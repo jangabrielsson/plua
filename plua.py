@@ -277,10 +277,44 @@ func()
                     print("  _PY - Show all available Python extensions")
                     print("  _PY.function_name() - Call a Python extension function")
                     continue
+                elif line.strip() == '_PY':
+                    # Show all available Python extensions
+                    print("Available Python extensions (_PY table):")
+                    try:
+                        self.lua_runtime.execute("_PY.list_extensions()")
+                    except Exception as e:
+                        print(f"Error listing extensions: {e}")
+                    continue
                 elif not line:
                     continue
 
-                self.execute_code(line)
+                # Try to execute as expression first (returns value)
+                try:
+                    # Use Lua's load to check if it's an expression that returns a value
+                    load_code = f"""
+local func, err = load("return {line}")
+if func then
+    local result = func()
+    if result ~= nil then
+        print(result)
+    end
+else
+    -- Not an expression, try as statement
+    local func2, err2 = load("{line}")
+    if func2 then
+        func2()
+    else
+        error(err2 or err)
+    end
+end
+"""
+                    self.lua_runtime.execute(load_code)
+                except Exception:
+                    # If the expression approach fails, try direct execution
+                    try:
+                        self.execute_code(line)
+                    except Exception as e2:
+                        print(f"Error: {e2}")
 
             except KeyboardInterrupt:
                 print("\nExiting...")
@@ -377,6 +411,19 @@ print("MobDebug server started on 0.0.0.0:{debugger_port}")
             print("Failed to execute file", file=sys.stderr)
             sys.exit(1)
         sys.exit(0)
+
+    elif args.execute_list and args.interactive:
+        # Execute code strings then start interactive shell
+        print(f"Executing {len(args.execute_list)} code strings, then starting interactive shell", file=sys.stderr)
+        all_code = "\n".join(args.execute_list)
+        interpreter.debug_print("Executing all -e code as a single chunk")
+        success = interpreter.execute_code(all_code)
+        if not success:
+            print("Failed to execute -e code chunk", file=sys.stderr)
+            sys.exit(1)
+        
+        # Start interactive shell after executing the code
+        interpreter.run_interactive()
 
     elif args.execute_list:
         # Execute multiple code strings from -e flags

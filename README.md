@@ -1,20 +1,29 @@
 # PLua - Lua Interpreter in Python
 
-A Lua interpreter implemented in Python using the Lupa library. It provides a Lua 5.4 environment with a modular extension system for adding Python functions to the Lua environment.
+A powerful Lua interpreter implemented in Python using the Lupa library. PLua provides a complete Lua 5.4 environment with an extensive modular extension system, async networking capabilities, debugging support, and a rich set of Python-integrated functions.
 
 ## Features
 
 - **Lua 5.4 Environment**: Full Lua 5.4 compatibility through the Lupa library
-- **Command Line Interface**: Run Lua files or execute code fragments
-- **Interactive Shell**: REPL mode for interactive Lua development
-- **Modular Extension System**: Easy-to-use decorator system for adding Python functions
-- **Rich Function Library**: 50+ built-in Python functions across multiple categories
-- **Network Support**: Asynchronous TCP and UDP networking with callback support
+- **Command Line Interface**: Run Lua files, execute code fragments, or start interactive mode
+- **Interactive Shell**: Full REPL mode with colored output and version information
+- **Modular Extension System**: Decorator-based system for adding Python functions to Lua
+- **Rich Function Library**: 60+ built-in Python functions across multiple categories
+- **Async Networking**: True asynchronous TCP/UDP networking with callback support
+- **Synchronous Networking**: Non-blocking TCP functions with smart error handling
+- **HTTP Support**: Full HTTP client with request/response handling
+- **Debugging Support**: MobDebug integration for remote debugging
+- **Smart Shutdown**: Intelligent termination detection for network operations
+- **Pretty Printing**: JSON-based table pretty printing with nested structure support
+- **Executable Build**: PyInstaller support for creating standalone executables
+- **Version Management**: Single source of truth versioning from pyproject.toml
+- **Colorized Output**: ANSI color support for enhanced terminal experience
+- **Fibaro HomeCenter 3 Support**: Complete Lua API compatibility for Fibaro HomeCenter 3 development and testing
 
 ## Requirements
 
 - Python 3.12+
-- uv package manager
+- uv package manager (recommended) or pip
 
 ## Installation
 
@@ -48,16 +57,22 @@ uv run python plua.py script.lua
 
 # Using pip
 python plua.py script.lua
+
+# Using built executable
+./dist/plua script.lua
 ```
 
 ### Executing Code Fragments
 
 ```bash
 # Using uv (recommended)
-uv run python plua.py -e "print_lua('Hello, World!')"
+uv run python plua.py -e "print('Hello, World!')"
 
 # Using pip
-python plua.py -e "print_lua('Hello, World!')"
+python plua.py -e "print('Hello, World!')"
+
+# Multiple code fragments
+uv run python plua.py -e "x=10" -e "print(x)"
 ```
 
 ### Interactive Mode
@@ -74,23 +89,64 @@ python plua.py -i
 python plua.py
 ```
 
+### Debugging Mode
+
+```bash
+# Start with MobDebug server on default port 8818
+uv run python plua.py --debugger script.lua
+
+# Custom debugger port
+uv run python plua.py --debugger --debugger-port 8820 script.lua
+
+# With VS Code integration
+uv run python plua.py --debugger -e "require('lua.fibaro')" script.lua
+```
+
+### Loading Libraries
+
+```bash
+# Load libraries before running script
+uv run python plua.py -l socket -l debugger script.lua
+
+# Load libraries in interactive mode
+uv run python plua.py -l socket -i
+```
+
 ### Command Line Options
 
 - `file` - Lua file to execute
-- `-e, --execute` - Execute Lua code string
+- `-e, --execute` - Execute Lua code string (can be used multiple times)
 - `-i, --interactive` - Start interactive shell
+- `-l, --library` - Load library before executing script (can be used multiple times)
+- `-d, --debug` - Enable debug output
+- `--debugger` - Start MobDebug server for remote debugging
+- `--debugger-port PORT` - Port for MobDebug server (default: 8818)
 - `-v, --version` - Show version information
+
+## Building Executable
+
+Create a standalone executable using PyInstaller:
+
+```bash
+# Using uv
+uv run python build.py
+
+# Using pip
+python build.py
+```
+
+The executable will be created in `dist/` directory and includes all dependencies.
 
 ## Extension System
 
-PLua uses a decorator-based extension system that automatically registers Python functions to the Lua environment. This makes it easy to add new functionality.
+PLua uses a decorator-based extension system that automatically registers Python functions to the Lua environment. Functions are organized into categories and available through the `_PY` table.
 
 ### Adding Custom Extensions
 
 Create a new Python file and use the `@registry.register` decorator:
 
 ```python
-from lua_extensions import registry
+from extensions.registry import registry
 
 @registry.register(description="My custom function", category="custom")
 def my_function(arg1, arg2):
@@ -103,55 +159,22 @@ def my_function(arg1, arg2):
 #### Timer Functions
 - `setTimeout(function, ms)` - Schedule a function to run after ms milliseconds
 - `clearTimeout(reference)` - Cancel a timer using its reference ID
+- `has_active_timers()` - Check if there are active timers
 
 #### I/O Functions
-- `print_lua(...)` - Print values to stdout
 - `input_lua(prompt)` - Get user input with optional prompt
 - `read_file(filename)` - Read and return file contents
 - `write_file(filename, content)` - Write content to a file
 
-#### Math Functions
-- `sqrt(x)` - Calculate square root
-- `pow(x, y)` - Calculate x raised to the power of y
-- `random()` - Get random number between 0 and 1
-- `randint(min, max)` - Get random integer between min and max
-
-#### String Functions
-- `to_upper(text)` - Convert string to uppercase
-- `to_lower(text)` - Convert string to lowercase
-- `split_string(text, delimiter)` - Split string by delimiter
-- `join_strings(strings, delimiter)` - Join list of strings with delimiter
-
-#### File System Functions
-- `file_exists(filename)` - Check if file exists
-- `get_file_size(filename)` - Get file size in bytes
-- `list_files(directory)` - List files in directory
-- `create_directory(path)` - Create directory
-
 #### JSON Functions
 - `parse_json(json_string)` - Parse JSON string to table
 - `to_json(data)` - Convert data to JSON string
+- `pretty_print(data, indent)` - Pretty print table as JSON string
+- `print_table(data, indent)` - Print table in pretty JSON format
 
-#### Data Processing Functions
-- `average(numbers)` - Calculate average of numbers
-- `max_value(values)` - Find maximum value in list
-- `min_value(values)` - Find minimum value in list
-- `count_occurrences(values, target)` - Count occurrences of value in list
-
-#### Date/Time Functions
-- `get_datetime()` - Get current date and time as string
-- `format_timestamp(timestamp, format)` - Format timestamp as date string
-
-#### System Functions
-- `get_time()` - Get current timestamp in seconds
-- `sleep(seconds)` - Sleep for specified seconds
-- `get_python_version()` - Get Python version information
-
-#### Network Functions
-- `get_hostname()` - Get current hostname
-- `check_port(host, port)` - Check if port is open on host
-- `get_local_ip()` - Get local IP address
-- `is_port_available(port, host)` - Check if port is available for binding
+#### HTTP Functions
+- `http_request_sync(url_or_table)` - Synchronous HTTP request (LuaSocket style)
+- `http_request_async(lua_runtime, url_or_table, callback)` - Asynchronous HTTP request
 
 #### TCP Functions (Asynchronous with Callbacks)
 - `tcp_connect(host, port, callback)` - Connect to TCP server asynchronously
@@ -180,31 +203,39 @@ def my_function(arg1, arg2):
 - `udp_read(conn_id, max_bytes, callback)` - Read data from UDP connection asynchronously
 - `udp_close(conn_id, callback)` - Close UDP connection
 
+#### Network Utility Functions
+- `get_hostname()` - Get current hostname
+- `get_local_ip()` - Get local IP address
+- `is_port_available(port, host)` - Check if port is available for binding
+- `has_active_network_operations()` - Check if there are active network operations
+
+#### File System Functions
+- `file_exists(filename)` - Check if file exists
+- `get_file_size(filename)` - Get file size in bytes
+- `list_files(directory)` - List files in directory
+- `create_directory(path)` - Create directory
+
+#### System Functions
+- `get_time()` - Get current timestamp in seconds
+- `sleep(seconds)` - Sleep for specified seconds (non-blocking)
+- `get_python_version()` - Get Python version information
+
 #### Configuration Functions
 - `get_env_var(name, default)` - Get environment variable value
 - `set_env_var(name, value)` - Set environment variable
 
 #### Utility Functions
-- `get_type(value)` - Get type of a value as string
-- `is_number(value)` - Check if value is a number
-- `is_string(value)` - Check if value is a string
-- `to_string(value)` - Convert value to string
-- `to_number(value)` - Convert value to number
 - `list_extensions()` - List all available Python extensions
-
-#### Debug Functions
-- `debug_value(value)` - Print debug information about value
-- `measure_time(func, ...)` - Measure execution time of function
 
 ## Examples
 
-### Basic Lua Code
+### Basic Usage
 
 ```lua
 -- Variables and control structures
 local name = "World"
 if name == "World" then
-    print_lua("Hello, " .. name .. "!")
+    print("Hello, " .. name .. "!")
 end
 
 -- Functions
@@ -212,156 +243,512 @@ local function greet(person)
     return "Hello, " .. person .. "!"
 end
 
-print_lua(greet("Alice"))
+print(greet("Alice"))
 ```
 
-### Using Extensions
+### Pretty Printing Tables
 
 ```lua
--- Timer example
-print_lua("Starting timer...")
-setTimeout(function()
-    print_lua("Timer fired after 3 seconds!")
-end, 3000)
+-- Create a complex nested table
+local data = {
+    name = "John",
+    age = 30,
+    hobbies = {"reading", "coding", "gaming"},
+    address = {
+        city = "New York",
+        zip = "10001",
+        coordinates = {40.7128, -74.0060}
+    },
+    metadata = {
+        created = "2024-01-01",
+        tags = {"user", "active"}
+    }
+}
 
--- File operations
-local content = read_file("input.txt")
-if content then
-    local upper_content = to_upper(content)
-    write_file("output.txt", upper_content)
+-- Pretty print the table
+_PY.print_table(data)
+
+-- Get pretty JSON string
+local json_string = _PY.pretty_print(data, 4)
+print("JSON string length:", #json_string)
+```
+
+### HTTP Requests
+
+```lua
+-- Simple GET request
+local response = _PY.http_request_sync("https://httpbin.org/json")
+if response and not response.error then
+    print("Status:", response.code)
+    print("Response length:", #response.body)
+    
+    -- Parse JSON response
+    local data = _PY.parse_json(response.body)
+    if data then
+        print("Title:", data.slideshow.title)
+    end
 end
 
--- Math and data processing
-local numbers = {1, 2, 3, 4, 5}
-print_lua("Average:", average(numbers))
-print_lua("Square root of 16:", sqrt(16))
+-- POST request with JSON data
+local post_data = {
+    url = "https://httpbin.org/post",
+    method = "POST",
+    headers = {["Content-Type"] = "application/json"},
+    body = '{"name": "John", "age": 30}'
+}
 
--- String processing
-local text = "hello world"
-print_lua("Uppercase:", to_upper(text))
-local words = split_string(text, " ")
-print_lua("Words:", table.unpack(words))
-
--- JSON processing
-local json_data = '{"name": "John", "age": 30}'
-local parsed = parse_json(json_data)
-if parsed then
-    print_lua("Name:", parsed.name)
-    print_lua("Age:", parsed.age)
-end
-
--- Network operations
-print_lua("Local IP:", get_local_ip())
-
--- TCP connection with callbacks
-tcp_connect("example.com", 80, function(success, conn_id, message)
-    if success then
-        print_lua("Connected:", message)
-        tcp_write(conn_id, "GET / HTTP/1.0\r\n\r\n", function(write_success, bytes_sent, write_message)
-            if write_success then
-                print_lua("Sent:", write_message)
-                tcp_read(conn_id, 1024, function(read_success, data, read_message)
-                    if read_success then
-                        print_lua("Received:", read_message)
-                        print_lua("Data preview:", string.sub(data, 1, 100))
-                    end
-                    tcp_close(conn_id, function(close_success, close_message)
-                        print_lua("Closed:", close_message)
-                    end)
-                end)
-            end
-        end)
-    else
-        print_lua("Connection failed:", message)
+local post_response = _PY.http_request_sync(post_data)
+if post_response and not post_response.error then
+    print("POST Status:", post_response.code)
+    local parsed = _PY.parse_json(post_response.body)
+    if parsed then
+        print("Posted data:", _PY.pretty_print(parsed.json))
     end
-end)
-
--- TCP connection with synchronous functions (no callbacks)
-local success, conn_id, message = tcp_connect_sync("example.com", 80)
-if success then
-    print_lua("Connected:", message)
-    
-    -- Set a custom timeout for this connection
-    local timeout_success, timeout_message = tcp_set_timeout_sync(conn_id, 5.0)
-    print_lua("Timeout set:", timeout_message)
-    
-    -- Set to blocking mode (no timeout)
-    local blocking_success, blocking_message = tcp_set_timeout_sync(conn_id, nil)
-    print_lua("Blocking mode:", blocking_message)
-    
-    -- Set back to timeout mode
-    local set_success2, set_message2 = tcp_set_timeout_sync(conn_id, 5.0)
-    print_lua("Set back to timeout mode:", set_message2)
-    
-    -- Read data using patterns
-    local read_success, data, read_message = tcp_read_sync(conn_id, "*l")  -- Read a line
-    if read_success then
-        print_lua("First line:", data)
-    end
-    
-    local read_success2, data2, read_message2 = tcp_read_sync(conn_id, 100)  -- Read 100 bytes
-    if read_success2 then
-        print_lua("Next 100 bytes:", string.sub(data2, 1, 50) .. "...")
-    end
-    
-    local write_success, bytes_written, write_message = tcp_write_sync(conn_id, "GET / HTTP/1.0\r\n\r\n")
-    if write_success then
-        print_lua("Sent:", write_message)
-        local read_success, data, read_message = tcp_read_sync(conn_id, 1024)
-        if read_success then
-            print_lua("Received:", read_message)
-            print_lua("Data preview:", string.sub(data, 1, 100))
-        end
-    end
-    local close_success, close_message = tcp_close_sync(conn_id)
-    if close_success then
-        print_lua("Closed:", close_message)
-    else
-        print_lua("Connection failed:", message)
-    end
-else
-    print_lua("Connection failed:", message)
-end
-
--- Non-blocking socket example (improved behavior)
-local success, conn_id, message = tcp_connect_sync("example.com", 80)
-if success then
-    print_lua("Connected:", message)
-    
-    -- Set to non-blocking mode
-    tcp_set_timeout_sync(conn_id, 0)
-    print_lua("Set to non-blocking mode")
-    
-    -- Try to read - now returns empty string instead of error
-    local read_success, data, read_message = tcp_read_sync(conn_id, 1024)
-    if read_success then
-        if #data > 0 then
-            print_lua("Data received:", #data, "bytes")
-        else
-            print_lua("No data available (normal for non-blocking)")
-        end
-    else
-        print_lua("Read error:", read_message)
-    end
-    
-    -- Simple retry loop (much easier now!)
-    local max_retries = 10
-    for i = 1, max_retries do
-        local success, data, message = tcp_read_sync(conn_id, 1024)
-        if success and #data > 0 then
-            print_lua("Data received on attempt", i, ":", #data, "bytes")
-            break
-        elseif success then
-            print_lua("Attempt", i, ": No data available")
-            os.execute("sleep 0.1")  -- Small delay
-        else
-            print_lua("Read error on attempt", i, ":", message)
-            break
-        end
-    end
-    
-    tcp_close_sync(conn_id)
-else
-    print_lua("Connection failed:", message)
 end
 ```
+
+### Network Operations
+
+```lua
+-- TCP connection with synchronous functions
+local success, conn_id, message = _PY.tcp_connect_sync("httpbin.org", 80)
+if success then
+    print("Connected:", message)
+    
+    -- Send HTTP request
+    local request = "GET /json HTTP/1.1\r\nHost: httpbin.org\r\n\r\n"
+    local write_success, bytes_written, write_message = _PY.tcp_write_sync(conn_id, request)
+    if write_success then
+        print("Sent:", write_message)
+        
+        -- Read response
+        local read_success, data, read_message = _PY.tcp_read_sync(conn_id, "*a")
+        if read_success then
+            print("Received:", read_message)
+            print("Data preview:", string.sub(data, 1, 200))
+        end
+    end
+    
+    _PY.tcp_close_sync(conn_id)
+else
+    print("Connection failed:", message)
+end
+
+-- Non-blocking socket example
+local success, conn_id, message = _PY.tcp_connect_sync("httpbin.org", 80)
+if success then
+    -- Set to non-blocking mode
+    _PY.tcp_set_timeout_sync(conn_id, 0)
+    
+    -- Try to read data
+    local read_success, data, read_message = _PY.tcp_read_sync(conn_id, 1024)
+    if read_success then
+        if #data > 0 then
+            print("Data received:", #data, "bytes")
+        else
+            print("No data available (normal for non-blocking)")
+        end
+    end
+    
+    _PY.tcp_close_sync(conn_id)
+end
+```
+
+### Timer Operations
+
+```lua
+-- Set a timer
+print("Starting timer...")
+local timer_id = _PY.setTimeout(function()
+    print("Timer fired after 3 seconds!")
+end, 3000)
+
+-- Check if timers are active
+if _PY.has_active_timers() then
+    print("Timers are running")
+end
+
+-- Cancel timer (optional)
+-- _PY.clearTimeout(timer_id)
+```
+
+### File Operations
+
+```lua
+-- Read and write files
+local content = _PY.read_file("input.txt")
+if content then
+    print("File content length:", #content)
+    
+    -- Write modified content
+    local success = _PY.write_file("output.txt", string.upper(content))
+    if success then
+        print("File written successfully")
+    end
+end
+
+-- Check file existence
+if _PY.file_exists("important.txt") then
+    local size = _PY.get_file_size("important.txt")
+    print("File size:", size, "bytes")
+end
+
+-- List files in directory
+local files = _PY.list_files(".")
+if files then
+    print("Files in current directory:")
+    for i, file in ipairs(files) do
+        print("  " .. i .. ": " .. file)
+    end
+end
+```
+
+### Debugging
+
+```lua
+-- Start with debugging enabled
+-- Run: plua --debugger script.lua
+
+-- Load fibaro module for MobDebug integration
+require('lua.fibaro')
+
+-- Your Lua code here
+local function my_function()
+    local x = 10
+    local y = 20
+    local result = x + y
+    print("Result:", result)
+end
+
+my_function()
+```
+
+### Interactive Mode
+
+```bash
+# Start interactive shell
+plua -i
+
+# In the shell:
+plua> local data = {name="John", age=30}
+plua> _PY.print_table(data)
+plua> _PY.list_extensions()
+plua> exit
+```
+
+## Fibaro HC3 Lua API Support
+
+PLua includes comprehensive support for the Fibaro HomeCenter 3 Lua API through the `fibaro.lua` module. This provides access to HomeCenter 3 devices, scenes, variables, and system functions.
+
+**Available Functions:**
+
+**Device Management:**
+- `fibaro.call(deviceId, action, ...)` - Call device actions
+- `fibaro.callhc3(deviceId, action, ...)` - Call device actions via HC3 API
+- `fibaro.callGroupAction(actionName, actionData)` - Execute group actions
+- `fibaro.get(deviceId, prop)` - Get device property with modification time
+- `fibaro.getValue(deviceId, propertyName)` - Get device property value
+- `fibaro.getType(deviceId)` - Get device type
+- `fibaro.getName(deviceId)` - Get device name
+- `fibaro.getRoomID(deviceId)` - Get device room ID
+- `fibaro.getSectionID(deviceId)` - Get device section ID
+- `fibaro.getRoomName(roomId)` - Get room name by ID
+- `fibaro.getRoomNameByDeviceID(deviceId)` - Get room name for device
+- `fibaro.getDevicesID(filter)` - Get device IDs with optional filtering
+- `fibaro.getIds(devices)` - Extract IDs from device objects
+- `fibaro.wakeUpDeadDevice(deviceID)` - Wake up dead Z-Wave devices
+
+**Alarm System:**
+- `fibaro.alarm(partitionId, action)` - Control partition alarm (arm/disarm)
+- `fibaro.__houseAlarm(action)` - Control main house alarm (arm/disarm)
+- `fibaro.isHomeBreached()` - Check if home is breached
+- `fibaro.isPartitionBreached(partitionId)` - Check if partition is breached
+- `fibaro.getPartitionArmState(partitionId)` - Get partition arm state
+- `fibaro.getHomeArmState()` - Get overall home arm state
+
+**Variables:**
+- `fibaro.getGlobalVariable(name)` - Get global variable with modification time
+- `fibaro.setGlobalVariable(name, value)` - Set global variable
+- `fibaro.getSceneVariable(name)` - Get scene variable
+- `fibaro.setSceneVariable(name, value)` - Set scene variable
+
+**Scenes:**
+- `fibaro.scene(action, ids)` - Execute or kill scenes
+
+**Profiles:**
+- `fibaro.profile(action, id)` - Activate user profile
+
+**Timers:**
+- `fibaro.setTimeout(timeout, action, errorHandler)` - Set timeout with error handling
+- `fibaro.clearTimeout(ref)` - Clear timeout
+
+**Notifications:**
+- `fibaro.alert(alertType, ids, notification)` - Send alerts (email/push/simplePush)
+
+**Events:**
+- `fibaro.emitCustomEvent(name)` - Emit custom events
+
+**System:**
+- `fibaro.sleep(ms)` - Pause execution
+- `fibaro.useAsyncHandler(value)` - Configure async handler
+
+**Usage Examples:**
+
+```lua
+-- Load the fibaro module
+require('lua.fibaro')
+
+-- Get all device IDs
+local deviceIds = fibaro.getDevicesID()
+
+-- Get devices by type
+local lightIds = fibaro.getDevicesID({type = "com.fibaro.multilevelSwitch"})
+
+-- Get devices by property
+local armedDevices = fibaro.getDevicesID({
+    properties = {armed = true}
+})
+
+-- Call device action
+fibaro.call(123, "turnOn")
+
+-- Get device property
+local value = fibaro.getValue(123, "value")
+
+-- Set global variable
+fibaro.setGlobalVariable("myVar", "hello")
+
+-- Get global variable
+local value, modified = fibaro.getGlobalVariable("myVar")
+
+-- Control alarm
+fibaro.alarm(1, "arm")  -- Arm partition 1
+fibaro.alarm("disarm")  -- Disarm main alarm
+
+-- Check alarm state
+if fibaro.isHomeBreached() then
+    print("Home is breached!")
+end
+
+-- Set timeout
+local timer = fibaro.setTimeout(5000, function()
+    print("5 seconds passed")
+end)
+
+-- Send notification
+fibaro.alert("push", {1, 2, 3}, "Alert message")
+
+-- Execute scene
+fibaro.scene("execute", {1, 2, 3})
+
+-- Wake up dead device
+fibaro.wakeUpDeadDevice(456)
+```
+
+**Note:** The `hub` variable is also available as an alias for `fibaro`.
+
+### Additional Lua Modules
+
+#### class.lua
+Simple class system for object-oriented programming:
+
+```lua
+local class = require("plua.class")
+
+-- Define a class
+local MyClass = class("MyClass")
+function MyClass:__init(name)
+    self.name = name
+end
+function MyClass:greet()
+    return "Hello, " .. self.name
+end
+
+-- Create instance
+local obj = MyClass("World")
+print(obj:greet()) -- Output: Hello, World
+```
+
+#### json.lua
+JSON encoding and decoding utilities:
+
+```lua
+local json = require("plua.json")
+
+-- Encode table to JSON string
+local data = {name = "John", age = 30}
+local json_str = json.encode(data)
+
+-- Decode JSON string to table
+local decoded = json.decode('{"name":"John","age":30}')
+
+-- Pretty print table as formatted JSON
+local pretty = json.encodeFormated(data)
+```
+
+#### net.lua
+Network utilities for HTTP and TCP operations:
+
+**HTTP Client:**
+```lua
+local net = require("plua.net")
+local http = net.HTTPClient()
+
+http:request("https://api.example.com/data", {
+    options = {
+        method = "POST",
+        headers = {["Content-Type"] = "application/json"},
+        data = '{"key":"value"}'
+    },
+    success = function(response)
+        print("Response:", response.body)
+    end,
+    error = function(status)
+        print("Error:", status)
+    end
+})
+```
+
+**TCP Socket:**
+```lua
+local net = require("plua.net")
+local socket = net.TCPSocket({
+    success = function(data) print("Connected") end,
+    error = function(err) print("Error:", err) end
+})
+
+socket:connect("example.com", 80, {
+    success = function() 
+        socket:write("GET / HTTP/1.0\r\n\r\n", {
+            success = function()
+                socket:read({
+                    success = function(data) print("Data:", data) end
+                })
+            end
+        })
+    end
+})
+```
+
+**UDP Socket:**
+```lua
+local net = require("plua.net")
+local udp = net.UDPSocket({
+    success = function(data) print("UDP data received") end,
+    error = function(err) print("UDP Error:", err) end
+})
+
+udp:connect("example.com", 53, {
+    success = function() 
+        udp:write("UDP message", {
+            success = function()
+                udp:read({
+                    success = function(data) print("UDP Data:", data) end
+                })
+            end
+        })
+    end
+})
+```
+
+#### quickapp.lua
+QuickApp base class for developing Fibaro QuickApps:
+
+```lua
+local QuickApp = require("plua.quickapp")
+
+-- Define your QuickApp
+local MyQuickApp = class('MyQuickApp', QuickApp)
+
+function MyQuickApp:onInit()
+    self:debug("QuickApp initialized")
+    self:setupUICallbacks()
+end
+
+function MyQuickApp:onAction()
+    self:debug("Action triggered")
+    self:updateProperty("status", "active")
+end
+
+-- UI callback example
+function MyQuickApp:buttonPressed()
+    self:debug("Button was pressed")
+    self:updateView("button", "text", "Pressed!")
+end
+
+-- Create and initialize QuickApp
+local qa = MyQuickApp(deviceObject)
+```
+
+**QuickApp Methods:**
+- `:debug(...)`, `:trace(...)`, `:warning(...)`, `:error(...)` - Logging
+- `:updateProperty(name, value)` - Update device property
+- `:updateView(element, property, value)` - Update UI element
+- `:registerUICallback(element, event, function)` - Register UI callbacks
+- `:hasInterface(name)` - Check if device has interface
+- `:addInterfaces(interfaces)` - Add device interfaces
+- `:deleteInterfaces(interfaces)` - Remove device interfaces
+- `:setName(name)` - Set device name
+- `:setEnabled(enabled)` - Set device enabled state
+
+### Environment Variables
+
+Configure HC3 connection via environment variables:
+- `HC3_URL` - HomeCenter 3 URL (e.g., "https://192.168.1.100")
+- `HC3_USER` - Username for API access
+- `HC3_PASSWORD` - Password for API access
+
+### Complete Usage Examples
+
+**Basic QuickApp Development:**
+```lua
+-- Load Fibaro modules
+require("lua.fibaro")
+
+-- Create QuickApp
+local MyQA = class('MyQA', QuickApp)
+function MyQA:onInit()
+    self:debug("Starting QuickApp")
+    self:updateProperty("status", "ready")
+end
+
+-- Test locally
+local device = {id = 1, name = "Test Device", properties = {}}
+local qa = MyQA(device)
+```
+
+**API Testing:**
+```lua
+require("lua.fibaro")
+
+-- Test device retrieval
+local devices = fibaro.getDevices()
+print("Found", #devices, "devices")
+
+-- Test alarm control
+fibaro.alarm("arm")
+local partitions = fibaro.getPartitions()
+```
+
+**Network Operations:**
+```lua
+local net = require("plua.net")
+
+-- HTTP request to external API
+local http = net.HTTPClient()
+http:request("https://httpbin.org/json", {
+    success = function(response)
+        local data = json.decode(response.body)
+        print("Title:", data.slideshow.title)
+    end
+})
+```
+
+### Debugging
+
+Enable debugging with MobDebug:
+```bash
+plua --debugger -e "require('lua.fibaro')" script.lua
+```
+
+This allows remote debugging of QuickApps using VS Code or other IDEs with MobDebug support.

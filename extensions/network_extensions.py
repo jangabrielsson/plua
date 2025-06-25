@@ -241,36 +241,10 @@ class AsyncioNetworkManager:
                     callback, False, None, "Connection closed by peer"
                 )
                 self.tcp_connections.pop(conn_id, None)
-        except socket.timeout:
-            # Don't remove connection for timeout errors (including non-blocking)
-            return (
-                False,
-                None,
-                "TCP read error: [Errno 35] Resource temporarily unavailable",
-            )
-        except BlockingIOError as e:
-            # Don't remove connection for non-blocking errors (Errno 35/36)
-            if hasattr(e, "errno") and e.errno in [
-                35,
-                36,
-            ]:  # Resource temporarily unavailable / Operation now in progress
-                return (
-                    False,
-                    None,
-                    "TCP read error: [Errno 35] Resource temporarily unavailable",
-                )
-            else:
-                # Other BlockingIOError, remove connection
-                self.tcp_connections.pop(conn_id, None)
-                return False, None, f"TCP read error: {str(e)}"
-        except ConnectionError as e:
-            # Remove connection for actual connection errors
-            self.tcp_connections.pop(conn_id, None)
-            return False, None, f"TCP connection error: {str(e)}"
         except Exception as e:
-            # Remove connection for other unexpected errors
-            self.tcp_connections.pop(conn_id, None)
-            return False, None, f"TCP read error: {str(e)}"
+            loop_manager.get_loop().call_soon_threadsafe(
+                callback, False, None, f"TCP read error: {str(e)}"
+            )
         finally:
             self._decrement_operations()
 
@@ -505,6 +479,68 @@ class AsyncioNetworkManager:
 
         except Exception as e:
             return False, None, f"TCP timeout get error: {str(e)}"
+
+    def tcp_read_until_sync(self, conn_id, delimiter, max_bytes=8192):
+        """Read data from TCP connection until delimiter is found - returns (success, data, message)"""
+        try:
+            reader, writer = self.tcp_connections.get(conn_id, (None, None))
+            if not reader:
+                return False, None, f"TCP connection {conn_id} not found"
+
+            sock = reader
+            data_parts = []
+            total_bytes = 0
+
+            while total_bytes < max_bytes:
+                # Read one byte at a time to check for delimiter
+                chunk = sock.recv(1)
+                if not chunk:
+                    # Connection closed by peer
+                    self.tcp_connections.pop(conn_id, None)
+                    if data_parts:
+                        data = b"".join(data_parts)
+                        data_str = data.decode("utf-8", errors="ignore")
+                        return True, data_str, f"Received {len(data)} bytes (connection closed)"
+                    else:
+                        return False, None, "Connection closed by peer"
+
+                data_parts.append(chunk)
+                total_bytes += 1
+
+                # Check if we have enough data to form the delimiter
+                if len(data_parts) >= len(delimiter):
+                    # Check if the last bytes match the delimiter
+                    recent_data = b"".join(data_parts[-len(delimiter):])
+                    if recent_data == delimiter.encode('utf-8'):
+                        # Found delimiter, return data including delimiter
+                        data = b"".join(data_parts)
+                        data_str = data.decode("utf-8", errors="ignore")
+                        return True, data_str, f"Received {len(data)} bytes (delimiter found)"
+
+            # Max bytes reached without finding delimiter
+            data = b"".join(data_parts)
+            data_str = data.decode("utf-8", errors="ignore")
+            return True, data_str, f"Received {len(data)} bytes (max bytes reached)"
+
+        except socket.timeout:
+            # Don't remove connection for timeout errors (including non-blocking)
+            return True, "", "No data available (non-blocking socket)"
+        except BlockingIOError as e:
+            # Don't remove connection for non-blocking errors (Errno 35/36)
+            if hasattr(e, "errno") and e.errno in [35, 36]:
+                return True, "", "No data available (non-blocking socket)"
+            else:
+                # Other BlockingIOError, remove connection
+                self.tcp_connections.pop(conn_id, None)
+                return False, None, f"TCP read error: {str(e)}"
+        except ConnectionError as e:
+            # Remove connection for actual connection errors
+            self.tcp_connections.pop(conn_id, None)
+            return False, None, f"TCP connection error: {str(e)}"
+        except Exception as e:
+            # Remove connection for other unexpected errors
+            self.tcp_connections.pop(conn_id, None)
+            return False, None, f"TCP read error: {str(e)}"
 
     # --- Asynchronous TCP Timeout Functions ---
     async def tcp_set_timeout_async(self, conn_id, timeout_seconds, callback):
@@ -788,6 +824,74 @@ class AsyncioNetworkManager:
         )
         task.add_done_callback(lambda t: None)
 
+    async def tcp_read_until_async(self, conn_id, delimiter, max_bytes, callback):
+        self._increment_operations()
+        try:
+            reader, writer = self.tcp_connections.get(conn_id, (None, None))
+            if not reader:
+                loop_manager.get_loop().call_soon_threadsafe(
+                    callback, False, None, f"TCP connection {conn_id} not found"
+                )
+                return
+
+            data_parts = []
+            total_bytes = 0
+
+            while total_bytes < max_bytes:
+                # Read one byte at a time to check for delimiter
+                chunk = await reader.read(1)
+                if not chunk:
+                    # Connection closed by peer
+                    self.tcp_connections.pop(conn_id, None)
+                    if data_parts:
+                        data = b"".join(data_parts)
+                        data_str = data.decode("utf-8", errors="ignore")
+                        loop_manager.get_loop().call_soon_threadsafe(
+                            callback, True, data_str, f"Received {len(data)} bytes (connection closed)"
+                        )
+                    else:
+                        loop_manager.get_loop().call_soon_threadsafe(
+                            callback, False, None, "Connection closed by peer"
+                        )
+                    return
+
+                data_parts.append(chunk)
+                total_bytes += 1
+
+                # Check if we have enough data to form the delimiter
+                if len(data_parts) >= len(delimiter):
+                    # Check if the last bytes match the delimiter
+                    recent_data = b"".join(data_parts[-len(delimiter):])
+                    if recent_data == delimiter.encode('utf-8'):
+                        # Found delimiter, return data including delimiter
+                        data = b"".join(data_parts)
+                        data_str = data.decode("utf-8", errors="ignore")
+                        loop_manager.get_loop().call_soon_threadsafe(
+                            callback, True, data_str, f"Received {len(data)} bytes (delimiter found)"
+                        )
+                        return
+
+            # Max bytes reached without finding delimiter
+            data = b"".join(data_parts)
+            data_str = data.decode("utf-8", errors="ignore")
+            loop_manager.get_loop().call_soon_threadsafe(
+                callback, True, data_str, f"Received {len(data)} bytes (max bytes reached)"
+            )
+
+        except Exception as e:
+            loop_manager.get_loop().call_soon_threadsafe(
+                callback, False, None, f"TCP read until error: {str(e)}"
+            )
+        finally:
+            self._decrement_operations()
+
+    def tcp_read_until(self, conn_id, delimiter, max_bytes, callback):
+        # Use create_task to properly handle the coroutine
+        task = asyncio.run_coroutine_threadsafe(
+            self.tcp_read_until_async(conn_id, delimiter, max_bytes, callback), loop_manager.get_loop()
+        )
+        task.add_done_callback(lambda t: None)
+
 
 # --- Global instance ---
 network_manager = AsyncioNetworkManager()
@@ -872,6 +976,12 @@ def tcp_set_timeout_sync(conn_id, timeout_seconds):
 def tcp_get_timeout_sync(conn_id):
     """Get TCP timeout for a connection and return (success, timeout_seconds, message)"""
     return network_manager.tcp_get_timeout_sync(conn_id)
+
+
+@registry.register(description="Read data from TCP connection until delimiter is found", category="tcp_sync")
+def tcp_read_until_sync(conn_id, delimiter, max_bytes=8192):
+    """Read data from TCP connection until delimiter is found - returns (success, data, message)"""
+    return network_manager.tcp_read_until_sync(conn_id, delimiter, max_bytes)
 
 
 # --- UDP Extension Functions ---
@@ -1439,3 +1549,10 @@ end
 def http_request(url_or_table):
     """Alias for http_request_sync for backward compatibility"""
     return http_request_sync(url_or_table)
+
+
+@registry.register(
+    description="Read data from TCP connection until delimiter asynchronously", category="tcp"
+)
+def tcp_read_until(conn_id, delimiter, max_bytes, callback):
+    network_manager.tcp_read_until(conn_id, delimiter, max_bytes, callback)

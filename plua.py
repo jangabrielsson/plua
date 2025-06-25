@@ -10,6 +10,7 @@ import argparse
 import time
 from lupa import LuaRuntime
 from extensions import get_lua_extensions
+from plua.version import __version__ as PLUA_VERSION
 
 # Import extension modules to register them (side effect: registers all extensions)
 import extensions.core  # noqa: F401
@@ -23,6 +24,11 @@ class PLuaInterpreter:
         self.debugger_enabled = debugger_enabled
         self.lua_runtime = LuaRuntime(unpack_returned_tuples=True)
         self.setup_lua_environment()
+        # Print greeting with versions
+        print(f"PLua version: {PLUA_VERSION}")
+        print(f"Python version: {sys.version.split()[0]}")
+        print(f"Lua version: {self.lua_runtime.globals()._VERSION}")
+        sys.stdout.flush()  # Ensure greeting appears before any Lua code runs
 
     def debug_print(self, message):
         """Print debug message only if debug mode is enabled"""
@@ -60,6 +66,9 @@ class PLuaInterpreter:
         # Add some standard Python functions that might be helpful
         # Note: Lua's native print function is already available
         lua_globals['input'] = input
+
+        # Expose PLua version to Lua
+        lua_globals['_PLUA_VERSION'] = PLUA_VERSION
 
     def execute_file(self, filename):
         """Execute a Lua file"""
@@ -316,7 +325,7 @@ Examples:
     # Start MobDebug if requested
     if args.debugger:
         debugger_port = args.debugger_port
-        print(f"Starting MobDebug server on 0.0.0.0:{debugger_port}", file=sys.stderr)
+        # print(f"Starting MobDebug server on 0.0.0.0:{debugger_port}", file=sys.stderr)
         try:
             # Load and start MobDebug
             mobdebug_code = f"""

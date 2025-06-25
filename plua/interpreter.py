@@ -177,11 +177,11 @@ class ExecutionTracker:
             return False
         if self.execution_phase != "tracking":
             return False
-        
+
         # Check if we should terminate immediately
         if self.should_terminate():
             return True
-            
+
         try:
             from extensions.network_extensions import loop_manager
             loop_manager.get_loop()  # Just ensure the loop exists
@@ -193,7 +193,7 @@ class ExecutionTracker:
                     return True
                 await asyncio.sleep(0.1)
             return False
-        
+
         # Event loop is available, use it for polling
         start_time = time.time()
         while time.time() - start_time < timeout:
@@ -296,7 +296,7 @@ class PLuaInterpreter:
         try:
             # Set the mainfile variable in _PY table
             self.lua_runtime.globals()['_PY']['mainfile'] = filename
-            
+
             with open(filename, 'r', encoding='utf-8') as f:
                 lua_code = f.read()
             # Use load() with filename for proper debugger support
@@ -490,7 +490,7 @@ end
         status, result = result_queue.get()
         if status == "error":
             raise Exception(result)
-        
+
         # Release the timer gate to allow pending timer callbacks to run
         try:
             from extensions.core import release_timer_gate
@@ -498,7 +498,7 @@ end
         except Exception as e:
             if self.debug:
                 print(f"DEBUG: Could not release timer gate: {e}", file=sys.stderr)
-        
+
         return result
 
     async def async_execute_file(self, filename):
@@ -535,7 +535,7 @@ end
         status, result = result_queue.get()
         if status == "error":
             raise Exception(result)
-        
+
         # Release the timer gate to allow pending timer callbacks to run
         try:
             from extensions.core import release_timer_gate
@@ -543,7 +543,7 @@ end
         except Exception as e:
             if self.debug:
                 print(f"DEBUG: Could not release timer gate: {e}", file=sys.stderr)
-        
+
         return result
 
     async def async_execute_all(self, fragments_code, main_file):
@@ -589,12 +589,12 @@ end
 
         # Block completely until thread completes - no yielding to event loop
         thread.join()
-        
+
         # Get the result
         status, result = result_queue.get()
         if status == "error":
             raise Exception(result)
-        
+
         # Now that both fragments and main file are completely processed,
         # release the timer gate to allow pending timer callbacks to run
         try:
@@ -603,5 +603,5 @@ end
         except Exception as e:
             if self.debug:
                 print(f"DEBUG: Could not release timer gate: {e}", file=sys.stderr)
-        
-        return result 
+
+        return result

@@ -8,29 +8,16 @@ This directory contains Lua modules that can be loaded using `require()` in PLua
 
 ```lua
 -- Load a module
-local utils = require("utils")
+local mymodule = require("mymodule")
 
 -- Use module functions
-local formatted = utils.format_with_prefix("Test", "Hello World")
-print(formatted)  -- Output: Test: Hello World
+local result = mymodule.some_function("Hello World")
+print(result)
 ```
 
 ### Available Modules
 
-#### `utils.lua`
-A general utility module with common helper functions:
-
-- `utils.format_with_prefix(prefix, text)` - Format text with a prefix
-- `utils.is_empty(str)` - Check if a string is empty
-- `utils.capitalize(str)` - Capitalize the first letter of a string
-- `utils.create_table(...)` - Create a table from key-value pairs
-
-#### `network_utils.lua`
-Network utility functions that use the PLua network extensions:
-
-- `network_utils.test_tcp_connection(host, port, callback)` - Test a TCP connection
-- `network_utils.get_network_info()` - Get network information
-- `network_utils.quick_test()` - Run a quick network test
+Currently, this directory is empty. You can create your own modules here.
 
 ### Creating Your Own Modules
 
@@ -56,12 +43,12 @@ Modules can depend on other modules using `require()`:
 
 ```lua
 -- mymodule.lua
-local utils = require("utils")  -- Load another module
+local other_module = require("other_module")  -- Load another module
 
 local mymodule = {}
 
 function mymodule.greeting(name)
-    return utils.format_with_prefix("Greeting", "Hello " .. name)
+    return "Hello " .. name .. " from " .. other_module.get_version()
 end
 
 return mymodule
@@ -79,10 +66,24 @@ This means you can organize modules in subdirectories if needed:
 
 ```
 lua/
-├── utils.lua
-├── network_utils.lua
+├── mymodule.lua
 ├── math/
 │   └── init.lua
 └── data/
     └── init.lua
+```
+
+## Using _PY Functions
+
+Instead of creating Lua modules, you can also use the built-in `_PY` functions directly:
+
+```lua
+-- Use _PY functions directly
+local hostname = _PY.get_hostname()
+local timestamp = _PY.get_time()
+local content = _PY.read_file("myfile.txt")
+
+print("Hostname:", hostname)
+print("Timestamp:", timestamp)
+print("File content:", content)
 ``` 

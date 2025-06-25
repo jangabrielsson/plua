@@ -2,7 +2,7 @@
 print("=== Synchronous TCP Functions Demo ===")
 
 -- Function to demonstrate a complete TCP conversation
-function tcp_conversation(host, port, request)
+local function tcp_conversation(host, port, request)
   print(string.format("\n--- TCP Conversation with %s:%d ---", host, port))
   
   -- Step 1: Connect

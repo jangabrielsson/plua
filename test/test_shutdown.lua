@@ -1,5 +1,9 @@
 -- Test Shutdown Mechanism
 print("=== Shutdown Test ===")
+local tcp_connect = _PY.tcp_connect
+local tcp_close = _PY.tcp_close
+local has_active_network_operations = _PY.has_active_network_operations
+local has_active_timers = _PY.has_active_timers
 
 -- Test 1: Simple timer
 print("Setting up a 2-second timer...")

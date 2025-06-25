@@ -13,7 +13,6 @@ from extensions import get_lua_extensions
 
 # Import extension modules to register them (side effect: registers all extensions)
 import extensions.core  # noqa: F401
-import extensions.custom_extensions  # noqa: F401
 import extensions.network_extensions  # noqa: F401
 
 
@@ -144,9 +143,17 @@ func()
 
     def _has_active_operations(self):
         """Check if there are any active operations without waiting"""
-        # For now, always return False to avoid hanging on simple commands
-        # This can be improved later if needed
-        return False
+        try:
+            from extensions.core import timer_manager
+            from extensions.network_extensions import network_manager
+
+            has_timers = timer_manager.has_active_timers()
+            has_network = network_manager.has_active_operations()
+
+            return has_timers or has_network
+        except Exception:
+            # If there's any error checking operations, assume there are none
+            return False
 
     def wait_for_active_operations(self):
         """Wait for active network operations and timers to complete"""
@@ -229,9 +236,9 @@ Examples:
   plua -e "x=10" -e "print(x)"                      # Execute multiple code strings
   plua -e "require('debugger')" -e "debugger.start()" script.lua  # Multiple -e before file
   plua -i                                            # Start interactive shell
-  plua -l utils script.lua                          # Load utils library before running script
-  plua -l utils -l network_utils                    # Load multiple libraries in interactive mode
-  plua -l utils -e "print(utils.capitalize('hello'))"  # Load library and execute code
+  plua -l socket script.lua                          # Load socket library before running script
+  plua -l socket -l debugger                         # Load multiple libraries in interactive mode
+  plua -l socket -e "print(socket.http.request('http://example.com'))"  # Load library and execute code
   plua -e "require('debugger')" -e "debugger.break()" script.lua  # Debugger mode: execute code then file
   plua -d script.lua                                # Run with debug output
   plua -d -e "print('debug mode')" script.lua      # Debug mode with -e commands

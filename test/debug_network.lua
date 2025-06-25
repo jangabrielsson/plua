@@ -1,6 +1,16 @@
 -- Debug Network Test
 print("=== Debug Network Test ===")
 
+local tcp_connect = _PY.tcp_connect
+local tcp_write = _PY.tcp_write
+local tcp_read = _PY.tcp_read
+local tcp_close = _PY.tcp_close
+local udp_connect = _PY.udp_connect
+local udp_write = _PY.udp_read
+local udp_read = _PY.udp_read
+local udp_close = _PY.udp_close
+local sleep = _PY.sleep
+
 -- Test 1: Simple TCP connection with immediate callback
 print("Test 1: TCP connection to example.com:80")
 tcp_connect("example.com", 80, function(success, conn_id, message)

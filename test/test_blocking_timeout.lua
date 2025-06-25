@@ -4,8 +4,15 @@
 print("=== Blocking Read Timeout Test ===")
 print("This test verifies that tcp_read_sync with timeout actually blocks for the specified duration")
 
+local tcp_connect_sync = _PY.tcp_connect_sync
+local tcp_read_sync = _PY.tcp_read_sync
+local tcp_set_timeout_sync = _PY.tcp_set_timeout_sync
+local tcp_get_timeout_sync = _PY.tcp_get_timeout_sync
+local tcp_close_sync = _PY.tcp_close_sync
+local os = _PY.os
+
 -- Function to measure time taken for an operation
-function measure_time(func)
+local function measure_time(func)
   local start_time = os.time()
   local start_clock = os.clock()
   

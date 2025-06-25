@@ -1,36 +1,33 @@
 -- Test script to demonstrate Lua modules
 print("=== Lua Module Test ===")
 
--- Load the utility module
-print("\n--- Loading utils module ---")
-local utils = require("utils")
-print("Utils module loaded successfully")
+-- Note: utils and network_utils modules have been removed
+-- This test now demonstrates direct use of _PY functions
 
--- Test utility functions
-print("\n--- Testing utility functions ---")
-print("Format with prefix:", utils.format_with_prefix("Test", "Hello World"))
-print("Is empty check:", utils.is_empty(""), utils.is_empty("not empty"))
-print("Capitalize:", utils.capitalize("hello"), utils.capitalize("world"))
+print("\n--- Testing _PY functions directly ---")
 
-local test_table = utils.create_table("name", "John", "age", 30, "city", "New York")
-print("Created table:")
-for key, value in pairs(test_table) do
-  print("  " .. key .. ":", value)
-end
-
--- Load the network utils module
-print("\n--- Loading network_utils module ---")
-local network_utils = require("network_utils")
-print("Network utils module loaded successfully")
-
--- Test network utilities
+-- Test network utility functions
 print("\n--- Testing network utilities ---")
-network_utils.get_network_info()
+local hostname = _PY.get_hostname()
+local local_ip = _PY.get_local_ip()
+local port_80_available = _PY.is_port_available(80)
+local port_8080_available = _PY.is_port_available(8080)
 
--- Test a simple network connection
+print("Network Info:")
+print("  Hostname:", hostname)
+print("  Local IP:", local_ip)
+print("  Port 80 available:", port_80_available)
+print("  Port 8080 available:", port_8080_available)
+
+-- Test a simple network connection using _PY functions directly
 print("\n--- Testing network connection ---")
-network_utils.test_tcp_connection("google.com", 80, function(success, conn_id, message)
-  print("Connection test completed")
-end)
+local success, conn_id, message = _PY.tcp_connect_sync("google.com", 80)
+if success then
+  print("Connection test: SUCCESS -", message)
+  _PY.tcp_close_sync(conn_id)
+  print("Connection closed")
+else
+  print("Connection test: FAILED -", message)
+end
 
 print("\n=== Module test completed ===") 

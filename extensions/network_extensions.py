@@ -945,11 +945,11 @@ def _create_http_request(
     """Create and configure HTTP request. The body must be a string if provided."""
     if headers is None:
         headers = {}
-    
+
     # Add default headers if not present
     if "User-Agent" not in headers:
         headers["User-Agent"] = "PLua/1.0"
-    
+
     # Create request
     if body is not None and method.upper() in ["POST", "PUT", "PATCH"]:
         if not isinstance(body, str):
@@ -961,13 +961,13 @@ def _create_http_request(
         )
     else:
         request = urllib.request.Request(url, headers=headers, method=method)
-    
+
     # Configure proxy if specified
     if proxy:
         proxy_handler = urllib.request.ProxyHandler({"http": proxy, "https": proxy})
         opener = urllib.request.build_opener(proxy_handler)
         urllib.request.install_opener(opener)
-    
+
     return request
 
 

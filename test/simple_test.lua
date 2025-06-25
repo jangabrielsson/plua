@@ -1,6 +1,12 @@
 -- Simple Test to isolate hanging issue
 print("=== Simple Test ===")
 
+local tcp_connect = _PY.tcp_connect
+local tcp_close = _PY.tcp_close
+local udp_connect = _PY.udp_connect
+local udp_close = _PY.udp_close
+local has_active_network_operations = _PY.has_active_network_operations
+
 -- Test 1: Simple TCP connect
 print("Test 1: TCP connect to google.com")
 tcp_connect("google.com", 80, function(success, conn_id, message)

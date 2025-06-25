@@ -8,18 +8,21 @@ _PY = _PY or {}
 local html2console = _PY.html2console
 _print = print
 local fmt = string.format
-
+json = require("plua.json")
+class = require("plua.class")
+net = require("plua.net")
+QuickApp = require("plua.quickapp")
 
 _print("PLua version: " .. _PLUA_VERSION)
 _print("Lua version: " .. _VERSION)
 _print("Python version: " .. _PY.get_python_version())
 
-json = { encode = _PY.to_json, decode = _PY.parse_json }
+
 
 local function logStr(...) 
   local b = {} 
   for _,e in ipairs({...}) do 
-  b[#b+1]=tostring(e) 
+    b[#b+1]=tostring(e) 
   end 
   return table.concat(b," ")
 end
@@ -44,11 +47,11 @@ function __fibaro_add_debug_message(tag, msg, typ, nohtml)
   local time = os.date("[%d.%m.%Y][%H:%M:%S]")
   local typStr = fmt("<font color='%s'>%-7s</font>", typeColor[typ], typ)
   if nohtml then
-  local txt = html2console(fmt("<font color='grey89'>%s[%s][%s]: @@</font>", time, typStr, tag))
-  _print((txt:gsub("@@", msg)))
+    local txt = html2console(fmt("<font color='grey89'>%s[%s][%s]: @@</font>", time, typStr, tag))
+    _print((txt:gsub("@@", msg)))
   else
-  msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
-  _print(html2console(msg))
+    msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
+    _print(html2console(msg))
   end
 end
 
@@ -89,43 +92,6 @@ end
 function print(...) fibaro.debug(__TAG, ...) end
 function __print(...) __fibaro_add_debug_message(__TAG, logStr(...), "DEBUG", true) end
 
-net = {}
--- Creates a new HTTP client object.
--- @return A table representing the HTTP client.
-function net.HTTPClient()
-  local self = {}
-  -- url is string
-  -- options = { options = { method = "get", headers = {}, data = "...", timeout = 10000 }, success = function(response) end, error = function(status) end }
-  function self:request(url, options)
-  -- Create the request table for http_request_async
-  local request_table = {
-  url = url,
-  method = options.options and options.options.method or "GET",
-  headers = options.options and options.options.headers or {},
-  body = options.options and options.options.data or nil
-  }
-  
-  -- Create a callback function that will handle the response
-  local callback = function(response)
-  if response.error then
-  -- Call error callback if provided
-  if options.error then
-  options.error(response.code or 0)
-  end
-  else
-  -- Call success callback if provided
-  if options.success then
-  options.success(response)
-  end
-  end
-  end
-  
-  -- Make the async HTTP request
-  _PY.http_request_async(request_table, callback)
-  end
-  return self
-end
-
 local hc3_url = os.getenv("HC3_URL")
 local hc3_user = os.getenv("HC3_USER")
 local hc3_pass = os.getenv("HC3_PASSWORD")
@@ -135,13 +101,13 @@ local function hc3_sync(method, path, data)
   if data~=nil then data = json.encode(data) end
   print("API: " .. url)
   local res = _PY.http_request_sync({
-  url = url,
-  method = method,
-  headers = {
-  ["Content-Type"] = "application/json",
-  ["Authorization"] = "Basic " .. _PY.base64_encode(hc3_user .. ":" .. hc3_pass)
-  },
-  body = data
+    url = url,
+    method = method,
+    headers = {
+      ["Content-Type"] = "application/json",
+      ["Authorization"] = "Basic " .. _PY.base64_encode(hc3_user .. ":" .. hc3_pass)
+    },
+    body = data
   })
   return res.body,res.code,res.headers
 end
@@ -222,7 +188,7 @@ function __fibaroUseAsyncHandler(_) return true end
 -- @param typ - The expected type string (e.g., "number", "string").
 function __assert_type(param, typ)
   if type(param) ~= typ then
-  error(fmt("Wrong parameter type, %s required. Provided param '%s' is type of %s",typ, tostring(param), type(param)), 3)
+    error(fmt("Wrong parameter type, %s required. Provided param '%s' is type of %s",typ, tostring(param), type(param)), 3)
   end
 end
 
@@ -264,28 +230,28 @@ function fibaro.alert(alertType, ids, notification)
   __assert_type(ids, "table")
   __assert_type(notification, "string")
   local action = ({
-  email = "sendGlobalEmailNotifications",push = "sendGlobalPushNotifications",simplePush = "sendGlobalPushNotifications",
+    email = "sendGlobalEmailNotifications",push = "sendGlobalPushNotifications",simplePush = "sendGlobalPushNotifications",
   })[alertType]
   if action == nil then
-  error("Wrong parameter: '" .. alertType .. "'. Available parameters: email, push, simplePush", 2)
+    error("Wrong parameter: '" .. alertType .. "'. Available parameters: email, push, simplePush", 2)
   end
   for _,id in ipairs(ids) do __assert_type(id, "number") end
   
   if alertType == 'push' then
-  local mobileDevices = __fibaro_get_devices_by_type('iOS_device')
-  assert(type(mobileDevices) == 'table', "Failed to get mobile devices")
-  local usersId = ids
-  ids = {}
-  for _, userId in ipairs(usersId) do
-  for _, device in ipairs(mobileDevices) do
-  if device.properties.lastLoggedUser == userId then
-  table.insert(ids, device.id)
-  end
-  end
-  end
+    local mobileDevices = __fibaro_get_devices_by_type('iOS_device')
+    assert(type(mobileDevices) == 'table', "Failed to get mobile devices")
+    local usersId = ids
+    ids = {}
+    for _, userId in ipairs(usersId) do
+      for _, device in ipairs(mobileDevices) do
+        if device.properties.lastLoggedUser == userId then
+          table.insert(ids, device.id)
+        end
+      end
+    end
   end
   for _, id in ipairs(ids) do
-  fibaro.call(id, 'sendGlobalPushNotifications', notification, "false")
+    fibaro.call(id, 'sendGlobalPushNotifications', notification, "false")
   end
 end
 
@@ -304,13 +270,13 @@ end
 function fibaro.call(deviceId, action, ...)
   __assert_type(action, "string")
   if type(deviceId) == "table" then
-  for _,id in pairs(deviceId) do __assert_type(id, "number") end
-  for _,id in pairs(deviceId) do fibaro.call(id, action, ...) end
+    for _,id in pairs(deviceId) do __assert_type(id, "number") end
+    for _,id in pairs(deviceId) do fibaro.call(id, action, ...) end
   else
-  __assert_type(deviceId, "number")
-  local arg = {...}
-  local arg2 = #arg>0 and arg or nil
-  return api.post("/devices/"..deviceId.."/action/"..action, { args = arg2 })
+    __assert_type(deviceId, "number")
+    local arg = {...}
+    local arg2 = #arg>0 and arg or nil
+    return api.post("/devices/"..deviceId.."/action/"..action, { args = arg2 })
   end
 end
 
@@ -323,13 +289,13 @@ end
 function fibaro.callhc3(deviceId, action, ...)
   __assert_type(action, "string")
   if type(deviceId) == "table" then
-  for _,id in pairs(deviceId) do __assert_type(id, "number") end
-  for _,id in pairs(deviceId) do fibaro.call(id, action, ...) end
+    for _,id in pairs(deviceId) do __assert_type(id, "number") end
+    for _,id in pairs(deviceId) do fibaro.call(id, action, ...) end
   else
-  __assert_type(deviceId, "number")
-  local arg = {...}
-  local arg2 = #arg>0 and arg or nil
-  return api.hc3.post("/devices/"..deviceId.."/action/"..action, { args = arg2 })
+    __assert_type(deviceId, "number")
+    local arg = {...}
+    local arg2 = #arg>0 and arg or nil
+    return api.hc3.post("/devices/"..deviceId.."/action/"..action, { args = arg2 })
   end
 end
 
@@ -433,26 +399,26 @@ end
 -- @return A table of device IDs matching the filter.
 function fibaro.getDevicesID(filter)
   if not (type(filter) == 'table' and next(filter)) then
-  return fibaro.getIds(__fibaro_get_devices())
+    return fibaro.getIds(__fibaro_get_devices())
   end
   
   local args = {}
   for key, val in pairs(filter) do
-  if key == 'properties' and type(val) == 'table' then
-  for n,p in pairs(val) do
-  if p == "nil" then
-  args[#args+1]='property='..tostring(n)
-  else
-  args[#args+1]='property=['..tostring(n)..','..tostring(p)..']'
-  end
-  end
-  elseif key == 'interfaces' and type(val) == 'table' then
-  for _,i in pairs(val) do
-  args[#args+1]='interface='..tostring(i)
-  end
-  else
-  args[#args+1]=tostring(key).."="..tostring(val)
-  end
+    if key == 'properties' and type(val) == 'table' then
+      for n,p in pairs(val) do
+        if p == "nil" then
+          args[#args+1]='property='..tostring(n)
+        else
+          args[#args+1]='property=['..tostring(n)..','..tostring(p)..']'
+        end
+      end
+    elseif key == 'interfaces' and type(val) == 'table' then
+      for _,i in pairs(val) do
+        args[#args+1]='interface='..tostring(i)
+      end
+    else
+      args[#args+1]=tostring(key).."="..tostring(val)
+    end
   end
   local argsStr = table.concat(args,"&")
   return fibaro.getIds(api.get('/devices/?'..argsStr))
@@ -465,7 +431,7 @@ end
 function fibaro.getIds(devices)
   local res = {}
   for _,d in pairs(devices) do
-  if type(d) == 'table' and d.id ~= nil and d.id > 3 then res[#res+1]=d.id end
+    if type(d) == 'table' and d.id ~= nil and d.id > 3 then res[#res+1]=d.id end
   end
   return res
 end
@@ -510,7 +476,7 @@ function fibaro.profile(action, id)
   __assert_type(id, "number")
   __assert_type(action, "string")
   if action ~= "activeProfile" then
-  error("Wrong parameter: " .. action .. ". Available actions: activateProfile", 2)
+    error("Wrong parameter: " .. action .. ". Available actions: activateProfile", 2)
   end
   return api.post("/profiles/activeProfile/"..id,nil)
 end
@@ -528,10 +494,10 @@ function fibaro.setTimeout(timeout, action, errorHandler)
   __assert_type(action, FUNCTION)
   local fun = action
   if errorHandler then
-  fun = function()
-  local stat,err = pcall(action)
-  if not stat then pcall(errorHandler,err) end
-  end
+    fun = function()
+      local stat,err = pcall(action)
+      if not stat then pcall(errorHandler,err) end
+    end
   end
   return setTimeout(fun, timeout)
 end
@@ -574,7 +540,7 @@ function fibaro.isPartitionBreached(partitionId)
   local ids = __fibaro_get_breached_partitions()
   assert(type(ids)=="table")
   for _,id in pairs(ids) do
-  if id == partitionId then return true end
+    if id == partitionId then return true end
   end
 end
 
@@ -582,7 +548,7 @@ function fibaro.getPartitionArmState(partitionId)
   __assert_type(partitionId, "number")
   local partition = __fibaro_get_partition(partitionId)
   if partition ~= nil then
-  return partition.armed and 'armed' or 'disarmed'
+    return partition.armed and 'armed' or 'disarmed'
   end
 end
 
@@ -591,7 +557,7 @@ function fibaro.getHomeArmState()
   local partitions = __fibaro_get_partitions()
   assert(type(partitions)=="table")
   for _,partition in pairs(partitions) do
-  n = n + 1; armed = armed + (partition.armed and 1 or 0)
+    n = n + 1; armed = armed + (partition.armed and 1 or 0)
   end
   if armed == 0 then return 'disarmed'
   elseif armed == n then return 'armed'

@@ -1,0 +1,19 @@
+[project]
+name = "plua"
+version = "1.0.0"
+description = "A Lua interpreter in Python using Lupa library"
+authors = [
+    {name = "PLua Developer", email = "developer@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "lupa>=1.13.0",
+]
+
+[project.scripts]
+plua = "plua:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build" 

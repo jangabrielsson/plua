@@ -13,59 +13,71 @@ import urllib.error
 from urllib.parse import urlparse
 import ssl
 import lupa
+import time
 
 
 # --- Event Loop Manager ---
 class AsyncioLoopManager:
-    """Ensures a running asyncio event loop, even if main thread is blocked"""
+    """Manages asyncio event loop in the main thread"""
 
     def __init__(self):
         self.loop = None
-        self.thread = None
-        # Don't start the loop immediately - only when needed
-
-    def _ensure_loop(self):
-        if self.loop is None or self.loop.is_closed():
-            self.loop = asyncio.new_event_loop()
-            self.thread = threading.Thread(target=self._run_loop, daemon=False)
-            self.thread.start()
-
-    def _run_loop(self):
-        asyncio.set_event_loop(self.loop)
-        try:
-            self.loop.run_forever()
-        except Exception:
-            pass  # Ignore exceptions during shutdown
 
     def get_loop(self):
-        self._ensure_loop()
+        if self.loop is None or self.loop.is_closed():
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
         return self.loop
 
+    def create_task(self, coro):
+        loop = self.get_loop()
+        return loop.create_task(coro)
+
+    def call_soon(self, callback, *args):
+        """Schedule a callback to be called soon"""
+        loop = self.get_loop()
+        loop.call_soon(callback, *args)
+
+    def run_main(self, main_coro):
+        """Run the main coroutine (entry point)"""
+        loop = self.get_loop()
+        try:
+            return loop.run_until_complete(main_coro)
+        finally:
+            self.shutdown()
+
     def shutdown(self):
-        """Clean shutdown of the event loop"""
         if self.loop and not self.loop.is_closed():
             try:
-                # Cancel all pending tasks
+                # Wait a bit for any pending callbacks to complete
+                time.sleep(0.1)
+
                 pending = asyncio.all_tasks(self.loop)
                 for task in pending:
-                    task.cancel()
-
-                # Stop the loop
-                self.loop.call_soon_threadsafe(self.loop.stop)
-
-                # Wait for thread to finish (with timeout)
-                if self.thread and self.thread.is_alive():
-                    self.thread.join(timeout=1.0)
-
-                # Close the loop
+                    if not task.done():
+                        task.cancel()
+                if pending:
+                    try:
+                        # Use gather instead of wait to avoid unawaited coroutine warnings
+                        # Create a list of tasks to wait for
+                        tasks_to_wait = [task for task in pending if not task.done()]
+                        if tasks_to_wait:
+                            # Use gather with return_exceptions=True to avoid unawaited coroutine warnings
+                            self.loop.run_until_complete(
+                                asyncio.gather(*tasks_to_wait, return_exceptions=True)
+                            )
+                    except Exception:
+                        pass
                 self.loop.close()
             except Exception:
-                pass  # Ignore errors during shutdown
+                pass
 
     def stop_loop(self):
         """Stop the event loop gracefully"""
         if self.loop and not self.loop.is_closed():
-            self.loop.call_soon_threadsafe(self.loop.stop)
+            # Don't stop immediately, let the main coroutine complete naturally
+            # The shutdown will be handled by the main coroutine completion
+            pass
 
 
 loop_manager = AsyncioLoopManager()
@@ -94,15 +106,7 @@ class AsyncioNetworkManager:
     def _decrement_operations(self):
         with self.lock:
             self.active_operations -= 1
-        # Only stop the loop if no active operations AND no open connections AND no active callbacks
-        if (
-            self.active_operations <= 0
-            and len(self.tcp_connections) == 0
-            and len(self.udp_transports) == 0
-            and self.active_callbacks <= 0
-        ):
-            # No more active operations, connections, or callbacks, signal shutdown
-            loop_manager.stop_loop()
+        # Don't stop the loop here - let the main coroutine complete naturally
 
     def _increment_callbacks(self):
         """Increment the callback counter when starting an async operation with callback"""
@@ -113,15 +117,7 @@ class AsyncioNetworkManager:
         """Decrement the callback counter when a callback completes"""
         with self.lock:
             self.active_callbacks -= 1
-        # Only stop the loop if no active operations AND no open connections AND no active callbacks
-        if (
-            self.active_operations <= 0
-            and len(self.tcp_connections) == 0
-            and len(self.udp_transports) == 0
-            and self.active_callbacks <= 0
-        ):
-            # No more active operations, connections, or callbacks, signal shutdown
-            loop_manager.stop_loop()
+        # Don't stop the loop here - let the main coroutine complete naturally
 
     def has_active_operations(self):
         """Check if there are any active network operations or callbacks"""
@@ -134,13 +130,7 @@ class AsyncioNetworkManager:
                 or len(self.udp_transports) > 0
                 or self.active_callbacks > 0
             )
-            
-            # If there are no actual operations but the loop is running, 
-            # we should stop it to allow clean exit
-            if not has_actual_operations and loop_manager.loop and not loop_manager.loop.is_closed():
-                # No actual operations, stop the loop
-                loop_manager.stop_loop()
-            
+
             return has_actual_operations
 
     def force_cleanup(self):
@@ -194,7 +184,7 @@ class AsyncioNetworkManager:
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not writer:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, None, f"TCP connection {conn_id} not found"
                 )
                 return
@@ -202,22 +192,25 @@ class AsyncioNetworkManager:
                 data_bytes = data.encode("utf-8")
             else:
                 data_bytes = bytes(data)
-            writer.write(data_bytes)
-            await writer.drain()
-            loop_manager.get_loop().call_soon_threadsafe(
+
+            # Use socket.send() instead of writer.write() since we're using socket objects
+            sock = writer  # writer is actually a socket object
+            sock.send(data_bytes)
+
+            loop_manager.call_soon(
                 callback, True, len(data_bytes), f"Sent {len(data_bytes)} bytes"
             )
         except Exception as e:
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 callback, False, None, f"TCP write error: {str(e)}"
             )
         finally:
             self._decrement_operations()
 
     def tcp_write(self, conn_id, data, callback):
-        # Use create_task to properly handle the coroutine
-        task = asyncio.run_coroutine_threadsafe(
-            self.tcp_write_async(conn_id, data, callback), loop_manager.get_loop()
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(
+            self.tcp_write_async(conn_id, data, callback)
         )
         task.add_done_callback(lambda t: None)
 
@@ -226,32 +219,36 @@ class AsyncioNetworkManager:
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, None, f"TCP connection {conn_id} not found"
                 )
                 return
-            data = await reader.read(max_bytes)
+
+            # Use socket.recv() instead of reader.read() since we're using socket objects
+            sock = reader  # reader is actually a socket object
+            data = sock.recv(max_bytes)
+
             if data:
                 data_str = data.decode("utf-8", errors="ignore")
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, True, data_str, f"Received {len(data)} bytes"
                 )
             else:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, None, "Connection closed by peer"
                 )
                 self.tcp_connections.pop(conn_id, None)
         except Exception as e:
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 callback, False, None, f"TCP read error: {str(e)}"
             )
         finally:
             self._decrement_operations()
 
     def tcp_read(self, conn_id, max_bytes, callback):
-        # Use create_task to properly handle the coroutine
-        task = asyncio.run_coroutine_threadsafe(
-            self.tcp_read_async(conn_id, max_bytes, callback), loop_manager.get_loop()
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(
+            self.tcp_read_async(conn_id, max_bytes, callback)
         )
         task.add_done_callback(lambda t: None)
 
@@ -260,26 +257,27 @@ class AsyncioNetworkManager:
         try:
             reader, writer = self.tcp_connections.pop(conn_id, (None, None))
             if writer:
-                writer.close()
-                await writer.wait_closed()
-                loop_manager.get_loop().call_soon_threadsafe(
+                # Use socket.close() instead of writer.close() since we're using socket objects
+                sock = writer  # writer is actually a socket object
+                sock.close()
+                loop_manager.call_soon(
                     callback, True, f"Connection {conn_id} closed"
                 )
             else:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, f"Connection {conn_id} not found"
                 )
         except Exception as e:
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 callback, False, f"Close error: {str(e)}"
             )
         finally:
             self._decrement_operations()
 
     def tcp_close(self, conn_id, callback):
-        # Use create_task to properly handle the coroutine
-        task = asyncio.run_coroutine_threadsafe(
-            self.tcp_close_async(conn_id, callback), loop_manager.get_loop()
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(
+            self.tcp_close_async(conn_id, callback)
         )
         task.add_done_callback(lambda t: None)
 
@@ -548,7 +546,7 @@ class AsyncioNetworkManager:
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader or not writer:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, f"TCP connection {conn_id} not found"
                 )
                 return
@@ -558,26 +556,26 @@ class AsyncioNetworkManager:
             sock.settimeout(timeout_seconds)
 
             if timeout_seconds is None:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback,
                     True,
                     f"Socket set to blocking mode for connection {conn_id}",
                 )
             elif timeout_seconds == 0:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback,
                     True,
                     f"Socket set to non-blocking mode for connection {conn_id}",
                 )
             else:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback,
                     True,
                     f"Timeout set to {timeout_seconds} seconds for connection {conn_id}",
                 )
 
         except Exception as e:
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 callback, False, f"TCP timeout set error: {str(e)}"
             )
         finally:
@@ -585,9 +583,8 @@ class AsyncioNetworkManager:
 
     def tcp_set_timeout(self, conn_id, timeout_seconds, callback):
         """Asynchronous TCP timeout setter"""
-        task = asyncio.run_coroutine_threadsafe(
-            self.tcp_set_timeout_async(conn_id, timeout_seconds, callback),
-            loop_manager.get_loop(),
+        task = loop_manager.create_task(
+            self.tcp_set_timeout_async(conn_id, timeout_seconds, callback)
         )
         task.add_done_callback(lambda t: None)
 
@@ -596,7 +593,7 @@ class AsyncioNetworkManager:
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader or not writer:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, None, f"TCP connection {conn_id} not found"
                 )
                 return
@@ -606,21 +603,21 @@ class AsyncioNetworkManager:
             timeout = sock.gettimeout()
 
             if timeout is None:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback,
                     True,
                     timeout,
                     f"Socket is in blocking mode for connection {conn_id}",
                 )
             elif timeout == 0:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback,
                     True,
                     timeout,
                     f"Socket is in non-blocking mode for connection {conn_id}",
                 )
             else:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback,
                     True,
                     timeout,
@@ -628,7 +625,7 @@ class AsyncioNetworkManager:
                 )
 
         except Exception as e:
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 callback, False, None, f"TCP timeout get error: {str(e)}"
             )
         finally:
@@ -636,8 +633,8 @@ class AsyncioNetworkManager:
 
     def tcp_get_timeout(self, conn_id, callback):
         """Asynchronous TCP timeout getter"""
-        task = asyncio.run_coroutine_threadsafe(
-            self.tcp_get_timeout_async(conn_id, callback), loop_manager.get_loop()
+        task = loop_manager.create_task(
+            self.tcp_get_timeout_async(conn_id, callback)
         )
         task.add_done_callback(lambda t: None)
 
@@ -651,7 +648,7 @@ class AsyncioNetworkManager:
 
         def connection_made(self, transport):
             self.transport = transport
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 self.callback,
                 True,
                 self.conn_id,
@@ -663,7 +660,7 @@ class AsyncioNetworkManager:
             pass
 
         def error_received(self, exc):
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 self.callback, False, self.conn_id, f"UDP error: {exc}"
             )
 
@@ -684,16 +681,14 @@ class AsyncioNetworkManager:
                 )
                 self.udp_transports[conn_id] = transport
             except Exception as e:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, None, f"UDP connect error: {str(e)}"
                 )
             finally:
                 self._decrement_operations()
 
-        # Use create_task to properly handle the coroutine
-        task = asyncio.run_coroutine_threadsafe(
-            udp_connect_async(), loop_manager.get_loop()
-        )
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(udp_connect_async())
         task.add_done_callback(lambda t: None)
 
     def udp_write(self, conn_id, data, host, port, callback):
@@ -704,7 +699,7 @@ class AsyncioNetworkManager:
             try:
                 transport = self.udp_transports.get(conn_id)
                 if not transport:
-                    loop_manager.get_loop().call_soon_threadsafe(
+                    loop_manager.call_soon(
                         callback, False, None, f"UDP connection {conn_id} not found"
                     )
                     return
@@ -713,23 +708,21 @@ class AsyncioNetworkManager:
                 else:
                     data_bytes = bytes(data)
                 transport.sendto(data_bytes, (host, port))
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback,
                     True,
                     len(data_bytes),
                     f"Sent {len(data_bytes)} bytes to {host}:{port}",
                 )
             except Exception as e:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, None, f"UDP write error: {str(e)}"
                 )
             finally:
                 self._decrement_operations()
 
-        # Use create_task to properly handle the coroutine
-        task = asyncio.run_coroutine_threadsafe(
-            udp_write_async(), loop_manager.get_loop()
-        )
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(udp_write_async())
         task.add_done_callback(lambda t: None)
 
     def udp_read(self, conn_id, max_bytes, callback):
@@ -740,7 +733,7 @@ class AsyncioNetworkManager:
             try:
                 transport = self.udp_transports.get(conn_id)
                 if not transport:
-                    loop_manager.get_loop().call_soon_threadsafe(
+                    loop_manager.call_soon(
                         callback, False, None, f"UDP connection {conn_id} not found"
                     )
                     return
@@ -767,14 +760,14 @@ class AsyncioNetworkManager:
                         future, timeout=5.0
                     )  # Reduced timeout
                     data_str = data.decode("utf-8", errors="ignore")
-                    loop_manager.get_loop().call_soon_threadsafe(
+                    loop_manager.call_soon(
                         callback,
                         True,
                         data_str,
                         f"Received {len(data)} bytes from {addr[0]}:{addr[1]}",
                     )
                 except asyncio.TimeoutError:
-                    loop_manager.get_loop().call_soon_threadsafe(
+                    loop_manager.call_soon(
                         callback, False, None, "UDP read timeout"
                     )
                 finally:
@@ -783,16 +776,14 @@ class AsyncioNetworkManager:
                         transport._protocol.datagram_received = original_received
 
             except Exception as e:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, None, f"UDP read error: {str(e)}"
                 )
             finally:
                 self._decrement_operations()
 
-        # Use create_task to properly handle the coroutine
-        task = asyncio.run_coroutine_threadsafe(
-            udp_read_async(), loop_manager.get_loop()
-        )
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(udp_read_async())
         task.add_done_callback(lambda t: None)
 
     def udp_close(self, conn_id, callback):
@@ -804,24 +795,22 @@ class AsyncioNetworkManager:
                 transport = self.udp_transports.pop(conn_id, None)
                 if transport:
                     transport.close()
-                    loop_manager.get_loop().call_soon_threadsafe(
+                    loop_manager.call_soon(
                         callback, True, f"Connection {conn_id} closed"
                     )
                 else:
-                    loop_manager.get_loop().call_soon_threadsafe(
+                    loop_manager.call_soon(
                         callback, False, f"Connection {conn_id} not found"
                     )
             except Exception as e:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, f"Close error: {str(e)}"
                 )
             finally:
                 self._decrement_operations()
 
-        # Use create_task to properly handle the coroutine
-        task = asyncio.run_coroutine_threadsafe(
-            udp_close_async(), loop_manager.get_loop()
-        )
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(udp_close_async())
         task.add_done_callback(lambda t: None)
 
     async def tcp_read_until_async(self, conn_id, delimiter, max_bytes, callback):
@@ -829,7 +818,7 @@ class AsyncioNetworkManager:
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader:
-                loop_manager.get_loop().call_soon_threadsafe(
+                loop_manager.call_soon(
                     callback, False, None, f"TCP connection {conn_id} not found"
                 )
                 return
@@ -846,11 +835,11 @@ class AsyncioNetworkManager:
                     if data_parts:
                         data = b"".join(data_parts)
                         data_str = data.decode("utf-8", errors="ignore")
-                        loop_manager.get_loop().call_soon_threadsafe(
+                        loop_manager.call_soon(
                             callback, True, data_str, f"Received {len(data)} bytes (connection closed)"
                         )
                     else:
-                        loop_manager.get_loop().call_soon_threadsafe(
+                        loop_manager.call_soon(
                             callback, False, None, "Connection closed by peer"
                         )
                     return
@@ -866,7 +855,7 @@ class AsyncioNetworkManager:
                         # Found delimiter, return data including delimiter
                         data = b"".join(data_parts)
                         data_str = data.decode("utf-8", errors="ignore")
-                        loop_manager.get_loop().call_soon_threadsafe(
+                        loop_manager.call_soon(
                             callback, True, data_str, f"Received {len(data)} bytes (delimiter found)"
                         )
                         return
@@ -874,21 +863,21 @@ class AsyncioNetworkManager:
             # Max bytes reached without finding delimiter
             data = b"".join(data_parts)
             data_str = data.decode("utf-8", errors="ignore")
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 callback, True, data_str, f"Received {len(data)} bytes (max bytes reached)"
             )
 
         except Exception as e:
-            loop_manager.get_loop().call_soon_threadsafe(
+            loop_manager.call_soon(
                 callback, False, None, f"TCP read until error: {str(e)}"
             )
         finally:
             self._decrement_operations()
 
     def tcp_read_until(self, conn_id, delimiter, max_bytes, callback):
-        # Use create_task to properly handle the coroutine
-        task = asyncio.run_coroutine_threadsafe(
-            self.tcp_read_until_async(conn_id, delimiter, max_bytes, callback), loop_manager.get_loop()
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(
+            self.tcp_read_until_async(conn_id, delimiter, max_bytes, callback)
         )
         task.add_done_callback(lambda t: None)
 
@@ -1460,7 +1449,6 @@ end
 
         # Clean up globals
         for key in [
-            "_http_callback",
             "_http_response_code",
             "_http_response_body",
             "_http_response_url",

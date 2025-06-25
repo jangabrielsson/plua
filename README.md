@@ -19,6 +19,7 @@ A powerful Lua interpreter implemented in Python using the Lupa library. PLua pr
 - **Version Management**: Single source of truth versioning from pyproject.toml
 - **Colorized Output**: ANSI color support for enhanced terminal experience
 - **Fibaro HomeCenter 3 Support**: Complete Lua API compatibility for Fibaro HomeCenter 3 development and testing
+- **Web Server**: Independent HTTP server for receiving callbacks and serving status pages
 
 ## Requirements
 
@@ -752,3 +753,57 @@ plua --debugger -e "require('lua.fibaro')" script.lua
 ```
 
 This allows remote debugging of QuickApps using VS Code or other IDEs with MobDebug support.
+
+### Web Server
+
+PLua includes a web server that runs in a separate process, allowing it to receive HTTP callbacks even when Lua execution is paused by the debugger. The server communicates with Lua via a message queue system.
+
+**Web Server Functions:**
+- `start_web_server(port, host)` - Start web server on specified port and host
+- `stop_web_server()` - Stop the web server
+- `is_web_server_running()` - Check if server is running
+- `get_web_server_status()` - Get server status information
+- `get_web_server_message()` - Get next HTTP request (non-blocking)
+- `register_web_callback(event_type, callback)` - Register Lua callback for HTTP events
+- `unregister_web_callback(event_type, callback)` - Unregister callback
+- `start_web_message_processing()` - Start automatic message processing
+- `stop_web_message_processing()` - Stop message processing
+
+**Usage Examples:**
+
+```lua
+-- Start web server
+local success, message = _PY.start_web_server(8080, "0.0.0.0")
+print("Server started:", success, message)
+
+-- Register callback for HTTP requests
+local function handle_request(request)
+    print("Received", request.method, "request to", request.path)
+    if request.body then
+        print("Body:", _PY.to_json(request.body))
+    end
+end
+
+_PY.register_web_callback("http_request", handle_request)
+
+-- Start message processing
+_PY.start_web_message_processing()
+
+-- Check server status
+local status = _PY.get_web_server_status()
+print("Server running:", status.running)
+print("Port:", status.port)
+```
+
+**Features:**
+- **Independent Process**: Server runs separately from Lua execution
+- **JSON Communication**: All messages use JSON format for simplicity
+- **Callback System**: Register Lua functions to handle HTTP requests
+- **Multiple HTTP Methods**: Supports GET, POST, PUT, DELETE
+- **Query Parameters**: Automatically parses URL query parameters
+- **JSON Body Parsing**: Automatically parses JSON request bodies
+- **Status Endpoints**: Built-in status and health check endpoints
+
+**Demo Scripts:**
+- `examples/web_server_demo.lua` - Basic web server usage
+- `examples/web_server_status_demo.lua` - Advanced status page example

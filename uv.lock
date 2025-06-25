@@ -150,6 +150,7 @@ dev = [
 dev = [
     { name = "pyinstaller" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
 ]
 
 [package.metadata]
@@ -165,6 +166,7 @@ provides-extras = ["dev"]
 dev = [
     { name = "pyinstaller", specifier = ">=6.14.1" },
     { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-asyncio", specifier = ">=1.0.0" },
 ]
 
 [[package]]

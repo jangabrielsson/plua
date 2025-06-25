@@ -9,7 +9,19 @@ local fmt = string.format
 json = require("plua.json")
 class = require("plua.class")
 net = require("plua.net")
-QuickApp = require("plua.quickapp")
+require("plua.quickapp")
+
+setTimeout = _PY.setTimeout
+clearTimeout = _PY.clearTimeout
+setInterval = _PY.setInterval
+clearInterval = _PY.clearInterval
+
+setTimeout(function()
+  if QuickApp and QuickApp.onInit then
+    print("QuickApp detected. Creating QuickApp instance.")
+    quickApp = QuickApp({id=888,type='com.fibaro.binarySwitch',name='MyQA'})
+  end
+end, 0)
 
 local version = _PLUA_VERSION or "unknown"
 

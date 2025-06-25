@@ -11,11 +11,13 @@ import json
 import os
 import base64
 import re
+import asyncio
+from extensions.network_extensions import loop_manager
 
 
 # Timer management class
 class TimerManager:
-    """Manages setTimeout and clearTimeout functionality"""
+    """Manages setTimeout and clearTimeout functionality using asyncio Tasks"""
 
     def __init__(self):
         self.timers = {}
@@ -23,13 +25,19 @@ class TimerManager:
         self.lock = threading.Lock()
 
     def setTimeout(self, func, ms):
-        """Schedule a function to run after ms milliseconds"""
+        """Schedule a function to run after ms milliseconds using asyncio"""
         with self.lock:
             timer_id = self.next_id
             self.next_id += 1
 
-        def wrapped_func():
+        async def timer_coroutine():
             try:
+                # Use a different approach for sleep
+                start_time = time.time()
+                while time.time() - start_time < ms / 1000.0:
+                    await asyncio.sleep(0.01)  # Sleep in small chunks
+
+                # Execute the callback directly since we're in the main thread
                 func()
             except Exception as e:
                 print(f"Timer error: {e}", file=sys.stderr)
@@ -38,25 +46,63 @@ class TimerManager:
                     if timer_id in self.timers:
                         del self.timers[timer_id]
 
-        timer = threading.Timer(ms / 1000.0, wrapped_func)
-        self.timers[timer_id] = timer
-        timer.start()
-
+        # Check if we're in an event loop context
+        try:
+            asyncio.get_running_loop()
+            # We're in an async context, use asyncio
+            task = loop_manager.create_task(timer_coroutine())
+            self.timers[timer_id] = task
+        except RuntimeError:
+            # No event loop running, use threading for short timers
+            if ms < 1000:  # Only use threading for timers under 1 second
+                def thread_timer():
+                    time.sleep(ms / 1000.0)
+                    try:
+                        func()
+                    except Exception as e:
+                        print(f"Timer error: {e}", file=sys.stderr)
+                    finally:
+                        with self.lock:
+                            if timer_id in self.timers:
+                                del self.timers[timer_id]
+                
+                thread = threading.Thread(target=thread_timer, daemon=True)
+                thread.start()
+                self.timers[timer_id] = thread
+            else:
+                # For longer timers, still try to use asyncio
+                task = loop_manager.create_task(timer_coroutine())
+                self.timers[timer_id] = task
+        
         return timer_id
 
     def clearTimeout(self, timer_id):
         """Cancel a timer by its ID"""
         with self.lock:
             if timer_id in self.timers:
-                timer = self.timers[timer_id]
-                timer.cancel()
+                timer_obj = self.timers[timer_id]
+                if hasattr(timer_obj, 'cancel'):  # asyncio.Task
+                    timer_obj.cancel()
+                elif hasattr(timer_obj, 'join'):  # threading.Thread
+                    # Threads can't be cancelled, but we can mark them for removal
+                    pass
                 del self.timers[timer_id]
                 return True
         return False
 
     def has_active_timers(self):
-        """Check if there are any active timers"""
+        """Check if there are any active timers (tasks that are not done)"""
         with self.lock:
+            # Remove any finished tasks or threads
+            to_remove = []
+            for tid, timer_obj in self.timers.items():
+                if hasattr(timer_obj, 'done') and timer_obj.done():  # asyncio.Task
+                    to_remove.append(tid)
+                elif hasattr(timer_obj, 'is_alive') and not timer_obj.is_alive():  # threading.Thread
+                    to_remove.append(tid)
+            
+            for tid in to_remove:
+                del self.timers[tid]
             return len(self.timers) > 0
 
 
@@ -160,13 +206,18 @@ def _to_lua_table(pylist):
 
 
 # JSON processing functions
-@registry.register(description="Parse JSON string to table", category="json")
-def parse_json(json_string):
+@registry.register(description="Parse JSON string to table", category="json", inject_runtime=True)
+def parse_json(lua_runtime, json_string):
     """Parse JSON string and return as Lua table"""
     try:
-        return json.loads(json_string)
+        python_obj = json.loads(json_string)
+        # Use Lupa's table conversion
+        return lua_runtime.table_from(python_obj)
     except json.JSONDecodeError as e:
         print(f"JSON parse error: {e}", file=sys.stderr)
+        return None
+    except Exception as e:
+        print(f"JSON conversion error: {e}", file=sys.stderr)
         return None
 
 
@@ -408,3 +459,126 @@ def base64_decode(encoded_data):
     except Exception as e:
         print(f"Base64 decoding error: {e}", file=sys.stderr)
         return None
+
+
+# Interval management class
+class IntervalManager:
+    """Manages setInterval and clearInterval functionality"""
+    def __init__(self):
+        self.intervals = {}
+        self.next_id = 1
+        self.lock = threading.Lock()
+
+    def setInterval(self, func, ms):
+        """Schedule a function to run every ms milliseconds"""
+        with self.lock:
+            interval_id = self.next_id
+            self.next_id += 1
+
+        async def interval_coroutine():
+            try:
+                while True:
+                    # Use the same approach for sleep as timers
+                    start_time = time.time()
+                    while time.time() - start_time < ms / 1000.0:
+                        await asyncio.sleep(0.01)  # Sleep in small chunks
+
+                    # Execute the callback directly since we're in the main thread
+                    func()
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                print(f"Interval error: {e}", file=sys.stderr)
+            finally:
+                with self.lock:
+                    if interval_id in self.intervals:
+                        del self.intervals[interval_id]
+
+        task = loop_manager.create_task(interval_coroutine())
+        self.intervals[interval_id] = task
+        return interval_id
+
+    def clearInterval(self, interval_id):
+        """Cancel an interval by its ID"""
+        with self.lock:
+            if interval_id in self.intervals:
+                task = self.intervals[interval_id]
+                task.cancel()
+                del self.intervals[interval_id]
+                return True
+        return False
+
+    def has_active_intervals(self):
+        """Check if there are any active intervals"""
+        with self.lock:
+            to_remove = [iid for iid, t in self.intervals.items() if t.done()]
+            for iid in to_remove:
+                del self.intervals[iid]
+            return len(self.intervals) > 0
+
+    def force_cleanup(self):
+        """Force cleanup of all intervals"""
+        with self.lock:
+            for iid, task in list(self.intervals.items()):
+                task.cancel()
+            self.intervals.clear()
+
+
+# Global interval manager instance
+interval_manager = IntervalManager()
+
+
+# Interval Extensions
+@registry.register(description="Schedule a function to run repeatedly every specified milliseconds", category="timers")
+def setInterval(func, ms):
+    """Schedule a function to run every ms milliseconds"""
+    return interval_manager.setInterval(func, ms)
+
+
+@registry.register(description="Cancel an interval using its reference ID", category="timers")
+def clearInterval(interval_id):
+    """Cancel an interval by its ID"""
+    return interval_manager.clearInterval(interval_id)
+
+
+@registry.register(description="Check if there are active intervals", category="timers")
+def has_active_intervals():
+    """Check if there are any active intervals"""
+    return interval_manager.has_active_intervals()
+
+
+@registry.register(description="Get event loop debug info", category="debug")
+def _get_event_loop_info():
+    """Get debug information about the event loop"""
+    try:
+        from extensions.network_extensions import loop_manager
+        loop = loop_manager.get_loop()
+        if loop:
+            tasks = asyncio.all_tasks(loop)
+            return {
+                "loop_running": loop.is_running(),
+                "loop_closed": loop.is_closed(),
+                "pending_tasks": len(tasks),
+                "task_names": [task.get_name() for task in tasks]
+            }
+        else:
+            return {"error": "No event loop available"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@registry.register(description="Yield control to the event loop", category="async")
+async def yield_to_event_loop():
+    """Yield control back to the Python event loop to allow timers and async operations to fire"""
+    await asyncio.sleep(0)
+
+
+@registry.register(description="Yield control to the event loop (sync wrapper)", category="async")
+def yield_to_loop():
+    """Synchronous wrapper that allows the event loop to process pending tasks"""
+    try:
+        import time
+        # Simple sleep to allow event loop to process pending tasks
+        time.sleep(0.01)  # 10ms sleep
+    except Exception as e:
+        print(f"Yield error: {e}", file=sys.stderr)

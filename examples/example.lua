@@ -3,6 +3,11 @@ if not fibaro then
   require('fibaro')
 end
 
+local b = json.decode('{}')
+print(type(b))
+b = json.decode("[]")
+print(type(b))
+
 fibaro.debug("EXAMPLE", "Hello", "World")
 fibaro.trace("EXAMPLE", "Hello", "World")
 fibaro.warning("EXAMPLE", "Hello", "World")

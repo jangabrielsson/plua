@@ -1,7 +1,5 @@
 _PLUA_VERSION = "1.0.0"
-local mobdebug = require("mobdebug")
-mobdebug.start('0.0.0.0', 8818)
---mobdebug.logging(true)
+-- MobDebug startup moved to command-line flag --debugger
 
 ---@table _PY
 _PY = _PY or {}
@@ -16,8 +14,6 @@ QuickApp = require("plua.quickapp")
 _print("PLua version: " .. _PLUA_VERSION)
 _print("Lua version: " .. _VERSION)
 _print("Python version: " .. _PY.get_python_version())
-
-
 
 local function logStr(...) 
   local b = {} 

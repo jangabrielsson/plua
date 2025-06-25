@@ -63,3 +63,8 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "raise ImportError",
 ] 
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]

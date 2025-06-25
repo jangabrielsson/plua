@@ -126,12 +126,22 @@ class AsyncioNetworkManager:
     def has_active_operations(self):
         """Check if there are any active network operations or callbacks"""
         with self.lock:
-            return (
+            # Only consider it active if there are actual operations, connections, or callbacks
+            # Don't count just the event loop being running as an active operation
+            has_actual_operations = (
                 self.active_operations > 0
                 or len(self.tcp_connections) > 0
                 or len(self.udp_transports) > 0
                 or self.active_callbacks > 0
             )
+            
+            # If there are no actual operations but the loop is running, 
+            # we should stop it to allow clean exit
+            if not has_actual_operations and loop_manager.loop and not loop_manager.loop.is_closed():
+                # No actual operations, stop the loop
+                loop_manager.stop_loop()
+            
+            return has_actual_operations
 
     def force_cleanup(self):
         """Force cleanup of all operations and connections"""

@@ -18,8 +18,9 @@ import extensions.network_extensions  # noqa: F401
 
 class PLuaInterpreter:
     """Main Lua interpreter class"""
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, debugger_enabled=False):
         self.debug = debug
+        self.debugger_enabled = debugger_enabled
         self.lua_runtime = LuaRuntime(unpack_returned_tuples=True)
         self.setup_lua_environment()
 
@@ -160,6 +161,50 @@ func()
         from extensions.core import timer_manager
         from extensions.network_extensions import network_manager
 
+        # Check if debugger was enabled via command line flag
+        if self.debugger_enabled:
+            return
+
+        # Check if MobDebug is active by checking if port 8818 is in use
+        try:
+            import socket
+            test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            test_socket.settimeout(0.1)
+            # Check the debugger port if enabled, otherwise check default port 8818
+            check_port = self.debugger_enabled if self.debugger_enabled else 8818
+            result = test_socket.connect_ex(('localhost', check_port))
+            test_socket.close()
+            
+            if result == 0:
+                # Port is in use, likely MobDebug server
+                print(f"MobDebug server detected on port {check_port} - skipping network operation wait", file=sys.stderr)
+                return
+        except Exception:
+            pass  # If we can't check, continue with normal behavior
+
+        # Check if fibaro module is loaded (which includes MobDebug)
+        try:
+            fibaro_loaded = self.lua_runtime.execute("return fibaro ~= nil")
+            if fibaro_loaded:
+                print("Fibaro module detected - skipping network operation wait", file=sys.stderr)
+                return
+        except Exception:
+            pass  # If we can't check, continue with normal behavior
+
+        # Debug: Check what's causing the network operations
+        if self.debug:
+            has_timers = timer_manager.has_active_timers()
+            has_network = network_manager.has_active_operations()
+            print(f"DEBUG: Active timers: {has_timers}", file=sys.stderr)
+            print(f"DEBUG: Active network operations: {has_network}", file=sys.stderr)
+            
+            # Check network manager details
+            with network_manager.lock:
+                print(f"DEBUG: active_operations: {network_manager.active_operations}", file=sys.stderr)
+                print(f"DEBUG: active_callbacks: {network_manager.active_callbacks}", file=sys.stderr)
+                print(f"DEBUG: tcp_connections: {len(network_manager.tcp_connections)}", file=sys.stderr)
+                print(f"DEBUG: udp_transports: {len(network_manager.udp_transports)}", file=sys.stderr)
+
         # Wait for operations to complete (with timeout)
         timeout = 60  # 60 second timeout for complex operations
         start_time = time.time()
@@ -242,6 +287,10 @@ Examples:
   plua -e "require('debugger')" -e "debugger.break()" script.lua  # Debugger mode: execute code then file
   plua -d script.lua                                # Run with debug output
   plua -d -e "print('debug mode')" script.lua      # Debug mode with -e commands
+  plua --debugger script.lua                        # Run with MobDebug server on default port 8818
+  plua --debugger --debugger-port 8820 script.lua   # Run with MobDebug server on port 8820
+  plua --debugger -e "require('lua.fibaro')" script.lua  # Run with debugger and fibaro module
+  plua --debugger --debugger-port 8820 -e "require('lua.fibaro')" script.lua  # Run with debugger on port 8820 and fibaro module
   """
     )
 
@@ -254,11 +303,31 @@ Examples:
                         help='Load library before executing script (can be used multiple times)')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Enable debug output')
+    parser.add_argument('--debugger', action='store_true',
+                        help='Start MobDebug server for remote debugging on default port 8818')
+    parser.add_argument('--debugger-port', type=int, default=8818, metavar='PORT',
+                        help='Port for MobDebug server (default: 8818)')
     parser.add_argument('-v', '--version', action='version', version='PLua 1.0.0')
 
     args = parser.parse_args()
 
-    interpreter = PLuaInterpreter(debug=args.debug)
+    interpreter = PLuaInterpreter(debug=args.debug, debugger_enabled=args.debugger_port if args.debugger else False)
+
+    # Start MobDebug if requested
+    if args.debugger:
+        debugger_port = args.debugger_port
+        print(f"Starting MobDebug server on 0.0.0.0:{debugger_port}", file=sys.stderr)
+        try:
+            # Load and start MobDebug
+            mobdebug_code = f"""
+local mobdebug = require("mobdebug")
+mobdebug.start('0.0.0.0', {debugger_port})
+print("MobDebug server started on 0.0.0.0:{debugger_port}")
+"""
+            interpreter.execute_code(mobdebug_code)
+        except Exception as e:
+            print(f"Failed to start MobDebug: {e}", file=sys.stderr)
+            sys.exit(1)
 
     # Load libraries specified with -l flags
     if args.libraries:

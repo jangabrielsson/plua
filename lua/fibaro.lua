@@ -93,7 +93,7 @@ local hc3_pass = os.getenv("HC3_PASSWORD")
 local function hc3_sync(method, path, data)
   local url = hc3_url .. "api" .. path
   if data~=nil then data = json.encode(data) end
-  print("API: " .. url)
+  --print("API: " .. url)
   local res = _PY.http_request_sync({
     url = url,
     method = method,
@@ -103,7 +103,9 @@ local function hc3_sync(method, path, data)
     },
     body = data
   })
-  return res.body,res.code,res.headers
+  local stat,r = pcall(json.decode,res.body)
+  if not stat then r = res.body end
+  return r,res.code,res.headers
 end
 
 api = {}

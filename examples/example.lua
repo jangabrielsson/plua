@@ -25,7 +25,7 @@ net.HTTPClient():request("https://www.google.com", {
   end
 })
 
-print(api.get("/devices?name=test"))
+print(json.encodeFormated((api.get("/devices?name=test"))))
 
 for i=1,10 do
   print(i)

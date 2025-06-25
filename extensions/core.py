@@ -202,6 +202,79 @@ def to_json(data):
         return None
 
 
+@registry.register(description="Pretty print a Lua table by converting to JSON", category="json")
+def pretty_print(data, indent=2):
+    """Pretty print a Lua table by converting to JSON with indentation"""
+    try:
+        # Convert Lua table to Python dict/list if needed
+        if hasattr(data, 'values'):  # Lua table
+            keys = list(data.keys())
+            if keys and all(isinstance(k, (int, float)) for k in keys):
+                sorted_keys = sorted(keys)
+                if sorted_keys == list(range(1, len(sorted_keys) + 1)):
+                    python_list = []
+                    for i in range(1, len(sorted_keys) + 1):
+                        value = data[i]
+                        if hasattr(value, 'values'):
+                            # Recursively convert nested Lua tables
+                            python_list.append(_convert_lua_to_python(value))
+                        else:
+                            python_list.append(value)
+                    return json.dumps(python_list, indent=indent)
+            python_dict = {}
+            for key, value in data.items():
+                if hasattr(value, 'values'):
+                    # Recursively convert nested Lua tables
+                    python_dict[key] = _convert_lua_to_python(value)
+                else:
+                    python_dict[key] = value
+            return json.dumps(python_dict, indent=indent)
+        else:
+            return json.dumps(data, indent=indent)
+    except Exception as e:
+        print(f"Pretty print error: {e}", file=sys.stderr)
+        return None
+
+
+def _convert_lua_to_python(lua_obj):
+    """Convert Lua object to Python object recursively"""
+    if hasattr(lua_obj, 'values'):  # Lua table
+        keys = list(lua_obj.keys())
+        if keys and all(isinstance(k, (int, float)) for k in keys):
+            sorted_keys = sorted(keys)
+            if sorted_keys == list(range(1, len(sorted_keys) + 1)):
+                # Convert to Python list
+                python_list = []
+                for i in range(1, len(sorted_keys) + 1):
+                    value = lua_obj[i]
+                    python_list.append(_convert_lua_to_python(value))
+                return python_list
+        # Convert to Python dict
+        python_dict = {}
+        for key, value in lua_obj.items():
+            python_dict[key] = _convert_lua_to_python(value)
+        return python_dict
+    else:
+        # Return as-is for primitive types
+        return lua_obj
+
+
+@registry.register(description="Print a Lua table in a pretty format", category="json")
+def print_table(data, indent=2):
+    """Print a Lua table in a pretty format to stdout"""
+    try:
+        pretty_json = pretty_print(data, indent)
+        if pretty_json is not None:
+            print(pretty_json)
+            return True
+        else:
+            print("Error: Could not convert table to JSON", file=sys.stderr)
+            return False
+    except Exception as e:
+        print(f"Print table error: {e}", file=sys.stderr)
+        return False
+
+
 # File system functions
 @registry.register(description="Check if file exists", category="filesystem")
 def file_exists(filename):

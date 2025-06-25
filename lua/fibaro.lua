@@ -12,9 +12,6 @@ net = require("plua.net")
 QuickApp = require("plua.quickapp")
 
 local version = _PLUA_VERSION or "unknown"
--- _print("PLua version: " .. version)
--- _print("Lua version: " .. _VERSION)
--- _print("Python version: " .. (_PY and _PY.get_python_version and _PY.get_python_version() or "unknown"))
 
 local function logStr(...) 
   local b = {} 

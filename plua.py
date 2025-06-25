@@ -17,6 +17,18 @@ import extensions.core  # noqa: F401
 import extensions.network_extensions  # noqa: F401
 
 
+# ANSI color codes for terminal output
+class Colors:
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    CYAN = '\033[96m'
+    MAGENTA = '\033[95m'
+    WHITE = '\033[97m'
+
+
 class PLuaInterpreter:
     """Main Lua interpreter class"""
     def __init__(self, debug=False, debugger_enabled=False):
@@ -25,9 +37,9 @@ class PLuaInterpreter:
         self.lua_runtime = LuaRuntime(unpack_returned_tuples=True)
         self.setup_lua_environment()
         # Print greeting with versions
-        print(f"PLua version: {PLUA_VERSION}")
-        print(f"Python version: {sys.version.split()[0]}")
-        print(f"Lua version: {self.lua_runtime.globals()._VERSION}")
+        print(f"{Colors.BOLD}{Colors.CYAN}PLua{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{PLUA_VERSION}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.GREEN}Python{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{sys.version.split()[0]}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.MAGENTA}Lua{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{self.lua_runtime.globals()._VERSION}{Colors.RESET}")
         sys.stdout.flush()  # Ensure greeting appears before any Lua code runs
 
     def debug_print(self, message):

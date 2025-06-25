@@ -1,4 +1,3 @@
-print("START")
 -- Load fibaro only if not already loaded (for compatibility with different environments)
 if not fibaro then
   require('fibaro')

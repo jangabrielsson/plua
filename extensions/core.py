@@ -15,6 +15,60 @@ import asyncio
 from extensions.network_extensions import loop_manager
 
 
+# Timer execution gate for synchronizing timer callbacks
+class TimerExecutionGate:
+    """Controls when timer callbacks are allowed to run using asyncio.Lock"""
+    
+    def __init__(self):
+        self.lock = asyncio.Lock()
+        self.queue = []
+        self._locked = True
+        self._initialized = False
+
+    async def initialize(self):
+        """Initialize the gate - should be called once when the event loop is ready"""
+        if not self._initialized:
+            await self.lock.acquire()
+            self._initialized = True
+
+    async def acquire(self):
+        """Lock the gate - no timer callbacks can run"""
+        if not self._initialized:
+            await self.initialize()
+        self._locked = True
+        if not self.lock.locked():
+            await self.lock.acquire()
+
+    async def release(self):
+        """Unlock the gate and run all queued callbacks"""
+        self._locked = False
+        if self.lock.locked():
+            self.lock.release()
+        
+        # Run all queued callbacks
+        while self.queue:
+            callback, args, kwargs = self.queue.pop(0)
+            try:
+                callback(*args, **kwargs)
+            except Exception as e:
+                print(f"Error in queued callback: {e}", file=sys.stderr)
+
+    def run_or_queue(self, callback, *args, **kwargs):
+        """Run callback immediately if unlocked, otherwise queue it"""
+        if not self._locked:
+            callback(*args, **kwargs)
+        else:
+            self.queue.append((callback, args, kwargs))
+
+    def is_locked(self):
+        """Check if the gate is currently locked"""
+        return self._locked
+
+
+# Global timer execution gate instance
+timer_gate = TimerExecutionGate()
+
+
 # Timer management class
 class TimerManager:
     """Manages setTimeout and clearTimeout functionality using asyncio Tasks"""
@@ -37,8 +91,8 @@ class TimerManager:
                 while time.time() - start_time < ms / 1000.0:
                     await asyncio.sleep(0.01)  # Sleep in small chunks
 
-                # Execute the callback directly since we're in the main thread
-                func()
+                # Use the timer gate to control execution
+                timer_gate.run_or_queue(func)
             except Exception as e:
                 print(f"Timer error: {e}", file=sys.stderr)
             finally:
@@ -58,7 +112,8 @@ class TimerManager:
                 def thread_timer():
                     time.sleep(ms / 1000.0)
                     try:
-                        func()
+                        # Use the timer gate to control execution
+                        timer_gate.run_or_queue(func)
                     except Exception as e:
                         print(f"Timer error: {e}", file=sys.stderr)
                     finally:
@@ -483,8 +538,8 @@ class IntervalManager:
                     while time.time() - start_time < ms / 1000.0:
                         await asyncio.sleep(0.01)  # Sleep in small chunks
 
-                    # Execute the callback directly since we're in the main thread
-                    func()
+                    # Use the timer gate to control execution
+                    timer_gate.run_or_queue(func)
             except asyncio.CancelledError:
                 pass
             except Exception as e:
@@ -582,3 +637,19 @@ def yield_to_loop():
         time.sleep(0.01)  # 10ms sleep
     except Exception as e:
         print(f"Yield error: {e}", file=sys.stderr)
+
+
+# Timer gate control functions (for interpreter use)
+async def acquire_timer_gate():
+    """Lock the timer execution gate - no timer callbacks can run"""
+    await timer_gate.acquire()
+
+
+async def release_timer_gate():
+    """Unlock the timer execution gate and run all queued callbacks"""
+    await timer_gate.release()
+
+
+def is_timer_gate_locked():
+    """Check if the timer execution gate is currently locked"""
+    return timer_gate.is_locked()

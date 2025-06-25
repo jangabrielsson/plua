@@ -40,7 +40,7 @@ class ExecutionTracker:
         self.web_server_running = False
         self.last_operation_count = 0
         self.stable_checks = 0  # Number of consecutive stable checks
-        self.stable_threshold = 3  # Number of stable checks needed to consider program dead
+        self.stable_threshold = 10  # Number of stable checks needed to consider program dead (increased from 3)
 
     def start_fragments(self):
         """Mark the start of -e fragment execution"""
@@ -86,6 +86,7 @@ class ExecutionTracker:
         """Get the total count of active operations"""
         try:
             from extensions.network_extensions import loop_manager
+            from extensions.core import timer_manager
 
             # Get the event loop and check for pending tasks
             loop = loop_manager.get_loop()
@@ -112,7 +113,12 @@ class ExecutionTracker:
                         if not task.done():
                             print(f"DEBUG: Task {task.get_name()}: done={task.done()}, cancelled={task.cancelled()}", file=sys.stderr)
 
-                return len(active_tasks)
+                # Also check for active timers
+                active_timers = timer_manager.has_active_timers()
+                if self.interpreter.debug and active_timers:
+                    print(f"DEBUG: Active timers detected: {active_timers}", file=sys.stderr)
+
+                return len(active_tasks) + (1 if active_timers else 0)
             return 0
 
         except Exception:
@@ -244,10 +250,12 @@ class PLuaInterpreter:
         lua_globals = self.lua_runtime.globals()
 
         # Set up package.path to include our local directories first
-        plua_dir = os.path.dirname(os.path.abspath(__file__))
+        # Calculate path relative to project root (one level up from plua/ directory)
+        plua_dir = os.path.dirname(os.path.abspath(__file__))  # This is the plua/ directory
+        project_root = os.path.dirname(plua_dir)  # Go up one level to project root
         local_paths = [
-            os.path.join(plua_dir, "lua", "?.lua"),
-            os.path.join(plua_dir, "lua", "?", "init.lua")
+            os.path.join(project_root, "lua", "?.lua"),
+            os.path.join(project_root, "lua", "?", "init.lua")
         ]
 
         # Set package.path with local paths first
@@ -273,6 +281,9 @@ class PLuaInterpreter:
         # Expose PLua version to Lua
         lua_globals['_PLUA_VERSION'] = PLUA_VERSION
 
+        # Initialize mainfile as None (will be set when a file is executed)
+        lua_globals['_PY']['mainfile'] = None
+
         # Set execution tracker in web server extension
         try:
             from extensions.web_server import set_execution_tracker
@@ -283,6 +294,9 @@ class PLuaInterpreter:
     def execute_file(self, filename):
         """Execute a Lua file"""
         try:
+            # Set the mainfile variable in _PY table
+            self.lua_runtime.globals()['_PY']['mainfile'] = filename
+            
             with open(filename, 'r', encoding='utf-8') as f:
                 lua_code = f.read()
             # Use load() with filename for proper debugger support
@@ -456,6 +470,14 @@ end
             except Exception as e:
                 result_queue.put(("error", str(e)))
 
+        # Lock the timer execution gate before starting
+        try:
+            from extensions.core import acquire_timer_gate
+            await acquire_timer_gate()
+        except Exception as e:
+            if self.debug:
+                print(f"DEBUG: Could not acquire timer gate: {e}", file=sys.stderr)
+
         # Start Lua execution in a thread
         thread = threading.Thread(target=execute_in_thread)
         thread.start()
@@ -468,6 +490,15 @@ end
         status, result = result_queue.get()
         if status == "error":
             raise Exception(result)
+        
+        # Release the timer gate to allow pending timer callbacks to run
+        try:
+            from extensions.core import release_timer_gate
+            await release_timer_gate()
+        except Exception as e:
+            if self.debug:
+                print(f"DEBUG: Could not release timer gate: {e}", file=sys.stderr)
+        
         return result
 
     async def async_execute_file(self, filename):
@@ -484,6 +515,14 @@ end
             except Exception as e:
                 result_queue.put(("error", str(e)))
 
+        # Lock the timer execution gate before starting
+        try:
+            from extensions.core import acquire_timer_gate
+            await acquire_timer_gate()
+        except Exception as e:
+            if self.debug:
+                print(f"DEBUG: Could not acquire timer gate: {e}", file=sys.stderr)
+
         # Start Lua execution in a thread
         thread = threading.Thread(target=execute_in_thread)
         thread.start()
@@ -496,6 +535,15 @@ end
         status, result = result_queue.get()
         if status == "error":
             raise Exception(result)
+        
+        # Release the timer gate to allow pending timer callbacks to run
+        try:
+            from extensions.core import release_timer_gate
+            await release_timer_gate()
+        except Exception as e:
+            if self.debug:
+                print(f"DEBUG: Could not release timer gate: {e}", file=sys.stderr)
+        
         return result
 
     async def async_execute_all(self, fragments_code, main_file):
@@ -516,6 +564,8 @@ end
 
                 # Then execute main file
                 if main_file:
+                    # Set the mainfile variable in _PY table
+                    self.lua_runtime.globals()['_PY']['mainfile'] = main_file
                     main_result = self.execute_file(main_file)
                     if not main_result:
                         result_queue.put(("error", "Failed to execute main file"))
@@ -525,16 +575,33 @@ end
             except Exception as e:
                 result_queue.put(("error", str(e)))
 
+        # Lock the timer execution gate before starting
+        try:
+            from extensions.core import acquire_timer_gate
+            await acquire_timer_gate()
+        except Exception as e:
+            if self.debug:
+                print(f"DEBUG: Could not acquire timer gate: {e}", file=sys.stderr)
+
         # Start Lua execution in a thread
         thread = threading.Thread(target=execute_in_thread)
         thread.start()
 
-        # Wait for completion while allowing event loop to process other tasks
-        while thread.is_alive():
-            await asyncio.sleep(0.01)  # Yield to event loop every 10ms
-
+        # Block completely until thread completes - no yielding to event loop
+        thread.join()
+        
         # Get the result
         status, result = result_queue.get()
         if status == "error":
             raise Exception(result)
+        
+        # Now that both fragments and main file are completely processed,
+        # release the timer gate to allow pending timer callbacks to run
+        try:
+            from extensions.core import release_timer_gate
+            await release_timer_gate()
+        except Exception as e:
+            if self.debug:
+                print(f"DEBUG: Could not release timer gate: {e}", file=sys.stderr)
+        
         return result 

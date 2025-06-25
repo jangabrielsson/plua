@@ -17,6 +17,7 @@ setInterval = _PY.setInterval
 clearInterval = _PY.clearInterval
 
 setTimeout(function()
+  print("Looking for QuickApp")
   if QuickApp and QuickApp.onInit then
     print("QuickApp detected. Creating QuickApp instance.")
     quickApp = QuickApp({id=888,type='com.fibaro.binarySwitch',name='MyQA'})

@@ -23,10 +23,20 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller lupa paho-mqtt
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: List directories
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Directory contents:"
+          dir
+          echo "Demos directory contents:"
+          dir demos
 
       - name: Build executable with PyInstaller
-        run: pyinstaller --onefile plua.py --name plua --add-data "lua;lua" --add-data "extensions;extensions" --add-data "examples;examples" --add-data "demos;demos"
+        run: pyinstaller --onefile plua.py --name plua --add-data "lua;lua" --add-data "extensions;extensions" --add-data "examples;examples" --add-data "demos;demos" --hidden-import toml
 
       - name: Upload executable
         uses: actions/upload-artifact@v4

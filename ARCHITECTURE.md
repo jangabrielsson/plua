@@ -385,8 +385,8 @@ graph TB
     end
     
     subgraph "Lua Integration"
-        F[require('mobdebug')] --> G[MobDebug Module]
-        G --> H[mobdebug.start()]
+        F[require.mobdebug] --> G[MobDebug Module]
+        G --> H[mobdebug.start]
         H --> I[Server Startup]
     end
     

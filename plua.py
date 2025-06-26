@@ -6,7 +6,6 @@ Supports Lua 5.4 environment with custom Python-extended functions for timer man
 
 import sys
 import argparse
-import asyncio
 from plua import PLuaInterpreter
 import extensions.network_extensions
 
@@ -21,10 +20,11 @@ def main():
         epilog="""
 Examples:
   plua script.lua                                    # Run a Lua file
-  plua -e "print('Hello')"                          # Execute Lua code
-  plua -e "x=10" -e "print(x)"                      # Execute multiple code strings
+  plua -e "print('Hello')"                          # Execute Lua code and exit
+  plua -e "x=10" -e "print(x)"                      # Execute multiple code strings and exit
   plua -e "require('debugger')" -e "debugger.start()" script.lua  # Multiple -e before file
   plua -i                                            # Start interactive shell
+  plua -e "print('Hello')" -i                       # Execute code then start interactive shell
   plua -l socket script.lua                          # Load socket library before running script
   plua -l socket -l debugger                         # Load multiple libraries in interactive mode
   plua -l socket -e "print(socket.http.request('http://example.com'))"  # Load library and execute code
@@ -81,40 +81,46 @@ print("MobDebug server started on 0.0.0.0:{debugger_port}")
                 sys.exit(1)
 
         # Handle different execution modes
-        if args.execute_list and args.file:
-            # Multiple -e flags with file: execute all code strings first, then the file
-            interpreter.debug_print(f"Executing {len(args.execute_list)} code strings then file")
+        if args.file:
+            # Execute file (with optional fragments from -e flags)
+            if args.execute_list:
+                interpreter.debug_print(f"Executing {len(args.execute_list)} code strings then file")
+            else:
+                interpreter.debug_print("Executing file only")
 
             # Start fragments phase
             interpreter.execution_tracker.start_fragments()
 
-            # Execute all -e code strings first (these don't have filenames)
-            all_code = "\n".join(args.execute_list)
-            interpreter.debug_print("Executing all -e code as a single chunk")
+            if args.execute_list:
+                # Execute fragments and main file together to keep timer gate locked
+                all_code = "\n".join(args.execute_list)
+                interpreter.debug_print("Executing all -e code and file together")
+                success = await interpreter.async_execute_all(all_code, args.file)
+                if not success:
+                    print("Failed to execute code", file=sys.stderr)
+                    sys.exit(1)
+            else:
+                # Execute the file only
+                interpreter.debug_print(f"Executing file '{args.file}'")
+                success = await interpreter.async_execute_file(args.file)
+                if not success:
+                    print("Failed to execute Lua code", file=sys.stderr)
+                    sys.exit(1)
 
-            # Complete fragments phase
+            # Complete fragments and main phases
             interpreter.execution_tracker.complete_fragments()
-
-            # Start main phase
-            interpreter.execution_tracker.start_main()
-
-            # Execute all Lua code (fragments + main) in a single task
-            interpreter.debug_print(f"Executing all Lua code (fragments + main file '{args.file}')")
-            success = await interpreter.async_execute_all(all_code, args.file)
-            if not success:
-                print("Failed to execute Lua code", file=sys.stderr)
-                sys.exit(1)
-
-            # Complete main phase and start tracking
             interpreter.execution_tracker.complete_main()
 
             # Wait for termination
             await interpreter.wait_for_active_operations()
             sys.exit(0)
 
-        elif args.execute_list and args.interactive:
-            # Execute code strings then start interactive shell
-            print(f"Executing {len(args.execute_list)} code strings, then starting interactive shell", file=sys.stderr)
+        elif args.execute_list:
+            # Execute code strings (fragments), then exit or go interactive
+            if args.interactive:
+                print(f"Executing {len(args.execute_list)} code strings, then starting interactive shell", file=sys.stderr)
+            else:
+                print(f"Executing {len(args.execute_list)} code strings", file=sys.stderr)
 
             # Start fragments phase
             interpreter.execution_tracker.start_fragments()
@@ -129,56 +135,23 @@ print("MobDebug server started on 0.0.0.0:{debugger_port}")
             # Complete fragments phase
             interpreter.execution_tracker.complete_fragments()
 
-            # Start interactive shell after executing the code
-            interpreter.execution_tracker.start_interactive()
-            interpreter.run_interactive()
-
-        elif args.execute_list:
-            # Execute multiple code strings from -e flags
-            print(f"Executing {len(args.execute_list)} code strings", file=sys.stderr)
-
-            # Start fragments phase
-            interpreter.execution_tracker.start_fragments()
-
-            # Concatenate all code strings into one chunk
-            all_code = "\n".join(args.execute_list)
-            interpreter.debug_print("Executing all -e code as a single chunk")
-            success = await interpreter.async_execute_code(all_code)
-            if not success:
-                print("Failed to execute -e code chunk", file=sys.stderr)
-                sys.exit(1)
-
-            # Complete fragments phase and start tracking
-            interpreter.execution_tracker.complete_fragments()
-
-            # Wait for termination
-            await interpreter.wait_for_active_operations()
-            sys.exit(0)
+            if args.interactive:
+                # Start interactive shell after executing the code
+                interpreter.execution_tracker.start_interactive()
+                interpreter.run_interactive()
+            else:
+                # For -e only (no file, no interactive), start tracking phase and wait for termination
+                interpreter.execution_tracker.start_tracking()
+                await interpreter.wait_for_active_operations()
+                sys.exit(0)
 
         elif args.interactive:
             # Start interactive shell
             interpreter.execution_tracker.start_interactive()
             interpreter.run_interactive()
 
-        elif args.file:
-            # Execute Lua file
-            interpreter.execution_tracker.start_main()
-            success = await interpreter.async_execute_file(args.file)
-            if not success:
-                sys.exit(1)
-
-            # Allow event loop to process pending tasks (like setTimeout with 0 delay)
-            await asyncio.sleep(0.1)
-
-            # Complete main phase and start tracking
-            interpreter.execution_tracker.complete_main()
-
-            # Wait for termination
-            await interpreter.wait_for_active_operations()
-            sys.exit(0)
-
         else:
-            # No arguments provided, start interactive shell
+            # No arguments provided: start interactive shell
             interpreter.execution_tracker.start_interactive()
             interpreter.run_interactive()
 

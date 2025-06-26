@@ -181,6 +181,7 @@ class AsyncioNetworkManager:
 
     async def tcp_write_async(self, conn_id, data, callback):
         self._increment_operations()
+        self._increment_callbacks()
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not writer:
@@ -206,6 +207,7 @@ class AsyncioNetworkManager:
             )
         finally:
             self._decrement_operations()
+            self._decrement_callbacks()
 
     def tcp_write(self, conn_id, data, callback):
         # Create task on the main thread event loop
@@ -216,6 +218,7 @@ class AsyncioNetworkManager:
 
     async def tcp_read_async(self, conn_id, max_bytes, callback):
         self._increment_operations()
+        self._increment_callbacks()
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader:
@@ -244,6 +247,7 @@ class AsyncioNetworkManager:
             )
         finally:
             self._decrement_operations()
+            self._decrement_callbacks()
 
     def tcp_read(self, conn_id, max_bytes, callback):
         # Create task on the main thread event loop
@@ -254,6 +258,7 @@ class AsyncioNetworkManager:
 
     async def tcp_close_async(self, conn_id, callback):
         self._increment_operations()
+        self._increment_callbacks()
         try:
             reader, writer = self.tcp_connections.pop(conn_id, (None, None))
             if writer:
@@ -273,6 +278,7 @@ class AsyncioNetworkManager:
             )
         finally:
             self._decrement_operations()
+            self._decrement_callbacks()
 
     def tcp_close(self, conn_id, callback):
         # Create task on the main thread event loop
@@ -543,6 +549,7 @@ class AsyncioNetworkManager:
     # --- Asynchronous TCP Timeout Functions ---
     async def tcp_set_timeout_async(self, conn_id, timeout_seconds, callback):
         self._increment_operations()
+        self._increment_callbacks()
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader or not writer:
@@ -580,6 +587,7 @@ class AsyncioNetworkManager:
             )
         finally:
             self._decrement_operations()
+            self._decrement_callbacks()
 
     def tcp_set_timeout(self, conn_id, timeout_seconds, callback):
         """Asynchronous TCP timeout setter"""
@@ -590,6 +598,7 @@ class AsyncioNetworkManager:
 
     async def tcp_get_timeout_async(self, conn_id, callback):
         self._increment_operations()
+        self._increment_callbacks()
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader or not writer:
@@ -630,6 +639,7 @@ class AsyncioNetworkManager:
             )
         finally:
             self._decrement_operations()
+            self._decrement_callbacks()
 
     def tcp_get_timeout(self, conn_id, callback):
         """Asynchronous TCP timeout getter"""
@@ -670,6 +680,7 @@ class AsyncioNetworkManager:
     def udp_connect(self, host, port, callback):
         """Connect to UDP server asynchronously"""
         self._increment_operations()
+        self._increment_callbacks()
 
         async def udp_connect_async():
             try:
@@ -686,6 +697,7 @@ class AsyncioNetworkManager:
                 )
             finally:
                 self._decrement_operations()
+                self._decrement_callbacks()
 
         # Create task on the main thread event loop
         task = loop_manager.create_task(udp_connect_async())
@@ -694,6 +706,7 @@ class AsyncioNetworkManager:
     def udp_write(self, conn_id, data, host, port, callback):
         """Write data to UDP connection asynchronously"""
         self._increment_operations()
+        self._increment_callbacks()
 
         async def udp_write_async():
             try:
@@ -720,6 +733,7 @@ class AsyncioNetworkManager:
                 )
             finally:
                 self._decrement_operations()
+                self._decrement_callbacks()
 
         # Create task on the main thread event loop
         task = loop_manager.create_task(udp_write_async())
@@ -728,6 +742,7 @@ class AsyncioNetworkManager:
     def udp_read(self, conn_id, max_bytes, callback):
         """Read data from UDP connection asynchronously"""
         self._increment_operations()
+        self._increment_callbacks()
 
         async def udp_read_async():
             try:
@@ -781,6 +796,7 @@ class AsyncioNetworkManager:
                 )
             finally:
                 self._decrement_operations()
+                self._decrement_callbacks()
 
         # Create task on the main thread event loop
         task = loop_manager.create_task(udp_read_async())
@@ -789,6 +805,7 @@ class AsyncioNetworkManager:
     def udp_close(self, conn_id, callback):
         """Close UDP connection asynchronously"""
         self._increment_operations()
+        self._increment_callbacks()
 
         async def udp_close_async():
             try:
@@ -808,6 +825,7 @@ class AsyncioNetworkManager:
                 )
             finally:
                 self._decrement_operations()
+                self._decrement_callbacks()
 
         # Create task on the main thread event loop
         task = loop_manager.create_task(udp_close_async())
@@ -815,6 +833,7 @@ class AsyncioNetworkManager:
 
     async def tcp_read_until_async(self, conn_id, delimiter, max_bytes, callback):
         self._increment_operations()
+        self._increment_callbacks()
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader:
@@ -873,6 +892,7 @@ class AsyncioNetworkManager:
             )
         finally:
             self._decrement_operations()
+            self._decrement_callbacks()
 
     def tcp_read_until(self, conn_id, delimiter, max_bytes, callback):
         # Create task on the main thread event loop
@@ -1394,22 +1414,18 @@ if _http_callback then
     _http_callback(response)
 end
 """
-            lua_runtime.execute(callback_code)
+            # Use the timer execution gate to control when the callback runs
+            try:
+                from extensions.core import timer_gate
 
-            # Clean up globals
-            for key in [
-                "_http_callback",
-                "_http_response_code",
-                "_http_response_body",
-                "_http_response_url",
-                "_http_response_error",
-                "_http_response_error_message",
-            ]:
-                if key in lua_runtime.globals():
-                    del lua_runtime.globals()[key]
-
-            # Decrement callback counter since we're done
-            network_manager._decrement_callbacks()
+                def run_callback_and_decrement():
+                    lua_runtime.execute(callback_code)
+                    network_manager._decrement_callbacks()
+                timer_gate.run_or_queue(run_callback_and_decrement)
+            except ImportError:
+                # Fallback to direct execution if timer gate is not available
+                lua_runtime.execute(callback_code)
+                network_manager._decrement_callbacks()
             return
 
     # If we get here, we have valid request_data and should proceed with the request
@@ -1445,21 +1461,18 @@ if _http_callback then
     _http_callback(response)
 end
 """
-        lua_runtime.execute(callback_code)
+        # Use the timer execution gate to control when the callback runs
+        try:
+            from extensions.core import timer_gate
 
-        # Clean up globals
-        for key in [
-            "_http_response_code",
-            "_http_response_body",
-            "_http_response_url",
-            "_http_response_error",
-            "_http_response_error_message",
-        ]:
-            if key in lua_runtime.globals():
-                del lua_runtime.globals()[key]
-
-        # Decrement callback counter since we're done
-        network_manager._decrement_callbacks()
+            def run_callback_and_decrement():
+                lua_runtime.execute(callback_code)
+                network_manager._decrement_callbacks()
+            timer_gate.run_or_queue(run_callback_and_decrement)
+        except ImportError:
+            # Fallback to direct execution if timer gate is not available
+            lua_runtime.execute(callback_code)
+            network_manager._decrement_callbacks()
         return
 
     result_queue = queue.Queue()
@@ -1511,23 +1524,20 @@ if _http_callback then
     _http_callback(response)
 end
 """
-        lua_runtime.execute(callback_code)
+        # Use the timer execution gate to control when the callback runs
+        try:
+            from extensions.core import timer_gate
 
-        # Clean up globals
-        for key in [
-            "_http_response_code",
-            "_http_response_body",
-            "_http_response_url",
-            "_http_response_error",
-            "_http_response_error_message",
-        ]:
-            if key in lua_runtime.globals():
-                del lua_runtime.globals()[key]
+            def run_callback_and_decrement():
+                lua_runtime.execute(callback_code)
+                network_manager._decrement_callbacks()
+            timer_gate.run_or_queue(run_callback_and_decrement)
+        except ImportError:
+            # Fallback to direct execution if timer gate is not available
+            lua_runtime.execute(callback_code)
+            network_manager._decrement_callbacks()
     except Exception:
         pass  # Silently handle any errors in callback execution
-    finally:
-        # Always decrement callback counter when we're done
-        network_manager._decrement_callbacks()
 
 
 # Alias for backward compatibility

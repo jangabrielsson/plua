@@ -16,6 +16,7 @@ clearTimeout = _PY.clearTimeout
 setInterval = _PY.setInterval
 clearInterval = _PY.clearInterval
 
+
 setTimeout(function()
   print("Looking for QuickApp")
   if QuickApp and QuickApp.onInit then

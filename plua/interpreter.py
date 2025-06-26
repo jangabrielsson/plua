@@ -274,6 +274,22 @@ class PLuaInterpreter:
         # Create the _PY table and add it to Lua globals
         lua_globals['_PY'] = extension_functions
 
+        # Add timer functions to the default Lua environment for convenience
+        # These are also available in _PY for backward compatibility
+        try:
+            from extensions.core import timer_manager, interval_manager
+            
+            # Add timer functions to global scope using the actual functions, not bound methods
+            lua_globals['setTimeout'] = lambda func, ms: timer_manager.setTimeout(func, ms)
+            lua_globals['clearTimeout'] = lambda timer_id: timer_manager.clearTimeout(timer_id)
+            lua_globals['setInterval'] = lambda func, ms: interval_manager.setInterval(func, ms)
+            lua_globals['clearInterval'] = lambda interval_id: interval_manager.clearInterval(interval_id)
+            
+            self.debug_print("Added timer functions to default Lua environment")
+        except ImportError:
+            # Timer extensions might not be available, that's okay
+            self.debug_print("Timer extensions not available")
+
         # Add some standard Python functions that might be helpful
         # Note: Lua's native print function is already available
         lua_globals['input'] = input
@@ -510,6 +526,21 @@ end
 
         def execute_in_thread():
             try:
+                # Check if _PY.mainHook is registered
+                try:
+                    main_hook = self.lua_runtime.globals()['_PY']['mainHook']
+                    if main_hook:
+                        # Call the mainHook function with the filename
+                        self.debug_print(f"Using _PY.mainHook for file '{filename}'")
+                        hook_code = f"_PY.mainHook('{filename}')"
+                        result = self.execute_code(hook_code)
+                        result_queue.put(("success", result))
+                        return
+                except (KeyError, TypeError):
+                    # mainHook doesn't exist or is not callable, proceed with normal execution
+                    pass
+
+                # Normal file execution
                 result = self.execute_file(filename)
                 result_queue.put(("success", result))
             except Exception as e:
@@ -566,7 +597,22 @@ end
                 if main_file:
                     # Set the mainfile variable in _PY table
                     self.lua_runtime.globals()['_PY']['mainfile'] = main_file
-                    main_result = self.execute_file(main_file)
+                    
+                    # Check if _PY.mainHook is registered
+                    try:
+                        main_hook = self.lua_runtime.globals()['_PY']['mainHook']
+                        if main_hook:
+                            # Call the mainHook function with the filename
+                            self.debug_print(f"Using _PY.mainHook for file '{main_file}'")
+                            hook_code = f"_PY.mainHook('{main_file}')"
+                            main_result = self.execute_code(hook_code)
+                        else:
+                            # Normal file execution
+                            main_result = self.execute_file(main_file)
+                    except (KeyError, TypeError):
+                        # mainHook doesn't exist or is not callable, proceed with normal execution
+                        main_result = self.execute_file(main_file)
+                    
                     if not main_result:
                         result_queue.put(("error", "Failed to execute main file"))
                         return

@@ -13,7 +13,7 @@ import websockets
 
 class WebSocketManager:
     """Manages WebSocket connections with event-driven callbacks"""
-    
+
     def __init__(self):
         self.connections = {}  # conn_id: WebSocketConnection
         self.next_id = 1
@@ -69,7 +69,7 @@ class WebSocketManager:
 
 class WebSocketConnection:
     """Represents a single WebSocket connection"""
-    
+
     def __init__(self, conn_id, manager, use_tls=False):
         self.conn_id = conn_id
         self.manager = manager
@@ -103,7 +103,7 @@ class WebSocketConnection:
                             print(f"Error in WebSocket {event_name} callback: {e}", file=sys.stderr)
                         finally:
                             self.manager._decrement_callbacks()
-                    
+
                     self.manager._increment_callbacks()
                     timer_gate.run_or_queue(run_callback)
                 except Exception as e:
@@ -112,15 +112,15 @@ class WebSocketConnection:
     def connect(self, url, headers=None):
         """Connect to WebSocket server"""
         self.manager._increment_operations()
-        
+
         def connect_thread():
             try:
                 import websocket
-                
+
                 # Ensure proper URL scheme
                 if not url.startswith(('ws://', 'wss://')):
                     raise ValueError(f"Invalid WebSocket URL scheme: {url}")
-                
+
                 # Convert Lua table headers to Python list format if provided
                 python_headers = None
                 if headers:
@@ -132,7 +132,7 @@ class WebSocketConnection:
                     except Exception as e:
                         print(f"Error converting headers: {e}", file=sys.stderr)
                         python_headers = None
-                
+
                 # Create WebSocket connection with optional headers
                 self.ws = websocket.WebSocketApp(
                     url,
@@ -142,10 +142,10 @@ class WebSocketConnection:
                     on_error=self._on_error,
                     on_close=self._on_close
                 )
-                
+
                 # Run the WebSocket in a separate thread
                 self.ws.run_forever()
-                
+
             except Exception as e:
                 self._emit_event('error', str(e))
             finally:
@@ -367,7 +367,7 @@ class WebSocketServer:
 
     def start(self, host, port):
         self.manager._increment_operations()
-        
+
         async def start_server():
             try:
                 async def handler(websocket, path=None):
@@ -437,4 +437,4 @@ def websocket_server_close(server_id):
 
 @registry.register(description="Check if there are active WebSocket server operations", category="websocket_server")
 def has_active_websocket_server_operations():
-    return websocket_server_manager.has_active_operations() 
+    return websocket_server_manager.has_active_operations()

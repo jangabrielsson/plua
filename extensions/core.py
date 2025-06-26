@@ -18,7 +18,7 @@ from extensions.network_extensions import loop_manager
 # Timer execution gate for synchronizing timer callbacks
 class TimerExecutionGate:
     """Controls when timer callbacks are allowed to run using asyncio.Lock"""
-    
+
     def __init__(self):
         self.lock = asyncio.Lock()
         self.queue = []
@@ -44,7 +44,7 @@ class TimerExecutionGate:
         self._locked = False
         if self.lock.locked():
             self.lock.release()
-        
+
         # Run all queued callbacks
         while self.queue:
             callback, args, kwargs = self.queue.pop(0)
@@ -120,7 +120,7 @@ class TimerManager:
                         with self.lock:
                             if timer_id in self.timers:
                                 del self.timers[timer_id]
-                
+
                 thread = threading.Thread(target=thread_timer, daemon=True)
                 thread.start()
                 self.timers[timer_id] = thread
@@ -128,7 +128,7 @@ class TimerManager:
                 # For longer timers, still try to use asyncio
                 task = loop_manager.create_task(timer_coroutine())
                 self.timers[timer_id] = task
-        
+
         return timer_id
 
     def clearTimeout(self, timer_id):
@@ -155,7 +155,7 @@ class TimerManager:
                     to_remove.append(tid)
                 elif hasattr(timer_obj, 'is_alive') and not timer_obj.is_alive():  # threading.Thread
                     to_remove.append(tid)
-            
+
             for tid in to_remove:
                 del self.timers[tid]
             return len(self.timers) > 0

@@ -11,7 +11,7 @@ import argparse
 def run_tests(args):
     """Run pytest with the given arguments"""
     cmd = ["pytest"] + args
-    
+
     try:
         result = subprocess.run(cmd, check=False)
         return result.returncode
@@ -31,43 +31,43 @@ def main():
     parser.add_argument("--file", "-f", help="Run specific test file")
     parser.add_argument("--function", "-k", help="Run tests matching pattern")
     parser.add_argument("--pdb", action="store_true", help="Drop into debugger on failures")
-    
+
     args = parser.parse_args()
-    
+
     # Build pytest arguments
     pytest_args = []
-    
+
     if args.verbose:
         pytest_args.append("-v")
-    
+
     if args.coverage:
         pytest_args.extend(["--cov=plua", "--cov=extensions", "--cov-report=term-missing"])
-    
+
     if args.fast:
         pytest_args.append("-m")
         pytest_args.append("not slow")
-    
+
     if args.unit:
         pytest_args.append("-m")
         pytest_args.append("unit")
-    
+
     if args.integration:
         pytest_args.append("-m")
         pytest_args.append("integration")
-    
+
     if args.file:
         pytest_args.append(args.file)
-    
+
     if args.function:
         pytest_args.append("-k")
         pytest_args.append(args.function)
-    
+
     if args.pdb:
         pytest_args.append("--pdb")
-    
+
     # Run tests
     return run_tests(pytest_args)
 
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())

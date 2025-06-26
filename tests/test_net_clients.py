@@ -34,7 +34,7 @@ class TestHTTPClient:
     def test_http_client_basic_request(self, lua_interpreter):
         """Test basic HTTP GET request"""
         load_net_module(lua_interpreter)
-        
+
         # Debug: Check if net module is loaded
         debug_code = """
         if net then
@@ -49,7 +49,7 @@ class TestHTTPClient:
         end
         """
         lua_interpreter.execute_code(debug_code)
-        
+
         # Test with synchronous HTTP request instead
         lua_code = """
         local response = _PY.http_request_sync("http://httpbin.org/get")
@@ -58,7 +58,7 @@ class TestHTTPClient:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # response exists
@@ -67,7 +67,7 @@ class TestHTTPClient:
     def test_http_client_post_request(self, lua_interpreter):
         """Test HTTP POST request with JSON data"""
         load_net_module(lua_interpreter)
-        
+
         lua_code = """
         local response = _PY.http_request_sync({
             url = "http://httpbin.org/post",
@@ -82,7 +82,7 @@ class TestHTTPClient:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # response exists
@@ -95,7 +95,7 @@ class TestAsyncHTTPClient:
     def test_async_http_client_basic_request(self, lua_interpreter):
         """Test async HTTP client with callbacks"""
         load_net_module(lua_interpreter)
-        
+
         # Test that the HTTPClient can be created and has the expected interface
         lua_code = """
         local http = net.HTTPClient()
@@ -107,7 +107,7 @@ class TestAsyncHTTPClient:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # HTTPClient created successfully
@@ -116,7 +116,7 @@ class TestAsyncHTTPClient:
     def test_async_http_client_post_request(self, lua_interpreter):
         """Test async HTTP client POST request"""
         load_net_module(lua_interpreter)
-        
+
         # Test that the HTTPClient can be created and has the expected interface
         lua_code = """
         local http = net.HTTPClient()
@@ -128,7 +128,7 @@ class TestAsyncHTTPClient:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # HTTPClient created successfully
@@ -141,7 +141,7 @@ class TestAsyncTCPSocket:
     def test_async_tcp_socket_connect_and_echo(self, lua_interpreter):
         """Test async TCP socket connecting to echo server"""
         load_net_module(lua_interpreter)
-        
+
         # Test that the TCPSocket can be created and has the expected interface
         lua_code = """
         local tcp = net.TCPSocket()
@@ -156,7 +156,7 @@ class TestAsyncTCPSocket:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # TCPSocket created successfully
@@ -168,7 +168,7 @@ class TestAsyncTCPSocket:
     def test_async_tcp_socket_connection_error(self, lua_interpreter):
         """Test async TCP socket connection error handling"""
         load_net_module(lua_interpreter)
-        
+
         # Test that the TCPSocket can be created and has the expected interface
         lua_code = """
         local tcp = net.TCPSocket()
@@ -181,7 +181,7 @@ class TestAsyncTCPSocket:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # TCPSocket created successfully
@@ -195,7 +195,7 @@ class TestAsyncUDPSocket:
     def test_async_udp_socket_send_receive(self, lua_interpreter):
         """Test async UDP socket send and receive"""
         load_net_module(lua_interpreter)
-        
+
         # Test that the UDPSocket can be created and has the expected interface
         lua_code = """
         local udp = net.UDPSocket()
@@ -209,7 +209,7 @@ class TestAsyncUDPSocket:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # UDPSocket created successfully
@@ -224,11 +224,11 @@ class TestAsyncWebSocketClient:
     def test_async_websocket_client_creation(self, lua_interpreter):
         """Test async WebSocket client creation and basic functionality"""
         load_net_module(lua_interpreter)
-        
+
         lua_code = """
         local ws = net.WebSocketClient()
         local ws_tls = net.WebSocketClientTls()
-        
+
         result = {
             ws ~= nil,
             ws.conn_id ~= nil,
@@ -239,7 +239,7 @@ class TestAsyncWebSocketClient:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # WebSocket client created
@@ -250,12 +250,12 @@ class TestAsyncWebSocketClient:
     def test_async_websocket_client_echo_server(self, lua_interpreter):
         """Test async WebSocket client connecting to echo server"""
         load_net_module(lua_interpreter)
-        
+
         # Test that the WebSocketClient can be created and has the expected interface
         lua_code = """
         local ws = net.WebSocketClient()
         local ws_tls = net.WebSocketClientTls()
-        
+
         result = {
             ws ~= nil,
             ws.conn_id ~= nil,
@@ -271,7 +271,7 @@ class TestAsyncWebSocketClient:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # WebSocket client created
@@ -291,7 +291,7 @@ class TestTCPClient:
     def test_tcp_client_connect_and_echo(self, lua_interpreter):
         """Test TCP client connecting to echo server"""
         load_net_module(lua_interpreter)
-        
+
         # Create a simple echo server
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -324,7 +324,7 @@ class TestTCPClient:
 
             create_lua_result_table(lua_interpreter)
             lua_interpreter.execute_code(lua_code)
-            
+
             result = get_lua_result(lua_interpreter)
             assert result is not None
             assert result[1] is True  # connected
@@ -339,7 +339,7 @@ class TestTCPClient:
     def test_tcp_client_connection_error(self, lua_interpreter):
         """Test TCP client connection error handling"""
         load_net_module(lua_interpreter)
-        
+
         lua_code = """
         local success, conn_id, message = _PY.tcp_connect_sync("localhost", 9999)
         result = {success, conn_id, message ~= nil}
@@ -347,7 +347,7 @@ class TestTCPClient:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is False  # connection failed
@@ -361,7 +361,7 @@ class TestWebSocketClient:
     def test_websocket_client_echo_server(self, lua_interpreter):
         """Test WebSocket client connecting to echo server"""
         load_net_module(lua_interpreter)
-        
+
         # Create a simple WebSocket echo server
         async def echo_handler(websocket, path):
             async for message in websocket:
@@ -385,7 +385,7 @@ class TestWebSocketClient:
 
             create_lua_result_table(lua_interpreter)
             lua_interpreter.execute_code(lua_code)
-            
+
             result = get_lua_result(lua_interpreter)
             assert result is not None
             assert result[1] is True  # WebSocket client created
@@ -403,47 +403,47 @@ class TestTCPExtensionServer:
     def test_tcp_extension_server_with_client(self, lua_interpreter):
         """Test TCP extension server with net.TCPSocket client"""
         load_net_module(lua_interpreter)
-        
+
         lua_code = """
         local _PY = _PY or {}
-        
+
         -- Create TCP server
         local server_id = _PY.tcp_server_create()
         local server_created = server_id ~= nil
-        
+
         -- Track server events
         local client_connected = false
         local data_received = false
         local received_data = nil
         local client_disconnected = false
-        
+
         -- Register server event listeners
         _PY.tcp_server_add_event_listener(server_id, "client_connected", function(client_id, addr)
             client_connected = true
             _PY.tcp_server_send(server_id, client_id, "Welcome to server!")
         end)
-        
+
         _PY.tcp_server_add_event_listener(server_id, "data_received", function(client_id, data)
             data_received = true
             received_data = data
             _PY.tcp_server_send(server_id, client_id, "Echo: " .. data)
         end)
-        
+
         _PY.tcp_server_add_event_listener(server_id, "client_disconnected", function(client_id, addr)
             client_disconnected = true
         end)
-        
+
         -- Start the server
         _PY.tcp_server_start(server_id, "127.0.0.1", 8766)
         local server_started = true
-        
+
         -- Test basic server creation and startup
         result = {server_created, server_started}
         """
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # server_created
@@ -456,25 +456,25 @@ class TestWebSocketExtensionServer:
     def test_websocket_extension_server_creation(self, lua_interpreter):
         """Test WebSocket extension server creation"""
         load_net_module(lua_interpreter)
-        
+
         lua_code = """
         local _PY = _PY or {}
-        
+
         -- Create WebSocket server
         local server_id = _PY.websocket_server_create()
         local server_created = server_id ~= nil
-        
+
         -- Start the server
         _PY.websocket_server_start(server_id, "127.0.0.1", 8767)
         local server_started = true
-        
+
         -- Test basic server creation and startup
         result = {server_created, server_started}
         """
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # server_created
@@ -487,34 +487,34 @@ class TestIntegrationScenarios:
     def test_multiple_tcp_clients_single_server(self, lua_interpreter):
         """Test multiple TCP clients connecting to a single server"""
         load_net_module(lua_interpreter)
-        
+
         lua_code = """
         local _PY = _PY or {}
-        
+
         -- Create TCP server
         local server_id = _PY.tcp_server_create()
         local client_count = 0
         local total_messages = 0
-        
+
         _PY.tcp_server_add_event_listener(server_id, "client_connected", function(client_id, addr)
             client_count = client_count + 1
             _PY.tcp_server_send(server_id, client_id, "Welcome client " .. client_id)
         end)
-        
+
         _PY.tcp_server_add_event_listener(server_id, "data_received", function(client_id, data)
             total_messages = total_messages + 1
             _PY.tcp_server_send(server_id, client_id, "Message " .. total_messages .. " from client " .. client_id)
         end)
-        
+
         _PY.tcp_server_start(server_id, "127.0.0.1", 8768)
-        
+
         -- Test server creation and startup
         result = {server_id ~= nil, client_count, total_messages}
         """
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # server created
@@ -524,12 +524,12 @@ class TestIntegrationScenarios:
     def test_network_utility_functions(self, lua_interpreter):
         """Test network utility functions"""
         load_net_module(lua_interpreter)
-        
+
         lua_code = """
         local local_ip = _PY.get_local_ip()
         local hostname = _PY.get_hostname()
         local port_available = _PY.is_port_available(9999)
-        
+
         result = {
             local_ip ~= nil and local_ip ~= "",
             hostname ~= nil and hostname ~= "",
@@ -539,9 +539,72 @@ class TestIntegrationScenarios:
 
         create_lua_result_table(lua_interpreter)
         lua_interpreter.execute_code(lua_code)
-        
+
         result = get_lua_result(lua_interpreter)
         assert result is not None
         assert result[1] is True  # local IP is valid
         assert result[2] is True  # hostname is valid
         assert isinstance(result[3], bool)  # port availability is boolean
+
+
+class TestAsyncMQTTClient:
+    """Test async MQTT client functionality"""
+
+    def test_async_mqtt_client_creation(self, lua_interpreter):
+        """Test async MQTT client creation and basic functionality"""
+        load_net_module(lua_interpreter)
+
+        lua_code = """
+        local mqtt = net.MQTTClient()
+        local mqtt_tls = net.MQTTClientTls()
+
+        result = {
+            mqtt ~= nil,
+            mqtt.conn_id ~= nil,
+            type(mqtt.addEventListener) == "function",
+            type(mqtt.connect) == "function",
+            type(mqtt.disconnect) == "function",
+            type(mqtt.subscribe) == "function",
+            type(mqtt.unsubscribe) == "function",
+            type(mqtt.publish) == "function",
+            mqtt_tls ~= nil,
+            mqtt_tls.conn_id ~= nil
+        }
+        """
+
+        create_lua_result_table(lua_interpreter)
+        lua_interpreter.execute_code(lua_code)
+
+        result = get_lua_result(lua_interpreter)
+        assert result is not None
+        assert result[1] is True  # MQTT client created
+        assert result[2] is True  # connection id exists
+        assert result[3] is True  # addEventListener method exists
+        assert result[4] is True  # connect method exists
+        assert result[5] is True  # disconnect method exists
+        assert result[6] is True  # subscribe method exists
+        assert result[7] is True  # unsubscribe method exists
+        assert result[8] is True  # publish method exists
+        assert result[9] is True  # TLS MQTT client created
+        assert result[10] is True  # TLS connection id exists
+
+    def test_mqtt_qos_constants(self, lua_interpreter):
+        """Test MQTT QoS constants"""
+        load_net_module(lua_interpreter)
+
+        lua_code = """
+        result = {
+            net.QoS.AT_MOST_ONCE == 0,
+            net.QoS.AT_LEAST_ONCE == 1,
+            net.QoS.EXACTLY_ONCE == 2
+        }
+        """
+
+        create_lua_result_table(lua_interpreter)
+        lua_interpreter.execute_code(lua_code)
+
+        result = get_lua_result(lua_interpreter)
+        assert result is not None
+        assert result[1] is True  # AT_MOST_ONCE = 0
+        assert result[2] is True  # AT_LEAST_ONCE = 1
+        assert result[3] is True  # EXACTLY_ONCE = 2

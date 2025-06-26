@@ -10,7 +10,6 @@ function QuickApp:onInit()
   net:HTTPClient():request("http://google.com",{
     success = function(response)
       print("success")
-      p()
     end,
     error = function(response)
       print("error",response)

@@ -65,13 +65,13 @@ Examples:
         # Initialize execute_list if it doesn't exist
         if args.execute_list is None:
             args.execute_list = []
-        
+
         # Insert require('fibaro') after any debugger-related -e commands
         insert_position = 0
         for i, arg in enumerate(args.execute_list):
             if 'require(\'debugger\')' in arg or 'mobdebug' in arg:
                 insert_position = i + 1
-        
+
         # Insert the fibaro require at the calculated position
         args.execute_list.insert(insert_position, "require('fibaro')")
 

@@ -14,7 +14,7 @@ def run_command(cmd, description):
     """Run a command and handle errors"""
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
-    
+
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
         print(f"✓ {description} completed successfully")
@@ -31,14 +31,14 @@ def build_executable():
     """Build the PLua executable"""
     system = platform.system().lower()
     print(f"Building PLua executable for {system}")
-    
+
     # Clean previous builds
     print("Cleaning previous builds...")
     for path in ['build', 'dist']:
         if os.path.exists(path):
             import shutil
             shutil.rmtree(path)
-    
+
     # Build the executable with more robust options
     cmd = [
         sys.executable, '-m', 'PyInstaller',
@@ -69,21 +69,21 @@ def build_executable():
         '--collect-submodules=lupa',
         'plua.py'
     ]
-    
+
     if not run_command(cmd, "Building executable"):
         return False
-    
+
     # Check if executable was created
     exe_name = 'plua.exe' if system == 'windows' else 'plua'
     exe_path = Path('dist') / exe_name
-    
+
     if not exe_path.exists():
         print(f"✗ Executable not found at {exe_path}")
         return False
-    
+
     print(f"✓ Executable created: {exe_path}")
     print(f"  Size: {exe_path.stat().st_size / (1024*1024):.1f} MB")
-    
+
     # Test the executable
     print("Testing executable...")
     test_cmd = [str(exe_path), '--version']
@@ -92,7 +92,7 @@ def build_executable():
     else:
         print("✗ Executable test failed")
         return False
-    
+
     return True
 
 
@@ -100,11 +100,11 @@ def main():
     """Main build function"""
     print("PLua Build Script")
     print("=" * 50)
-    
+
     if not build_executable():
         print("\nBuild failed!")
         sys.exit(1)
-    
+
     print("\nBuild completed successfully!")
     print("\nUsage:")
     print("  ./dist/plua script.lua")
@@ -113,4 +113,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main() 
+    main()

@@ -294,13 +294,13 @@ class PLuaInterpreter:
         # These are also available in _PY for backward compatibility
         try:
             from extensions.core import timer_manager, interval_manager
-            
+
             # Add timer functions to global scope using the actual functions, not bound methods
             lua_globals['setTimeout'] = lambda func, ms: timer_manager.setTimeout(func, ms)
             lua_globals['clearTimeout'] = lambda timer_id: timer_manager.clearTimeout(timer_id)
             lua_globals['setInterval'] = lambda func, ms: interval_manager.setInterval(func, ms)
             lua_globals['clearInterval'] = lambda interval_id: interval_manager.clearInterval(interval_id)
-            
+
             self.debug_print("Added timer functions to default Lua environment")
         except ImportError:
             # Timer extensions might not be available, that's okay
@@ -613,7 +613,7 @@ end
                 if main_file:
                     # Set the mainfile variable in _PY table
                     self.lua_runtime.globals()['_PY']['mainfile'] = main_file
-                    
+
                     # Check if _PY.mainHook is registered
                     try:
                         main_hook = self.lua_runtime.globals()['_PY']['mainHook']
@@ -628,7 +628,7 @@ end
                     except (KeyError, TypeError):
                         # mainHook doesn't exist or is not callable, proceed with normal execution
                         main_result = self.execute_file(main_file)
-                    
+
                     if not main_result:
                         result_queue.put(("error", "Failed to execute main file"))
                         return

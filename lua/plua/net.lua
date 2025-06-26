@@ -352,4 +352,128 @@ function net.WebSocketClientTls(options)
   return self
 end
 
+-- MQTT client implementation following Fibaro HC3 API
+function net.MQTTClient(options)
+  local options = options or {}
+  local self = {}
+  self.conn_id = _PY.mqtt_client_create()  -- Remove the false parameter
+  
+  function self:addEventListener(eventName, callback)
+    local success, err = pcall(_PY.mqtt_client_add_event_listener, self.conn_id, eventName, callback)
+    if not success then
+      print("Error adding MQTT event listener: " .. tostring(err))
+    end
+  end
+  
+  function self:connect(uri, options)
+    local success, err = pcall(_PY.mqtt_client_connect, self.conn_id, uri, options)
+    if not success then
+      print("Error connecting MQTT: " .. tostring(err))
+    end
+  end
+  
+  function self:disconnect(options)
+    local success, err = pcall(_PY.mqtt_client_disconnect, self.conn_id, options)
+    if not success then
+      print("Error disconnecting MQTT: " .. tostring(err))
+    end
+  end
+  
+  function self:subscribe(topic_or_topics, options)
+    local success, result = pcall(_PY.mqtt_client_subscribe, self.conn_id, topic_or_topics, options)
+    if not success then
+      print("Error subscribing MQTT: " .. tostring(result))
+      return nil
+    end
+    return result
+  end
+  
+  function self:unsubscribe(topic_or_topics, options)
+    local success, result = pcall(_PY.mqtt_client_unsubscribe, self.conn_id, topic_or_topics, options)
+    if not success then
+      print("Error unsubscribing MQTT: " .. tostring(result))
+      return nil
+    end
+    return result
+  end
+  
+  function self:publish(topic, payload, options)
+    local success, result = pcall(_PY.mqtt_client_publish, self.conn_id, topic, payload, options)
+    if not success then
+      print("Error publishing MQTT: " .. tostring(result))
+      return nil
+    end
+    return result
+  end
+  
+  local pstr = "MQTTClient object: "..tostring(self):match("%s(.*)")
+  setmetatable(self,{__tostring = function(_) return pstr end})
+  return self
+end
+
+function net.MQTTClientTls(options)
+  local options = options or {}
+  local self = {}
+  self.conn_id = _PY.mqtt_client_create()  -- Remove the true parameter
+  
+  function self:addEventListener(eventName, callback)
+    local success, err = pcall(_PY.mqtt_client_add_event_listener, self.conn_id, eventName, callback)
+    if not success then
+      print("Error adding MQTT TLS event listener: " .. tostring(err))
+    end
+  end
+  
+  function self:connect(uri, options)
+    local success, err = pcall(_PY.mqtt_client_connect, self.conn_id, uri, options)
+    if not success then
+      print("Error connecting MQTT TLS: " .. tostring(err))
+    end
+  end
+  
+  function self:disconnect(options)
+    local success, err = pcall(_PY.mqtt_client_disconnect, self.conn_id, options)
+    if not success then
+      print("Error disconnecting MQTT TLS: " .. tostring(err))
+    end
+  end
+  
+  function self:subscribe(topic_or_topics, options)
+    local success, result = pcall(_PY.mqtt_client_subscribe, self.conn_id, topic_or_topics, options)
+    if not success then
+      print("Error subscribing MQTT TLS: " .. tostring(result))
+      return nil
+    end
+    return result
+  end
+  
+  function self:unsubscribe(topic_or_topics, options)
+    local success, result = pcall(_PY.mqtt_client_unsubscribe, self.conn_id, topic_or_topics, options)
+    if not success then
+      print("Error unsubscribing MQTT TLS: " .. tostring(result))
+      return nil
+    end
+    return result
+  end
+  
+  function self:publish(topic, payload, options)
+    local success, result = pcall(_PY.mqtt_client_publish, self.conn_id, topic, payload, options)
+    if not success then
+      print("Error publishing MQTT TLS: " .. tostring(result))
+      return nil
+    end
+    return result
+  end
+  
+  local pstr = "MQTTClientTls object: "..tostring(self):match("%s(.*)")
+  setmetatable(self,{__tostring = function(_) return pstr end})
+  return self
+end
+
+-- MQTT QoS constants
+net.QoS = {
+    AT_MOST_ONCE = 0,
+    AT_LEAST_ONCE = 1,
+    EXACTLY_ONCE = 2,
+}
+
 return net

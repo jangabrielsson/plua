@@ -26,17 +26,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: List directories
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Directory contents:"
-          dir
-          echo "Demos directory contents:"
-          dir demos
+      - name: Generate PyInstaller spec file
+        run: python build_windows_spec.py
 
       - name: Build executable with PyInstaller
-        run: pyinstaller --onefile plua.py --name plua --add-data "lua;lua" --add-data "extensions;extensions" --add-data "examples;examples" --add-data "demos;demos" --add-data "pyproject.toml;." --hidden-import toml --hidden-import toml.decoder --hidden-import toml.encoder --hidden-import toml.parser --hidden-import toml.types
+        run: pyinstaller plua.spec
 
       - name: Upload executable
         uses: actions/upload-artifact@v4

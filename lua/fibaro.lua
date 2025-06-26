@@ -9,21 +9,9 @@ local fmt = string.format
 json = require("plua.json")
 class = require("plua.class")
 net = require("plua.net")
+require("plua.qa_mgr")
 require("plua.quickapp")
-
-setTimeout = _PY.setTimeout
-clearTimeout = _PY.clearTimeout
-setInterval = _PY.setInterval
-clearInterval = _PY.clearInterval
-
-
-setTimeout(function()
-  print("Looking for QuickApp")
-  if QuickApp and QuickApp.onInit then
-    print("QuickApp detected. Creating QuickApp instance.")
-    quickApp = QuickApp({id=888,type='com.fibaro.binarySwitch',name='MyQA'})
-  end
-end, 0)
+fibaro = {}
 
 local version = _PLUA_VERSION or "unknown"
 
@@ -35,7 +23,35 @@ local function logStr(...)
   return table.concat(b," ")
 end
 
-__TAG = "PLUA"
+fibaro._traceback = false
+local function prettyCall(fun)
+  xpcall(fun,function(err)
+    local info = debug.getinfo(2)
+    local msg = err:match("^.-](:%d+:.*)$") or err
+    local source = info.source:match("^.+/(.+)$") or info.short_src
+    if fibaro._traceback then
+      msg = msg .. "\n" .. debug.traceback()
+    end
+    fibaro.error(__TAG,source..":"..msg)
+  end)
+end
+
+local oldSetTimeout = setTimeout
+function setTimeout(func,ms)
+  return oldSetTimeout(function() prettyCall(func) end,ms)
+end
+
+local oldSetInterval = setInterval
+function setInterval(func,ms)
+  local ref
+  ref =oldSetInterval(function()
+    local ok = prettyCall(func)
+    if not ok then clearInterval(ref) end
+  end,ms)
+  return ref
+end
+
+__TAG = "FIBARO"
 
 local typeColor = {
   DEBUG = "light_green",
@@ -62,8 +78,6 @@ function __fibaro_add_debug_message(tag, msg, typ, nohtml)
     _print(html2console(msg))
   end
 end
-
-fibaro = {}
 
 -- Adds a debug message to the emulator's debug output.
 -- @param tag - The tag for the debug message.

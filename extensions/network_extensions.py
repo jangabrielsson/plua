@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 import ssl
 import lupa
 import time
+import sys
 
 
 # --- Event Loop Manager ---
@@ -198,6 +199,9 @@ class AsyncioNetworkManager:
             sock = writer  # writer is actually a socket object
             sock.send(data_bytes)
 
+            # Give the event loop a chance to process other tasks
+            await asyncio.sleep(0.001)  # 1ms yield to event loop
+
             loop_manager.call_soon(
                 callback, True, len(data_bytes), f"Sent {len(data_bytes)} bytes"
             )
@@ -229,7 +233,17 @@ class AsyncioNetworkManager:
 
             # Use socket.recv() instead of reader.read() since we're using socket objects
             sock = reader  # reader is actually a socket object
-            data = sock.recv(max_bytes)
+            
+            # Set a short timeout for the read operation
+            sock.settimeout(2)  # 2 second timeout for read operations
+            
+            try:
+                data = sock.recv(max_bytes)
+            except socket.timeout:
+                loop_manager.call_soon(
+                    callback, False, None, "TCP read timeout"
+                )
+                return
 
             if data:
                 data_str = data.decode("utf-8", errors="ignore")
@@ -292,7 +306,7 @@ class AsyncioNetworkManager:
         """Synchronous TCP connect - returns (success, conn_id, message)"""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(10)  # 10 second timeout
+            sock.settimeout(1)  # 1 second timeout instead of 10
             sock.connect((host, port))
 
             # Store connection
@@ -1419,13 +1433,21 @@ end
                 from extensions.core import timer_gate
 
                 def run_callback_and_decrement():
-                    lua_runtime.execute(callback_code)
-                    network_manager._decrement_callbacks()
+                    try:
+                        lua_runtime.execute(callback_code)
+                    except Exception as e:
+                        print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+                    finally:
+                        network_manager._decrement_callbacks()
                 timer_gate.run_or_queue(run_callback_and_decrement)
             except ImportError:
                 # Fallback to direct execution if timer gate is not available
-                lua_runtime.execute(callback_code)
-                network_manager._decrement_callbacks()
+                try:
+                    lua_runtime.execute(callback_code)
+                except Exception as e:
+                    print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+                finally:
+                    network_manager._decrement_callbacks()
             return
 
     # If we get here, we have valid request_data and should proceed with the request
@@ -1466,13 +1488,21 @@ end
             from extensions.core import timer_gate
 
             def run_callback_and_decrement():
-                lua_runtime.execute(callback_code)
-                network_manager._decrement_callbacks()
+                try:
+                    lua_runtime.execute(callback_code)
+                except Exception as e:
+                    print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+                finally:
+                    network_manager._decrement_callbacks()
             timer_gate.run_or_queue(run_callback_and_decrement)
         except ImportError:
             # Fallback to direct execution if timer gate is not available
-            lua_runtime.execute(callback_code)
-            network_manager._decrement_callbacks()
+            try:
+                lua_runtime.execute(callback_code)
+            except Exception as e:
+                print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+            finally:
+                network_manager._decrement_callbacks()
         return
 
     result_queue = queue.Queue()
@@ -1529,15 +1559,24 @@ end
             from extensions.core import timer_gate
 
             def run_callback_and_decrement():
-                lua_runtime.execute(callback_code)
-                network_manager._decrement_callbacks()
+                try:
+                    lua_runtime.execute(callback_code)
+                except Exception as e:
+                    print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+                finally:
+                    network_manager._decrement_callbacks()
             timer_gate.run_or_queue(run_callback_and_decrement)
         except ImportError:
             # Fallback to direct execution if timer gate is not available
-            lua_runtime.execute(callback_code)
-            network_manager._decrement_callbacks()
-    except Exception:
-        pass  # Silently handle any errors in callback execution
+            try:
+                lua_runtime.execute(callback_code)
+            except Exception as e:
+                print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+            finally:
+                network_manager._decrement_callbacks()
+    except Exception as e:
+        print(f"Error in HTTP request processing: {e}", file=sys.stderr)
+        network_manager._decrement_callbacks()
 
 
 # Alias for backward compatibility
@@ -1554,3 +1593,200 @@ def http_request(url_or_table):
 )
 def tcp_read_until(conn_id, delimiter, max_bytes, callback):
     network_manager.tcp_read_until(conn_id, delimiter, max_bytes, callback)
+
+
+# --- TCP Server Extensions ---
+class TCPServerManager:
+    def __init__(self):
+        self.servers = {}  # server_id: TCPServer
+        self.next_id = 1
+        self.lock = threading.Lock()
+        self.active_operations = 0
+        self.active_callbacks = 0
+
+    def _next_server_id(self):
+        with self.lock:
+            sid = self.next_id
+            self.next_id += 1
+            return sid
+
+    def _increment_operations(self):
+        with self.lock:
+            self.active_operations += 1
+
+    def _decrement_operations(self):
+        with self.lock:
+            self.active_operations -= 1
+
+    def _increment_callbacks(self):
+        with self.lock:
+            self.active_callbacks += 1
+
+    def _decrement_callbacks(self):
+        with self.lock:
+            self.active_callbacks -= 1
+
+    def has_active_operations(self):
+        with self.lock:
+            return self.active_operations > 0 or len(self.servers) > 0 or self.active_callbacks > 0
+
+    def force_cleanup(self):
+        with self.lock:
+            for server_id in list(self.servers.keys()):
+                try:
+                    server = self.servers[server_id]
+                    if server:
+                        server.close()
+                except Exception:
+                    pass
+            self.servers.clear()
+            self.active_operations = 0
+            self.active_callbacks = 0
+
+
+class TCPServer:
+    def __init__(self, server_id, manager):
+        self.server_id = server_id
+        self.manager = manager
+        self.server = None
+        self.clients = {}  # client_id: (reader, writer)
+        self.next_client_id = 1
+        self.event_listeners = {
+            'client_connected': [],
+            'client_disconnected': [],
+            'data_received': [],
+            'error': []
+        }
+        self.running = False
+
+    def add_event_listener(self, event_name, callback):
+        if event_name in self.event_listeners:
+            self.event_listeners[event_name].append(callback)
+
+    def _emit_event(self, event_name, *args):
+        if event_name in self.event_listeners:
+            for callback in self.event_listeners[event_name]:
+                try:
+                    def run_callback():
+                        try:
+                            callback(*args)
+                        except Exception as e:
+                            print(f"Error in TCPServer {event_name} callback: {e}", file=sys.stderr)
+                        finally:
+                            self.manager._decrement_callbacks()
+                    self.manager._increment_callbacks()
+                    loop_manager.call_soon(run_callback)
+                except Exception as e:
+                    print(f"Error scheduling TCPServer {event_name} callback: {e}", file=sys.stderr)
+
+    async def _handle_client(self, reader, writer):
+        client_id = self.next_client_id
+        self.next_client_id += 1
+        self.clients[client_id] = (reader, writer)
+        
+        addr = writer.get_extra_info('peername')
+        self._emit_event('client_connected', client_id, addr)
+        
+        try:
+            while True:
+                data = await reader.read(1024)  # Read up to 1KB
+                if not data:
+                    break  # Client disconnected
+                
+                data_str = data.decode('utf-8', errors='ignore')
+                self._emit_event('data_received', client_id, data_str)
+                
+        except Exception as e:
+            self._emit_event('error', f"Client {client_id} error: {str(e)}")
+        finally:
+            # Clean up
+            writer.close()
+            await writer.wait_closed()
+            self.clients.pop(client_id, None)
+            self._emit_event('client_disconnected', client_id, addr)
+
+    def start(self, host, port):
+        self.manager._increment_operations()
+        
+        async def start_server():
+            try:
+                self.server = await asyncio.start_server(
+                    self._handle_client, host, port
+                )
+                self.running = True
+                print(f"TCP Server listening on {host}:{port}")
+            except Exception as e:
+                self._emit_event('error', str(e))
+            finally:
+                self.manager._decrement_operations()
+        
+        loop_manager.create_task(start_server())
+
+    def send(self, client_id, data):
+        async def send_data():
+            try:
+                reader, writer = self.clients.get(client_id)
+                if writer:
+                    if isinstance(data, str):
+                        data_bytes = data.encode('utf-8')
+                    else:
+                        data_bytes = bytes(data)
+                    writer.write(data_bytes)
+                    await writer.drain()
+                else:
+                    self._emit_event('error', f"Client {client_id} not found")
+            except Exception as e:
+                self._emit_event('error', f"Send error to client {client_id}: {str(e)}")
+        
+        loop_manager.create_task(send_data())
+
+    def close(self):
+        if self.server:
+            self.server.close()
+            self.running = False
+        self.manager.servers.pop(self.server_id, None)
+
+
+# Global TCP server manager instance
+tcp_server_manager = TCPServerManager()
+
+
+@registry.register(description="Create TCP server", category="tcp_server")
+def tcp_server_create():
+    server_id = tcp_server_manager._next_server_id()
+    server = TCPServer(server_id, tcp_server_manager)
+    tcp_server_manager.servers[server_id] = server
+    return server_id
+
+
+@registry.register(description="Add event listener to TCP server", category="tcp_server")
+def tcp_server_add_event_listener(server_id, event_name, callback):
+    server = tcp_server_manager.servers.get(server_id)
+    if server:
+        server.add_event_listener(event_name, callback)
+
+
+@registry.register(description="Start TCP server", category="tcp_server")
+def tcp_server_start(server_id, host, port):
+    server = tcp_server_manager.servers.get(server_id)
+    if server:
+        server.start(host, port)
+
+
+@registry.register(description="Send data to TCP client", category="tcp_server")
+def tcp_server_send(server_id, client_id, data):
+    server = tcp_server_manager.servers.get(server_id)
+    if server:
+        server.send(client_id, data)
+
+
+@registry.register(description="Close TCP server", category="tcp_server")
+def tcp_server_close(server_id):
+    server = tcp_server_manager.servers.get(server_id)
+    if server:
+        server.close()
+
+
+@registry.register(description="Check if there are active TCP server operations", category="tcp_server")
+def has_active_tcp_server_operations():
+    return tcp_server_manager.has_active_operations()

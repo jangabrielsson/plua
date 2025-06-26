@@ -118,7 +118,16 @@ class ExecutionTracker:
                 if self.interpreter.debug and active_timers:
                     print(f"DEBUG: Active timers detected: {active_timers}", file=sys.stderr)
 
-                return len(active_tasks) + (1 if active_timers else 0)
+                # Check for active WebSocket operations
+                try:
+                    from extensions.websocket_extensions import has_active_websocket_operations
+                    active_websockets = has_active_websocket_operations()
+                    if self.interpreter.debug and active_websockets:
+                        print(f"DEBUG: Active WebSocket operations detected: {active_websockets}", file=sys.stderr)
+                except ImportError:
+                    active_websockets = False
+
+                return len(active_tasks) + (1 if active_timers else 0) + (1 if active_websockets else 0)
             return 0
 
         except Exception:
@@ -216,6 +225,13 @@ class ExecutionTracker:
                 for task in pending_tasks:
                     if not task.done():
                         task.cancel()
+
+            # Force cleanup WebSocket connections
+            try:
+                from extensions.websocket_extensions import websocket_manager
+                websocket_manager.force_cleanup()
+            except ImportError:
+                pass
 
             if self.interpreter.debug:
                 print("DEBUG: Forced cleanup completed", file=sys.stderr)

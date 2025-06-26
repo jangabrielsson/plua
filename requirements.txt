@@ -1,6 +1,7 @@
 # Main dependencies
 lupa>=1.13.0
 toml>=0.10.0
+websocket-client>=1.6.0
 
 # Development dependencies
 pytest>=8.4.1

@@ -35,6 +35,9 @@ Examples:
   plua --debugger --debugger-port 8820 script.lua   # Run with MobDebug server on port 8820
   plua --debugger -e "require('lua.fibaro')" script.lua  # Run with debugger and fibaro module
   plua --debugger --debugger-port 8820 -e "require('lua.fibaro')" script.lua  # Run with debugger on port 8820 and fibaro module
+  plua --fibaro script.lua                          # Load fibaro library and run script
+  plua --debugger --fibaro script.lua               # Run with debugger and fibaro library
+  plua --fibaro -e "print('Hello')" script.lua      # Load fibaro, execute code, then run script
   """
     )
 
@@ -51,9 +54,26 @@ Examples:
                         help='Start MobDebug server for remote debugging on default port 8818')
     parser.add_argument('--debugger-port', type=int, default=8818, metavar='PORT',
                         help='Port for MobDebug server (default: 8818)')
+    parser.add_argument('--fibaro', action='store_true',
+                        help='Load fibaro.lua library (equivalent to -e "require(\'fibaro\')")')
     parser.add_argument('-v', '--version', action='version', version='PLua 1.0.0')
 
     args = parser.parse_args()
+
+    # Handle --fibaro flag by inserting require('fibaro') into execute_list at the right position
+    if args.fibaro:
+        # Initialize execute_list if it doesn't exist
+        if args.execute_list is None:
+            args.execute_list = []
+        
+        # Insert require('fibaro') after any debugger-related -e commands
+        insert_position = 0
+        for i, arg in enumerate(args.execute_list):
+            if 'require(\'debugger\')' in arg or 'mobdebug' in arg:
+                insert_position = i + 1
+        
+        # Insert the fibaro require at the calculated position
+        args.execute_list.insert(insert_position, "require('fibaro')")
 
     async def async_main(args):
         interpreter = PLuaInterpreter(debug=args.debug, debugger_enabled=args.debugger_port if args.debugger else False)

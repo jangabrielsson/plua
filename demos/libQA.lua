@@ -1,0 +1,1 @@
+function FunA() print("Hello from libA") end

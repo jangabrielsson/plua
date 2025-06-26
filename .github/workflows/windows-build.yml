@@ -26,13 +26,7 @@ jobs:
           pip install pyinstaller lupa paho-mqtt
 
       - name: Build executable with PyInstaller
-        run: |
-          pyinstaller --onefile plua.py --name plua \
-            --add-data "lua;lua" \
-            --add-data "extensions;extensions" \
-            --add-data "examples;examples" \
-            --add-data "demos;demos"
-        # If your entry point is in plua/interpreter.py, change to: pyinstaller --onefile plua/interpreter.py --name plua ...
+        run: pyinstaller --onefile plua.py --name plua --add-data "lua;lua" --add-data "extensions;extensions" --add-data "examples;examples" --add-data "demos;demos"
 
       - name: Upload executable
         uses: actions/upload-artifact@v4

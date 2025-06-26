@@ -11,7 +11,7 @@ class = require("plua.class")
 net = require("plua.net")
 require("plua.qa_mgr")
 require("plua.quickapp")
-fibaro = {}
+fibaro = { _plua = {} }
 
 local version = _PLUA_VERSION or "unknown"
 
@@ -29,11 +29,13 @@ local function prettyCall(fun)
     local info = debug.getinfo(2)
     local msg = err:match("^.-](:%d+:.*)$") or err
     local source = info.source:match("^.+/(.+)$") or info.short_src
-    if fibaro._traceback then
+    if fibaro._plua.traceback then
       msg = msg .. "\n" .. debug.traceback()
     end
     fibaro.error(__TAG,source..":"..msg)
+    return false
   end)
+  return true
 end
 
 local oldSetTimeout = setTimeout
@@ -68,14 +70,20 @@ os.getenv = _PY.get_env_var
 -- @param msg - The message string.
 -- @param typ - The type of message (e.g., "DEBUG", "ERROR").
 function __fibaro_add_debug_message(tag, msg, typ, nohtml)
-  local time = os.date("[%d.%m.%Y][%H:%M:%S]")
+  local time = ""
+  if fibaro._plua.shortTime then
+    time = tostring(os.date("[%H:%M:%S]"))
+  else
+    time = tostring(os.date("[%d.%m.%Y][%H:%M:%S]"))
+  end
   local typStr = fmt("<font color='%s'>%-7s</font>", typeColor[typ], typ)
   if nohtml then
     local txt = html2console(fmt("<font color='grey89'>%s[%s][%s]: @@</font>", time, typStr, tag))
     _print((txt:gsub("@@", msg)))
   else
     msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
-    _print(html2console(msg))
+    local tt = html2console(msg)
+    _print(tt)
   end
 end
 

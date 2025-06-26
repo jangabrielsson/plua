@@ -27,7 +27,8 @@ function net.HTTPClient()
       else
         -- Call success callback if provided
         if options.success then
-          local success, err = pcall(options.success, response)
+          local res = { status = response.code, data = response.body }
+          local success, err = pcall(options.success, res)
           if not success then
             print("Error in HTTP success callback: " .. tostring(err))
           end

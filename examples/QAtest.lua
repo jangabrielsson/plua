@@ -5,7 +5,8 @@
 print("QAtest")
 function QuickApp:onInit()
   self:debug("onInit")
-  fibaro._traceback = true
+  fibaro._plua.traceback = true
+  fibaro._plua.shortTime = true
   
   net:HTTPClient():request("http://google.com",{
     success = function(response)

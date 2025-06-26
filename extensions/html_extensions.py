@@ -154,58 +154,56 @@ def _parse_html_tags(html_text):
     # Handle <br> and </br> tags
     html_text = re.sub(r'</?br\s*/?>', '\n', html_text, flags=re.IGNORECASE)
 
-    # Tokenize the HTML into tags and text
-    tokens = []
-    i = 0
-
-    while i < len(html_text):
-        if html_text[i] == '<':
-            # Find the end of the tag
-            tag_end = html_text.find('>', i)
-            if tag_end == -1:
-                # Malformed tag, treat as text
-                tokens.append(('text', html_text[i:]))
-                break
-
-            tag_content = html_text[i:tag_end+1]
-            tokens.append(('tag', tag_content))
-            i = tag_end + 1
-        else:
-            # Find the next tag
-            next_tag = html_text.find('<', i)
-            if next_tag == -1:
-                # No more tags, add remaining text
-                tokens.append(('text', html_text[i:]))
-                break
-
-            text_content = html_text[i:next_tag]
-            if text_content:
-                tokens.append(('text', text_content))
-            i = next_tag
-
-    # Process tokens with color stack
+    # Process the text with color stack
     color_stack = []
     result = ""
-
-    for token_type, content in tokens:
-        if token_type == 'text':
-            # Apply current color if any
-            if color_stack:
-                result += _apply_ansi_color(content, color_stack[-1])
-            else:
-                result += content
-        elif token_type == 'tag':
-            if content.lower().startswith('<font'):
-                # Opening font tag
-                color_match = re.search(r'color\s*=\s*[\'"]([^\'"]+)[\'"]', content, re.IGNORECASE)
+    i = 0
+    
+    while i < len(html_text):
+        if html_text[i] == '<':
+            # Check if this is a font tag
+            if html_text[i:i+5].lower() == '<font':
+                # Find the end of the opening font tag
+                tag_end = html_text.find('>', i)
+                if tag_end == -1:
+                    # Malformed tag, treat as text
+                    result += html_text[i:]
+                    break
+                
+                # Extract the font tag
+                font_tag = html_text[i:tag_end+1]
+                
+                # Extract color attribute
+                color_match = re.search(r'color\s*=\s*[\'"]([^\'"]+)[\'"]', font_tag, re.IGNORECASE)
                 if color_match:
                     color_name = color_match.group(1)
                     color_code = _get_ansi_color_code(color_name)
                     color_stack.append(color_code)
-            elif content.lower() == '</font>':
+                
+                i = tag_end + 1
+                
+            elif html_text[i:i+7].lower() == '</font>':
                 # Closing font tag
                 if color_stack:
                     color_stack.pop()
+                i += 7
+                
+            else:
+                # Not a font tag, treat as text, apply color if active
+                char = html_text[i]
+                if color_stack:
+                    result += _apply_ansi_color(char, color_stack[-1])
+                else:
+                    result += char
+                i += 1
+        else:
+            # Regular text character
+            char = html_text[i]
+            if color_stack:
+                result += _apply_ansi_color(char, color_stack[-1])
+            else:
+                result += char
+            i += 1
 
     return result
 

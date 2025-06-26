@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-"""
-Generate a comprehensive PyInstaller spec file for PLua
-"""
-
-spec_content = '''# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
 
@@ -16,21 +11,9 @@ a = Analysis(
         ('extensions', 'extensions'),
         ('examples', 'examples'),
         ('demos', 'demos'),
-        ('pyproject.toml', '.'),
     ],
     hiddenimports=[
         'lupa',
-        'lupa.lua',
-        'lupa._lupa',
-        'lupa._lupa2',
-        'lupa._lupa3',
-        'lupa._lupa4',
-        'lupa._lupa5',
-        'toml',
-        'toml.decoder',
-        'toml.encoder',
-        'toml.parser',
-        'toml.types',
         'asyncio',
         'socket',
         'threading',
@@ -43,10 +26,8 @@ a = Analysis(
         'extensions.html_extensions',
         'extensions.core',
         'extensions.registry',
-        'extensions.web_server',
-        'extensions.websocket_extensions',
     ],
-    hookspath=['hooks'],
+    hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
@@ -79,9 +60,3 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
-'''
-
-with open('plua.spec', 'w') as f:
-    f.write(spec_content)
-
-print("Generated plua.spec file") 

@@ -98,19 +98,11 @@ end
 -- Create a global router instance that gets set up once
 local router = nil
 
--- Function to set up the router with all endpoints (called once)
-local function setup_router()
-  if router then
-    return router  -- Already set up
-  end
-  
-  router = API()
-  
-  -- Helper function to create response
-  local function create_response(data, status)
-    return data, status or 200
-  end
-  
+-- Helper function to create response
+local function create_response(data, status)
+  return data, status or 200
+end
+
 -- Helper function to create a redirect response
 local function create_redirect_response(hostname, port)
   return {
@@ -120,6 +112,14 @@ local function create_redirect_response(hostname, port)
   }
 end
 
+-- Function to set up the router with all endpoints (called once)
+local function setup_router()
+  if router then
+    return router  -- Already set up
+  end
+  
+  router = API()
+  
   -- Register all endpoints sorted by path
   router:add("POST", "/alarms/v1/partitions/actions/arm", function(data, queryParameters)
     --return create_response({status = "armed"})
@@ -577,7 +577,8 @@ local function fibaroapi(method, path, data, queryParameters)
   end
   
   -- Default response for unknown endpoints
-  return {status = "ok", method = method, path = path}
+  -- We should check if we run offline and if so, return a 404 error
+  return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
 end
 
 _PY.fibaroapi = fibaroapi

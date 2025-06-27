@@ -1,4 +1,3 @@
-_PLUA_VERSION = "1.0.0"
 -- MobDebug startup moved to command-line flag --debugger
 
 ---@table _PY
@@ -306,9 +305,9 @@ function fibaro.alert(alertType, ids, notification)
     local usersId = ids
     ids = {}
     for _, userId in ipairs(usersId) do
-      for _, device in ipairs(mobileDevices) do
-        if device.properties.lastLoggedUser == userId then
-          table.insert(ids, device.id)
+      for _, device1 in ipairs(mobileDevices) do
+        if device1['properties'].lastLoggedUser == userId then
+          table.insert(ids, device1['id'])
         end
       end
     end

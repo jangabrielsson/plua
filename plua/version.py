@@ -11,24 +11,27 @@ except ImportError:
 def get_version():
     # If toml is not available, return a default version
     if toml is None:
-        return "1.0.0"
+        return "1.0.2"
     
     # Detect if running in a PyInstaller bundle
     if getattr(sys, 'frozen', False):
         base_path = sys._MEIPASS
         pyproject = os.path.join(base_path, 'pyproject.toml')
     else:
-        # In development mode, look for pyproject.toml in the parent directory
-        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        pyproject = os.path.join(base_path, 'pyproject.toml')
+        # In development mode, look for pyproject.toml in the project root
+        # Start from the current file location and go up to find pyproject.toml
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)  # Go up one level from plua/ to project root
+        pyproject = os.path.join(project_root, 'pyproject.toml')
 
     try:
-        with open(pyproject, 'r') as f:
+        with open(pyproject, 'r', encoding='utf-8') as f:
             data = toml.load(f)
         return data['project']['version']
-    except (FileNotFoundError, KeyError, Exception):
+    except (FileNotFoundError, KeyError, Exception) as e:
         # Fallback if file is not found or has unexpected format
-        return "1.0.0"
+        print(f"Warning: Could not read version from pyproject.toml: {e}", file=sys.stderr)
+        return "1.0.2"
 
 
 __version__ = get_version()

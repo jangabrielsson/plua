@@ -283,12 +283,13 @@ class PLuaInterpreter:
             self,
             debug=False,
             debugger_enabled=False,
-            start_api_server=True):
+            start_api_server=True,
+            api_server_port=8000):
         self.debug = debug
         self.debugger_enabled = debugger_enabled
         self.lua_runtime = LuaRuntime(unpack_returned_tuples=True)
         self.execution_tracker = ExecutionTracker(self)
-        self.api_server_port = 8000
+        self.api_server_port = api_server_port
         self.api_server_host = "127.0.0.1"
         self.instance_id = str(uuid.uuid4())  # Generate unique instance ID
         self.embedded_api_server = None
@@ -860,14 +861,15 @@ end
         """Start the embedded API server"""
         try:
             from .embedded_api_server import EmbeddedAPIServer
-            
+
             self.embedded_api_server = EmbeddedAPIServer(
-                self, 
-                host=self.api_server_host, 
-                port=self.api_server_port
+                self,
+                host=self.api_server_host,
+                port=self.api_server_port,
+                debug=self.debug
             )
             self.embedded_api_server.start()
-            
+
         except ImportError as e:
             self.debug_print(f"FastAPI not available, skipping embedded API server: {e}")
             self.embedded_api_server = None
@@ -884,33 +886,33 @@ end
         try:
             # Set a reasonable timeout for execution
             import threading
-            
+
             result = None
             error = None
-            
+
             def execute_with_timeout():
                 nonlocal result, error
                 try:
                     result = self.lua_runtime.execute(code)
                 except Exception as e:
                     error = str(e)
-            
+
             # Run execution in a thread with timeout
             thread = threading.Thread(target=execute_with_timeout)
             thread.daemon = True
             thread.start()
-            
+
             # Wait for completion with timeout
             thread.join(timeout=30)  # 30 second timeout
-            
+
             if thread.is_alive():
                 return {"success": False, "result": None, "error": "Execution timed out after 30 seconds"}
-            
+
             if error:
                 return {"success": False, "result": None, "error": error}
-            
+
             return {"success": True, "result": result, "error": None}
-            
+
         except Exception as e:
             return {"success": False, "result": None, "error": str(e)}
 
@@ -944,20 +946,20 @@ end
         try:
             # Execute the code
             self.lua_runtime.execute(code)
-            
+
             # Get captured output
             captured_output = self.get_captured_output()
-            
+
             return {
                 "success": True,
                 "result": captured_output if captured_output else None,
                 "error": None
             }
-            
+
         except Exception as e:
             # Get any captured output even if there was an error
             captured_output = self.get_captured_output()
-            
+
             return {
                 "success": False,
                 "result": captured_output if captured_output else None,

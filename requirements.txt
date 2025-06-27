@@ -1,7 +1,13 @@
-# Main dependencies
+# Core dependencies
 lupa>=1.13.0
 toml>=0.10.0
 websocket-client>=1.6.0
+
+# API server dependencies (embedded)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+httpx>=0.25.0
 
 # Development dependencies
 pytest>=8.4.1

@@ -87,10 +87,18 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# pytest
+.pytest_cache/
+
 # PLua specific
 test_output.txt
 *.log
 *.tmp
+.plua.lua
+*.plua.lua
+plua_cache/
+plua_temp/
+plua_debug/
 
 # OS generated files
 .DS_Store

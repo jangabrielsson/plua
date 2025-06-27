@@ -587,9 +587,14 @@ The server automatically:
 
 ### Usage
 
-To use the system, always start with:
-```bash
-python plua.py [your_lua_file.lua]
-```
+To run PLua with the new architecture:
 
-The embedded API server will automatically start and be available at `http://127.0.0.1:8000/`. 
+```bash
+# Install in development mode
+uv pip install -e .
+
+# Run a Lua script
+plua [your_lua_file.lua]
+
+# Or use the module form
+python -m plua [your_lua_file.lua] 

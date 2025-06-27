@@ -38,7 +38,7 @@ def test_integration():
     # Start PLua in interactive mode (this will register with the API server)
     print("Starting PLua in interactive mode...")
     plua_process = subprocess.Popen([
-        sys.executable, "plua.py", "-i"
+        sys.executable, "-m", "plua", "-i"
     ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
     # Wait a moment for PLua to start and register

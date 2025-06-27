@@ -51,7 +51,7 @@ def test_integration():
     try:
         print("\n📝 Testing PLua script execution...")
         result = subprocess.run([
-            sys.executable, "plua.py", 
+            sys.executable, "-m", "plua",
             "-e", "print('Setting variable x to 42'); x = 42; print('Variable x set successfully')",
             "examples/basic.lua"
         ], capture_output=True, text=True, timeout=30)
@@ -74,7 +74,7 @@ def test_integration():
         print("\n🔄 Testing interactive mode connection...")
         # Start interactive mode and send a command, then exit
         process = subprocess.Popen([
-            sys.executable, "plua.py", "-i"
+            sys.executable, "-m", "plua", "-i"
         ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
         # Send commands and exit

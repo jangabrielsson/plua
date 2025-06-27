@@ -45,8 +45,8 @@ def build_executable():
         '--clean',
         '--onefile',
         '--name=plua',
-        '--add-data=lua:lua',
-        '--add-data=extensions:extensions',
+        '--add-data=src/lua:lua',
+        '--add-data=src/extensions:extensions',
         '--add-data=pyproject.toml:.',
         '--hidden-import=lupa',
         '--hidden-import=lupa._lupa',
@@ -67,7 +67,9 @@ def build_executable():
         '--hidden-import=queue',
         '--collect-all=lupa',
         '--collect-submodules=lupa',
-        'plua.py'
+        '--collect-submodules=plua',
+        '--collect-submodules=extensions',
+        'src/plua/__main__.py'
     ]
 
     if not run_command(cmd, "Building executable"):

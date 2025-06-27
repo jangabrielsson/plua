@@ -21,7 +21,8 @@ def get_version():
         # In development mode, look for pyproject.toml in the project root
         # Start from the current file location and go up to find pyproject.toml
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(current_dir)  # Go up one level from plua/ to project root
+        # Go up two levels: src/plua/ -> src/ -> project root
+        project_root = os.path.dirname(os.path.dirname(current_dir))
         pyproject = os.path.join(project_root, 'pyproject.toml')
 
     try:

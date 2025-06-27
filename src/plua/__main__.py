@@ -1,17 +1,12 @@
-#!/usr/bin/env python
-"""
-PLua - A Lua interpreter in Python using Lupa library
-Supports Lua 5.4 environment with custom Python-extended functions for timer management.
-"""
-
 import sys
 import argparse
+import os
+
 from plua import PLuaInterpreter
 from plua.version import __version__
 import extensions.network_extensions
 
 loop_manager = extensions.network_extensions.loop_manager
-
 
 def main():
     """Main entry point"""
@@ -182,6 +177,5 @@ print("MobDebug server started on 0.0.0.0:{debugger_port}")
 
     loop_manager.run_main(async_main(args))
 
-
 if __name__ == "__main__":
-    main()
+    main() 

@@ -48,81 +48,87 @@ A powerful Lua interpreter implemented in Python using the Lupa library. PLua pr
    pip install -r requirements.txt
    ```
 
-## Usage
+## Quick Start
 
-### New Architecture (Single-Process, Embedded API Server)
+```bash
+# Install in development mode
+uv pip install -e .
 
-- The API server is now always started and managed by PLua itself.
-- Do **NOT** run `api_server.py` directly.
-- To use PLua and the web interface, always start with:
+# Run a Lua script
+plua [your_lua_file.lua]
 
-```sh
-python plua.py [your_lua_file.lua]
+# Or use the module form
+python -m plua [your_lua_file.lua]
 ```
 
-or use your main entrypoint script.
+## Usage Examples
 
-### Running Lua Files
+### Running Lua Scripts
 
 ```bash
 # Using uv (recommended)
-uv run python plua.py script.lua
+uv run plua script.lua
 
-# Using pip
-python plua.py script.lua
+# Direct execution
+plua script.lua
 
-# Using built executable
-./dist/plua script.lua
+# Module form
+python -m plua script.lua
 ```
 
-### Executing Code Fragments
+### Executing Lua Code
 
 ```bash
-# Using uv (recommended)
-uv run python plua.py -e "print('Hello, World!')"
+# Execute a single line of Lua code
+uv run plua -e "print('Hello, World!')"
 
-# Using pip
-python plua.py -e "print('Hello, World!')"
+# Direct execution
+plua -e "print('Hello, World!')"
 
-# Multiple code fragments
-uv run python plua.py -e "x=10" -e "print(x)"
+# Execute multiple lines
+uv run plua -e "x=10" -e "print(x)"
+
+# Module form
+python -m plua -e "print('Hello, World!')"
 ```
 
 ### Interactive Mode
 
 ```bash
-# Using uv (recommended)
-uv run python plua.py -i
-# or simply
-uv run python plua.py
+# Start interactive shell
+uv run plua -i
 
-# Using pip
-python plua.py -i
-# or simply
-python plua.py
+# Or simply
+uv run plua
+
+# Direct execution
+plua -i
+
+# Module form
+python -m plua -i
 ```
 
-### Debugging Mode
+### Debugging
 
 ```bash
-# Start with MobDebug server on default port 8818
-uv run python plua.py --debugger script.lua
+# Run with MobDebug server (default port 8818)
+uv run plua --debugger script.lua
 
 # Custom debugger port
-uv run python plua.py --debugger --debugger-port 8820 script.lua
+uv run plua --debugger --debugger-port 8820 script.lua
 
-# With VS Code integration
-uv run python plua.py --debugger -e "require('lua.fibaro')" script.lua
+# With Fibaro library
+uv run plua --debugger -e "require('lua.fibaro')" script.lua
 ```
 
 ### Loading Libraries
 
 ```bash
-# Load libraries before running script
-uv run python plua.py -l socket -l debugger script.lua
+# Load socket and debugger libraries
+uv run plua -l socket -l debugger script.lua
 
-# Load libraries in interactive mode
-uv run python plua.py -l socket -i
+# Interactive mode with libraries
+uv run plua -l socket -i
 ```
 
 ### Command Line Options

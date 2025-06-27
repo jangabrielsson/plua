@@ -38,12 +38,12 @@ def build_windows_executable():
 block_cipher = None
 
 a = Analysis(
-    ['plua.py'],
+    ['src/plua/__main__.py'],
     pathex=[],
     binaries=[],
     datas=[
-        ('lua', 'lua'),
-        ('extensions', 'extensions'),
+        ('src/lua', 'lua'),
+        ('src/extensions', 'extensions'),
         ('examples', 'examples'),
         ('demos', 'demos'),
     ],
@@ -61,6 +61,10 @@ a = Analysis(
         'extensions.html_extensions',
         'extensions.core',
         'extensions.registry',
+        'plua',
+        'plua.interpreter',
+        'plua.embedded_api_server',
+        'plua.version',
     ],
     hookspath=[],
     hooksconfig={},

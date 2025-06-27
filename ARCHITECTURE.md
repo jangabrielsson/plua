@@ -466,7 +466,130 @@ graph TB
 
 ## Single-Process, Embedded API Server
 
-- The FastAPI server is now always started and managed by the PLua interpreter itself (embedded).
-- There is no registration, coordination, or separate process for the API server.
-- All communication between the web interface and the interpreter is in-process.
-- To use the system, always start with `python plua.py` or your main entrypoint. 
+The FastAPI server is now always started and managed by the PLua interpreter itself (embedded). This provides a unified, single-process architecture for development and testing.
+
+### Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "PLua Interpreter Process"
+        A[PLuaInterpreter] --> B[Embedded API Server]
+        A --> C[Lua Runtime]
+        A --> D[HTTP Client]
+        
+        B --> E[FastAPI Server]
+        E --> F[API Endpoints]
+        F --> G[_PY.fibaroapi]
+        
+        G --> H[Lua Handler]
+        H --> I[Return Data]
+        H --> J[Return Redirect]
+        
+        J --> K[HTTP Request to External]
+        K --> D
+        D --> L[External HC3 Server]
+        L --> M[Response Data]
+        M --> I
+    end
+    
+    subgraph "External Systems"
+        L
+    end
+```
+
+### Key Features
+
+- **Single Process**: No separate API server process or registration required
+- **Direct Integration**: API calls go directly to `_PY.fibaroapi()` function
+- **Redirect Support**: Can redirect requests to real HC3 servers for testing
+- **Non-blocking HTTP**: Asyncio-based HTTP requests prevent blocking
+- **Legacy Fallback**: Automatic fallback to urllib-based requests if needed
+
+### HTTP Request Architecture
+
+The system uses a hybrid HTTP request approach:
+
+```mermaid
+sequenceDiagram
+    participant Lua as Lua Code
+    participant API as Embedded API
+    participant Handler as Lua Handler
+    participant HTTP as HTTP Client
+    participant External as External Server
+    
+    Lua->>API: api.get("/devices")
+    API->>Handler: _PY.fibaroapi("GET", "/api/devices")
+    
+    alt Return Mock Data
+        Handler-->>API: {devices: [...]}
+        API-->>Lua: Mock data
+    else Return Redirect
+        Handler-->>API: {_redirect: true, hostname: "http://192.168.1.57/"}
+        API->>HTTP: Make external request
+        HTTP->>External: GET /api/devices
+        External-->>HTTP: Real data
+        HTTP-->>API: Response data
+        API-->>Lua: Real data
+    end
+```
+
+### HTTP Client Implementation
+
+The HTTP client uses a multi-layered approach:
+
+1. **Primary**: Asyncio-based with httpx (non-blocking)
+2. **Fallback**: Legacy urllib-based implementation
+3. **Threading**: Separate thread for asyncio operations
+4. **Timeout**: Configurable timeouts with automatic fallback
+
+```python
+# Primary implementation (asyncio + httpx)
+async def async_request():
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.request(method, url, headers=headers, data=body)
+        return response.json()
+
+# Fallback implementation (urllib)
+def legacy_request():
+    with urllib.request.urlopen(request, context=context, timeout=10) as response:
+        return json.loads(response.read().decode())
+```
+
+### Redirect Handling
+
+The embedded API server can handle redirects to external HC3 servers:
+
+```lua
+-- Lua handler can return redirect response
+function handle_devices_request()
+    return {
+        _redirect = true,
+        hostname = "http://192.168.1.57/",  -- Full URL
+        port = 80
+    }
+end
+```
+
+The server automatically:
+1. Detects `_redirect` flag in response
+2. Extracts hostname and port
+3. Makes HTTP request to external server
+4. Returns actual data from external server
+
+### Benefits
+
+- **Simplified Setup**: No need to run separate API server
+- **Better Integration**: Direct access to Lua environment
+- **Flexible Testing**: Can mock data or redirect to real servers
+- **Non-blocking**: HTTP requests don't block the main thread
+- **Reliable**: Multiple fallback mechanisms ensure operation
+- **Development Friendly**: Easy to switch between mock and real data
+
+### Usage
+
+To use the system, always start with:
+```bash
+python plua.py [your_lua_file.lua]
+```
+
+The embedded API server will automatically start and be available at `http://127.0.0.1:8000/`. 

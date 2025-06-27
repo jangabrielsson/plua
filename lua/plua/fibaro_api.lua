@@ -120,26 +120,340 @@ local function create_redirect_response(hostname, port)
   }
 end
 
-  -- Register all GET endpoints
+  -- Register all endpoints sorted by path
+  router:add("POST", "/alarms/v1/partitions/actions/arm", function(data, queryParameters)
+    --return create_response({status = "armed"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("DELETE", "/alarms/v1/partitions/actions/arm", function(data, queryParameters)
+    --return create_response({status = "disarmed"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/alarms/v1/partitions/<id>/actions/arm", function(data, queryParameters, vars)
+    --return create_response({status = "armed"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("DELETE", "/alarms/v1/partitions/<id>/actions/arm", function(data, queryParameters, vars)
+    --return create_response({status = "disarmed"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/alarms/v1/partitions/actions/tryArm", function(data, queryParameters)
+    --return create_response({status = "try_armed"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/alarms/v1/partitions/<id>/actions/tryArm", function(data, queryParameters, vars)
+    --return create_response({status = "try_armed"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/callAction", function(data, queryParameters)
+    --return create_response({status = "action_executed"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/customEvents", function(data, queryParameters)
+    --return create_response({status = "created"}, 201)
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/customEvents", function(data, queryParameters)
+    --return create_response({event1 = {name = "testEvent", userdescription = "Test event"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/customEvents/<name>", function(data, queryParameters, vars)
+    --return create_response({name = vars.name, userdescription = "Test event"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/customEvents/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("PUT", "/api/customEvents/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("DELETE", "/api/customEvents/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "deleted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/customEvents/<name>/emit", function(data, queryParameters, vars)
+    --return create_response({status = "emitted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/debugMessages", function(data, queryParameters)
+    --return create_response({status = "added"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
   router:add("GET", "/api/devices", function(data, queryParameters)
-    -- Example: Redirect to external HC3 server for real device data
-    -- Uncomment the line below to redirect to your actual HC3 server
-    -- return create_redirect_response("your-hc3-server.com", 443)
-    
-    -- For now, return mock data
-    return create_redirect_response(fibaro.hc3_url, 80)
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
   router:add("GET", "/api/devices/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, name = "Device" .. vars.id})
+    --return create_response({id = vars.id, name = "Device" .. vars.id})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("DELETE", "/api/devices/<id>", function(data, queryParameters, vars)
+    --return create_response({status = "deleted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/devices/<id>/action/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "action_executed", deviceId = vars.id, action = vars.name})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/diagnostics", function(data, queryParameters)
+    --return create_response({status = "ok", version = "1.0.0"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/energy/devices", function(data, queryParameters)
+    --return create_response({device1 = {id = 1, name = "Energy Meter"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
   router:add("GET", "/api/globalVariables", function(data, queryParameters)
-    return create_response({var1 = {name = "var1", value = "foo"}})
+    --return create_response({var1 = {name = "var1", value = "foo"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
   router:add("GET", "/api/globalVariables/<name>", function(data, queryParameters, vars)
-    return create_response({name = vars.name, value = "foo"})
+    --return create_response({name = vars.name, value = "foo"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/home", function(data, queryParameters)
+    --return create_response({hcName = "Home Center", currency = "USD"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/home", function(data, queryParameters)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("PUT", "/api/home", function(data, queryParameters)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/icons", function(data, queryParameters)
+    --return create_response({icon1 = {id = 1, name = "Light Icon"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/iosDevices", function(data, queryParameters)
+    --return create_response({device1 = {id = 1, name = "iPhone"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/notificationCenter", function(data, queryParameters)
+    --return create_response({notification1 = {id = 1, message = "Test notification"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/climate", function(data, queryParameters)
+    --return create_response({climate1 = {id = 1, temperature = 22}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/climate/<id>", function(data, queryParameters, vars)
+    --return create_response({id = vars.id, temperature = 22})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/family", function(data, queryParameters)
+    --return create_response({family1 = {id = 1, name = "Family"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/favoriteColors", function(data, queryParameters)
+    --return create_response({color1 = {id = 1, name = "Blue"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/favoriteColors/v2", function(data, queryParameters)
+    --return create_response({color1 = {id = 1, name = "Blue", version = "2"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/humidity", function(data, queryParameters)
+    --return create_response({humidity1 = {id = 1, value = 45}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/location", function(data, queryParameters)
+    --return create_response({location1 = {id = 1, name = "Home"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/notifications", function(data, queryParameters)
+    --return create_response({notification1 = {id = 1, message = "Panel notification"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/panels/sprinklers", function(data, queryParameters)
+    --return create_response({sprinkler1 = {id = 1, name = "Garden Sprinkler"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
+    --return create_response({key1 = "value1", key2 = "value2"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
+    --return create_response({status = "created"}, 201)
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("DELETE", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
+    --return create_response({status = "deleted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
+    --return create_response({value = "test_value"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "updated"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("PUT", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "updated"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("DELETE", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "deleted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/callUIEvent", function(data, queryParameters)
+    --return create_response({status = "ui_event_called"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/createChildDevice", function(data, queryParameters)
+    --return create_response({id = 1, status = "created"}, 201)
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/publishEvent", function(data, queryParameters)
+    --return create_response({status = "published"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/removeChildDevice/<id>", function(data, queryParameters, vars)
+    --return create_response({status = "deleted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/restart", function(data, queryParameters)
+    --return create_response({status = "restarted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/updateProperty", function(data, queryParameters)
+    --return create_response({status = "property_updated"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/plugins/updateView", function(data, queryParameters)
+    --return create_response({status = "view_updated"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/profiles", function(data, queryParameters)
+    --return create_response({profiles = {profile1 = {id = 1, name = "Admin"}}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/profiles/<id>", function(data, queryParameters, vars)
+    --return create_response({id = vars.id, name = "Profile" .. vars.id})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/proxy", function(data, queryParameters)
+    --return create_response({status = "ok", proxied = true})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/quickApp", function(data, queryParameters)
+    --return create_response({id = 1, status = "imported"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
+    --return create_response({{name = "main.lua", content = "print('Hello')", isMain = true}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
+    --return create_response({status = "created"}, 201)
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("PUT", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
+    --return create_response({name = vars.name, content = "print('Hello')", isMain = true})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("PUT", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("DELETE", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
+    --return create_response({status = "deleted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/quickApp/export/<id>", function(data, queryParameters, vars)
+    --return create_response({name = "test.fqa", content = "exported content"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/quickApp/import", function(data, queryParameters)
+    --return create_response({status = "imported"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/refreshStates", function(data, queryParameters)
+    --return create_response({
+    --  events = {
+    --    {id = 1, type = "deviceUpdate", timestamp = os.time()},
+    --    {id = 2, type = "systemEvent", timestamp = os.time()}
+    --  },
+    --  last = 2
+    --})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
   router:add("GET", "/api/rooms", function(data, queryParameters)
@@ -147,343 +461,90 @@ end
     --return create_response({room1 = {id = 1, name = "Living Room"}})
   end)
   
-  router:add("GET", "/api/rooms/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, name = "Room" .. vars.id})
-  end)
-  
-  router:add("GET", "/api/sections", function(data, queryParameters)
-    return create_response({section1 = {id = 1, name = "Main Section"}})
-  end)
-  
-  router:add("GET", "/api/sections/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, name = "Section" .. vars.id})
-  end)
-  
-  router:add("GET", "/api/customEvents", function(data, queryParameters)
-    return create_response({event1 = {name = "testEvent", userdescription = "Test event"}})
-  end)
-  
-  router:add("GET", "/api/customEvents/<name>", function(data, queryParameters, vars)
-    return create_response({name = vars.name, userdescription = "Test event"})
-  end)
-  
-  router:add("GET", "/api/refreshStates", function(data, queryParameters)
-    return create_response({
-      events = {
-        {id = 1, type = "deviceUpdate", timestamp = os.time()},
-        {id = 2, type = "systemEvent", timestamp = os.time()}
-      },
-      last = 2
-    })
-  end)
-  
-  router:add("GET", "/api/weather", function(data, queryParameters)
-    return create_response({temperature = 22.5, humidity = 45})
-  end)
-  
-  router:add("GET", "/api/iosDevices", function(data, queryParameters)
-    return create_response({device1 = {id = 1, name = "iPhone"}})
-  end)
-  
-  router:add("GET", "/api/home", function(data, queryParameters)
-    return create_response({hcName = "Home Center", currency = "USD"})
-  end)
-  
-  router:add("GET", "/api/settings", function(data, queryParameters)
-    return create_response({setting = "value"})
-  end)
-  
-  router:add("GET", "/api/settings/<name>", function(data, queryParameters, vars)
-    return create_response({name = vars.name, value = "setting_value"})
-  end)
-  
-  router:add("GET", "/api/alarms/v1/partitions", function(data, queryParameters)
-    return create_response({partition1 = {id = 1, name = "Main Partition"}})
-  end)
-  
-  router:add("GET", "/api/alarms/v1/partitions/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, name = "Partition" .. vars.id})
-  end)
-  
-  router:add("GET", "/api/alarms/v1/devices", function(data, queryParameters)
-    return create_response({device1 = {id = 1, name = "Alarm Device"}})
-  end)
-  
-  router:add("GET", "/api/notificationCenter", function(data, queryParameters)
-    return create_response({notification1 = {id = 1, message = "Test notification"}})
-  end)
-  
-  router:add("GET", "/api/profiles", function(data, queryParameters)
-    return create_response({profiles = {profile1 = {id = 1, name = "Admin"}}})
-  end)
-  
-  router:add("GET", "/api/profiles/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, name = "Profile" .. vars.id})
-  end)
-  
-  router:add("GET", "/api/icons", function(data, queryParameters)
-    return create_response({icon1 = {id = 1, name = "Light Icon"}})
-  end)
-  
-  router:add("GET", "/api/users", function(data, queryParameters)
-    return create_response({user1 = {id = 1, name = "Admin User"}})
-  end)
-  
-  router:add("GET", "/api/energy/devices", function(data, queryParameters)
-    return create_response({device1 = {id = 1, name = "Energy Meter"}})
-  end)
-  
-  router:add("GET", "/api/panels/location", function(data, queryParameters)
-    return create_response({location1 = {id = 1, name = "Home"}})
-  end)
-  
-  router:add("GET", "/api/panels/climate", function(data, queryParameters)
-    return create_response({climate1 = {id = 1, temperature = 22}})
-  end)
-  
-  router:add("GET", "/api/panels/climate/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, temperature = 22})
-  end)
-  
-  router:add("GET", "/api/panels/notifications", function(data, queryParameters)
-    return create_response({notification1 = {id = 1, message = "Panel notification"}})
-  end)
-  
-  router:add("GET", "/api/panels/family", function(data, queryParameters)
-    return create_response({family1 = {id = 1, name = "Family"}})
-  end)
-  
-  router:add("GET", "/api/panels/sprinklers", function(data, queryParameters)
-    return create_response({sprinkler1 = {id = 1, name = "Garden Sprinkler"}})
-  end)
-  
-  router:add("GET", "/api/panels/humidity", function(data, queryParameters)
-    return create_response({humidity1 = {id = 1, value = 45}})
-  end)
-  
-  router:add("GET", "/api/panels/favoriteColors", function(data, queryParameters)
-    return create_response({color1 = {id = 1, name = "Blue"}})
-  end)
-  
-  router:add("GET", "/api/panels/favoriteColors/v2", function(data, queryParameters)
-    return create_response({color1 = {id = 1, name = "Blue", version = "2"}})
-  end)
-  
-  router:add("GET", "/api/diagnostics", function(data, queryParameters)
-    return create_response({status = "ok", version = "1.0.0"})
-  end)
-  
-  router:add("GET", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
-    return create_response({key1 = "value1", key2 = "value2"})
-  end)
-  
-  router:add("GET", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
-    return create_response({value = "test_value"})
-  end)
-  
-  router:add("GET", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
-    return create_response({{name = "main.lua", content = "print('Hello')", isMain = true}})
-  end)
-  
-  router:add("GET", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
-    return create_response({name = vars.name, content = "print('Hello')", isMain = true})
-  end)
-  
-  router:add("GET", "/api/quickApp/export/<id>", function(data, queryParameters, vars)
-    return create_response({name = "test.fqa", content = "exported content"})
-  end)
-  
-  router:add("GET", "/api/proxy", function(data, queryParameters)
-    return create_response({status = "ok", proxied = true})
-  end)
-  
-  -- Register all POST endpoints
-  router:add("POST", "/api/devices/<id>/action/<name>", function(data, queryParameters, vars)
-    return create_response({status = "action_executed", deviceId = vars.id, action = vars.name})
-  end)
-  
-  router:add("POST", "/api/callAction", function(data, queryParameters)
-    return create_response({status = "action_executed"})
-  end)
-  
   router:add("POST", "/api/rooms", function(data, queryParameters)
-    return create_response({id = 1, status = "created"}, 201)
+    --return create_response({id = 1, status = "created"}, 201)
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/rooms/<id>", function(data, queryParameters, vars)
+    --return create_response({id = vars.id, name = "Room" .. vars.id})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
   router:add("POST", "/api/rooms/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, status = "modified"})
+    --return create_response({id = vars.id, status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
-  router:add("POST", "/api/sections", function(data, queryParameters)
-    return create_response({id = 1, status = "created"}, 201)
-  end)
-  
-  router:add("POST", "/api/sections/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, status = "modified"})
-  end)
-  
-  router:add("POST", "/api/customEvents", function(data, queryParameters)
-    return create_response({status = "created"}, 201)
-  end)
-  
-  router:add("POST", "/api/customEvents/<name>", function(data, queryParameters, vars)
-    return create_response({status = "modified"})
-  end)
-  
-  router:add("POST", "/api/customEvents/<name>/emit", function(data, queryParameters, vars)
-    return create_response({status = "emitted"})
-  end)
-  
-  router:add("POST", "/api/plugins/callUIEvent", function(data, queryParameters)
-    return create_response({status = "ui_event_called"})
-  end)
-  
-  router:add("POST", "/api/plugins/updateProperty", function(data, queryParameters)
-    return create_response({status = "property_updated"})
-  end)
-  
-  router:add("POST", "/api/plugins/updateView", function(data, queryParameters)
-    return create_response({status = "view_updated"})
-  end)
-  
-  router:add("POST", "/api/plugins/restart", function(data, queryParameters)
-    return create_response({status = "restarted"})
-  end)
-  
-  router:add("POST", "/api/plugins/createChildDevice", function(data, queryParameters)
-    return create_response({id = 1, status = "created"}, 201)
-  end)
-  
-  router:add("POST", "/api/plugins/removeChildDevice/<id>", function(data, queryParameters, vars)
-    return create_response({status = "deleted"})
-  end)
-  
-  router:add("POST", "/api/plugins/publishEvent", function(data, queryParameters)
-    return create_response({status = "published"})
-  end)
-  
-  router:add("POST", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
-    return create_response({status = "created"}, 201)
-  end)
-  
-  router:add("POST", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
-    return create_response({status = "updated"})
-  end)
-  
-  router:add("POST", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
-    return create_response({status = "created"}, 201)
-  end)
-  
-  router:add("POST", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
-    return create_response({status = "modified"})
-  end)
-  
-  router:add("POST", "/api/quickApp", function(data, queryParameters)
-    return create_response({id = 1, status = "imported"})
-  end)
-  
-  router:add("POST", "/api/quickApp/import", function(data, queryParameters)
-    return create_response({status = "imported"})
-  end)
-  
-  router:add("POST", "/api/weather", function(data, queryParameters)
-    return create_response({status = "modified"})
-  end)
-  
-  router:add("POST", "/api/home", function(data, queryParameters)
-    return create_response({status = "modified"})
-  end)
-  
-  router:add("POST", "/api/debugMessages", function(data, queryParameters)
-    return create_response({status = "added"})
-  end)
-  
-  router:add("POST", "/alarms/v1/partitions/actions/arm", function(data, queryParameters)
-    return create_response({status = "armed"})
-  end)
-  
-  router:add("POST", "/alarms/v1/partitions/<id>/actions/arm", function(data, queryParameters, vars)
-    return create_response({status = "armed"})
-  end)
-  
-  router:add("POST", "/alarms/v1/partitions/actions/tryArm", function(data, queryParameters)
-    return create_response({status = "try_armed"})
-  end)
-  
-  router:add("POST", "/alarms/v1/partitions/<id>/actions/tryArm", function(data, queryParameters, vars)
-    return create_response({status = "try_armed"})
-  end)
-  
-  -- Register all PUT endpoints
   router:add("PUT", "/api/rooms/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, status = "modified"})
-  end)
-  
-  router:add("PUT", "/api/sections/<id>", function(data, queryParameters, vars)
-    return create_response({id = vars.id, status = "modified"})
-  end)
-  
-  router:add("PUT", "/api/customEvents/<name>", function(data, queryParameters, vars)
-    return create_response({status = "modified"})
-  end)
-  
-  router:add("PUT", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
-    return create_response({status = "updated"})
-  end)
-  
-  router:add("PUT", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
-    return create_response({status = "modified"})
-  end)
-  
-  router:add("PUT", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
-    return create_response({status = "modified"})
-  end)
-  
-  router:add("PUT", "/api/weather", function(data, queryParameters)
-    return create_response({status = "modified"})
-  end)
-  
-  router:add("PUT", "/api/home", function(data, queryParameters)
-    return create_response({status = "modified"})
-  end)
-  
-  -- Register all DELETE endpoints
-  router:add("DELETE", "/api/devices/<id>", function(data, queryParameters, vars)
-    return create_response({status = "deleted"})
+    --return create_response({id = vars.id, status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
   router:add("DELETE", "/api/rooms/<id>", function(data, queryParameters, vars)
-    return create_response({status = "deleted"})
+    --return create_response({status = "deleted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/sections", function(data, queryParameters)
+    --return create_response({section1 = {id = 1, name = "Main Section"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/sections", function(data, queryParameters)
+    --return create_response({id = 1, status = "created"}, 201)
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("GET", "/api/sections/<id>", function(data, queryParameters, vars)
+    --return create_response({id = vars.id, name = "Section" .. vars.id})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("POST", "/api/sections/<id>", function(data, queryParameters, vars)
+    --return create_response({id = vars.id, status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  end)
+  
+  router:add("PUT", "/api/sections/<id>", function(data, queryParameters, vars)
+    --return create_response({id = vars.id, status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
   router:add("DELETE", "/api/sections/<id>", function(data, queryParameters, vars)
-    return create_response({status = "deleted"})
+    --return create_response({status = "deleted"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
-  router:add("DELETE", "/api/customEvents/<name>", function(data, queryParameters, vars)
-    return create_response({status = "deleted"})
+  router:add("GET", "/api/settings", function(data, queryParameters)
+    --return create_response({setting = "value"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
-  router:add("DELETE", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
-    return create_response({status = "deleted"})
+  router:add("GET", "/api/settings/<name>", function(data, queryParameters, vars)
+    --return create_response({name = vars.name, value = "setting_value"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
-  router:add("DELETE", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
-    return create_response({status = "deleted"})
+  router:add("GET", "/api/users", function(data, queryParameters)
+    --return create_response({user1 = {id = 1, name = "Admin User"}})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
-  router:add("DELETE", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
-    return create_response({status = "deleted"})
+  router:add("GET", "/api/weather", function(data, queryParameters)
+    --return create_response({temperature = 22.5, humidity = 45})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
-  router:add("DELETE", "/alarms/v1/partitions/actions/arm", function(data, queryParameters)
-    return create_response({status = "disarmed"})
+  router:add("POST", "/api/weather", function(data, queryParameters)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
   
-  router:add("DELETE", "/alarms/v1/partitions/<id>/actions/arm", function(data, queryParameters, vars)
-    return create_response({status = "disarmed"})
+  router:add("PUT", "/api/weather", function(data, queryParameters)
+    --return create_response({status = "modified"})
+    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
   end)
-  
   return router
 end
 

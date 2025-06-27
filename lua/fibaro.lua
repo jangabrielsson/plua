@@ -125,6 +125,7 @@ hc3_user = _PY.pluaconfig and _PY.pluaconfig.hc3_user or hc3_user
 hc3_pass = _PY.pluaconfig and _PY.pluaconfig.hc3_pass or hc3_pass
 fibaro.api_url = "http://127.0.0.1:8000/"
 fibaro.hc3_url = hc3_url
+fibaro.hc3_port = 80
 
 local function hc3_sync(method, path, data)
   local api_url = fibaro.api_url

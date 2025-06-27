@@ -496,6 +496,54 @@ plua> exit
 
 PLua includes comprehensive support for the Fibaro HomeCenter 3 Lua API through the `fibaro.lua` module. This provides access to HomeCenter 3 devices, scenes, variables, and system functions.
 
+### Architecture
+
+The Fibaro API integration uses an **embedded API server** architecture:
+
+- **Embedded API Server**: A FastAPI server runs within the PLua interpreter process
+- **Direct Lua Integration**: API calls are handled directly through `_PY.fibaroapi()` function
+- **External Redirect Support**: Can redirect requests to real HC3 servers for testing
+- **Non-blocking HTTP**: Uses asyncio-based HTTP requests to avoid blocking the main thread
+
+### API Request Flow
+
+1. **Lua Code** calls `api.get("/devices")` or similar
+2. **Embedded API Server** receives the request via `_PY.fibaroapi()`
+3. **Lua Handler** processes the request and can:
+   - Return mock data for testing
+   - Return a redirect response to call external HC3 server
+   - Return actual data from external server
+4. **HTTP Client** (if redirect) makes non-blocking request to external server
+5. **Response** is returned to the original Lua code
+
+### Redirect to External HC3 Server
+
+Lua handlers can redirect requests to real HC3 servers:
+
+```lua
+-- In your Lua handler
+function handle_devices_request()
+    -- Return redirect to external HC3 server
+    return {
+        _redirect = true,
+        hostname = "http://192.168.1.57/",
+        port = 80
+    }
+end
+```
+
+The embedded API server will automatically:
+1. Detect the redirect response
+2. Make an HTTP request to the external server
+3. Return the actual data from the external server
+
+### HTTP Request Improvements
+
+- **Non-blocking**: `_PY.http_request_sync()` uses asyncio internally with threading
+- **Legacy Fallback**: `_PY.http_request_sync_legacy()` available for compatibility
+- **Timeout Handling**: Configurable timeouts with fallback mechanisms
+- **Error Recovery**: Automatic fallback to legacy implementation on errors
+
 **Available Functions:**
 
 **Device Management:**

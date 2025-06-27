@@ -106,6 +106,7 @@ Thumbs.db
 *.temp
 *.bak
 *.backup
+/old
 
 # Network test files (if any)
 test_*.log

@@ -11,6 +11,7 @@ class = require("plua.class")
 net = require("plua.net")
 require("plua.qa_mgr")
 require("plua.quickapp")
+require("plua.fibaro_api")
 fibaro = { _plua = {} }
 
 local version = _PLUA_VERSION or "unknown"
@@ -77,14 +78,8 @@ function __fibaro_add_debug_message(tag, msg, typ, nohtml)
     time = tostring(os.date("[%d.%m.%Y][%H:%M:%S]"))
   end
   local typStr = fmt("<font color='%s'>%-7s</font>", typeColor[typ], typ)
-  if nohtml then
-    local txt = html2console(fmt("<font color='grey89'>%s[%s][%s]: @@</font>", time, typStr, tag))
-    _print((txt:gsub("@@", msg)))
-  else
-    msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
-    local tt = html2console(msg)
-    _print(tt)
-  end
+  msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
+  _print(msg)
 end
 
 -- Adds a debug message to the emulator's debug output.
@@ -125,24 +120,59 @@ function __print(...) __fibaro_add_debug_message(__TAG, logStr(...), "DEBUG", tr
 local hc3_url = os.getenv("HC3_URL")
 local hc3_user = os.getenv("HC3_USER")
 local hc3_pass = os.getenv("HC3_PASSWORD")
+hc3_url = _PY.pluaconfig and _PY.pluaconfig.hc3_url or hc3_url
+hc3_user = _PY.pluaconfig and _PY.pluaconfig.hc3_user or hc3_user
+hc3_pass = _PY.pluaconfig and _PY.pluaconfig.hc3_pass or hc3_pass
+fibaro.api_url = "http://127.0.0.1:8000/"
+fibaro.hc3_url = hc3_url
 
 local function hc3_sync(method, path, data)
-  local url = hc3_url .. "api" .. path
+  local api_url = fibaro.api_url
+  assert(api_url, "HC3_URL is not set")
+  assert(hc3_user, "HC3_USER is not set")
+  assert(hc3_pass, "HC3_PASSWORD is not set")
+  
+  -- Check if we're calling the embedded API server (127.0.0.1:8000)
+  if api_url == "http://127.0.0.1:8000/" then
+    -- Call _PY.fibaroapi directly to avoid HTTP request blocking
+    print("API: " .. api_url .. "api" .. path .. " (direct call)")
+    local result, status_code = _PY.fibaroapi(method, "/api" .. path, data, {})
+    
+    -- Check if this is a redirect response
+    if result and result._redirect then
+      print("DEBUG: Redirect detected, making external request")
+      -- Handle redirect by making the actual HTTP request to external server
+      local hostname = result.hostname
+      local port = result.port or 80
+      
+      -- Construct the external URL
+      local external_url = hostname .. "api" .. path
+      print("DEBUG: Making external request to: " .. external_url)
+      
+      -- Use the legacy HTTP implementation directly to avoid timeout issues
+      local http_result = _PY.http_request_sync_legacy(external_url, 0, 5, method, {
+        ["Authorization"] = "Basic " .. _PY.base64_encode(hc3_user .. ":" .. hc3_pass),
+        ["Content-Type"] = "application/json"
+      }, data and json.encode(data))
+      
+      return http_result.body and json.decode(http_result.body) or http_result, http_result.code or 200, http_result.headers or {}
+    end
+    
+    return result, status_code or 200, {}
+  end
+  
+  -- For external API calls, use HTTP request
+  local url = api_url .. "api" .. path
   if data~=nil then data = json.encode(data) end
-  --print("API: " .. url)
-  local res = _PY.http_request_sync({
-    url = url,
-    method = method,
-    headers = {
-      ["Content-Type"] = "application/json",
-      ["Authorization"] = "Basic " .. _PY.base64_encode(hc3_user .. ":" .. hc3_pass)
-    },
-    body = data
-  })
-  local stat,r = pcall(json.decode,res.body)
-  if not stat then r = res.body end
-  return r,res.code,res.headers
+  local result = _PY.http_request_sync(url, 0, 5, method, {
+    ["Authorization"] = "Basic " .. _PY.base64_encode(hc3_user .. ":" .. hc3_pass),
+    ["Content-Type"] = "application/json"
+  }, data)
+  return result.body and json.decode(result.body) or result, result.code or 200, result.headers or {}
 end
+
+fibaro.hc3_sync = hc3_sync
+fibaro.hc3_url = hc3_url
 
 api = {}
 function api.get(path) return hc3_sync("GET", path) end
@@ -207,7 +237,7 @@ function __fibaro_get_breached_partitions() return api.get("/alarms/v1/partition
 
 -- Pauses execution for a specified number of milliseconds.
 -- @param ms - The duration to sleep in milliseconds.
-function __fibaroSleep(ms) _emu:sleep(ms) end
+function __fibaroSleep(ms) _PY.sleep(ms/1000.0) end
 
 -- Placeholder function, seems to indicate async handler usage.
 -- @param _ - Unused parameter.

@@ -1,0 +1,89 @@
+name: Auto Version Bump
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/version-bump.yml'
+      - 'docs/**'
+      - '*.md'
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install toml
+      
+      - name: Bump version
+        id: bump
+        run: |
+          echo "Reading current version from pyproject.toml..."
+          
+          # Read current version
+          python -c "
+          import toml
+          import re
+          import os
+          
+          # Read current version
+          with open('pyproject.toml', 'r') as f:
+              data = toml.load(f)
+          
+          current_version = data['project']['version']
+          print(f'Current version: {current_version}')
+          
+          # Parse version components
+          match = re.match(r'(\d+)\.(\d+)\.(\d+)', current_version)
+          if match:
+              major, minor, patch = match.groups()
+              new_patch = int(patch) + 1
+              new_version = f'{major}.{minor}.{new_patch}'
+              print(f'New version: {new_version}')
+              
+              # Update pyproject.toml
+              data['project']['version'] = new_version
+              with open('pyproject.toml', 'w') as f:
+                  toml.dump(data, f)
+              
+              print('Updated pyproject.toml')
+              
+              # Set output for next steps
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f'old_version={current_version}\n')
+                  f.write(f'new_version={new_version}\n')
+          else:
+              print('Could not parse version format')
+              exit(1)
+          "
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Check if there are changes to commit
+          if git diff --quiet pyproject.toml; then
+            echo "No version changes to commit"
+            exit 0
+          fi
+          
+          git add pyproject.toml
+          git commit -m "Auto-bump version from ${{ steps.bump.outputs.old_version }} to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git push
+          
+          echo "Version bumped from ${{ steps.bump.outputs.old_version }} to ${{ steps.bump.outputs.new_version }}" 

@@ -16,3 +16,8 @@ function QuickApp:onInit()
 
   self:debug("onInit done")
 end
+
+
+net.HTTPClient():request("http://google.com",{ success = function() print("OK") end })
+
+ 

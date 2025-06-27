@@ -6,6 +6,7 @@ Provides true async TCP/UDP networking with Lua callback support
 import asyncio
 import socket
 import threading
+import queue
 from .registry import registry
 import urllib.request
 import urllib.parse
@@ -16,6 +17,14 @@ import lupa
 import time
 import sys
 import paho.mqtt.client as mqtt
+
+# Try to import httpx for modern HTTP requests
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
+    print("Warning: httpx not available, falling back to urllib for HTTP requests")
 
 
 # --- Event Loop Manager ---
@@ -1160,7 +1169,7 @@ def _handle_http_response(response, redirect_count=0, maxredirects=5):
     }
 
 
-def _http_request_sync(
+def _http_request_sync_legacy(
     url,
     redirect_count=0,
     maxredirects=5,
@@ -1170,7 +1179,7 @@ def _http_request_sync(
     proxy=None,
     redirect=True,
 ):
-    """Synchronous HTTP request implementation"""
+    """Legacy synchronous HTTP request implementation using urllib"""
     try:
         request = _create_http_request(
             url, method, headers, body, proxy, redirect, maxredirects
@@ -1223,6 +1232,97 @@ def _http_request_sync(
             "error": True,
             "error_message": str(e),
         }
+
+
+def _http_request_sync(
+    url,
+    redirect_count=0,
+    maxredirects=5,
+    method="GET",
+    headers=None,
+    body=None,
+    proxy=None,
+    redirect=True,
+):
+    """Synchronous HTTP request implementation using asyncio and httpx"""
+    
+    # If httpx is not available, fall back to legacy implementation
+    if not HTTPX_AVAILABLE:
+        return _http_request_sync_legacy(
+            url, redirect_count, maxredirects, method, headers, body, proxy, redirect
+        )
+    
+    # Use asyncio with httpx in a separate thread to avoid blocking
+    result_queue = queue.Queue()
+    
+    async def async_request():
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Prepare request
+                request_headers = headers if headers is not None else {}
+                
+                # Make the request
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=request_headers,
+                    content=body,
+                    follow_redirects=redirect and redirect_count < maxredirects
+                )
+                
+                # Read response body
+                try:
+                    body_content = response.text
+                except Exception:
+                    body_content = response.content.decode('utf-8', errors='ignore')
+                
+                result = {
+                    "code": response.status_code,
+                    "headers": dict(response.headers),
+                    "body": body_content,
+                    "url": str(response.url),
+                }
+                
+                result_queue.put(("success", result))
+                
+        except Exception as e:
+            result_queue.put(("error", str(e)))
+    
+    def run_async_in_thread():
+        try:
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(async_request())
+        except Exception as e:
+            result_queue.put(("error", str(e)))
+        finally:
+            if loop and not loop.is_closed():
+                loop.close()
+    
+    # Start the thread
+    thread = threading.Thread(target=run_async_in_thread)
+    thread.daemon = True
+    thread.start()
+    thread.join(timeout=30)  # 30 second timeout
+    
+    # Get the result
+    try:
+        status, result = result_queue.get_nowait()
+        if status == "success":
+            return result
+        else:
+            # Fallback to legacy implementation on error
+            print(f"HTTP request failed with error: {result}, falling back to legacy implementation")
+            return _http_request_sync_legacy(
+                url, redirect_count, maxredirects, method, headers, body, proxy, redirect
+            )
+    except queue.Empty:
+        # Timeout - fallback to legacy implementation
+        print("HTTP request timed out after 30 seconds, falling back to legacy implementation")
+        return _http_request_sync_legacy(
+            url, redirect_count, maxredirects, method, headers, body, proxy, redirect
+        )
 
 
 @registry.register(
@@ -2282,4 +2382,14 @@ def has_active_mqtt_client_operations():
     return mqtt_client_manager.has_active_operations()
 
 
+@registry.register(
+    description="Legacy synchronous HTTP request (urllib-based)", category="network"
+)
+def http_request_sync_legacy(url, redirect_count=0, maxredirects=5, method="GET", headers=None, body=None, proxy=None, redirect=True):
+    """Legacy synchronous HTTP request implementation using urllib"""
+    return _http_request_sync_legacy(url, redirect_count, maxredirects, method, headers, body, proxy, redirect)
+
+
 # --- WebSocket Extensions ---
+
+

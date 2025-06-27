@@ -50,6 +50,18 @@ A powerful Lua interpreter implemented in Python using the Lupa library. PLua pr
 
 ## Usage
 
+### New Architecture (Single-Process, Embedded API Server)
+
+- The API server is now always started and managed by PLua itself.
+- Do **NOT** run `api_server.py` directly.
+- To use PLua and the web interface, always start with:
+
+```sh
+python plua.py [your_lua_file.lua]
+```
+
+or use your main entrypoint script.
+
 ### Running Lua Files
 
 ```bash
@@ -137,6 +149,48 @@ python build.py
 ```
 
 The executable will be created in `dist/` directory and includes all dependencies.
+## Configuration
+
+### Project Configuration File: .plua.lua
+
+PLua supports project/user configuration via a `.plua.lua` file. This file can be placed in either the current working directory or your home directory (or both). If both exist, values from the current directory take precedence.
+
+**Search order:**
+1. `$HOME/.plua.lua` (user config)
+2. `./.plua.lua` (project config, overrides user config)
+
+**Format:**
+The file must return a Lua table (with or without the `return` keyword):
+```lua
+return {
+  key1 = "value1",
+  key2 = 42,
+  key3 = { nested = true },
+  key4 = function() print("hello") end,
+  ...
+}
+```
+Or simply:
+```lua
+{
+  key1 = "value1",
+  ...
+}
+```
+
+**Accessing configuration in Lua:**
+The merged configuration table is available as `_PY.pluaconfig`:
+```lua
+print(_PY.pluaconfig.key1)
+if _PY.pluaconfig.debug then print("Debug mode enabled") end
+if _PY.pluaconfig.on_startup then _PY.pluaconfig.on_startup() end
+```
+
+**Notes:**
+- Any Lua type is supported (strings, numbers, tables, booleans, functions, etc).
+- If both files exist, keys from the current directory override those from the home directory.
+- If no config is found, `_PY.pluaconfig` is an empty table.
+- Comments and whitespace are allowed in the config file.
 
 ## Extension System
 
@@ -224,6 +278,7 @@ def my_function(arg1, arg2):
 #### Configuration Functions
 - `get_env_var(name, default)` - Get environment variable value
 - `set_env_var(name, value)` - Set environment variable
+- `get_all_env_vars()` - Get all environment variables as a table (with .env file precedence)
 
 #### Utility Functions
 - `list_extensions()` - List all available Python extensions
@@ -807,3 +862,49 @@ print("Port:", status.port)
 **Demo Scripts:**
 - `examples/web_server_demo.lua` - Basic web server usage
 - `examples/web_server_status_demo.lua` - Advanced status page example
+
+### Bundled Files
+
+When PLua is built as a standalone executable using PyInstaller, additional files (like demos, examples, and Lua modules) are bundled with the executable. These files are accessible from within Lua scripts using the bundled files API.
+
+**Bundled Files Functions:**
+- `bundled_file_read(path)` - Read contents of a bundled file
+- `bundled_file_exists(path)` - Check if a bundled file exists
+- `bundled_file_list(directory)` - List files in a bundled directory
+- `bundled_file_path(path)` - Get the full path to a bundled file
+
+**Usage Examples:**
+
+```lua
+-- Check if a bundled file exists
+if _PY.bundled_file_exists("demos/basic.lua") then
+    print("Demo file exists")
+end
+
+-- Read a bundled file
+local content = _PY.bundled_file_read("demos/basic.lua")
+if content then
+    print("Demo file content length:", #content)
+end
+
+-- List files in bundled directory
+local files = _PY.bundled_file_list("demos")
+if files then
+    print("Bundled demo files:")
+    for i, file in ipairs(files) do
+        print("  " .. i .. ": " .. file)
+    end
+end
+
+-- Get full path to bundled file
+local full_path = _PY.bundled_file_path("examples/http_demo.lua")
+print("Full path:", full_path)
+```
+
+**Available Bundled Directories:**
+- `demos/` - Demo scripts and libraries
+- `examples/` - Example scripts
+- `lua/` - Lua modules and libraries
+- `test/` - Test scripts
+
+**Note:** Bundled files are only available when running from a PyInstaller-built executable. When running from source, these functions will work with files in the project directory.

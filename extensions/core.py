@@ -221,21 +221,40 @@ def get_time():
     return time.time()
 
 
-@registry.register(description="Sleep for specified seconds (non-blocking)", category="system")
+@registry.register(description="Sleep for specified seconds (non-blocking when possible)", category="system")
 def sleep(seconds):
-    """Sleep for specified number of seconds (non-blocking)"""
-    # Use a simple busy wait for short sleeps, setTimeout for longer ones
-    if seconds < 0.1:
-        # For very short sleeps, use busy wait to avoid timer overhead
-        end_time = time.time() + seconds
-        while time.time() < end_time:
-            pass
-    else:
-        # For longer sleeps, use setTimeout to avoid blocking
+    """Sleep for specified number of seconds (non-blocking when event loop available)"""
+    import asyncio
+    try:
+        # Check if we're in an event loop context
+        asyncio.get_running_loop()
+        # We're in an async context, use setTimeout for non-blocking sleep
         import threading
+        import time
+
+        # Create an event to signal completion
         event = threading.Event()
-        timer_manager.setTimeout(lambda: event.set(), seconds * 1000)
-        event.wait()
+
+        # Set a timeout to prevent infinite waiting
+        def timeout_handler():
+            event.set()
+
+        # Schedule the timeout
+        timer_id = timer_manager.setTimeout(timeout_handler, seconds * 1000)
+
+        # Wait for the event with a timeout to prevent deadlock
+        if not event.wait(timeout=seconds + 1.0):  # Add 1 second buffer
+            # If we timeout, clean up the timer
+            timer_manager.clearTimeout(timer_id)
+            # Fall back to blocking sleep
+            time.sleep(seconds)
+
+    except RuntimeError:
+        # No event loop running, use blocking sleep
+        import time
+        time.sleep(seconds)
+
+    return None
 
 
 @registry.register(description="Get Python version information", category="system")
@@ -265,6 +284,10 @@ def _to_lua_table(pylist):
 def parse_json(lua_runtime, json_string):
     """Parse JSON string and return as Lua table"""
     try:
+        # Handle empty or None input
+        if not json_string or json_string == "":
+            return None
+        
         python_obj = json.loads(json_string)
         # Use Lupa's table conversion
         return lua_runtime.table_from(python_obj)
@@ -477,6 +500,34 @@ def set_env_var(name, value):
     """Set environment variable"""
     os.environ[name] = str(value)
     return True
+
+
+@registry.register(description="Get all environment variables as a table", category="config", inject_runtime=True)
+def get_all_env_vars(lua_runtime):
+    """Get all environment variables as a Lua table, with .env file variables taking precedence"""
+    # First ensure .env files are loaded
+    if not hasattr(get_env_var, '_env_loaded'):
+        get_env_var._env_loaded = True
+        _load_env_files()
+
+    # Create a Lua table with all environment variables
+    env_table = lua_runtime.table()
+
+    # Add all environment variables to the table
+    for key, value in os.environ.items():
+        env_table[key] = value
+
+    return env_table
+
+
+@registry.register(description="Import Python module", category="system")
+def import_module(module_name):
+    """Import a Python module and return it"""
+    try:
+        return __import__(module_name)
+    except ImportError as e:
+        print(f"Failed to import module '{module_name}': {e}", file=sys.stderr)
+        return None
 
 
 # Base64 encoding/decoding functions

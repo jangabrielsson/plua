@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 PLua - A Lua interpreter in Python using Lupa library
 Supports Lua 5.4 environment with custom Python-extended functions for timer management.
@@ -38,6 +38,8 @@ Examples:
   plua --fibaro script.lua                          # Load fibaro library and run script
   plua --debugger --fibaro script.lua               # Run with debugger and fibaro library
   plua --fibaro -e "print('Hello')" script.lua      # Load fibaro, execute code, then run script
+  plua --restart script.lua                          # Restart API server interpreter, then run script
+  plua --restart --fibaro script.lua                 # Restart API server interpreter, load fibaro, then run script
   """
     )
 
@@ -56,6 +58,8 @@ Examples:
                         help='Port for MobDebug server (default: 8818)')
     parser.add_argument('--fibaro', action='store_true',
                         help='Load fibaro.lua library (equivalent to -e "require(\'fibaro\')")')
+    parser.add_argument('--restart', action='store_true',
+                        help='Restart the API server interpreter before executing the file (ensures fresh state)')
     parser.add_argument('-v', '--version', action='version', version='PLua 1.0.0')
 
     args = parser.parse_args()
@@ -107,6 +111,19 @@ print("MobDebug server started on 0.0.0.0:{debugger_port}")
                 interpreter.debug_print(f"Executing {len(args.execute_list)} code strings then file")
             else:
                 interpreter.debug_print("Executing file only")
+
+            # Restart API server interpreter if requested
+            if args.restart:
+                interpreter.debug_print("Restarting API server interpreter as requested")
+                try:
+                    import requests
+                    response = requests.post(f"http://{interpreter.api_server_host}:{interpreter.api_server_port}/api/restart", timeout=10)
+                    if response.status_code == 200:
+                        interpreter.debug_print("Successfully restarted API server interpreter")
+                    else:
+                        interpreter.debug_print(f"Failed to restart API server interpreter: {response.status_code}")
+                except Exception as e:
+                    interpreter.debug_print(f"Error restarting API server interpreter: {e}")
 
             # Start fragments phase
             interpreter.execution_tracker.start_fragments()

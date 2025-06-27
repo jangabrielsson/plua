@@ -462,4 +462,11 @@ graph TB
 - Incremental feature additions
 - Performance optimization
 - Enhanced debugging capabilities
-- Better error reporting and recovery 
+- Better error reporting and recovery
+
+## Single-Process, Embedded API Server
+
+- The FastAPI server is now always started and managed by the PLua interpreter itself (embedded).
+- There is no registration, coordination, or separate process for the API server.
+- All communication between the web interface and the interpreter is in-process.
+- To use the system, always start with `python plua.py` or your main entrypoint. 

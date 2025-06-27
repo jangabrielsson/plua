@@ -45,7 +45,6 @@ a = Analysis(
         ('src/lua', 'lua'),
         ('src/extensions', 'extensions'),
         ('examples', 'examples'),
-        ('demos', 'demos'),
     ],
     hiddenimports=[
         'lupa',
@@ -160,7 +159,6 @@ def create_windows_package():
         'README.md',
         'requirements.txt',
         'examples',
-        'demos',
     ]
     
     for item in additional_files:

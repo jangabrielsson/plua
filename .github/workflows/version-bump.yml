@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - '**.md'
       - '.github/workflows/version-bump.yml'
+      - '.github/workflows/**'
       - 'docs/**'
       - '*.md'
 

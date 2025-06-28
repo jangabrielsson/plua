@@ -1,6 +1,6 @@
 [project]
 name = "plua"
-version = "1.0.11"
+version = "1.0.12"
 description = "A Lua interpreter in Python using Lupa library"
 readme = "README.md"
 requires-python = ">=3.12"

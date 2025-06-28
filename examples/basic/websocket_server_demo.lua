@@ -67,7 +67,7 @@ function net.WebSocketServer(debugFlag)
     if self.callbacks.receive then
       local stat,res = pcall(self.callback, client, msg)
       if not stat then
-        debug("Error in callback: %s", tostring(res))
+        debug("Error in callback : %s", tostring(res))
       end
     end
   end)

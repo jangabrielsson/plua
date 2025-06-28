@@ -68,7 +68,14 @@ _PY.mainHook = function(filename)
   local preprocessed,info = preprocessQA(filename,content)
   
   info.id = info.id or 555
+  info.type = info.type or 'com.fibaro.binarySwitch'
   __TAG = info.name..info.id or __TAG
+
+  -- Load and execute included files + main file
+  for name,path in pairs(info.files) do
+    loadFile(path,name)
+  end
+  loadFile(filename,'main',preprocessed)
 
   setTimeout(function()
     -- print("Looking for QuickApp")
@@ -77,12 +84,6 @@ _PY.mainHook = function(filename)
       quickApp = QuickApp(info)
     end
   end, 0)
-
-  -- Load and execute included files + main file
-  for name,path in pairs(info.files) do
-    loadFile(path,name)
-  end
-  loadFile(filename,'main',preprocessed)
 end
 
 _PY.mainHook = printError(_PY.mainHook)

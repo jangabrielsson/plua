@@ -24,6 +24,7 @@ class TimerExecutionGate:
         self.queue = []
         self._locked = True
         self._initialized = False
+        self._fragment_executing = False  # Track fragment execution state
 
     async def initialize(self):
         """Initialize the gate - should be called once when the event loop is ready"""
@@ -42,6 +43,7 @@ class TimerExecutionGate:
     async def release(self):
         """Unlock the gate and run all queued callbacks"""
         self._locked = False
+        self._fragment_executing = False  # Clear fragment execution state
         if self.lock.locked():
             self.lock.release()
 
@@ -53,16 +55,52 @@ class TimerExecutionGate:
             except Exception as e:
                 print(f"Error in queued callback: {e}", file=sys.stderr)
 
+    def set_fragment_executing(self, executing):
+        """Set whether fragment execution is currently happening"""
+        self._fragment_executing = executing
+
+    def is_socket_operation(self, callback):
+        """Check if a callback is related to socket operations"""
+        try:
+            # Check if the callback is from our network extensions
+            callback_str = str(callback)
+            socket_indicators = [
+                'tcp_', 'udp_', 'socket', 'network', 'mobdebug',
+                'AsyncioNetworkManager', 'TCPServer'
+            ]
+            return any(indicator in callback_str for indicator in socket_indicators)
+        except Exception:
+            return False
+
     def run_or_queue(self, callback, *args, **kwargs):
         """Run callback immediately if unlocked, otherwise queue it"""
-        if not self._locked:
+        # During fragment execution, be more permissive with operations
+        if self._fragment_executing:
+            # Allow most operations during fragment execution, only block pure timer callbacks
+            callback_str = str(callback)
+            timer_indicators = ['setTimeout', 'setInterval', 'timer_coroutine', 'interval_coroutine']
+            is_timer_callback = any(indicator in callback_str for indicator in timer_indicators)
+            
+            if is_timer_callback:
+                # Queue only pure timer callbacks during fragment execution
+                self.queue.append((callback, args, kwargs))
+            else:
+                # Allow all other operations (including socket operations) during fragment execution
+                callback(*args, **kwargs)
+        elif not self._locked:
+            # Normal execution when not locked
             callback(*args, **kwargs)
         else:
+            # Queue all callbacks when locked (non-fragment execution)
             self.queue.append((callback, args, kwargs))
 
     def is_locked(self):
         """Check if the gate is currently locked"""
         return self._locked
+
+    def is_fragment_executing(self):
+        """Check if fragment execution is currently happening"""
+        return self._fragment_executing
 
 
 # Global timer execution gate instance
@@ -701,6 +739,16 @@ async def release_timer_gate():
     await timer_gate.release()
 
 
+def set_fragment_executing(executing):
+    """Set whether fragment execution is currently happening"""
+    timer_gate.set_fragment_executing(executing)
+
+
 def is_timer_gate_locked():
     """Check if the timer execution gate is currently locked"""
     return timer_gate.is_locked()
+
+
+def is_fragment_executing():
+    """Check if fragment execution is currently happening"""
+    return timer_gate.is_fragment_executing()

@@ -1,6 +1,8 @@
 local fmt = string.format
 local _DEBUG = false
 _PY = _PY or {}
+
+-- Use synchronous functions directly for MobDebug compatibility
 local tcp_connect_sync = _PY.tcp_connect_sync
 local tcp_write_sync = _PY.tcp_write_sync
 local tcp_read_sync = _PY.tcp_read_sync
@@ -13,9 +15,12 @@ local socket = {}
 
 local function tcp()
   local self = { conn_id = nil }
+  
   function self:connect(host, port)
     debug("Connecting to " .. host .. " on port " .. port)
+    
     local success, conn_id, message = tcp_connect_sync(host, tonumber(port))
+    
     if success then 
       debug("Connected") 
       self.conn_id = conn_id
@@ -25,46 +30,80 @@ local function tcp()
       return nil, message 
     end
   end
+  
   function self:settimeout(timeout)
     if self.conn_id then
       debug("Setting timeout to " .. tostring(timeout))
+      
       local success, message = tcp_set_timeout_sync(self.conn_id, timeout)
-      if success then debug("Timeout set,",message) else debug("Failed to set timeout: " .. message) end
+      
+      if success then 
+        debug("Timeout set:", message) 
+      else 
+        debug("Failed to set timeout: " .. message) 
+      end
     else
       debug("No connection to set timeout")
     end
   end
-  function self:send(data,i,j)
+  
+  function self:send(data, i, j)
     if self.conn_id then
-      debug("Sending data: " .. data,i,j)
+      debug("Sending data: " .. data, i, j)
+      
       local success, len, message = tcp_write_sync(self.conn_id, data)
-      if success then debug("Sent",len) else debug("Failed to send: " .. message) end
-      if success then return len, nil else return nil, message end
+      
+      if success then 
+        debug("Sent", len) 
+        return len, nil 
+      else 
+        debug("Failed to send: " .. message) 
+        return nil, message 
+      end
     else
       debug("No connection to send data")
+      return nil, "No connection to send data"
     end
   end
-  function self:receive(pattern_or_n,m)
+  
+  function self:receive(pattern_or_n, m)
     if self.conn_id then
-      debug("Receiving data",pattern_or_n,m)
+      debug("Receiving data", pattern_or_n, m)
+      
       local success, data, message = tcp_read_sync(self.conn_id, pattern_or_n)
-      data = tostring(data)
-      if success then debug("Received: " .. '"' .. data .. '"',message) else debug("Failed to receive: " .. tostring(message)) end
-      return data,#data
+      
+      if success then 
+        data = tostring(data)
+        debug("Received: " .. '"' .. data .. '"', message) 
+        return data, #data
+      else 
+        debug("Failed to receive: " .. tostring(message)) 
+        return nil, message
+      end
     else
       debug("No connection to receive data")
       return nil, "No connection to receive data"
     end
   end
+  
   function self:close() 
     if self.conn_id then
       debug("Closing connection")
+      
       local success, message = tcp_close_sync(self.conn_id)
-      if success then debug("Closed") else debug("Failed to close: " .. message) end
+      
+      if success then 
+        debug("Closed") 
+      else 
+        debug("Failed to close: " .. message) 
+      end
+      
+      self.conn_id = nil
     else
       debug("No connection to close")
     end
   end
+  
   setmetatable(self, { __tostring = function() return fmt("[tcp conn_id=%s]", self.conn_id or -1) end })
   return self
 end

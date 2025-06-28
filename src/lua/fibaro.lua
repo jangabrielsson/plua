@@ -150,11 +150,16 @@ local function hc3_sync(method, path, data)
       print("DEBUG: Making external request to: " .. external_url)
       
       -- Use the legacy HTTP implementation directly to avoid timeout issues
-      local http_result = _PY.http_request_sync_legacy(external_url, 0, 5, method, {
-        ["Authorization"] = "Basic " .. _PY.base64_encode(hc3_user .. ":" .. hc3_pass),
-        ["Content-Type"] = "application/json"
-      }, data and json.encode(data))
-      
+      local http_result = _PY.http_request_sync({
+        url = external_url, 
+        method = method, 
+        headers = {
+          ["Authorization"] = "Basic " .. _PY.base64_encode(hc3_user .. ":" .. hc3_pass),
+          ["Content-Type"] = "application/json"
+        }, 
+        body = data and json.encode(data) or nil
+      })
+
       return http_result.body and json.decode(http_result.body) or http_result, http_result.code or 200, http_result.headers or {}
     end
     

@@ -375,12 +375,15 @@ class PLuaInterpreter:
                         html2console = lua_globals['_PY']['html2console']
                         ansi_output = html2console(output)
                         print(ansi_output, file=sys.stdout)
+                        sys.stdout.flush()
                     else:
                         # Fallback: just print the HTML as-is
                         print(output, file=sys.stdout)
+                        sys.stdout.flush()
                 except Exception:
                     # If conversion fails, print original
                     print(output, file=sys.stdout)
+                    sys.stdout.flush()
             else:
                 # No HTML, store and print as-is
                 self.output_buffer.append(output)
@@ -395,6 +398,16 @@ class PLuaInterpreter:
 
         # Create the _PY table and add it to Lua globals
         lua_globals['_PY'] = extension_functions
+
+        # Always load plua_init.lua for global Lua setup
+        plua_init_path = os.path.join(project_root, "lua", "plua", "plua_init.lua")
+        if os.path.exists(plua_init_path):
+            with open(plua_init_path, 'r', encoding='utf-8') as f:
+                plua_init_code = f.read()
+            self.lua_runtime.execute(plua_init_code, self.lua_runtime.globals())
+            self.debug_print("Loaded plua_init.lua for global Lua setup")
+        else:
+            self.debug_print("plua_init.lua not found, skipping global Lua setup")
 
         # Load Fibaro API automatically
         try:
@@ -694,17 +707,40 @@ end
         # No unregister needed in embedded mode
 
     async def async_execute_code(self, lua_code):
-        """Execute Lua code asynchronously"""
+        """Async wrapper that runs Lua code in a thread"""
         def execute_in_thread():
             try:
-                return self.execute_code(lua_code)
+                result = self.execute_code(lua_code)
+                return f"Success: {result}"
             except Exception as e:
                 return f"Error: {str(e)}"
+
+        # Lock the timer execution gate before starting fragments only
+        try:
+            from extensions.core import acquire_timer_gate, set_fragment_executing
+            await acquire_timer_gate()
+            set_fragment_executing(True)  # Mark that fragment execution is starting
+        except Exception as e:
+            if self.debug:
+                print(
+                    f"DEBUG: Could not acquire timer gate: {e}",
+                    file=sys.stderr)
 
         # Run in thread to avoid blocking
         thread = threading.Thread(target=execute_in_thread)
         thread.start()
         thread.join()
+
+        # Release the timer gate after fragments are done
+        try:
+            from extensions.core import release_timer_gate
+            await release_timer_gate()
+        except Exception as e:
+            if self.debug:
+                print(
+                    f"DEBUG: Could not release timer gate: {e}",
+                    file=sys.stderr)
+
         return "Async execution completed"
 
     async def async_execute_file(self, filename):
@@ -738,16 +774,6 @@ end
             except Exception as e:
                 result_queue.put(("error", str(e)))
 
-        # Lock the timer execution gate before starting
-        try:
-            from extensions.core import acquire_timer_gate
-            await acquire_timer_gate()
-        except Exception as e:
-            if self.debug:
-                print(
-                    f"DEBUG: Could not acquire timer gate: {e}",
-                    file=sys.stderr)
-
         # Start Lua execution in a thread
         thread = threading.Thread(target=execute_in_thread)
         thread.start()
@@ -760,16 +786,6 @@ end
         status, result = result_queue.get()
         if status == "error":
             raise Exception(result)
-
-        # Release the timer gate to allow pending timer callbacks to run
-        try:
-            from extensions.core import release_timer_gate
-            await release_timer_gate()
-        except Exception as e:
-            if self.debug:
-                print(
-                    f"DEBUG: Could not release timer gate: {e}",
-                    file=sys.stderr)
 
         return result
 
@@ -822,30 +838,31 @@ end
             except Exception as e:
                 result_queue.put(("error", str(e)))
 
-        # Lock the timer execution gate before starting
+        # Start Lua execution in a thread
+        thread = threading.Thread(target=execute_in_thread)
+        thread.start()
+
+        # Lock the timer execution gate before starting fragments only
         try:
-            from extensions.core import acquire_timer_gate
+            from extensions.core import acquire_timer_gate, set_fragment_executing
             await acquire_timer_gate()
+            set_fragment_executing(True)  # Mark that fragment execution is starting
         except Exception as e:
             if self.debug:
                 print(
                     f"DEBUG: Could not acquire timer gate: {e}",
                     file=sys.stderr)
 
-        # Start Lua execution in a thread
-        thread = threading.Thread(target=execute_in_thread)
-        thread.start()
-
-        # Block completely until thread completes - no yielding to event loop
-        thread.join()
+        # Wait for completion with very frequent yields to allow socket operations
+        while thread.is_alive():
+            await asyncio.sleep(0.0001)  # Yield every 0.1ms for maximum responsiveness
 
         # Get the result
         status, result = result_queue.get()
         if status == "error":
             raise Exception(result)
 
-        # Now that both fragments and main file are completely processed,
-        # release the timer gate to allow pending timer callbacks to run
+        # Release the timer gate after fragments are done
         try:
             from extensions.core import release_timer_gate
             await release_timer_gate()

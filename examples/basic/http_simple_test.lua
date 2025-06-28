@@ -10,11 +10,14 @@ print()
 
 -- Test 2: POST request with JSON body
 print("Test 2: POST request with JSON body")
+-- Create JSON string from Lua table
+local post_data = {name = "John", age = 30, city = "New York"}
+local json_body = _PY.to_json(post_data)
 local response2 = _PY.http_request_sync{
   url = "https://httpbin.org/post",
   method = "POST",
   headers = {["Content-Type"] = "application/json"},
-  body = {name = "John", age = 30, city = "New York"}
+  body = json_body
 }
 print("Status:", response2.code)
 print("Body length:", #response2.body)

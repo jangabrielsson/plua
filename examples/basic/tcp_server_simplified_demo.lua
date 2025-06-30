@@ -38,7 +38,7 @@ _PY.tcp_server_add_event_listener(server_id, "error", function(err)
 end)
 
 -- Function to continuously read from a client
-function _read_from_client(client_id)
+local function _read_from_client(client_id)
     _PY.tcp_read(client_id, 1024, function(success, data, message)
         if success and data then
             print("Received from client", client_id, ":", data:gsub("\n", "\\n"))

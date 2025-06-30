@@ -20,10 +20,9 @@ try:
     from fastapi.responses import HTMLResponse
     from pydantic import BaseModel, Field
     import uvicorn
-    import httpx
 except ImportError as e:
     print(f"Missing required dependency: {e}")
-    print("Please install with: pip install fastapi uvicorn httpx")
+    print("Please install with: pip install fastapi uvicorn")
     raise
 
 # API tags for better organization
@@ -75,63 +74,6 @@ class EmbeddedAPIServer:
 
         if FastAPI is None:
             raise ImportError("FastAPI is not available")
-
-    async def _handle_redirect(self, redirect_data, method, path, data, query_params, headers):
-        """Handle redirect to external HC3 server"""
-        try:
-            hostname = redirect_data.get('hostname')
-            port = redirect_data.get('port', 80)
-
-            # Handle case where hostname contains full URL
-            if hostname.startswith('http://') or hostname.startswith('https://'):
-                # Extract just the hostname part
-                from urllib.parse import urlparse
-                parsed = urlparse(hostname)
-                hostname = parsed.netloc
-                # Use the scheme from the URL if provided
-                scheme = parsed.scheme
-            else:
-                # Use default scheme based on port
-                scheme = "https" if port == 443 else "http"
-
-            # Construct the external URL
-            url = f"{scheme}://{hostname}:{port}{path}"
-
-            print(f"DEBUG: Redirecting to external server: {url}")
-
-            # Prepare headers for the external request
-            external_headers = {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-            # Add any additional headers from the original request
-            if headers:
-                external_headers.update(headers)
-
-            # Make the request to the external HC3 server
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                if method == "GET":
-                    response = await client.get(url, params=query_params, headers=external_headers)
-                elif method == "POST":
-                    response = await client.post(url, json=data, params=query_params, headers=external_headers)
-                elif method == "PUT":
-                    response = await client.put(url, json=data, params=query_params, headers=external_headers)
-                elif method == "DELETE":
-                    response = await client.delete(url, params=query_params, headers=external_headers)
-                else:
-                    raise HTTPException(status_code=400, detail=f"Unsupported method: {method}")
-
-                print(f"DEBUG: External server response status: {response.status_code}")
-
-                # Return the response from the external server
-                return response.json(), response.status_code
-
-        except httpx.RequestError as e:
-            print(f"DEBUG: Request error during redirect: {e}")
-            raise HTTPException(status_code=502, detail=f"Failed to connect to external HC3 server: {str(e)}")
-        except Exception as e:
-            print(f"DEBUG: Error during redirect: {e}")
-            raise HTTPException(status_code=500, detail=f"Error proxying to external server: {str(e)}")
 
     def _unpack_result(self, result):
         """Helper to unpack Lua {data, status} result for FastAPI endpoints."""
@@ -654,9 +596,18 @@ print("Python version:", _PY.get_python_version())</textarea>
         @app.get("/api/devices", tags=["Device methods"])
         async def get_devices(request: Request, response: Response):
             """Get all devices"""
+            # Build the full path with query parameters
+            path = "/api/devices"
+            qps = request.query_params._dict
+            if qps:
+                query_parts = []
+                for k, v in qps.items():
+                    query_parts.append(f"{k}={v}")
+                path += "?" + "&".join(query_parts)
+            
             try:
                 result = self.interpreter.execute_lua_code_remote(
-                    "return _PY.fibaroapi('GET', '/api/devices')"
+                    f"return _PY.fibaroapi('GET', '{path}')"
                 )
                 if result.get("success"):
                     lua_result = result.get("result", [])
@@ -678,6 +629,23 @@ print("Python version:", _PY.get_python_version())</textarea>
             try:
                 result = self.interpreter.execute_lua_code_remote(
                     f"return _PY.fibaroapi('GET', '/api/devices/{id}')"
+                )
+                if result.get("success"):
+                    lua_result = result.get("result", [])
+                    data, status = self._unpack_result(lua_result)
+                    response.status_code = status
+                    return data
+                else:
+                    raise HTTPException(status_code=500, detail=f"Lua execution error: {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @app.get("/api/devices/{id}/properties/{name}", tags=["Device methods"])
+        async def get_device_property(id: int, name: str, response: Response):
+            """Get a specific property of a device"""
+            try:
+                result = self.interpreter.execute_lua_code_remote(
+                    f"return _PY.fibaroapi('GET', '/api/devices/{id}/properties/{name}')"
                 )
                 if result.get("success"):
                     lua_result = result.get("result", [])
@@ -750,18 +718,39 @@ print("Python version:", _PY.get_python_version())</textarea>
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
 
+        @app.get("/api/devices/{id}/action/{name}", tags=["Device methods"])
+        async def get_device_action_info(id: int, name: str, response: Response):
+            """Get device action information"""
+            try:
+                result = self.interpreter.execute_lua_code_remote(
+                    f"return _PY.fibaroapi('GET', '/api/devices/{id}/action/{name}')"
+                )
+                if result.get("success"):
+                    lua_result = result.get("result", [])
+                    data, status = self._unpack_result(lua_result)
+                    response.status_code = status
+                    return data
+                else:
+                    raise HTTPException(status_code=500, detail=f"Lua execution error: {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
         @app.get("/api/callAction", tags=["Device methods"])
         async def callAction_quickapp_method(request: Request, response: Response):
             """Call QuickApp action via query parameters"""
             qps = request.query_params._dict
-            # Remove deviceID and name from query params
-            del qps["deviceID"]
-            del qps["name"]
-            args = [a for a in qps.values()]
+            # Build the full path with query parameters
+            path = "/api/callAction"
+            if qps:
+                query_parts = []
+                for k, v in qps.items():
+                    query_parts.append(f"{k}={v}")
+                path += "?" + "&".join(query_parts)
+            
             t = time.time()
             try:
                 result = self.interpreter.execute_lua_code_remote(
-                    f"return _PY.fibaroapi('POST', '/api/callAction', {args}, {qps})"
+                    f"return _PY.fibaroapi('POST', '{path}')"
                 )
                 if result.get("success"):
                     lua_result = result.get("result", [])
@@ -1091,9 +1080,18 @@ print("Python version:", _PY.get_python_version())</textarea>
         @app.get("/api/refreshStates", tags=["RefreshStates methods"])
         async def get_refreshStates_events(query: RefreshStatesQuery, response: Response):
             """Get refresh states events"""
+            # Build the full path with query parameters
+            path = "/api/refreshStates"
+            query_dict = query.model_dump()
+            if query_dict:
+                query_parts = []
+                for k, v in query_dict.items():
+                    query_parts.append(f"{k}={v}")
+                path += "?" + "&".join(query_parts)
+            
             try:
                 result = self.interpreter.execute_lua_code_remote(
-                    f"return _PY.fibaroapi('GET', '/api/refreshStates', None, {query.model_dump()})"
+                    f"return _PY.fibaroapi('GET', '{path}')"
                 )
                 if result.get("success"):
                     lua_result = result.get("result", [])
@@ -1216,14 +1214,18 @@ print("Python version:", _PY.get_python_version())</textarea>
         async def call_ui_event(request: Request, response: Response):
             """Call UI event via query parameters"""
             qps = request.query_params._dict
-            # Remove deviceID and name from query params
-            del qps["deviceID"]
-            del qps["name"]
-            args = [a for a in qps.values()]
+            # Build the full path with query parameters
+            path = "/api/plugins/callUIEvent"
+            if qps:
+                query_parts = []
+                for k, v in qps.items():
+                    query_parts.append(f"{k}={v}")
+                path += "?" + "&".join(query_parts)
+            
             t = time.time()
             try:
                 result = self.interpreter.execute_lua_code_remote(
-                    f"return _PY.fibaroapi('POST', '/api/plugins/callUIEvent', {args}, {qps})"
+                    f"return _PY.fibaroapi('POST', '{path}')"
                 )
                 if result.get("success"):
                     lua_result = result.get("result", [])
@@ -1944,9 +1946,12 @@ print("Python version:", _PY.get_python_version())</textarea>
         @app.get("/api/proxy", tags=["Proxy methods"])
         async def call_via_proxy(query: ProxyParams, response: Response):
             """Call via proxy"""
+            # Build the full path with query parameters
+            path = f"/api/proxy?url={query.url}"
+            
             try:
                 result = self.interpreter.execute_lua_code_remote(
-                    f"return _PY.fibaroapi('GET', '/api/proxy', None, {{'url': '{query.url}'}})"
+                    f"return _PY.fibaroapi('GET', '{path}')"
                 )
                 if result.get("success"):
                     lua_result = result.get("result", [])

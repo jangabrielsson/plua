@@ -23,9 +23,33 @@ function bundled_files.get_base_path()
     return "."
 end
 
+-- Get the correct base path that accounts for the src/lua structure
+function bundled_files.get_corrected_base_path()
+    local base = bundled_files.get_base_path()
+    
+    -- Check if we're in development mode (src/lua exists)
+    local src_lua_path = base .. "/src/lua"
+    local file = io.open(src_lua_path .. "/plua/plua_init.lua", "r")
+    if file then
+        file:close()
+        return base .. "/src"  -- Return src/ as the base
+    end
+    
+    -- Check if we're in installed mode (lua exists directly)
+    local lua_path = base .. "/lua"
+    local file = io.open(lua_path .. "/plua/plua_init.lua", "r")
+    if file then
+        file:close()
+        return base  -- Return current directory as base
+    end
+    
+    -- Fallback: assume src/lua structure
+    return base .. "/src"
+end
+
 -- Check if a bundled file exists
 function bundled_files.exists(path)
-    local full_path = bundled_files.get_base_path() .. "/" .. path
+    local full_path = bundled_files.get_corrected_base_path() .. "/lua/" .. path
     local file = io.open(full_path, "r")
     if file then
         file:close()
@@ -36,7 +60,7 @@ end
 
 -- Read a bundled file
 function bundled_files.read(path)
-    local full_path = bundled_files.get_base_path() .. "/" .. path
+    local full_path = bundled_files.get_corrected_base_path() .. "/lua/" .. path
     local file = io.open(full_path, "r")
     if file then
         local content = file:read("*a")
@@ -51,8 +75,8 @@ function bundled_files.list_dir(dir_path)
     local py = _G._PY
     if py then
         local os = py.import_module("os")
-        local base = bundled_files.get_base_path()
-        local full_path = base .. "/" .. dir_path
+        local base = bundled_files.get_corrected_base_path()
+        local full_path = base .. "/lua/" .. dir_path
         local files = {}
         local pylist = os.listdir(full_path)
         if pylist then
@@ -74,15 +98,19 @@ end
 
 -- Get common bundled directories
 function bundled_files.get_demos_path()
-    return bundled_files.get_base_path() .. "/demos"
+    local base = bundled_files.get_base_path()
+    -- Demos are at the root level, not in src/
+    return base .. "/demos"
 end
 
 function bundled_files.get_examples_path()
-    return bundled_files.get_base_path() .. "/examples"
+    local base = bundled_files.get_base_path()
+    -- Examples are at the root level, not in src/
+    return base .. "/examples"
 end
 
 function bundled_files.get_lua_path()
-    return bundled_files.get_base_path() .. "/lua"
+    return bundled_files.get_corrected_base_path() .. "/lua"
 end
 
 -- Example usage functions

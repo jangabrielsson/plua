@@ -1,3 +1,4 @@
+local Emu = ...
 local fmt = string.format
 
 function string.split(inputstr, sep)
@@ -8,6 +9,38 @@ end
 
 local urldecode = function(url)
   return (url:gsub("%%(%x%x)", function(x) return string.char(tonumber(x, 16)) end))
+end
+
+local filterkeys = {
+  parentId=function(d,v) return tonumber(d.parentId) == tonumber(v) end,
+  name=function(d,v) return d.name == v end,
+  type=function(d,v) return d.type == v end,
+  enabled=function(d,v) return tostring(d.enabled) == tostring(v) end,
+  visible=function(d,v) return tostring(d.visible) == tostring(v) end,
+  roomID=function(d,v) return tonumber(d.roomID) == tonumber(v) end,
+  interface=function(d,v)
+    local ifs = d.interfaces or d.interface or {}
+    for _,i in ipairs(ifs) do if i == v then return true end end
+  end,
+  property=function(d,v)
+    local prop,val = v:match("%[([^,]+),(.+)%]")
+    if not prop then return false end
+    return tostring(d.properties[prop]) == tostring(val)
+  end,
+}
+
+-- local var = api.get("/devices?property=[lastLoggedUser,"..val.."]") 
+local function filter1(q,d)
+  for k,v in pairs(q) do 
+    if not(filterkeys[k] and filterkeys[k](d,v)) then return false end 
+  end
+  return true
+end
+
+local function filter(q,ds)
+  local r = {}
+  for _,d in pairs(ds) do if filter1(q,d) then r[#r+1] = d end end
+  return r
 end
 
 local function API()
@@ -80,505 +113,578 @@ local function API()
   return self
 end
 
--- Usage:
--- local router = API()
--- router:add("GET", "/api/devices", function(data, queryParameters)
---   return {status = "ok"},200
--- end)
--- router:add("POST", "/api/devices", function(data, queryParameters)
---   return {status = "ok"},200
--- end)
--- router:add("PUT", "/api/devices/<id>", function(data, queryParameters)
---   return {status = "ok"},200
--- end)
--- router:add("DELETE", "/api/devices/<id>", function(data, queryParameters)
---   return {status = "ok"},200
--- end)
-
--- Create a global router instance that gets set up once
-local router = nil
-
 -- Helper function to create response
 local function create_response(data, status)
   return data, status or 200
 end
 
 -- Helper function to create a redirect response
-local function create_redirect_response(hostname, port)
-  return {
-    _redirect = true,
-    hostname = hostname,
-    port = port or 80
-  }
-end
+local function create_redirect_response() return { _redirect = true, } end
 
--- Function to set up the router with all endpoints (called once)
-local function setup_router()
-  if router then
-    return router  -- Already set up
+local router = API()
+local HTTP =router.HTTP
+local hc3api = Emu.lib.hc3api
+local hc3_url,hc3_port = Emu.lib.hc3_url,Emu.lib.hc3_port
+Emu.lib.router = router
+
+-- Register all endpoints sorted by path
+router:add("POST", "/alarms/v1/partitions/actions/arm", function(path, data, vars, query)
+  --return create_response({status = "armed"})
+  return create_redirect_response()
+end)
+
+router:add("DELETE", "/alarms/v1/partitions/actions/arm", function(path, data, vars, query)
+  --return create_response({status = "disarmed"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/alarms/v1/partitions/<id>/actions/arm", function(path, data, vars, query)
+  --return create_response({status = "armed"})
+  return create_redirect_response()
+end)
+
+router:add("DELETE", "/alarms/v1/partitions/<id>/actions/arm", function(path, data, vars, query)
+  --return create_response({status = "disarmed"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/alarms/v1/partitions/actions/tryArm", function(path, data, vars, query)
+  --return create_response({status = "try_armed"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/alarms/v1/partitions/<id>/actions/tryArm", function(path, data, vars, query)
+  --return create_response({status = "try_armed"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/callAction", function(path, data, vars, query)
+  --return create_response({status = "action_executed"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/customEvents", function(path, data, vars, query)
+  --return create_response({status = "created"}, 201)
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/customEvents", function(path, data, vars, query)
+  --return create_response({event1 = {name = "testEvent", userdescription = "Test event"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/customEvents/<name>", function(path, data, vars, query)
+  --return create_response({name = vars.name, userdescription = "Test event"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/customEvents/<name>", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/customEvents/<name>", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("DELETE", "/api/customEvents/<name>", function(path, data, vars, query)
+  --return create_response({status = "deleted"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/customEvents/<name>/emit", function(path, data, vars, query)
+  --return create_response({status = "emitted"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/debugMessages", function(path, data, vars, query)
+  --return create_response({status = "added"})
+  return create_redirect_response()
+end)
+
+local function indexMap(t,key) local r = {} for _,v in ipairs(t) do r[v[key]] = v end return r end
+
+router:add("GET", "/api/devices", function(path, data, vars, query)
+  local devs = Emu.offline and {} or hc3api.get(path)
+  local res = indexMap(devs,'id')
+  for id,dev in pairs(Emu.DIR) do
+    res[id] = res[id] or dev.device
   end
-  
-  router = API()
-  
-  -- Register all endpoints sorted by path
-  router:add("POST", "/alarms/v1/partitions/actions/arm", function(data, queryParameters)
-    --return create_response({status = "armed"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/alarms/v1/partitions/actions/arm", function(data, queryParameters)
-    --return create_response({status = "disarmed"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/alarms/v1/partitions/<id>/actions/arm", function(data, queryParameters, vars)
-    --return create_response({status = "armed"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/alarms/v1/partitions/<id>/actions/arm", function(data, queryParameters, vars)
-    --return create_response({status = "disarmed"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/alarms/v1/partitions/actions/tryArm", function(data, queryParameters)
-    --return create_response({status = "try_armed"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/alarms/v1/partitions/<id>/actions/tryArm", function(data, queryParameters, vars)
-    --return create_response({status = "try_armed"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/callAction", function(data, queryParameters)
-    --return create_response({status = "action_executed"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/customEvents", function(data, queryParameters)
-    --return create_response({status = "created"}, 201)
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/customEvents", function(data, queryParameters)
-    --return create_response({event1 = {name = "testEvent", userdescription = "Test event"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/customEvents/<name>", function(data, queryParameters, vars)
-    --return create_response({name = vars.name, userdescription = "Test event"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/customEvents/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("PUT", "/api/customEvents/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/api/customEvents/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "deleted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/customEvents/<name>/emit", function(data, queryParameters, vars)
-    --return create_response({status = "emitted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/debugMessages", function(data, queryParameters)
-    --return create_response({status = "added"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/devices", function(data, queryParameters)
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/devices/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, name = "Device" .. vars.id})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/api/devices/<id>", function(data, queryParameters, vars)
-    --return create_response({status = "deleted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/devices/<id>/action/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "action_executed", deviceId = vars.id, action = vars.name})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/diagnostics", function(data, queryParameters)
-    --return create_response({status = "ok", version = "1.0.0"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/energy/devices", function(data, queryParameters)
-    --return create_response({device1 = {id = 1, name = "Energy Meter"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/globalVariables", function(data, queryParameters)
-    --return create_response({var1 = {name = "var1", value = "foo"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/globalVariables/<name>", function(data, queryParameters, vars)
-    --return create_response({name = vars.name, value = "foo"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/home", function(data, queryParameters)
-    --return create_response({hcName = "Home Center", currency = "USD"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/home", function(data, queryParameters)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("PUT", "/api/home", function(data, queryParameters)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/icons", function(data, queryParameters)
-    --return create_response({icon1 = {id = 1, name = "Light Icon"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/iosDevices", function(data, queryParameters)
-    --return create_response({device1 = {id = 1, name = "iPhone"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/notificationCenter", function(data, queryParameters)
-    --return create_response({notification1 = {id = 1, message = "Test notification"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/climate", function(data, queryParameters)
-    --return create_response({climate1 = {id = 1, temperature = 22}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/climate/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, temperature = 22})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/family", function(data, queryParameters)
-    --return create_response({family1 = {id = 1, name = "Family"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/favoriteColors", function(data, queryParameters)
-    --return create_response({color1 = {id = 1, name = "Blue"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/favoriteColors/v2", function(data, queryParameters)
-    --return create_response({color1 = {id = 1, name = "Blue", version = "2"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/humidity", function(data, queryParameters)
-    --return create_response({humidity1 = {id = 1, value = 45}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/location", function(data, queryParameters)
-    --return create_response({location1 = {id = 1, name = "Home"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/notifications", function(data, queryParameters)
-    --return create_response({notification1 = {id = 1, message = "Panel notification"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/panels/sprinklers", function(data, queryParameters)
-    --return create_response({sprinkler1 = {id = 1, name = "Garden Sprinkler"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
-    --return create_response({key1 = "value1", key2 = "value2"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
-    --return create_response({status = "created"}, 201)
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/api/plugins/<id>/variables", function(data, queryParameters, vars)
-    --return create_response({status = "deleted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
-    --return create_response({value = "test_value"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "updated"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("PUT", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "updated"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/api/plugins/<id>/variables/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "deleted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/callUIEvent", function(data, queryParameters)
-    --return create_response({status = "ui_event_called"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/createChildDevice", function(data, queryParameters)
-    --return create_response({id = 1, status = "created"}, 201)
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/publishEvent", function(data, queryParameters)
-    --return create_response({status = "published"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/removeChildDevice/<id>", function(data, queryParameters, vars)
-    --return create_response({status = "deleted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/restart", function(data, queryParameters)
-    --return create_response({status = "restarted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/updateProperty", function(data, queryParameters)
-    --return create_response({status = "property_updated"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/plugins/updateView", function(data, queryParameters)
-    --return create_response({status = "view_updated"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/profiles", function(data, queryParameters)
-    --return create_response({profiles = {profile1 = {id = 1, name = "Admin"}}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/profiles/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, name = "Profile" .. vars.id})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/proxy", function(data, queryParameters)
-    --return create_response({status = "ok", proxied = true})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/quickApp", function(data, queryParameters)
-    --return create_response({id = 1, status = "imported"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
-    --return create_response({{name = "main.lua", content = "print('Hello')", isMain = true}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
-    --return create_response({status = "created"}, 201)
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("PUT", "/api/quickApp/<id>/files", function(data, queryParameters, vars)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
-    --return create_response({name = vars.name, content = "print('Hello')", isMain = true})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("PUT", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/api/quickApp/<id>/files/<name>", function(data, queryParameters, vars)
-    --return create_response({status = "deleted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/quickApp/export/<id>", function(data, queryParameters, vars)
-    --return create_response({name = "test.fqa", content = "exported content"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/quickApp/import", function(data, queryParameters)
-    --return create_response({status = "imported"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/refreshStates", function(data, queryParameters)
-    --return create_response({
-    --  events = {
-    --    {id = 1, type = "deviceUpdate", timestamp = os.time()},
-    --    {id = 2, type = "systemEvent", timestamp = os.time()}
-    --  },
-    --  last = 2
-    --})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/rooms", function(data, queryParameters)
-    return create_redirect_response(fibaro.hc3_url, 80)
-    --return create_response({room1 = {id = 1, name = "Living Room"}})
-  end)
-  
-  router:add("POST", "/api/rooms", function(data, queryParameters)
-    --return create_response({id = 1, status = "created"}, 201)
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/rooms/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, name = "Room" .. vars.id})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/rooms/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("PUT", "/api/rooms/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/api/rooms/<id>", function(data, queryParameters, vars)
-    --return create_response({status = "deleted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/sections", function(data, queryParameters)
-    --return create_response({section1 = {id = 1, name = "Main Section"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/sections", function(data, queryParameters)
-    --return create_response({id = 1, status = "created"}, 201)
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/sections/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, name = "Section" .. vars.id})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/sections/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("PUT", "/api/sections/<id>", function(data, queryParameters, vars)
-    --return create_response({id = vars.id, status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("DELETE", "/api/sections/<id>", function(data, queryParameters, vars)
-    --return create_response({status = "deleted"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/settings", function(data, queryParameters)
-    --return create_response({setting = "value"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/settings/<name>", function(data, queryParameters, vars)
-    --return create_response({name = vars.name, value = "setting_value"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/users", function(data, queryParameters)
-    --return create_response({user1 = {id = 1, name = "Admin User"}})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("GET", "/api/weather", function(data, queryParameters)
-    --return create_response({temperature = 22.5, humidity = 45})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("POST", "/api/weather", function(data, queryParameters)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  
-  router:add("PUT", "/api/weather", function(data, queryParameters)
-    --return create_response({status = "modified"})
-    return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
-  end)
-  return router
+  return filter(query, res),HTTP.OK
+end)
+
+router:add("GET", "/api/devices/<id>", function(path, data, vars, query)
+  if Emu.DIR[vars.id] then
+    return Emu.DIR[vars.id].device,HTTP.OK
+  elseif Emu.offline then
+    return nil,HTTP.NOT_FOUND
+  else
+    return create_redirect_response()
+  end
+end)
+
+router:add("DELETE", "/api/devices/<id>", function(path, data, vars, query)
+  --return create_response({status = "deleted"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/devices/<id>/action/<name>", function(path, data, vars, query)
+  local id = vars.id
+  local dev = Emu.DIR[id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
+  else
+    dev.env.setTimeout(function()
+      dev.env.onAction(id,{ deviceId = id, actionName = vars.name, args = data.args })
+    end,0)
+    return nil,HTTP.OK
+  end
+end)
+
+router:add("GET", "/api/devices/<id>/action/<name>", function(path, data, vars, query)
+  local id = vars.id
+  local dev = Emu.DIR[id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.get(path,data) end
+  else
+    local action = vars.name
+    local data,args = {},{}
+    for k,v in pairs(query) do data[#data+1] = {k,v} end
+    table.sort(data,function(a,b) return a[1] < b[1] end)
+    for _,d in ipairs(data) do args[#args+1] = d[2] end
+    dev.env.setTimeout(function()
+      dev.env.onAction(id,{ deviceId = id, actionName = action, args =args})
+    end,0)
+    return nil,HTTP.OK
+  end
+end)
+
+router:add("GET", "/api/devices/<id>/properties/<name>", function(path, data, vars, query)
+  local id,name = vars.id,vars.name
+  if id == 1 and (name == "sunriseHour" or name == "sunsetHour") then
+    return {value=Emu[name],modified=0},HTTP.OK
+  end
+  local dev = Emu.DIR[id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.get(path) end end
+  return {value=dev.device.properties[name],modified=0},HTTP.OK
+end)
+
+router:add("GET", "/api/diagnostics", function(path, data, vars, query)
+  --return create_response({status = "ok", version = "1.0.0"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/energy/devices", function(path, data, vars, query)
+  --return create_response({device1 = {id = 1, name = "Energy Meter"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/globalVariables", function(path, data, vars, query)
+  return create_response({var1 = {name = "var1", value = "foo"}})
+  --return create_redirect_response()
+end)
+
+router:add("GET", "/api/globalVariables/<name>", function(path, data, vars, query)
+  --return create_response({name = vars.name, value = "foo"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/home", function(path, data, vars, query)
+  --return create_response({hcName = "Home Center", currency = "USD"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/home", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/home", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/icons", function(path, data, vars, query)
+  --return create_response({icon1 = {id = 1, name = "Light Icon"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/iosDevices", function(path, data, vars, query)
+  --return create_response({device1 = {id = 1, name = "iPhone"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/notificationCenter", function(path, data, vars, query)
+  --return create_response({notification1 = {id = 1, message = "Test notification"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/climate", function(path, data, vars, query)
+  --return create_response({climate1 = {id = 1, temperature = 22}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/climate/<id>", function(path, data, vars, query)
+  --return create_response({id = vars.id, temperature = 22})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/family", function(path, data, vars, query)
+  --return create_response({family1 = {id = 1, name = "Family"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/favoriteColors", function(path, data, vars, query)
+  --return create_response({color1 = {id = 1, name = "Blue"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/favoriteColors/v2", function(path, data, vars, query)
+  --return create_response({color1 = {id = 1, name = "Blue", version = "2"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/humidity", function(path, data, vars, query)
+  --return create_response({humidity1 = {id = 1, value = 45}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/location", function(path, data, vars, query)
+  --return create_response({location1 = {id = 1, name = "Home"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/notifications", function(path, data, vars, query)
+  --return create_response({notification1 = {id = 1, message = "Panel notification"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/panels/sprinklers", function(path, data, vars, query)
+  --return create_response({sprinkler1 = {id = 1, name = "Garden Sprinkler"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/plugins/<id>/variables", function(path, data, vars, query)
+  --return create_response({key1 = "value1", key2 = "value2"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/plugins/<id>/variables", function(path, data, vars, query)
+  --return create_response({status = "created"}, 201)
+  return create_redirect_response()
+end)
+
+router:add("DELETE", "/api/plugins/<id>/variables", function(path, data, vars, query)
+  --return create_response({status = "deleted"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/plugins/<id>/variables/<name>", function(path, data, vars, query)
+  --return create_response({value = "test_value"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/plugins/<id>/variables/<name>", function(path, data, vars, query)
+  --return create_response({status = "updated"})
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/plugins/<id>/variables/<name>", function(path, data, vars, query)
+  --return create_response({status = "updated"})
+  return create_redirect_response()
+end)
+
+router:add("DELETE", "/api/plugins/<id>/variables/<name>", function(path, data, vars, query)
+  --return create_response({status = "deleted"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/plugins/callUIEvent", function(path, data, vars, query)
+  --return create_response({status = "ui_event_called"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/plugins/createChildDevice", function(path, data, vars, query)
+  local data = data
+  local parent = data.parentId
+  local dev = Emu.DIR[parent]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end end
+  if dev.device.isProxy then
+    local res = hc3api.post(path,data) -- create child on HC3
+    res.isProxy = true
+    data = res
+  end
+  data.isChild = true
+  local headers = { webUI = dev.headers.webUI }
+  if data.initialProperties and data.initialProperties.uiView then
+    local uiView = data.initialProperties.uiView
+    local callbacks = data.initialProperties.uiCallbacks or {}
+    headers.UI = Emu.lib.ui.uiView2UI(uiView,callbacks)
+  end
+  Emu:registerDevice({device = data, env = dev.env})
+  return data,HTTP.OK
+end)
+
+router:add("POST", "/api/plugins/publishEvent", function(path, data, vars, query)
+  --return create_response({status = "published"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/plugins/removeChildDevice/<id>", function(path, data, vars, query)
+  local id = vars.id
+  local dev = Emu.DIR[id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.delete(path) end
+  elseif dev.device.isChild then
+    Emu.DIR[id] = nil
+    return nil,HTTP.OK
+  else return nil,HTTP.NOT_IMPLEMENTED end
+end)
+
+router:add("POST", "/api/plugins/restart", function(path, data, vars, query)
+  local dev = Emu.DIR[data.deviceId]
+  if dev then
+    for ref,typ in pairs(dev.env.plugin._timers or {}) do
+      if typ == 'timer' then dev.env.clearTimeout(ref) end
+      if typ == 'interv' then dev.env.clearInterval(ref) end
+    end
+    Emu:restartQA(dev.device.id)
+    return nil,HTTP.OK
+  end
+  --return create_response({status = "restarted"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/plugins/updateProperty", function(path, data, vars, query)
+  local id = data.deviceId
+  local dev = Emu.DIR[id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
+  else
+    local prop = data.propertyName
+    local value = data.value
+    if dev.device.properties[prop] ~= value then
+      -- Generate refreshState event
+      if not dev.device.isProxy then
+        Emu:refreshEvent('DevicePropertyUpdatedEvent',{
+          deviceId = id,
+          propertyName = prop,
+          newValue = value,
+        })
+    end
+      --dev:watching(prop,value)
+    end
+    dev.device.properties[prop] = value
+    if dev.device.isProxy then return hc3api.post("/plugins/updateProperty",data) end
+    return nil,HTTP.OK
+  end
+end)
+
+router:add("POST", "/api/plugins/updateView", function(path, data, vars, query)
+  --return create_response({status = "view_updated"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/profiles", function(path, data, vars, query)
+  --return create_response({profiles = {profile1 = {id = 1, name = "Admin"}}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/profiles/<id>", function(path, data, vars, query)
+  --return create_response({id = vars.id, name = "Profile" .. vars.id})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/proxy", function(path, data, vars, query)
+  --return create_response({status = "ok", proxied = true})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/quickApp", function(path, data, vars, query)
+  --return create_response({id = 1, status = "imported"})
+  return create_redirect_response()
+end)
+
+local function findFile(name,files)
+  for i,f in ipairs(files) do if f.name == name then return f,i end end
 end
 
--- Helper function to create a normal response
-local function create_response(data, status_code)
-  status_code = status_code or 200
-  return data, status_code
-end
+router:add("GET", "/api/quickApp/<id>/files", function(path, data, vars, query)
+  local dev = Emu.DIR[vars.id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
+  local files = {}
+  for name,_ in ipairs(dev.files) do
+    files[#files+1] = { name = name, isOpen=false, type='lua', isMain = name == 'main' }
+  end
+  return files,HTTP.OK
+end)
 
-local function fibaroapi(method, path, data, queryParameters)
-  print("FIBAROAPI called")
-  print("fibaroapi called:", method, path, data, queryParameters)
-  
-  -- Ensure router is set up (only happens once)
-  local router = setup_router()
+router:add("POST", "/api/quickApp/<id>/files", function(path, data, vars, query)
+  --return create_response({status = "created"}, 201)
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/quickApp/<id>/files", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/quickApp/<id>/files/<name>", function(path, data, vars, query)
+  local dev = Emu.DIR[vars.id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
+  local files = dev.files or {}
+  local f =  files[data.name]
+  if f then return {name = data.name, content = f.content, isMain = f.isMain, isOpen=false, type='lua'},HTTP.OK else return nil,HTTP.NOT_FOUND end
+end)
+
+router:add("POST", "/api/quickApp/<id>/files/<name>", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/quickApp/<id>/files/<name>", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("DELETE", "/api/quickApp/<id>/files/<name>", function(path, data, vars, query)
+  --return create_response({status = "deleted"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/quickApp/export/<id>", function(path, data, vars, query)
+  --return create_response({name = "test.fqa", content = "exported content"})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/quickApp/import", function(path, data, vars, query)
+  --return create_response({status = "imported"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/refreshStates", function(path, data, vars, query)
+  --return create_response({
+  --  events = {
+  --    {id = 1, type = "deviceUpdate", timestamp = os.time()},
+  --    {id = 2, type = "systemEvent", timestamp = os.time()}
+  --  },
+  --  last = 2
+  --})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/rooms", function(path, data, vars, query)
+  return create_redirect_response()
+  --return create_response({room1 = {id = 1, name = "Living Room"}})
+end)
+
+router:add("POST", "/api/rooms", function(path, data, vars, query)
+  --return create_response({id = 1, status = "created"}, 201)
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/rooms/<id>", function(path, data, vars, query)
+  --return create_response({id = vars.id, name = "Room" .. vars.id})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/rooms/<id>", function(path, data, vars, query)
+  --return create_response({id = vars.id, status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/rooms/<id>", function(path, data, vars, query)
+  --return create_response({id = vars.id, status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("DELETE", "/api/rooms/<id>", function(path, data, vars, query)
+  --return create_response({status = "deleted"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/sections", function(path, data, vars, query)
+  --return create_response({section1 = {id = 1, name = "Main Section"}})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/sections", function(path, data, vars, query)
+  --return create_response({id = 1, status = "created"}, 201)
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/sections/<id>", function(path, data, vars, query)
+  --return create_response({id = vars.id, name = "Section" .. vars.id})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/sections/<id>", function(path, data, vars, query)
+  --return create_response({id = vars.id, status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/sections/<id>", function(path, data, vars, query)
+  --return create_response({id = vars.id, status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("DELETE", "/api/sections/<id>", function(path, data, vars, query)
+  --return create_response({status = "deleted"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/settings", function(path, data, vars, query)
+  --return create_response({setting = "value"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/settings/<name>", function(path, data, vars, query)
+  --return create_response({name = vars.name, value = "setting_value"})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/users", function(path, data, vars, query)
+  --return create_response({user1 = {id = 1, name = "Admin User"}})
+  return create_redirect_response()
+end)
+
+router:add("GET", "/api/weather", function(path, data, vars, query)
+  --return create_response({temperature = 22.5, humidity = 45})
+  return create_redirect_response()
+end)
+
+router:add("POST", "/api/weather", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/weather", function(path, data, vars, query)
+  --return create_response({status = "modified"})
+  return create_redirect_response()
+end)
+
+
+local function fibaroapi(method, path, data)
+  Emu:DEBUG("fibaroapi called:", method, path, data)
   
   -- Try to get route from router
   local handler, vars, query = router:getRoute(method, path)
-  
+  local redirect = false
   if handler then
-    local response_data, status_code = handler(data, query or queryParameters, vars)
+    local response_data, status_code = handler(path, data, vars, query)
     
     -- Check if this is a redirect response
-    if response_data and response_data._redirect then
-      return response_data
+    if response_data and type(response_data) == "table" and response_data._redirect then
+      redirect = true
+    else 
+      return response_data, status_code
     end
-    
-    -- Return just the data, not the data and status code as a list
-    return response_data
   end
   
-  -- Default response for unknown endpoints
-  -- We should check if we run offline and if so, return a 404 error
-  return create_redirect_response(fibaro.hc3_url, fibaro.hc3_port)
+  if not handler then redirect = true end
+  if not Emu.offline and redirect then
+    -- Handle redirect by making the actual HTTP request to external server
+    return Emu:HC3_CALL(method, path, data, true)
+  end
+  
+  return nil, HTTP.NOT_IMPLEMENTED
 end
 
 _PY.fibaroapi = fibaroapi

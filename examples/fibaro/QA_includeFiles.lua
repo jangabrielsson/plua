@@ -1,7 +1,7 @@
 --%%name:Files
 --%%type:com.fibaro.binarySwitch
---%%file:demos/libQA.lua,libA
---%%file:demos/libQB.lua,libB
+--%%file:examples/fibaro/libQA.lua,libA
+--%%file:examples/fibaro/libQB.lua,libB
 
 function QuickApp:onInit()
   self:debug("onInit")

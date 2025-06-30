@@ -16,7 +16,6 @@
 ---```
 
 local fmt = string.format
-
 local function copy(t)
   if type(t) ~= "table" then return t end
   local cp = {}
@@ -33,7 +32,50 @@ local function member(value, table)
   return false
 end
 
+function class(name)
+  local cls = setmetatable({__USERDATA=true}, {
+    __call = function(t,...)
+      assert(rawget(t,'__init'),"No constructor")
+      local obj = {__USERDATA=true}
+      setmetatable(obj,{__index=t, __tostring = t.__tostring or function() return "object "..name end})
+      obj:__init(...)
+      return obj
+    end,
+    __tostring = function() return "class "..name end,
+  })
+  cls.__org = cls
+  _ENV[name] = cls
+  return function(p) getmetatable(cls).__index = p end
+end
+
+local function printErr(...) fibaro.error(__TAG,...) end
+
+local qaTimers = {}
+
+local function timerErr(ref) return function(...) qaTimers[ref]= nil printErr(...) end end
+
+local oldSetTimeout = setTimeout
+function setTimeout(func,ms)
+  local ref
+  ref = oldSetTimeout(function() qaTimers[ref]= nil fibaro.plua.lib.prettyCall(func,timerErr(ref)) end,ms)
+  qaTimers[ref]= 'timer'
+  return ref
+end
+
+local oldSetInterval = setInterval
+function setInterval(func,ms)
+  local ref
+  ref =oldSetInterval(function()
+    local ok = fibaro.plua.lib.prettyCall(func,timerErr(ref))
+    if not ok then clearInterval(ref) end
+  end,ms)
+  qaTimers[ref]= 'interv'
+  return ref
+end
+
 plugin = plugin or {}
+plugin._timers = qaTimers -- So api/plugins/restart can clear timers
+
 -- Retrieves a device by its ID
 -- @param deviceId - The ID of the device to retrieve
 -- @return Device object from the HC3 API
@@ -345,8 +387,6 @@ class 'QuickAppChild'(QuickAppBase)
 function QuickAppChild:__init(dev)
   QuickAppBase.__init(self, dev)
   self.parentId = dev.parentId
-  local dev = _emu.devices[self.id]
-  dev.env = _G
   if self.onInit then self:onInit() end
 end
 
@@ -448,10 +488,21 @@ function RefreshStateSubscriber:unsubscribe(subscription)
   end
 end
 
+local listeners = {}
+function _PY.newRefreshStatesEvent(event)
+  for listener,_ in pairs(listeners) do
+    pcall(listener,event)
+  end
+end
 -- Starts the refresh state subscriber
 ---@diagnostic disable-next-line: undefined-field
-function RefreshStateSubscriber:run() fibaro.hc3emu.refreshState:addListener(self.handle) end
+function RefreshStateSubscriber:run()
+  fibaro.plua:startRefreshStatesPolling()
+  listeners[self.handle] = true
+end
 
 -- Stops the refresh state subscriber
 ---@diagnostic disable-next-line: undefined-field
-function RefreshStateSubscriber:stop() fibaro.hc3emu.refreshState:removeListener(self.handle) end
+function RefreshStateSubscriber:stop() 
+  listeners[self.handle] = nil
+end

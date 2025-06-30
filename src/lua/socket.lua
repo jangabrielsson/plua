@@ -11,6 +11,18 @@ local tcp_set_timeout_sync = _PY.tcp_set_timeout_sync
 
 local function debug(...) if _DEBUG then print(...) end end
 
+-- Helper function to safely convert any error to string
+local function safe_tostring(value)
+    if type(value) == "string" then
+        return value
+    elseif type(value) == "userdata" then
+        -- Handle Python exception objects that might slip through
+        return "Python error: " .. tostring(value)
+    else
+        return tostring(value)
+    end
+end
+
 local socket = {}
 
 local function tcp()
@@ -26,8 +38,9 @@ local function tcp()
       self.conn_id = conn_id
       return conn_id, message 
     else 
-      debug("Failed to connect: " .. message) 
-      return nil, message 
+      local error_msg = safe_tostring(message)
+      debug("Failed to connect: " .. error_msg) 
+      return nil, error_msg 
     end
   end
   
@@ -40,7 +53,8 @@ local function tcp()
       if success then 
         debug("Timeout set:", message) 
       else 
-        debug("Failed to set timeout: " .. message) 
+        local error_msg = safe_tostring(message)
+        debug("Failed to set timeout: " .. error_msg) 
       end
     else
       debug("No connection to set timeout")
@@ -57,8 +71,9 @@ local function tcp()
         debug("Sent", len) 
         return len, nil 
       else 
-        debug("Failed to send: " .. message) 
-        return nil, message 
+        local error_msg = safe_tostring(message)
+        debug("Failed to send: " .. error_msg) 
+        return nil, error_msg 
       end
     else
       debug("No connection to send data")
@@ -77,8 +92,9 @@ local function tcp()
         debug("Received: " .. '"' .. data .. '"', message) 
         return data, #data
       else 
-        debug("Failed to receive: " .. tostring(message)) 
-        return nil, message
+        local error_msg = safe_tostring(message)
+        debug("Failed to receive: " .. error_msg) 
+        return nil, error_msg
       end
     else
       debug("No connection to receive data")
@@ -95,7 +111,8 @@ local function tcp()
       if success then 
         debug("Closed") 
       else 
-        debug("Failed to close: " .. message) 
+        local error_msg = safe_tostring(message)
+        debug("Failed to close: " .. error_msg) 
       end
       
       self.conn_id = nil

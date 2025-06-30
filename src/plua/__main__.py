@@ -86,7 +86,7 @@ Examples:
                 mobdebug_code = f"""
 local mobdebug = require("mobdebug")
 mobdebug.start('0.0.0.0', {debugger_port})
-print("MobDebug server started on 0.0.0.0:{debugger_port}")
+print("<font color='blue'>MobDebug server</font> <font color='yellow'>started on:</font> <font color='white'>0.0.0.0:{debugger_port}</font>")
 """
                 interpreter.execute_code(mobdebug_code)
             except Exception as e:

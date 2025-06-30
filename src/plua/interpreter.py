@@ -220,6 +220,12 @@ class ExecutionTracker:
         if self.execution_phase != "tracking":
             return False
 
+        # Use longer timeout when debugger is enabled (5 minutes)
+        if self.interpreter.debugger_enabled:
+            timeout = 300  # 5 minutes
+            if self.interpreter.debug:
+                print("DEBUG: Using extended timeout (5 minutes) for debugger mode", file=sys.stderr)
+
         # Check if we should terminate immediately
         if self.should_terminate():
             return True
@@ -877,6 +883,10 @@ end
     def start_embedded_api_server(self):
         """Start the embedded API server"""
         try:
+            # Try to free the port before starting the server
+            if not free_port(self.api_server_port, self.api_server_host):
+                self.debug_print(f"Could not free port {self.api_server_port}, attempting to start server anyway")
+            
             from .embedded_api_server import EmbeddedAPIServer
 
             self.embedded_api_server = EmbeddedAPIServer(
@@ -1014,3 +1024,45 @@ def lua_to_python(obj):
             # If keys() fails, it's not a Lua table
             return obj
     return obj
+
+def free_port(port, host="127.0.0.1"):
+    """Free a port by terminating any process using it"""
+    try:
+        import psutil
+        import socket
+        
+        # First, try to bind to the port to see if it's actually in use
+        test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            test_socket.bind((host, port))
+            test_socket.close()
+            return True  # Port is free
+        except OSError:
+            test_socket.close()
+            # Port is in use, find and terminate the process
+        
+        # Find processes using the port - use a more robust approach
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                # Get connections for this process
+                connections = proc.connections()
+                for conn in connections:
+                    if (conn.status == psutil.CONN_LISTEN and 
+                            conn.laddr.port == port and 
+                            conn.laddr.ip == host):
+                        print(f"Terminating process {proc.info['pid']} ({proc.info['name']}) using port {port}")
+                        proc.terminate()
+                        proc.wait(timeout=2)
+                        return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired, psutil.ZombieProcess):
+                continue
+            except Exception:
+                # Skip processes that don't support connections or have other issues
+                continue
+        return False
+    except ImportError:
+        print("psutil not available, cannot free port automatically", file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"Error freeing port {port}: {e}", file=sys.stderr)
+        return False

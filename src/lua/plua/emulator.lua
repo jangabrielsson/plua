@@ -266,10 +266,18 @@ function Emulator:loadQA(info)
 end
 
 function Emulator:loadMainFile(filename)
-  if not (filename and filename:match("%.lua$")) then return false end
+  if _PY.args.task then return self:runTask(_PY.args.task,filename) end
+  if not (filename and filename:match("%.lua$")) then 
+    self:ERROR("Invalid filename: "..filename)
+    return false 
+  end
   
   local info = self:createInfoFromFile(filename)
+  if info.debug then self.debugFlag = true end
+  if _PY.args.debug == true then self.debugFlag = true end
+
   if info.headers.offline then
+    self.offline = true
     self:DEBUG("Offline mode")
   end
   
@@ -279,7 +287,6 @@ function Emulator:loadMainFile(filename)
   
   if info.headers.offline then
     -- If main files has offline directive, setup offline routes
-    self.offline = true
     self.lib.loadLib("offline",self)
     self.lib.setupOfflineRoutes()
   end
@@ -392,5 +399,21 @@ function Emulator:refreshEvent(typ,data) _PY.addEvent(json.encode({type=typ,data
 function Emulator:DEBUG(...) if self.debugFlag then print(...) end end
 function Emulator:INFO(...) __fibaro_add_debug_message(__TAG, self.lib.logStr(...), "INFO", false) end 
 function Emulator:ERROR(...) printErr(...) end
+
+function Emulator:runTask(task,arg1)
+  if task == "uploadQA" then
+    self:INFO("Uploading QA",arg1)
+  elseif task == "updateFile" then
+    self:INFO("Updating file",arg1)
+  elseif task == "updateQA" then
+    self:INFO("Updating QA",arg1)
+  elseif task == "downloadQA" then
+    local id,path = arg1:match("^([^:]+):(.*)$")
+    self:INFO("Downloading QA",id,"to",path)
+  else
+    self:ERROR("Unknown task: "..task)
+  end
+  return false
+end
 
 return Emulator

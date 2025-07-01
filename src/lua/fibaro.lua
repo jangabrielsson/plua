@@ -89,7 +89,7 @@ if hc3_url then
   hc3_url = hc3_url..":"..hc3_port
 end
 
-plua.api_url = "http://127.0.0.1:8000"
+plua.api_url = string.format("http://127.0.0.1:%s",_PY.args.port or 8000)
 plua.hc3_url = hc3_url
 plua.hc3_port = hc3_port
 if hc3_user and hc3_pass then 
@@ -110,7 +110,10 @@ local function printError(func)
   end
 end
 
-_PY.mainHook = printError(function(filename) Emu:loadMainFile(filename) end)
+_PY.mainHook = printError(function(filename) 
+  Emu:loadMainFile(filename) 
+end)
+
 function _PY.getQAInfo(id) 
   local qa_data = Emu.DIR[id]
   if qa_data then
@@ -128,4 +131,4 @@ function _PY.getAllQAInfo()
   return json.encode(qa_data)
 end
 
-_print("<font color='blue'>Fibaro API loaded</font>")
+_print(fmt("<font color='blue'>Fibaro API loaded%s</font>",_PY.args.task and (" with task ".._PY.args.task) or ""))

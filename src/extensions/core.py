@@ -85,7 +85,7 @@ class TimerExecutionGate:
             callback_str = str(callback)
             timer_indicators = ['setTimeout', 'setInterval', 'timer_coroutine', 'interval_coroutine']
             is_timer_callback = any(indicator in callback_str for indicator in timer_indicators)
-            
+
             if is_timer_callback:
                 # Queue only pure timer callbacks during fragment execution
                 self.queue.append((callback, args, kwargs))
@@ -330,7 +330,7 @@ def parse_json(lua_runtime, json_string):
         # Handle empty or None input
         if not json_string or json_string == "":
             return None
-        
+
         python_obj = json.loads(json_string)
         # Convert Python object to Lua table recursively
         return _python_to_lua_table(lua_runtime, python_obj)
@@ -434,7 +434,7 @@ def _convert_lua_to_python(lua_obj):
                     return python_list
         except (KeyError, TypeError):
             pass  # If any key access fails, treat as dict
-        
+
         # Convert to Python dict
         python_dict = {}
         for key, value in lua_obj.items():
@@ -795,20 +795,20 @@ def _convert_lua_table(lua_table):
 def pollRefreshStates(lua_runtime, start: int, url: str, options: dict):
     """Start polling refresh states in a background thread"""
     global _refresh_thread, _refresh_running
-    
+
     # Stop existing thread if running
     if _refresh_running and _refresh_thread:
         _refresh_running = False
         _refresh_thread.join(timeout=1)
-    
+
     # Convert Lua options to Python dict
     options = _convert_lua_table(options)
-    
+
     def refresh_runner():
         global _refresh_running, _events, _event_count
         last, retries = start, 0
         _refresh_running = True
-        
+
         while _refresh_running:
             try:
                 nurl = url + str(last) + "&lang=en&rand=7784634785"
@@ -817,17 +817,17 @@ def pollRefreshStates(lua_runtime, start: int, url: str, options: dict):
                     retries = 0
                     data = resp.json()
                     last = data.get('last', last)
-                    
+
                     if data.get('events'):
                         for event in data['events']:
                             # Use addEvent function directly with dict for efficiency
                             addEvent(lua_runtime, event)
-                            
+
                 elif resp.status_code == 401:
                     print("HC3 credentials error", file=sys.stderr)
                     print("Exiting refreshStates loop", file=sys.stderr)
                     break
-                    
+
             except requests.exceptions.Timeout:
                 pass
             except requests.exceptions.ConnectionError:
@@ -838,16 +838,16 @@ def pollRefreshStates(lua_runtime, start: int, url: str, options: dict):
                     break
             except Exception as e:
                 print(f"Error: {e} {nurl}", file=sys.stderr)
-            
+
             # Sleep between requests
             time.sleep(1)
-        
+
         _refresh_running = False
-    
+
     # Start the thread
     _refresh_thread = Thread(target=refresh_runner, daemon=True)
     _refresh_thread.start()
-    
+
     return {"status": "started", "thread_id": _refresh_thread.ident}
 
 
@@ -855,13 +855,13 @@ def pollRefreshStates(lua_runtime, start: int, url: str, options: dict):
 def addEvent(lua_runtime, event):
     """Add an event to the event queue - accepts dict only"""
     global _events, _event_count
-    
+
     try:
         with _events_lock:
             _event_count += 1
             event_with_counter = {'last': _event_count, 'event': event}
             _events.append(event_with_counter)
-        
+
         # Call _PY.newRefreshStatesEvent if it exists (for Lua event hooks)
         try:
             if hasattr(lua_runtime.globals(), '_PY') and hasattr(lua_runtime.globals()['_PY'], 'newRefreshStatesEvent'):
@@ -872,7 +872,7 @@ def addEvent(lua_runtime, event):
         except Exception:
             # Silently ignore errors in event hook - don't break the queue
             pass
-        
+
         return {"status": "added", "event_count": _event_count}
     except Exception as e:
         print(f"Error adding event: {e}", file=sys.stderr)
@@ -894,15 +894,15 @@ def addEventFromLua(lua_runtime, event_json: str):
 def getEvents(lua_runtime, counter: int = 0):
     """Get events since the given counter"""
     global _events, _event_count
-    
+
     with _events_lock:
         events = list(_events)  # Copy to avoid race conditions
         count = events[-1]['last'] if events else 0
         evs = [e['event'] for e in events if e['last'] > counter]
-    
+
     ts = datetime.now().timestamp()
     tsm = time.time()
-    
+
     res = {
         'status': 'IDLE',
         'events': evs,
@@ -912,7 +912,7 @@ def getEvents(lua_runtime, counter: int = 0):
         'date': datetime.fromtimestamp(ts).strftime('%H:%M | %d.%m.%Y'),
         'last': count
     }
-    
+
     # Return as Lua table directly
     return _python_to_lua_table(lua_runtime, res)
 
@@ -954,17 +954,17 @@ def broadcast_ui_update(lua_runtime, device_id):
     """
     Broadcast a UI update event to all connected WebSocket clients.
     This will trigger a reload of the QuickApps UI in the frontend.
-    
+
     Args:
         device_id: The ID of the device whose UI has been updated (can be number, string, or Lua table with .id)
-        
+
     Returns:
         bool: True if the broadcast was successful
     """
     try:
         # Convert device_id to integer, handling different input types
         actual_device_id = None
-        
+
         if isinstance(device_id, (int, float)):
             actual_device_id = int(device_id)
         elif isinstance(device_id, str):
@@ -978,12 +978,12 @@ def broadcast_ui_update(lua_runtime, device_id):
             try:
                 actual_device_id = int(device_id.id)
             except (TypeError, ValueError, AttributeError):
-                print(f"Error: device_id object has .id but it's not a valid integer", file=sys.stderr)
+                print("Error: device_id object has .id but it's not a valid integer", file=sys.stderr)
                 return False
         else:
             print("Error: device_id must be a number, string, or object with .id property, got {}".format(type(device_id)), file=sys.stderr)
             return False
-        
+
         # Get the interpreter instance from _PY_INTERPRETER
         lua_globals = lua_runtime.globals()
         if '_PY_INTERPRETER' in lua_globals:
@@ -992,7 +992,7 @@ def broadcast_ui_update(lua_runtime, device_id):
                 # Run the broadcast in a new thread to avoid blocking
                 import threading
                 import asyncio
-                
+
                 def run_broadcast():
                     try:
                         # Create new event loop for this thread
@@ -1003,7 +1003,7 @@ def broadcast_ui_update(lua_runtime, device_id):
                         )
                     except Exception as e:
                         print(f"Error in broadcast thread: {e}", file=sys.stderr)
-                
+
                 # Start broadcast in background thread
                 thread = threading.Thread(target=run_broadcast)
                 thread.daemon = True

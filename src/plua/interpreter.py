@@ -996,6 +996,23 @@ end
                 "error": str(e)
             }
 
+    def setup_command_line_args(self, args):
+        """Setup command-line arguments in _PY.args table for Lua access"""
+        lua_globals = self.lua_runtime.globals()
+        
+        # Create _PY.args table
+        args_table = self.lua_runtime.table()
+        args_table['debug'] = getattr(args, 'debug', False)
+        args_table['port'] = getattr(args, 'port', 8000)
+        args_table['task'] = getattr(args, 'task', None)
+        
+        # Add to _PY table
+        lua_globals['_PY']['args'] = args_table
+        
+        self.debug_print(f"Command-line args available in _PY.args: debug={args_table['debug']}, port={args_table['port']}, task={args_table['task']}")
+
+        # Load Fibaro API automatically
+
 
 # Recursively convert Lua tables to Python dicts/lists
 def lua_to_python(obj):

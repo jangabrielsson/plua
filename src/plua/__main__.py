@@ -1,12 +1,12 @@
 import sys
 import argparse
-import os
 
 from plua import PLuaInterpreter
 from plua.version import __version__
 import extensions.network_extensions
 
 loop_manager = extensions.network_extensions.loop_manager
+
 
 def main():
     """Main entry point"""
@@ -36,6 +36,8 @@ Examples:
   plua --fibaro -e "print('Hello')" script.lua      # Load fibaro, execute code, then run script
   plua --port 8080 --fibaro -i                      # Run on custom port 8080 with fibaro and interactive shell
   plua --port 9000 script.lua                       # Run script with API server on port 9000
+  plua --task "my-task" script.lua                  # Pass task string to Lua (available in _PY.args.task)
+  plua -d --port 8080 --task "debug-task" script.lua # Debug mode with custom port and task
   """
     )
 
@@ -56,6 +58,8 @@ Examples:
                         help='Load fibaro.lua library (equivalent to -e "require(\'fibaro\')")')
     parser.add_argument('--port', type=int, default=8000, metavar='PORT',
                         help='Port for the embedded API server (default: 8000)')
+    parser.add_argument('--task', type=str, metavar='TASK',
+                        help='Task string to pass to Lua (available in _PY.args.task)')
     parser.add_argument('-v', '--version', action='version', version=f'PLua {__version__}')
 
     args = parser.parse_args()
@@ -77,6 +81,9 @@ Examples:
 
     async def async_main(args):
         interpreter = PLuaInterpreter(debug=args.debug, debugger_enabled=args.debugger_port if args.debugger else False, api_server_port=args.port)
+
+        # Pass command-line arguments to Lua in _PY.args table
+        interpreter.setup_command_line_args(args)
 
         # Start MobDebug if requested
         if args.debugger:
@@ -177,5 +184,6 @@ print("<font color='blue'>MobDebug server</font> <font color='yellow'>started on
 
     loop_manager.run_main(async_main(args))
 
+
 if __name__ == "__main__":
-    main() 
+    main()

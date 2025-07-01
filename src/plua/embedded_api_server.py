@@ -9,6 +9,7 @@ import threading
 import time
 from datetime import datetime
 from typing import Optional, Any, List, Dict
+import json
 
 # Add the project root to the path so we can import api_server
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -18,6 +19,7 @@ try:
     from fastapi import FastAPI, HTTPException, Request, Response
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import HTMLResponse
+    from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel, Field
     import uvicorn
 except ImportError as e:
@@ -108,6 +110,9 @@ class EmbeddedAPIServer:
 
         # Store reference to interpreter
         app.state.interpreter = self.interpreter
+
+        # Mount static files
+        app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
 
         # Define models
         class ExecuteRequest(BaseModel):
@@ -227,279 +232,29 @@ class EmbeddedAPIServer:
         class ProxyParams(BaseModel):
             url: str
 
+        class CallUIEventParams(BaseModel):
+            deviceID: int
+            elementName: str
+            eventType: str
+            value: Optional[str] = None
+
         # API endpoints
         @app.get("/", response_class=HTMLResponse, tags=["Core"])
         async def root():
             """Web interface"""
-            return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>PLua Web Interface</title>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <style>
-                    * { box-sizing: border-box; }
-                    body {
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        margin: 0;
-                        padding: 20px;
-                        background: #f5f5f5;
-                    }
-                    .container {
-                        max-width: 1200px;
-                        margin: 0 auto;
-                        background: white;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        overflow: hidden;
-                    }
-                    .header {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        padding: 30px;
-                        text-align: center;
-                    }
-                    .header h1 { margin: 0; font-size: 2.5em; }
-                    .header p { margin: 10px 0 0 0; opacity: 0.9; }
-                    .content { padding: 30px; }
-                    .section {
-                        margin: 30px 0;
-                        padding: 25px;
-                        border: 1px solid #e1e5e9;
-                        border-radius: 8px;
-                        background: #fafbfc;
-                    }
-                    .section h2 {
-                        margin: 0 0 20px 0;
-                        color: #24292e;
-                        border-bottom: 2px solid #667eea;
-                        padding-bottom: 10px;
-                    }
-                    .code-input {
-                        width: 100%;
-                        height: 200px;
-                        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-                        font-size: 14px;
-                        padding: 15px;
-                        border: 1px solid #d1d5da;
-                        border-radius: 6px;
-                        resize: vertical;
-                        background: #f6f8fa;
-                    }
-                    .button {
-                        background: #667eea;
-                        color: white;
-                        padding: 12px 24px;
-                        border: none;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        font-size: 16px;
-                        font-weight: 500;
-                        transition: background 0.2s;
-                    }
-                    .button:hover { background: #5a6fd8; }
-                    .button:disabled { background: #ccc; cursor: not-allowed; }
-                    .output {
-                        background: #f6f8fa;
-                        padding: 20px;
-                        border-radius: 6px;
-                        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-                        white-space: pre-wrap;
-                        border: 1px solid #e1e5e9;
-                        min-height: 100px;
-                        max-height: 400px;
-                        overflow-y: auto;
-                    }
-                    .status {
-                        display: inline-block;
-                        padding: 4px 8px;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        font-weight: 500;
-                    }
-                    .status.success { background: #d4edda; color: #155724; }
-                    .status.error { background: #f8d7da; color: #721c24; }
-                    .status.info { background: #d1ecf1; color: #0c5460; }
-                    .tabs {
-                        display: flex;
-                        border-bottom: 1px solid #e1e5e9;
-                        margin-bottom: 20px;
-                    }
-                    .tab {
-                        padding: 10px 20px;
-                        cursor: pointer;
-                        border-bottom: 2px solid transparent;
-                        transition: all 0.2s;
-                    }
-                    .tab.active {
-                        border-bottom-color: #667eea;
-                        color: #667eea;
-                        font-weight: 500;
-                    }
-                    .tab-content {
-                        display: none;
-                    }
-                    .tab-content.active {
-                        display: block;
-                    }
-                    .api-links {
-                        display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                        gap: 15px;
-                        margin-top: 20px;
-                    }
-                    .api-link {
-                        padding: 15px;
-                        border: 1px solid #e1e5e9;
-                        border-radius: 6px;
-                        text-decoration: none;
-                        color: #24292e;
-                        transition: all 0.2s;
-                    }
-                    .api-link:hover {
-                        border-color: #667eea;
-                        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>PLua Web Interface</h1>
-                        <p>Execute Lua code with Python extensions via web interface</p>
-                    </div>
-
-                    <div class="content">
-                        <div class="tabs">
-                            <div class="tab active" onclick="showTab('execute')">Execute Code</div>
-                            <div class="tab" onclick="showTab('api')">API Documentation</div>
-                            <div class="tab" onclick="showTab('status')">Server Status</div>
-                        </div>
-
-                        <div id="execute" class="tab-content active">
-                            <div class="section">
-                                <h2>Execute Lua Code</h2>
-                                <textarea id="code" class="code-input" placeholder="Enter Lua code here...">print("Hello from PLua!")
-print("Current time:", _PY.get_time())
-print("Python version:", _PY.get_python_version())</textarea>
-                                <br><br>
-                                <button onclick="executeCode()" class="button" id="executeBtn">Execute</button>
-                                <button onclick="clearOutput()" class="button" style="background: #6c757d; margin-left: 10px;">Clear</button>
-                                <div id="output" class="output">Ready to execute Lua code...</div>
-                            </div>
-                        </div>
-
-                        <div id="api" class="tab-content">
-                            <div class="section">
-                                <h2>API Documentation</h2>
-                                <p>Access the full API documentation and interactive testing interface:</p>
-                                <div class="api-links">
-                                    <a href="/docs" target="_blank" class="api-link">
-                                        <strong>Swagger UI</strong><br>
-                                        Interactive API documentation with testing interface
-                                    </a>
-                                    <a href="/redoc" target="_blank" class="api-link">
-                                        <strong>ReDoc</strong><br>
-                                        Beautiful, responsive API documentation
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="status" class="tab-content">
-                            <div class="section">
-                                <h2>Server Status</h2>
-                                <div id="statusContent">Loading...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <script>
-                    function showTab(tabName) {
-                        // Hide all tab contents
-                        document.querySelectorAll('.tab-content').forEach(content => {
-                            content.classList.remove('active');
-                        });
-                        document.querySelectorAll('.tab').forEach(tab => {
-                            tab.classList.remove('active');
-                        });
-
-                        // Show selected tab
-                        document.getElementById(tabName).classList.add('active');
-                        event.target.classList.add('active');
-
-                        // Load status if needed
-                        if (tabName === 'status') {
-                            loadStatus();
-                        }
-                    }
-
-                    async function executeCode() {
-                        const code = document.getElementById('code').value;
-                        const output = document.getElementById('output');
-                        const executeBtn = document.getElementById('executeBtn');
-
-                        output.textContent = 'Executing...';
-                        executeBtn.disabled = true;
-
-                        try {
-                            const response = await fetch('/api/execute', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ code: code })
-                            });
-
-                            const result = await response.json();
-
-                            if (result.success) {
-                                const timeStr = result.execution_time?.toFixed(3) || '0.000';
-                                const outputText = result.result || 'No output';
-                                output.innerHTML = `<span class="status success">Success (${timeStr}s)</span><br><br>Output:<br>${outputText}`;
-                            } else {
-                                const timeStr = result.execution_time?.toFixed(3) || '0.000';
-                                output.innerHTML = `<span class="status error">Error (${timeStr}s)</span><br><br>${result.error}`;
-                            }
-                        } catch (error) {
-                            output.innerHTML = `<span class="status error">Request Failed</span><br><br>${error.message}`;
-                        } finally {
-                            executeBtn.disabled = false;
-                        }
-                    }
-
-                    function clearOutput() {
-                        document.getElementById('output').textContent = 'Ready to execute Lua code...';
-                    }
-
-                    async function loadStatus() {
-                        const statusContent = document.getElementById('statusContent');
-
-                        try {
-                            const response = await fetch('/api/status');
-                            const status = await response.json();
-
-                            const interpreterStatus = status.interpreter_initialized ? 'success' : 'error';
-                            const interpreterText = status.interpreter_initialized ? 'Initialized' : 'Not Initialized';
-
-                            statusContent.innerHTML = `
-                                <p><strong>Server Time:</strong> ${status.server_time || 'Unknown'}</p>
-                                <p><strong>Interpreter:</strong> <span class="status ${interpreterStatus}">${interpreterText}</span></p>
-                                <p><strong>Active Sessions:</strong> ${status.active_sessions || 0}</p>
-                                <p><strong>Active Timers:</strong> ${status.active_timers || 0}</p>
-                                <p><strong>Network Operations:</strong> ${status.active_network_operations || 0}</p>
-                                <p><strong>Python Version:</strong> ${status.python_version || 'Unknown'}</p>
-                                <p><strong>Lua Version:</strong> ${status.lua_version || 'Unknown'}</p>
-                                <p><strong>PLua Version:</strong> ${status.plua_version || 'Unknown'}</p>
-                            `;
-                        } catch (error) {
-                            statusContent.innerHTML = `<span class="status error">Failed to load status: ${error.message}</span>`;
-                        }
-                    }
-                </script>
-            </body>
-            </html>
-            """
+            try:
+                with open(os.path.join(os.path.dirname(__file__), "static", "index.html"), "r", encoding="utf-8") as f:
+                    return f.read()
+            except FileNotFoundError:
+                return """
+                <html>
+                <head><title>PLua Web Interface</title></head>
+                <body>
+                    <h1>PLua Web Interface</h1>
+                    <p>Static files not found. Please ensure the static directory exists with index.html, styles.css, and script.js files.</p>
+                </body>
+                </html>
+                """
 
         @app.get("/health", tags=["Core"])
         async def health_check():
@@ -1210,34 +965,29 @@ print("Python version:", _PY.get_python_version())</textarea>
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Plugins endpoints
-        @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
-        async def call_ui_event(request: Request, response: Response):
-            """Call UI event via query parameters"""
-            qps = request.query_params._dict
-            # Build the full path with query parameters
-            path = "/api/plugins/callUIEvent"
-            if qps:
-                query_parts = []
-                for k, v in qps.items():
-                    query_parts.append(f"{k}={v}")
-                path += "?" + "&".join(query_parts)
-            
+        @app.post("/api/plugins/callUIEvent", tags=["Plugins methods"])
+        async def call_ui_event(args: CallUIEventParams, response: Response):
+            """Call UI event via POST body"""
             t = time.time()
             try:
-                result = self.interpreter.execute_lua_code_remote(
-                    f"return _PY.fibaroapi('POST', '{path}')"
-                )
+                json_args = json.dumps(args.model_dump())
+                lua_code = f"return _PY.fibaroapi('POST', '/api/plugins/callUIEvent', json.decode([==[{json_args}]==]))"
+                result = self.interpreter.execute_lua_code_remote(lua_code)
                 if result.get("success"):
-                    lua_result = result.get("result", [])
-                    data, status = self._unpack_result(lua_result)
-                    response.status_code = status
                     return {
                         "endTimestampMillis": time.time(),
                         "message": "Accepted",
                         "startTimestampMillis": t,
+                        "result": result.get("result"),
                     }
                 else:
-                    raise HTTPException(status_code=500, detail=f"Lua execution error: {result.get('error', 'Unknown error')}")
+                    response.status_code = 400
+                    return {
+                        "endTimestampMillis": time.time(),
+                        "message": "Not accepted",
+                        "startTimestampMillis": t,
+                        "error": result.get("error", "Unknown error")
+                    }
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -1468,6 +1218,45 @@ print("Python version:", _PY.get_python_version())</textarea>
                     data, status = self._unpack_result(lua_result)
                     response.status_code = status
                     return data
+                else:
+                    raise HTTPException(status_code=500, detail=f"Lua execution error: {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @app.get("/api/quickapps", tags=["QuickApp methods"])
+        async def get_all_quickapps():
+            """Get all emulated QuickApps"""
+            try:
+                result = self.interpreter.execute_lua_code(
+                    "return _PY.getAllQAInfo()"
+                )
+                if result.get("success"):
+                    qa_info_str = result.get("result", "")
+                    if qa_info_str and qa_info_str.strip():
+                        import json
+                        devices = json.loads(qa_info_str)
+                        return devices  # Return as-is, do not wrap in {"device": d}
+                    return []
+                else:
+                    raise HTTPException(status_code=500, detail=f"Lua execution error: {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @app.get("/api/quickapps/{id}", tags=["QuickApp methods"])
+        async def get_quickapp_by_id(id: int):
+            """Get specific QuickApp by ID"""
+            try:
+                result = self.interpreter.execute_lua_code(
+                    f"return _PY.getQAInfo({id})"
+                )
+                if result.get("success"):
+                    qa_data_str = result.get("result", "")
+                    if qa_data_str and qa_data_str.strip():
+                        import json
+                        device = json.loads(qa_data_str)
+                        return {"device": device}
+                    else:
+                        raise HTTPException(status_code=404, detail="QuickApp not found")
                 else:
                     raise HTTPException(status_code=500, detail=f"Lua execution error: {result.get('error', 'Unknown error')}")
             except Exception as e:

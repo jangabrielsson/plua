@@ -452,6 +452,7 @@ function RefreshStateSubscriber:__init()
   self.subscribers = {}
   self.last = 0
   function self.handle(event)
+    event.created = event.created or os.time()
     if self.time > event.created+2 then return end -- Allow for 2 seconds mismatch between emulator and HC3
     for sub,_ in pairs(self.subscribers) do
       if sub.filter(event) then pcall(sub.handler,event) end
@@ -489,7 +490,8 @@ function RefreshStateSubscriber:unsubscribe(subscription)
 end
 
 local listeners = {}
-function _PY.newRefreshStatesEvent(event)
+function _PY.newRefreshStatesEvent(jsonevent)
+  local event = json.decode(jsonevent)
   for listener,_ in pairs(listeners) do
     pcall(listener,event)
   end

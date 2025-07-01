@@ -400,7 +400,14 @@ end)
 
 router:add("POST", "/api/plugins/callUIEvent", function(path, data, vars, query)
   --return create_response({status = "ui_event_called"})
-  return create_redirect_response()
+  local dev = Emu.DIR[data.deviceID]
+  if not dev then return nil,400 end
+  local val = data.value or data.values
+  if type(val)=='string' and val:sub(1,1)=='[' then val = json.decode(val) end
+  data.value,data.values = nil,nil
+  data.values = {val}
+  dev.env.setTimeout(function() dev.env.onUIEvent(data.deviceID,data) end,0)
+  return nil,HTTP.OK
 end)
 
 router:add("POST", "/api/plugins/createChildDevice", function(path, data, vars, query)

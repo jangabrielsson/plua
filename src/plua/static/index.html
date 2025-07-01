@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PLua Web Interface</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PLua Web Interface</h1>
+            <p>Execute Lua code with Python extensions via web interface</p>
+        </div>
+
+        <div class="content">
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('execute')">Execute Code</div>
+                <div class="tab" onclick="showTab('api')">API Documentation</div>
+                <div class="tab" onclick="showTab('quickapps')">QuickApps</div>
+                <div class="tab" onclick="showTab('status')">Server Status</div>
+            </div>
+
+            <div id="execute" class="tab-content active">
+                <div class="section">
+                    <h2>Execute Lua Code</h2>
+                    <textarea id="code" class="code-input" placeholder="Enter Lua code here...">print("Hello from PLua!")
+print("Current time:", _PY.get_time())
+print("Python version:", _PY.get_python_version())</textarea>
+                    <br><br>
+                    <button onclick="executeCode()" class="button" id="executeBtn">Execute</button>
+                    <button onclick="clearOutput()" class="button" style="background: #6c757d; margin-left: 10px;">Clear</button>
+                    <div id="output" class="output">Ready to execute Lua code...</div>
+                </div>
+            </div>
+
+            <div id="api" class="tab-content">
+                <div class="section">
+                    <h2>API Documentation</h2>
+                    <p>Access the full API documentation and interactive testing interface:</p>
+                    <div class="api-links">
+                        <a href="/docs" target="_blank" class="api-link">
+                            <strong>Swagger UI</strong><br>
+                            Interactive API documentation with testing interface
+                        </a>
+                        <a href="/redoc" target="_blank" class="api-link">
+                            <strong>ReDoc</strong><br>
+                            Beautiful, responsive API documentation
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="quickapps" class="tab-content">
+                <div class="section">
+                    <h2>Emulated QuickApps</h2>
+                    <p>List of all QuickApps currently running in PLua:</p>
+                    <button onclick="loadQuickApps()" class="button" id="loadQABtn">Refresh QuickApps</button>
+                    <div id="quickappsList" class="output" style="margin-top: 20px; min-height: 200px;">
+                        Click "Refresh QuickApps" to load the list...
+                    </div>
+                </div>
+            </div>
+
+            <div id="status" class="tab-content">
+                <div class="section">
+                    <h2>Server Status</h2>
+                    <div id="statusContent">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html> 

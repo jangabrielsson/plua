@@ -111,5 +111,21 @@ local function printError(func)
 end
 
 _PY.mainHook = printError(function(filename) Emu:loadMainFile(filename) end)
+function _PY.getQAInfo(id) 
+  local qa_data = Emu.DIR[id]
+  if qa_data then
+    return json.encode({device=qa_data.device,UI=qa_data.UI})
+  else
+    return nil
+  end
+end
+
+function _PY.getAllQAInfo() 
+  local qa_data = {}
+  for _,i in pairs(Emu.DIR) do
+    qa_data[#qa_data+1] = {device=i.device,UI=i.UI}
+  end
+  return json.encode(qa_data)
+end
 
 _print("<font color='blue'>Fibaro API loaded</font>")

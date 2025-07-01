@@ -4,7 +4,7 @@ local fmt = string.format
 
 -- arrayify table. Ensures that empty array is json encoded as "[]"
 local function arrayify(t) 
-  if type(t)=='table' then json.util.InitArray(t) end 
+  if type(t)=='table' then json.initArray(t) end 
   return t
 end
 
@@ -246,6 +246,61 @@ local function uiView2UI(uiView,uiCallbacks)
   return UI
 end
 
+local function extendUI(UI)
+  for _,r in ipairs(UI) do
+    if r[1]==nil then r = {r} end
+    for _,e in ipairs(r) do
+      if e.button then
+        e.type = "button"
+        e.id = e.button
+        if e.text == nil then e.text = "" end
+        if e.onReleased == nil then e.onReleased = "" end
+        if e.onLongPressDown == nil then e.onLongPressDown = "" end
+        if e.onLongPressReleased == nil then e.onLongPressReleased = "" end
+        if e.visible == nil then e.visible = true end
+      elseif e.switch then
+        e.type = "switch"
+        e.id = e.switch
+        if e.text == nil then e.text = "" end
+        if e.value == nil then e.value = "false" end
+        if e.onReleased == nil then e.onReleased = "" end
+        if e.visible == nil then e.visible = true end
+      elseif e.slider then
+        e.type = "slider"
+        e.id = e.slider
+        if e.text == nil then e.text = "" end
+        if e.onChanged == nil then e.onChanged = "" end
+        if e.value == nil then e.value = "0" end
+        if e.min == nil then e.min = "0" end
+        if e.max == nil then e.max = "100" end
+        if e.step == nil then e.step = "1" end
+        if e.visible == nil then e.visible = true end
+      elseif e.label then
+        e.type = "label"
+        e.id = e.label
+        if e.text == nil then e.text = "" end
+        if e.visible == nil then e.visible = true end
+      elseif e.select then
+        e.type = "select"
+        e.id = e.select
+        if e.text == nil then e.text = "" end
+        if e.onToggled == nil then e.onToggled = "" end
+        if e.visible == nil then e.visible = true end
+        if e.options == nil then e.options = {} end
+        if e.value == nil then e.value = "" end
+      elseif e.multi then
+        e.type = "multi"
+        e.id = e.multi
+        if e.text == nil then e.text = "" end
+        if e.onToggled == nil then e.onToggled = "" end
+        if e.visible == nil then e.visible = true end
+        if e.options == nil then e.options = {} end
+        if e.values == nil then e.values = {} end
+      end
+    end
+  end
+end
+
 local function compileUI(UI)
   local callBacks = UI2uiCallbacks(UI)
   local uiView = UI2NewUiView(UI)
@@ -400,6 +455,7 @@ exports.viewLayout2UI = viewLayout2UI
 exports.uiView2UI = uiView2UI
 exports.dumpUI = dumpUI
 exports.compileUI = compileUI
+exports.extendUI = extendUI
 exports.getElmType = getElmType
 
 return exports

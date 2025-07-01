@@ -43,6 +43,7 @@ function Emulator:registerDevice(info)
   if info.device.id == nil then DEVICEID = DEVICEID + 1; info.device.id = DEVICEID end
   self.DIR[info.device.id] = { 
     device = info.device, files = info.files, env = info.env, headers = info.headers,
+    UI = info.UI,
   }
 end
 
@@ -144,6 +145,7 @@ function Emulator:loadResource(fname,parseJson)
 end
 
 function Emulator:createUI(UI) -- Move to ui.lua ? 
+  self.lib.ui.extendUI(UI)
   local uiCallbacks,viewLayout,uiView
   if UI and #UI > 0 then
     uiCallbacks,viewLayout,uiView = self.lib.ui.compileUI(UI)
@@ -198,6 +200,7 @@ function Emulator:createInfoFromContent(filename,content)
     mode='model',role='deviceRole',
     description='userDescription'
   }
+  info.UI = headers.UI
   for _,prop in ipairs(specProps) do
     if headers[prop] then props[prop] = headers[prop] end
   end
@@ -354,10 +357,11 @@ end
 
 local pollStarted = false
 function Emulator:startRefreshStatesPolling()
-  if not self.offline and pollStarted then
+  if not (self.offline or pollStarted) then
     pollStarted = true
+    print( self.lib.hc3_creds)
     local result = _PY.pollRefreshStates(0, self.lib.hc3_url.."/api/refreshStates?last=", {
-      headers = {Authorization = "Basic "..self.lib.hc3_creds}
+      headers = {Authorization = self.lib.hc3_creds}
     })
   end
 end

@@ -1,3 +1,41 @@
+// --- WebSocket for live QuickApps UI updates ---
+(function() {
+    let ws;
+    function connectWebSocket() {
+        ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/quickapps');
+        ws.onopen = function() {
+            console.log('WebSocket connected to /ws/quickapps');
+        };
+        ws.onmessage = function(event) {
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'ui_update') {
+                    // Check if QuickApps tab is active or if QuickApps content is visible
+                    const quickappsTab = document.getElementById('quickapps');
+                    const quickappsContent = document.querySelector('#quickapps.tab-content');
+                    const isTabActive = quickappsTab && quickappsTab.classList.contains('active');
+                    const isContentVisible = quickappsContent && quickappsContent.classList.contains('active');
+                    
+                    if (isTabActive || isContentVisible) {
+                        loadQuickApps();
+                    }
+                }
+            } catch (e) {
+                console.error('WebSocket message error', e);
+            }
+        };
+        ws.onclose = function() {
+            console.log('WebSocket disconnected, reconnecting in 2s...');
+            // Try to reconnect after a delay
+            setTimeout(connectWebSocket, 2000);
+        };
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+    connectWebSocket();
+})();
+
 function showTab(tabName) {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(content => {

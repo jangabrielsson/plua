@@ -247,10 +247,12 @@ local function uiView2UI(uiView,uiCallbacks)
 end
 
 local function extendUI(UI)
+  local UImap = {}
   for _,r in ipairs(UI) do
     if r[1]==nil then r = {r} end
     for _,e in ipairs(r) do
       if e.button then
+        UImap[e.button] = e
         e.type = "button"
         e.id = e.button
         if e.text == nil then e.text = "" end
@@ -259,6 +261,7 @@ local function extendUI(UI)
         if e.onLongPressReleased == nil then e.onLongPressReleased = "" end
         if e.visible == nil then e.visible = true end
       elseif e.switch then
+        UImap[e.switch] = e
         e.type = "switch"
         e.id = e.switch
         if e.text == nil then e.text = "" end
@@ -266,6 +269,7 @@ local function extendUI(UI)
         if e.onReleased == nil then e.onReleased = "" end
         if e.visible == nil then e.visible = true end
       elseif e.slider then
+        UImap[e.slider] = e
         e.type = "slider"
         e.id = e.slider
         if e.text == nil then e.text = "" end
@@ -276,11 +280,13 @@ local function extendUI(UI)
         if e.step == nil then e.step = "1" end
         if e.visible == nil then e.visible = true end
       elseif e.label then
+        UImap[e.label] = e
         e.type = "label"
         e.id = e.label
         if e.text == nil then e.text = "" end
         if e.visible == nil then e.visible = true end
       elseif e.select then
+        UImap[e.select] = e
         e.type = "select"
         e.id = e.select
         if e.text == nil then e.text = "" end
@@ -289,6 +295,7 @@ local function extendUI(UI)
         if e.options == nil then e.options = {} end
         if e.value == nil then e.value = "" end
       elseif e.multi then
+        UImap[e.multi] = e
         e.type = "multi"
         e.id = e.multi
         if e.text == nil then e.text = "" end
@@ -299,6 +306,7 @@ local function extendUI(UI)
       end
     end
   end
+  return UImap
 end
 
 local function compileUI(UI)

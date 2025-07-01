@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from typing import Optional, Any, List, Dict
 import json
+from fastapi import WebSocket, WebSocketDisconnect
 
 # Add the project root to the path so we can import api_server
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,7 +61,6 @@ tags_metadata = [
     {"name": "Proxy methods", "description": "Proxy operations"},
 ]
 
-
 class EmbeddedAPIServer:
     """Embedded FastAPI server that runs within the PLua interpreter process"""
 
@@ -73,9 +73,18 @@ class EmbeddedAPIServer:
         self.server = None
         self.server_thread = None
         self.running = False
+        self.quickapps_ws_clients = set()
 
         if FastAPI is None:
             raise ImportError("FastAPI is not available")
+
+    async def broadcast_ui_update(self, device_id):
+        message = json.dumps({"type": "ui_update", "deviceID": device_id})
+        for ws in list(self.quickapps_ws_clients):
+            try:
+                await ws.send_text(message)
+            except Exception:
+                self.quickapps_ws_clients.discard(ws)
 
     def _unpack_result(self, result):
         """Helper to unpack Lua {data, status} result for FastAPI endpoints."""
@@ -113,6 +122,19 @@ class EmbeddedAPIServer:
 
         # Mount static files
         app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
+
+        # Register websocket endpoint
+        quickapps_ws_clients = self.quickapps_ws_clients
+
+        @app.websocket("/ws/quickapps")
+        async def quickapps_ws(websocket: WebSocket):
+            await websocket.accept()
+            quickapps_ws_clients.add(websocket)
+            try:
+                while True:
+                    await websocket.receive_text()  # Keep the connection alive
+            except WebSocketDisconnect:
+                quickapps_ws_clients.remove(websocket)
 
         # Define models
         class ExecuteRequest(BaseModel):

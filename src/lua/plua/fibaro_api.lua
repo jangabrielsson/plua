@@ -486,7 +486,13 @@ end)
 
 router:add("POST", "/api/plugins/updateView", function(path, data, vars, query)
   --return create_response({status = "view_updated"})
-  return create_redirect_response()
+  local id = data.deviceId
+  local dev = Emu.DIR[id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
+  else
+    dev.env.setTimeout(function() Emu:updateView(id,data) end,0)
+    return nil,HTTP.OK
+  end
 end)
 
 router:add("GET", "/api/profiles", function(path, data, vars, query)

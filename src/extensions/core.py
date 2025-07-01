@@ -946,3 +946,75 @@ def getRefreshStatesStatus(lua_runtime):
     except Exception as e:
         print(f"Error getting refresh states status: {e}", file=sys.stderr)
         return {'running': False, 'error': str(e)}
+
+
+# QuickApps UI Update Functions
+@registry.register(description="Broadcast UI update to all connected WebSocket clients", category="quickapps", inject_runtime=True)
+def broadcast_ui_update(lua_runtime, device_id):
+    """
+    Broadcast a UI update event to all connected WebSocket clients.
+    This will trigger a reload of the QuickApps UI in the frontend.
+    
+    Args:
+        device_id: The ID of the device whose UI has been updated (can be number, string, or Lua table with .id)
+        
+    Returns:
+        bool: True if the broadcast was successful
+    """
+    try:
+        # Convert device_id to integer, handling different input types
+        actual_device_id = None
+        
+        if isinstance(device_id, (int, float)):
+            actual_device_id = int(device_id)
+        elif isinstance(device_id, str):
+            try:
+                actual_device_id = int(device_id)
+            except ValueError:
+                print(f"Error: device_id string '{device_id}' cannot be converted to integer", file=sys.stderr)
+                return False
+        elif hasattr(device_id, 'id'):
+            # Handle Lua table with .id property (like self)
+            try:
+                actual_device_id = int(device_id.id)
+            except (TypeError, ValueError, AttributeError):
+                print(f"Error: device_id object has .id but it's not a valid integer", file=sys.stderr)
+                return False
+        else:
+            print("Error: device_id must be a number, string, or object with .id property, got {}".format(type(device_id)), file=sys.stderr)
+            return False
+        
+        # Get the interpreter instance from _PY_INTERPRETER
+        lua_globals = lua_runtime.globals()
+        if '_PY_INTERPRETER' in lua_globals:
+            interpreter = lua_globals['_PY_INTERPRETER']
+            if interpreter and interpreter.embedded_api_server:
+                # Run the broadcast in a new thread to avoid blocking
+                import threading
+                import asyncio
+                
+                def run_broadcast():
+                    try:
+                        # Create new event loop for this thread
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        loop.run_until_complete(
+                            interpreter.embedded_api_server.broadcast_ui_update(actual_device_id)
+                        )
+                    except Exception as e:
+                        print(f"Error in broadcast thread: {e}", file=sys.stderr)
+                
+                # Start broadcast in background thread
+                thread = threading.Thread(target=run_broadcast)
+                thread.daemon = True
+                thread.start()
+                return True
+            else:
+                print("Warning: Embedded API server not available", file=sys.stderr)
+                return False
+        else:
+            print("Warning: Interpreter reference not available", file=sys.stderr)
+            return False
+    except Exception as e:
+        print(f"Error broadcasting UI update: {e}", file=sys.stderr)
+        return False

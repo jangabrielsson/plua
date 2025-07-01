@@ -43,7 +43,7 @@ function Emulator:registerDevice(info)
   if info.device.id == nil then DEVICEID = DEVICEID + 1; info.device.id = DEVICEID end
   self.DIR[info.device.id] = { 
     device = info.device, files = info.files, env = info.env, headers = info.headers,
-    UI = info.UI,
+    UI = info.UI, UImap = info.UImap,
   }
 end
 
@@ -145,7 +145,7 @@ function Emulator:loadResource(fname,parseJson)
 end
 
 function Emulator:createUI(UI) -- Move to ui.lua ? 
-  self.lib.ui.extendUI(UI)
+  local UImap = self.lib.ui.extendUI(UI)
   local uiCallbacks,viewLayout,uiView
   if UI and #UI > 0 then
     uiCallbacks,viewLayout,uiView = self.lib.ui.compileUI(UI)
@@ -167,7 +167,7 @@ function Emulator:createUI(UI) -- Move to ui.lua ?
     uiView = json.initArray({})
     uiCallbacks = json.initArray({})
   end
-  return uiCallbacks,viewLayout,uiView
+  return uiCallbacks,viewLayout,uiView,UImap
 end
 
 local deviceTypes = nil
@@ -193,7 +193,7 @@ function Emulator:createInfoFromContent(filename,content)
   props.model = headers.model
   props.role = headers.role
   props.description = headers.description
-  props.uiCallbacks,props.viewLayout,props.uiView = self:createUI(headers.UI or {})
+  props.uiCallbacks,props.viewLayout,props.uiView,info.UImap = self:createUI(headers.UI or {})
   info.files.main = { path=filename, content=preprocessed }
   local specProps = {
     uid='quickAppUuid',manufacturer='manufacturer',
@@ -285,6 +285,26 @@ function Emulator:loadMainFile(filename)
   end
   
   self:startQA(info.device.id)
+end
+
+local viewProps = {}
+function viewProps.text(elm,data) elm.text = data.newValue end
+function viewProps.value(elm,data) elm.value = data.newValue end
+function viewProps.options(elm,data) elm.options = data.newValue end
+function viewProps.selectedItems(elm,data) elm.values = data.newValue end
+function viewProps.selectedItem(elm,data) elm.value = data.newValue end
+
+function Emulator:updateView(id,data)
+  local info = self.DIR[id]
+  local elm = info.UImap[data.componentName or ""]
+  if elm then
+    if viewProps[data.propertyName] then
+      viewProps[data.propertyName](elm,data)
+      _PY.broadcast_ui_update(id)
+    else
+      self:DEBUG("Unknown view property: " .. data.propertyName)
+    end
+  end
 end
 
 function Emulator:API_CALL(method, path, data)

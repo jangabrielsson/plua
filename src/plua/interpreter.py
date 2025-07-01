@@ -405,6 +405,9 @@ class PLuaInterpreter:
         # Create the _PY table and add it to Lua globals
         lua_globals['_PY'] = extension_functions
 
+        # Store reference to interpreter for _PY functions to access
+        lua_globals['_PY_INTERPRETER'] = self
+
         # Always load plua_init.lua for global Lua setup
         plua_init_path = os.path.join(project_root, "lua", "plua", "plua_init.lua")
         if os.path.exists(plua_init_path):

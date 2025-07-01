@@ -45,5 +45,10 @@ end
 
 function QuickApp:onInit()
   self:debug("onInit")
+  setTimeout(function()
+    print("updateView")
+    self:updateView('multi1','selectedItems',{"2"})
+    --self:updateView('lbl1','text',os.date("%c"))
+  end,1000)
   setInterval(function() print("PING") end,2000) -- keep script alive
 end

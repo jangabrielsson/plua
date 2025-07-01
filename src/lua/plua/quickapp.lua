@@ -491,6 +491,7 @@ end
 
 local listeners = {}
 function _PY.newRefreshStatesEvent(jsonevent)
+  --print("New jsonevent",jsonevent) -- jsonevent)
   local event = json.decode(jsonevent)
   for listener,_ in pairs(listeners) do
     pcall(listener,event)

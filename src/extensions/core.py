@@ -865,7 +865,10 @@ def addEvent(lua_runtime, event):
         # Call _PY.newRefreshStatesEvent if it exists (for Lua event hooks)
         try:
             if hasattr(lua_runtime.globals(), '_PY') and hasattr(lua_runtime.globals()['_PY'], 'newRefreshStatesEvent'):
-                lua_runtime.globals()['_PY']['newRefreshStatesEvent'](event)
+                if isinstance(event, str):
+                    lua_runtime.globals()['_PY']['newRefreshStatesEvent'](event)
+                else:
+                    lua_runtime.globals()['_PY']['newRefreshStatesEvent'](json.dumps(event))
         except Exception:
             # Silently ignore errors in event hook - don't break the queue
             pass

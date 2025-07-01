@@ -359,7 +359,6 @@ local pollStarted = false
 function Emulator:startRefreshStatesPolling()
   if not (self.offline or pollStarted) then
     pollStarted = true
-    print( self.lib.hc3_creds)
     local result = _PY.pollRefreshStates(0, self.lib.hc3_url.."/api/refreshStates?last=", {
       headers = {Authorization = self.lib.hc3_creds}
     })

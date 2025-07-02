@@ -15,13 +15,31 @@
 
         <div class="content">
             <div class="tabs">
-                <div class="tab active" onclick="showTab('execute')">Execute Code</div>
-                <div class="tab" onclick="showTab('api')">API Documentation</div>
-                <div class="tab" onclick="showTab('quickapps')">QuickApps</div>
+                <div class="tab active" onclick="showTab('quickapps')">QuickApps</div>
                 <div class="tab" onclick="showTab('status')">Server Status</div>
+                <div class="tab" onclick="showTab('execute')">Execute Code</div>
+                <div class="tab" onclick="showTab('api')">API Documentation</div>
             </div>
 
-            <div id="execute" class="tab-content active">
+            <div id="quickapps" class="tab-content active">
+                <div class="section">
+                    <h2>Emulated QuickApps</h2>
+                    <p>List of all QuickApps currently running in PLua:</p>
+                    <button onclick="loadQuickApps()" class="button" id="loadQABtn">Refresh QuickApps</button>
+                    <div id="quickappsList" class="output" style="margin-top: 20px; min-height: 200px;">
+                        Click "Refresh QuickApps" to load the list...
+                    </div>
+                </div>
+            </div>
+
+            <div id="status" class="tab-content">
+                <div class="section">
+                    <h2>Server Status</h2>
+                    <div id="statusContent">Loading...</div>
+                </div>
+            </div>
+
+            <div id="execute" class="tab-content">
                 <div class="section">
                     <h2>Execute Lua Code</h2>
                     <textarea id="code" class="code-input" placeholder="Enter Lua code here...">print("Hello from PLua!")
@@ -48,24 +66,6 @@ print("Python version:", _PY.get_python_version())</textarea>
                             Beautiful, responsive API documentation
                         </a>
                     </div>
-                </div>
-            </div>
-
-            <div id="quickapps" class="tab-content">
-                <div class="section">
-                    <h2>Emulated QuickApps</h2>
-                    <p>List of all QuickApps currently running in PLua:</p>
-                    <button onclick="loadQuickApps()" class="button" id="loadQABtn">Refresh QuickApps</button>
-                    <div id="quickappsList" class="output" style="margin-top: 20px; min-height: 200px;">
-                        Click "Refresh QuickApps" to load the list...
-                    </div>
-                </div>
-            </div>
-
-            <div id="status" class="tab-content">
-                <div class="section">
-                    <h2>Server Status</h2>
-                    <div id="statusContent">Loading...</div>
                 </div>
             </div>
         </div>

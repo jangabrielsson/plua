@@ -16,21 +16,6 @@
 ---```
 
 local fmt = string.format
-local function copy(t)
-  if type(t) ~= "table" then return t end
-  local cp = {}
-  for k, v in pairs(t) do
-    cp[k] = copy(v)
-  end
-  return cp
-end
-
-local function member(value, table)
-  for _, v in pairs(table) do
-    if v == value then return true end
-  end
-  return false
-end
 
 function class(name)
   local cls = setmetatable({__USERDATA=true}, {
@@ -119,7 +104,7 @@ function QuickAppBase:__init(dev)
   self.roomID = dev.roomID
   self.properties = dev.properties
   self.interfaces = dev.interfaces
-  self.properties = copy(dev.properties)
+  self.properties = table.copy(dev.properties)
   self.uiCallbacks = {}
 end
 
@@ -166,8 +151,14 @@ QuickAppBase.registerUICallbacks = QuickAppBase.setupUICallbacks
 -- @return Result of the action method or nil if method doesn't exist
 function QuickAppBase:callAction(name, ...)
   --if name == "" then return end
-  if (type(self[name]) == 'function') then return self[name](self, ...)
-  else print(fmt("[WARNING] Class does not have '%s' function defined - action ignored",tostring(name))) end
+  local args = {...}
+  local stat,res = fibaro.plua.lib.prettyCall(function()
+    if (type(self[name]) == 'function') then return self[name](self, table.unpack(args))
+    else print(fmt("[WARNING] Class does not have '%s' function defined - action ignored",tostring(name))) end
+  end,printErr)
+  if not stat then
+    self:error(fmt("Error calling action %s: %s",name,res))
+  end
 end
 
 -- Updates a device property and sends the update to the HC3 system
@@ -178,7 +169,7 @@ function QuickAppBase:updateProperty(name,value)
   api.post("/plugins/updateProperty",{
     deviceId=self.id,
     propertyName=name,
-    value=copy(value)
+    value=table.copy(value)
   })
 end
 
@@ -198,7 +189,7 @@ end
 -- Checks if the device has a specific interface
 -- @param name - The interface name to check for
 -- @return True if the device has the interface, false otherwise
-function QuickAppBase:hasInterface(name) return member(name, self.interfaces) end
+function QuickAppBase:hasInterface(name) return table.member(name, self.interfaces) end
 
 -- Adds new interfaces to the device
 -- @param values - Table of interface names to add
@@ -346,7 +337,7 @@ function QuickApp:initChildDevices(map)
       self:error(fmt("Class for the child device: %s, with type: %s not found. Using base class: QuickAppChild", c.id, c.type))
       childDevices[c.id] = QuickAppChild(c)
     end
----@diagnostic disable-next-line: inject-field
+    ---@diagnostic disable-next-line: inject-field
     childDevices[c.id].parent = self
   end
   self.childsInitialized = true
@@ -357,28 +348,28 @@ end
 -- @param classRepresentation - Optional class constructor for the child device
 -- @return The created child device instance
 function QuickApp:createChildDevice(options, classRepresentation)
-    __assert_type(options, "table")
-    __assert_type(options.name, "string")
-    __assert_type(options.type, "string")
-    options.parentId = self.id
-    if options.initialInterfaces then
-        __assert_type(options.initialInterfaces, "table")
-        table.insert(options.initialInterfaces, "quickAppChild")
-    else
-        options.initialInterfaces = {"quickAppChild"}
-    end
-    if options.initialProperties then
-        __assert_type(options.initialProperties, "table")
-    end
-    local child = api.post("/plugins/createChildDevice", options)
-    if classRepresentation == nil then
-        classRepresentation = QuickAppChild
-    end
-    self.childDevices[child.id] = classRepresentation(child)
----@diagnostic disable-next-line: inject-field
-    self.childDevices[child.id].parent = self
-
-    return self.childDevices[child.id]
+  __assert_type(options, "table")
+  __assert_type(options.name, "string")
+  __assert_type(options.type, "string")
+  options.parentId = self.id
+  if options.initialInterfaces then
+    __assert_type(options.initialInterfaces, "table")
+    table.insert(options.initialInterfaces, "quickAppChild")
+  else
+    options.initialInterfaces = {"quickAppChild"}
+  end
+  if options.initialProperties then
+    __assert_type(options.initialProperties, "table")
+  end
+  local child = api.post("/plugins/createChildDevice", options)
+  if classRepresentation == nil then
+    classRepresentation = QuickAppChild
+  end
+  self.childDevices[child.id] = classRepresentation(child)
+  ---@diagnostic disable-next-line: inject-field
+  self.childDevices[child.id].parent = self
+  
+  return self.childDevices[child.id]
 end
 
 class 'QuickAppChild'(QuickAppBase)
@@ -397,7 +388,7 @@ end
 function onAction(id,event) -- { deviceID = 1234, actionName = "test", args = {1,2,3} }
   --if Emu:DBGFLAG('onAction') then print("onAction: ", json.encode(event)) end
   local self = plugin.mainQA
----@diagnostic disable-next-line: undefined-field
+  ---@diagnostic disable-next-line: undefined-field
   if self.actionHandler then return self:actionHandler(event) end
   if event.deviceId == self.id then
     return self:callAction(event.actionName, table.unpack(event.args))
@@ -413,13 +404,19 @@ end
 -- @param event - Event object containing UI event details
 function onUIEvent(id, event)
   local quickApp = plugin.mainQA
+  --print("onUIEvent",json.encode(event))
   --if Emu:DBGFLAG('onUIEvent') then print("UIEvent: ", json.encode(event)) end
----@diagnostic disable-next-line: undefined-field
+  ---@diagnostic disable-next-line: undefined-field
   if quickApp.UIHandler then quickApp:UIHandler(event) return end
   if quickApp.uiCallbacks[event.elementName] and quickApp.uiCallbacks[event.elementName][event.eventType] then
-    quickApp:callAction(quickApp.uiCallbacks[event.elementName][event.eventType], event)
+    local action = quickApp.uiCallbacks[event.elementName][event.eventType]
+    if action == "" then
+      fibaro.warning(__TAG,fmt("UI callback for %s %s not found.", event.elementName, event.eventType))
+      return
+    end
+    quickApp:callAction(action, event)
   else
-    fibaro.warning(__TAG,fmt("UI callback for element:%s not found.", event.elementName))
+    fibaro.warning(__TAG,fmt("UI callback for element %s not found.", event.elementName))
   end
 end
 
@@ -448,7 +445,7 @@ class 'RefreshStateSubscriber'
 -- Constructor for RefreshStateSubscriber class
 -- Initializes the subscriber for refresh state events
 function RefreshStateSubscriber:__init()
- self.time = os.time() -- Skip events before this time
+  self.time = os.time() -- Skip events before this time
   self.subscribers = {}
   self.last = 0
   function self.handle(event)

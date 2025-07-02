@@ -43,7 +43,7 @@ function Emulator:registerDevice(info)
   if info.device.id == nil then DEVICEID = DEVICEID + 1; info.device.id = DEVICEID end
   self.DIR[info.device.id] = { 
     device = info.device, files = info.files, env = info.env, headers = info.headers,
-    UI = info.UI, UImap = info.UImap,
+    UI = info.UI, UImap = info.UImap, watches = info.watches,
   }
 end
 
@@ -144,6 +144,8 @@ function Emulator:loadResource(fname,parseJson)
   return content
 end
 
+local embedUIs = require("plua.embedui")
+
 function Emulator:createUI(UI) -- Move to ui.lua ? 
   local UImap = self.lib.ui.extendUI(UI)
   local uiCallbacks,viewLayout,uiView
@@ -167,6 +169,7 @@ function Emulator:createUI(UI) -- Move to ui.lua ?
     uiView = json.initArray({})
     uiCallbacks = json.initArray({})
   end
+
   return uiCallbacks,viewLayout,uiView,UImap
 end
 
@@ -179,6 +182,7 @@ function Emulator:createInfoFromContent(filename,content)
   headers.type = headers.type or 'com.fibaro.binarySwitch'
   local dev = deviceTypes[headers.type]
   assert(dev,"Unknown device type: "..headers.type)
+  dev = table.copy(dev)
   if not headers.id then DEVICEID = DEVICEID + 1 end
   dev.id = headers.id or DEVICEID
   dev.name = headers.name or "MyQA"
@@ -200,6 +204,17 @@ function Emulator:createInfoFromContent(filename,content)
     mode='model',role='deviceRole',
     description='userDescription'
   }
+  local embeds = embedUIs.UI[headers.type]
+  if embeds then
+    for i,v in ipairs(embeds) do
+      table.insert(headers.UI,i,v)
+    end
+    for _,cb in ipairs(self.lib.ui.UI2uiCallbacks(embeds) or{}) do
+      props.uiCallbacks[#props.uiCallbacks+1] = cb
+    end
+    self.lib.ui.extendUI(headers.UI,info.UImap)
+    info.watches = embedUIs.watches[headers.type] or {}
+  end
   info.UI = headers.UI
   for _,prop in ipairs(specProps) do
     if headers[prop] then props[prop] = headers[prop] end
@@ -234,6 +249,44 @@ function Emulator:restartQA(id)
     self:loadQA(info)
     self:startQA(id)
   end,4000)
+end
+
+function Emulator:createChild(data)
+  local info = { UI = {}, headers = {} }
+  if deviceTypes == nil then deviceTypes = self:loadResource(bundled.get_lua_path().."/rsrsc/devices.json",true) end
+  local typ = data.type or 'com.fibaro.binarySwitch'
+  local dev = deviceTypes[typ]
+  assert(dev,"Unknown device type: "..typ)
+  dev = table.copy(dev)
+  DEVICEID = DEVICEID + 1
+  dev.id = DEVICEID
+  dev.parentId = data.parentId
+  dev.name = data.name or "MyChild"
+  dev.enabled = true
+  dev.visible = true
+  dev.isChild = true
+  info.device = dev
+  local props = dev.properties or {}
+  if data.initialProperties and data.initialProperties.uiView then
+    local uiView = data.initialProperties.uiView
+    local callbacks = data.initialProperties.uiCallbacks or {}
+    info.UI = Emu.lib.ui.uiView2UI(uiView,callbacks)
+  end
+  props.uiCallbacks,props.viewLayout,props.uiView,info.UImap = self:createUI(info.UI or {})
+  local embeds = embedUIs.UI[dev.type]
+  if embeds then
+    for i,v in ipairs(embeds) do
+      table.insert(info.UI,i,v)
+    end
+    for _,cb in ipairs(self.lib.ui.UI2uiCallbacks(embeds) or{}) do
+      props.uiCallbacks[#props.uiCallbacks+1] = cb
+    end
+    self.lib.ui.extendUI(info.UI,info.UImap)
+    info.watches = embedUIs.watches[dev.type] or {}
+  end
+  info.device = dev
+  self:registerDevice(info)
+  return dev
 end
 
 local stdLua = { 
@@ -301,13 +354,14 @@ function viewProps.options(elm,data) elm.options = data.newValue end
 function viewProps.selectedItems(elm,data) elm.values = data.newValue end
 function viewProps.selectedItem(elm,data) elm.value = data.newValue end
 
-function Emulator:updateView(id,data)
+function Emulator:updateView(id,data,noUpdate)
   local info = self.DIR[id]
   local elm = info.UImap[data.componentName or ""]
   if elm then
     if viewProps[data.propertyName] then
       viewProps[data.propertyName](elm,data)
-      _PY.broadcast_ui_update(id)
+      --print("broadcast_ui_update",data.componentName)
+      if not noUpdate then _PY.broadcast_ui_update(id) end
     else
       self:DEBUG("Unknown view property: " .. data.propertyName)
     end

@@ -61,6 +61,7 @@ tags_metadata = [
     {"name": "Proxy methods", "description": "Proxy operations"},
 ]
 
+
 class EmbeddedAPIServer:
     """Embedded FastAPI server that runs within the PLua interpreter process"""
 

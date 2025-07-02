@@ -1,5 +1,5 @@
 --%%name:UItest
---%%type:com.fibaro.binarySwitch
+--%%type:com.fibaro.multilevelSwitch
 --%%debug:false
 --%% offline:true
 
@@ -10,6 +10,18 @@
 --%%u:{select="select1",text="Select",visible=true,onToggled="mySelect",value='2',options={{type='option',text='Option 1',value='1'},{type='option',text='Option 2',value='2'},{type='option',text='Option 3',value='3'}}}
 --%%u:{multi="multi1",text="Multi",visible=true,values={"1","3"},onToggled="myMulti",options={{type='option',text='Option 1',value='1'},{type='option',text='Option 2',value='2'},{type='option',text='Option 3',value='3'}}}
 
+function QuickApp:turnOn()
+  self:updateProperty('value',true)
+end
+
+function QuickApp:turnOff()
+  self:updateProperty('value',false)
+end
+
+function QuickApp:setValue(value)
+  print("setValue",value)
+  self:updateProperty('value',value)
+end
 
 function QuickApp:testBtn1(ev)
   print("testBtn1")

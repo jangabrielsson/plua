@@ -232,7 +232,8 @@ end)
 router:add("POST", "/api/devices/<id>/action/<name>", function(path, data, vars, query)
   local id = vars.id
   local dev = Emu.DIR[id]
-  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
+  if not dev then 
+    if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
   else
     dev.env.setTimeout(function()
       dev.env.onAction(id,{ deviceId = id, actionName = vars.name, args = data.args })
@@ -244,7 +245,8 @@ end)
 router:add("GET", "/api/devices/<id>/action/<name>", function(path, data, vars, query)
   local id = vars.id
   local dev = Emu.DIR[id]
-  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.get(path,data) end
+  if not dev then 
+    if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.get(path,data) end
   else
     local action = vars.name
     local data,args = {},{}
@@ -402,11 +404,27 @@ router:add("POST", "/api/plugins/callUIEvent", function(path, data, vars, query)
   --return create_response({status = "ui_event_called"})
   local dev = Emu.DIR[data.deviceID]
   if not dev then return nil,400 end
+  
   local val = data.value or data.values
   if type(val)=='string' and val:sub(1,1)=='[' then val = json.decode(val) end
   data.value,data.values = nil,nil
   data.values = {val}
-  dev.env.setTimeout(function() dev.env.onUIEvent(data.deviceID,data) end,0)
+  
+  if data.elementName:sub(1,2) == "__" then
+    --   data.elementName = data.elementName:sub(3)
+    local actionName = data.elementName:sub(3)
+    local val = tonumber(data.values[1]) or data.values[1]
+    local args = {
+      deviceId=dev.device.id,
+      actionName=actionName,
+      args={val}
+    }
+    if dev.device.isChild then dev = Emu.DIR[dev.device.parentId] end
+    local env = Emu.DIR[dev.device.id].env
+    return env.onAction(dev.device.id,args)
+  else
+    dev.env.setTimeout(function() dev.env.onUIEvent(data.deviceID,data) end,0)
+  end
   return nil,HTTP.OK
 end)
 
@@ -420,15 +438,8 @@ router:add("POST", "/api/plugins/createChildDevice", function(path, data, vars, 
     res.isProxy = true
     data = res
   end
-  data.isChild = true
-  local headers = { webUI = dev.headers.webUI }
-  if data.initialProperties and data.initialProperties.uiView then
-    local uiView = data.initialProperties.uiView
-    local callbacks = data.initialProperties.uiCallbacks or {}
-    headers.UI = Emu.lib.ui.uiView2UI(uiView,callbacks)
-  end
-  Emu:registerDevice({device = data, env = dev.env})
-  return data,HTTP.OK
+  local dev = Emu:createChild(data)
+  if dev then return dev,HTTP.OK else return nil,HTTP.BAD_REQUEST end
 end)
 
 router:add("POST", "/api/plugins/publishEvent", function(path, data, vars, query)
@@ -440,10 +451,10 @@ router:add("POST", "/api/plugins/removeChildDevice/<id>", function(path, data, v
   local id = vars.id
   local dev = Emu.DIR[id]
   if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.delete(path) end
-  elseif dev.device.isChild then
-    Emu.DIR[id] = nil
-    return nil,HTTP.OK
-  else return nil,HTTP.NOT_IMPLEMENTED end
+elseif dev.device.isChild then
+  Emu.DIR[id] = nil
+  return nil,HTTP.OK
+else return nil,HTTP.NOT_IMPLEMENTED end
 end)
 
 router:add("POST", "/api/plugins/restart", function(path, data, vars, query)
@@ -463,7 +474,8 @@ end)
 router:add("POST", "/api/plugins/updateProperty", function(path, data, vars, query)
   local id = data.deviceId
   local dev = Emu.DIR[id]
-  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
+  if not dev then if Emu.offline then 
+    return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
   else
     local prop = data.propertyName
     local value = data.value
@@ -475,11 +487,18 @@ router:add("POST", "/api/plugins/updateProperty", function(path, data, vars, que
           propertyName = prop,
           newValue = value,
         })
+      end
+      if dev.watches and dev.watches[prop] then
+        local watch = dev.watches[prop]
+        if watch[1] == nil then watch = {watch} end
+        for _,w in ipairs(watch) do
+          local str = type(w.fmt)=='func'..'tion' and w.fmt(value) or string.format(w.fmt,value)
+          Emu:updateView(id,{componentName=w.id,propertyName=w.prop,newValue=str})
+        end
+      end
+      dev.device.properties[prop] = value
+      if dev.device.isProxy then return hc3api.post("/plugins/updateProperty",data) end
     end
-      --dev:watching(prop,value)
-    end
-    dev.device.properties[prop] = value
-    if dev.device.isProxy then return hc3api.post("/plugins/updateProperty",data) end
     return nil,HTTP.OK
   end
 end)
@@ -489,10 +508,10 @@ router:add("POST", "/api/plugins/updateView", function(path, data, vars, query)
   local id = data.deviceId
   local dev = Emu.DIR[id]
   if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
-  else
-    dev.env.setTimeout(function() Emu:updateView(id,data) end,0)
-    return nil,HTTP.OK
-  end
+else
+  dev.env.setTimeout(function() Emu:updateView(id,data) end,0)
+  return nil,HTTP.OK
+end
 end)
 
 router:add("GET", "/api/profiles", function(path, data, vars, query)

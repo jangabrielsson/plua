@@ -18,6 +18,24 @@ __TAG = "<font color='light_blue'>PLUA</font>"
 plua.version = _PLUA_VERSION or "unknown"
 plua.traceback = false
 
+local function copy(t)
+  if type(t) ~= "table" then return t end
+  local cp = {}
+  for k, v in pairs(t) do
+    cp[k] = copy(v)
+  end
+  return cp
+end
+
+local function member(value, table)
+  for _, v in pairs(table) do
+    if v == value then return true end
+  end
+  return false
+end
+table.copy,table.member = copy,member
+
+
 local function prettyCall(fun,errPrint)
   xpcall(fun,function(err)
     local info = debug.getinfo(2)

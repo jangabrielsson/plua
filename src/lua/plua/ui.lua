@@ -246,8 +246,8 @@ local function uiView2UI(uiView,uiCallbacks)
   return UI
 end
 
-local function extendUI(UI)
-  local UImap = {}
+local function extendUI(UI,UImap)
+  UImap = UImap or {}
   for _,r in ipairs(UI) do
     if r[1]==nil then r = {r} end
     for _,e in ipairs(r) do
@@ -465,5 +465,6 @@ exports.dumpUI = dumpUI
 exports.compileUI = compileUI
 exports.extendUI = extendUI
 exports.getElmType = getElmType
+exports.UI2uiCallbacks = UI2uiCallbacks
 
 return exports

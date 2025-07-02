@@ -178,10 +178,44 @@ body {
     margin-bottom: 8px;
     align-items: stretch;
     flex-wrap: wrap;
+    width: 100%;
 }
-.qa-ui-row > * {
-    margin-top: 0;
-    margin-bottom: 0;
+.qa-ui-row .qa-ui-button {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* Button layout rules - make buttons fill row width based on count */
+.qa-ui-row.buttons-1 .qa-ui-button {
+    flex: 1 1 100%;
+}
+.qa-ui-row.buttons-2 .qa-ui-button {
+    flex: 1 1 calc(50% - 4px);
+}
+.qa-ui-row.buttons-3 .qa-ui-button {
+    flex: 1 1 calc(33.333% - 5.33px);
+}
+.qa-ui-row.buttons-4 .qa-ui-button {
+    flex: 1 1 calc(25% - 6px);
+}
+.qa-ui-row.buttons-5 .qa-ui-button {
+    flex: 1 1 calc(20% - 6.4px);
+}
+
+/* Full width elements */
+.qa-ui-label,
+.qa-ui-slider-container,
+.qa-ui-select,
+.qa-ui-multidrop {
+    flex: 1 1 100%;
+    width: 100%;
+}
+
+.qa-ui-slider-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
 }
 .qa-ui-button {
     background: #667eea;
@@ -211,7 +245,6 @@ body {
 .qa-ui-slider {
     flex: 1 1 0%;
     width: 100%;
-    max-width: 260px;
     accent-color: #667eea;
     margin: 0 6px;
     position: relative;

@@ -123,7 +123,7 @@ local function create_redirect_response() return { _redirect = true, } end
 
 local router = API()
 local HTTP =router.HTTP
-local hc3api = Emu.lib.hc3api
+local hc3api = Emu.api.hc3
 local hc3_url,hc3_port = Emu.lib.hc3_url,Emu.lib.hc3_port
 Emu.lib.router = router
 
@@ -582,8 +582,11 @@ router:add("DELETE", "/api/quickApp/<id>/files/<name>", function(path, data, var
 end)
 
 router:add("GET", "/api/quickApp/export/<id>", function(path, data, vars, query)
-  --return create_response({name = "test.fqa", content = "exported content"})
-  return create_redirect_response()
+  local dev = Emu.DIR[vars.id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
+  local tools = Emu.lib.loadLib("tools",Emu)
+  local fqa = tools.getFQA(dev.device.id)
+  if fqa then return json.encodeFast(fqa),HTTP.OK else return nil,HTTP.NOT_FOUND end
 end)
 
 router:add("POST", "/api/quickApp/import", function(path, data, vars, query)

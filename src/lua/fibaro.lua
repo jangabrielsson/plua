@@ -14,83 +14,11 @@ function plua.loadLib(name,...) return loadfile(libPath..name..".lua","t",_G)(..
 json = require("plua.json")
 plua.loadLib("emulator",plua)
 
+os.getenv = _PY.get_env_var
+
 __TAG = "<font color='light_blue'>PLUA</font>"
 plua.version = _PLUA_VERSION or "unknown"
 plua.traceback = false
-
-local function copy(t)
-  if type(t) ~= "table" then return t end
-  local cp = {}
-  for k, v in pairs(t) do
-    cp[k] = copy(v)
-  end
-  return cp
-end
-
-local function member(value, table)
-  for _, v in pairs(table) do
-    if v == value then return true end
-  end
-  return false
-end
-table.copy,table.member = copy,member
-
-
-local function prettyCall(fun,errPrint)
-  xpcall(fun,function(err)
-    local info = debug.getinfo(2)
-    local msg = err:match("^.-](:%d+:.*)$") or err
-    local source = info.source:match("^.+/(.+)$") or info.short_src
-    if plua.traceback then
-      msg = msg .. "\n" .. debug.traceback()
-    end
-    (errPrint or print)(source..":"..msg)
-    return false
-  end)
-  return true
-end
-
-plua.prettyCall = prettyCall
-
-local typeColor = {
-  DEBUG = "light_green",
-  TRACE = "plum2",
-  WARNING = "darkorange",
-  ERROR = "light_red",
-  INFO = "light_blue",
-}
-
-os.getenv = _PY.get_env_var
-
--- Adds a debug message to the emulator's debug output.
--- @param tag - The tag for the debug message.
--- @param msg - The message string.
--- @param typ - The type of message (e.g., "DEBUG", "ERROR").
-function __fibaro_add_debug_message(tag, msg, typ, nohtml)
-  local time = ""
-  if plua.shortTime then
-    time = tostring(os.date("[%H:%M:%S]"))
-  else
-    time = tostring(os.date("[%d.%m.%Y][%H:%M:%S]"))
-  end
-  local typStr = fmt("<font color='%s'>%-7s</font>", typeColor[typ], typ)
-  msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
-  _print(msg)
-end
-
-plua.__fibaro_add_debug_message = __fibaro_add_debug_message
-
-plua.logStr = function(...) 
-  local b = {} 
-  for _,e in ipairs({...}) do 
-    b[#b+1]=tostring(e) 
-  end 
-  return table.concat(b," ")
-end
-
-function print(...) __fibaro_add_debug_message(__TAG, plua.logStr(...), "DEBUG", false) end
-function printErr(...) __fibaro_add_debug_message(__TAG, plua.logStr(...), "ERROR", false) end
-
 
 local hc3_url = _PY.pluaconfig and _PY.pluaconfig.hc3_url or os.getenv("HC3_URL")
 local hc3_user = _PY.pluaconfig and _PY.pluaconfig.hc3_user or  os.getenv("HC3_USER")
@@ -107,7 +35,9 @@ if hc3_url then
   hc3_url = hc3_url..":"..hc3_port
 end
 
-plua.api_url = string.format("http://127.0.0.1:%s",_PY.args.port or 8000)
+plua.webport = _PY.args.port or 8000
+plua.IPAddress = _PY.get_local_ip()
+plua.api_url = string.format("http://127.0.0.1:%s",plua.webport)
 plua.hc3_url = hc3_url
 plua.hc3_port = hc3_port
 if hc3_user and hc3_pass then 
@@ -149,4 +79,6 @@ function _PY.getAllQAInfo()
   return json.encode(qa_data)
 end
 
-_print(fmt("<font color='blue'>Fibaro API loaded%s</font>",_PY.args.task and (" with task ".._PY.args.task) or ""))
+if not _PY.args.task then
+  _print(fmt("<font color='blue'>Fibaro API loaded%s</font>",_PY.args.task and (" with task ".._PY.args.task) or ""))
+end

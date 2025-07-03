@@ -1,4 +1,7 @@
-Emu=Emu
+local Emu = ...
+
+local fmt = string.format 
+
 local fileNum = 0
 local function createTempName(suffix)
   fileNum = fileNum + 1
@@ -51,6 +54,7 @@ local function arrayifyFqa(fqa)
   markArray(fqa.initialProperties.uiView)
   markArray(fqa.initialProperties.uiCallbacks)
   markArray(fqa.initialProperties.supportedDeviceRoles)
+  return fqa
 end
 
 local function uploadFQA(fqa)
@@ -65,24 +69,29 @@ local function uploadFQA(fqa)
   end
   assert(haveMain, "fqa must have a main file")
   arrayifyFqa(fqa)
-  local res,code = Emu.api.hc3.post("/quickApp/",fqa)
+  local res,code = Emu.api.hc3.post("/quickApp/",json.encodeFast(fqa))
   if not code or code > 201 then
-    Emu:ERRORF("Failed to upload FQA: %s", res)
+    Emu:ERROR("Failed to upload FQA: "..tostring(code))
   else
-    Emu:DEBUG("Successfully uploaded FQA with ID: %s", res.id)
+    Emu:INFO("Successfully uploaded FQA with ID: "..(res.id or "unknown"))
   end
   return res,code
 end
 
 local function getFQA(id) -- Creates FQA structure from installed QA
-  local dev = Emu.devices[id]
+  local dev = Emu.DIR[id]
   assert(dev,"QuickApp not found, ID"..tostring(id))
   local struct = dev.device
   local files = {}
-  for _,f in ipairs(dev.files) do
-    if f.content == nil then f.content = Emu.lib.readFile(f.fname) end
-    files[#files+1] = {name=f.name, isMain=f.name=='main', isOpen=false, type='lua', content=f.content}
+  for name,f in pairs(dev.files) do
+    if f.content == nil then f.content = Emu.lib.readFile(f.path) end
+    files[#files+1] = {name=name, isMain=name=='main', isOpen=false, type='lua', content=f.content}
   end
+  local ncbs = {}
+  for i,cb in ipairs(struct.properties.uiCallbacks or {}) do
+    if cb.name:sub(1,2) ~= "__" then ncbs[#ncbs+1] = cb end
+  end
+  struct.properties.uiCallbacks = ncbs
   local initProps = {}
   local savedProps = {
     "uiCallbacks","quickAppVariables","uiView","viewLayout","apiVersion","useEmbededView",
@@ -90,7 +99,7 @@ local function getFQA(id) -- Creates FQA structure from installed QA
     "userDescription","typeTemplateInitialized","quickAppUuid","deviceRole"
   }
   for _,k in ipairs(savedProps) do initProps[k]=struct.properties[k] end
-  return {
+  local struct = {
     apiVersion = "1.3",
     name = struct.name,
     type = struct.type,
@@ -98,6 +107,7 @@ local function getFQA(id) -- Creates FQA structure from installed QA
     initialInterfaces = struct.interfaces,
     files = files
   }
+  return arrayifyFqa(struct)
 end
 
 local function saveQA(id,fileName) -- Save installed QA to disk as .fqa  //Move to QA class
@@ -224,14 +234,202 @@ function saveProject(id,dev,path)  -- Save project to .project file
   f:close()
 end
 
-return {
-  createTempName = createTempName,
-  findFirstLine = findFirstLine,
-  loadQAString = loadQAString,
-  uploadFQA = uploadFQA,
-  getFQA = getFQA,
-  saveQA = saveQA,
-  loadQA = loadQA,
-  downloadFQA = downloadFQA,
-  saveProject = saveProject,
-}
+
+local function findIdAndName(fname)
+  local function find(path)
+    local f = io.open(path,"r")
+    if not f then return false,nil end
+    local p = f:read("*a")
+    f:close()
+    local _,data = pcall(json.decode,p)
+    data = data or {}
+    for qn,fn in pairs(data.files or {}) do
+      if fn==fname then
+        return true,data.id, qn, data
+      end
+    end
+  end
+  local path,file = fname:match("^(.-)([^/\\]+)$")
+  if not path then path = "" end
+  local p1 = path..".project"
+  local p2 = ".project"
+  local _,id,name,data = find(p1)
+  if id then return true,id,name,data end
+  return find(p2)
+end
+
+local function updateQA(fname)
+  Emu:INFO(fmt("Updating QA: %s",tostring(fname))) -- fname
+  local exist,id,qn,data = findIdAndName(fname)
+  assert(exist,"No .project file found for " .. fname)
+  assert(id,"No entry for "..fname.." in .project file")
+  assert(data,"No .project found for "..fname)
+  local qa = api.hc3.get("/devices/"..id)
+  if not qa then
+    return Emu:ERROR(fmt("QuickApp on HC3 with ID %s not found %s", tostring(id)))
+  end
+  local device = emu.loadQA(fname,{proxy="false"}, true)
+  assert(device, "Emulator installation error")
+  assert(qa.type == device.type, "QuickApp type mismatch: expected " .. device.type .. ", got " .. qa.type)
+  local fqa = emu.getFQA(device.id)
+  assert(fqa, "FQA creation error")
+
+  local oldFiles = Emu.api.hc3.get("/quickApp/"..id.."/files") or {}
+  local oldMap,existingFiles,newFiles = {},{},{}
+  for _,f in ipairs(oldFiles) do oldMap[f.name] = f end
+  for n,_ in pairs(data.files) do
+    local flag = oldMap[n]
+    oldMap[n]=nil
+    if flag then existingFiles[n] = true else newFiles[n] = true end
+  end
+
+  -- Delete files no longer part of QA
+  for name,_ in pairs(oldMap) do
+    local r,err = Emu.api.hc3.delete("/quickApp/"..id.."/files/"..name)
+    if err > 206 then
+      return Emu:ERROR(fmt("Failed to delete file %s from QuickApp %s: %s", name, id, err))
+    else
+      Emu:INFO(fmt("Deleted file %s from QuickApp %s", name, id))
+    end
+  end
+
+  -- Create new files
+  for name,_ in pairs(newFiles) do
+    local path = data.files[name]
+    local f = {name=name, isMain=false, isOpen=false, type='lua', content=Emu.lib.readFile(path)}
+    local r,err = Emu.api.hc3.post("/quickApp/"..id.."/files",f)
+    if err > 206 then
+      return Emu:ERROR(fmt("Failed to create file %s in QuickApp %s: %s", name, id, err))
+    else
+      Emu:INFO(fmt("Created file %s in QuickApp %s", name, id))
+    end
+  end
+
+  -- Update existing files
+  local ufiles = {}
+  for name,_ in pairs(existingFiles) do
+    local path = data.files[name]
+    local ef = Emu.api.hc3.get("/quickApp/"..id.."/files/"..name)
+    local content = Emu.lib.readFile(path)
+    if content == ef.content then
+      Emu:INFO(fmt("Untouched file %s:%s in QuickApp %s", name, path, id))
+    else
+      local f = {name=name, isMain=name=='main', isOpen=false, type='lua', content=content}
+      ufiles[#ufiles+1] = f
+    end
+  end
+  if ufiles[1] then
+    local r,err = Emu.api.hc3.put("/quickApp/"..id.."/files",ufiles)
+    if err > 206 then
+      return Emu:ERROR(fmt("Failed to update files for QuickApp %s: %s", id, err))
+    else
+      for name,_ in pairs(existingFiles) do
+        Emu:INFO(fmt("Updated file %s:%s in QuickApp %s", name, data.files[name], id))
+      end
+    end
+  end
+
+  local function update(prop,value)
+    return Emu.api.hc3.post("/plugins/updateProperty",{
+      deviceId = id,
+      propertyName = prop,
+      value = value
+    })
+  end
+
+  -- Update UI...
+  local res,err = Emu.api.hc3.put("/devices/"..id,{
+    properties = {
+      viewLayout = fqa.initialProperties.viewLayout,
+      uiCallbacks = fqa.initialProperties.uiCallbacks
+    }
+  })
+  if err > 206 then return Emu:ERROR(fmt("Failed to update QuickApp viewLayout for %s: %s", id, err)) end
+  -- r, err = update("uiView", fqa.initialProperties.uiView)
+  -- if err > 206 then ERROR("Failed to update QuickApp uiView for %s: %s", id, err) end
+  -- r, err = update("uiCallbacks", fqa.initialProperties.uiCallbacks)
+  -- if err > 206 then ERROR("Failed to update QuickApp uiCallbacks for %s: %s", id, err) end
+
+  -- Update other properties
+  local updateProps = {
+    "quickAppVariables","manufacturer","model","buildNumber",
+    "userDescription","quickAppUuid","deviceRole"
+  }
+  for _,prop in ipairs(updateProps) do 
+    local value = fqa.initialProperties[prop]
+    if value ~= nil and value ~= "" and value ~= device.properties[prop] then 
+      update(prop, value) 
+      if prop == "quickAppVariables" then
+        value = json.encode(value)
+        if #value > 40 then 
+          value = value:sub(1, 40) .. "..."
+        end
+      end
+      Emu:INFO(fmt("Updated property %s to '%s' for QuickApp %s", prop, value, id))
+    end
+  end
+
+  local function trueMap(arr) local r={} for _,v in ipairs(arr) do r[v]=true end return r end
+  -- Update interfaces
+  local interfaces = fqa.initialInterfaces or {}
+  local oldInterfaces = qa.interfaces or {}
+  local newMap,oldMap = trueMap(interfaces),trueMap(oldInterfaces)
+  local newIfs,oldIfs = {},{}
+  for i,_ in pairs(newMap) do if not oldMap[i] then newIfs[#newIfs+1] = i end end
+  for i,_ in pairs(oldMap) do if not newMap[i] then oldIfs[#oldIfs+1] = i end end
+  if #newIfs > 0 then 
+    local res,code = api.hc3.restricted.post("/plugins/interfaces", {action = 'add', deviceId = id, interfaces = newIfs})  -- TODO
+    if code > 206 then
+      return Emu:ERROR(fmt("Failed to add interfaces to QuickApp %s: %s", id, code))
+    else
+      Emu:INFO(fmt("Added interfaces to QuickApp %s: %s", id, table.concat(newIfs, ", ")))
+    end
+  end
+  if #oldIfs > 0 then 
+    local res,code = api.hc3.restricted.post("/plugins/interfaces", {action = 'delete', deviceId = id, interfaces = oldIfs}) -- TODO
+    if code > 206 then
+      return Emu:ERROR(fmt("Failed to delete interfaces from QuickApp %s: %s", id, code))
+    else
+      Emu:INFO(fmt("Deleted interfaces from QuickApp %s: %s", id, table.concat(oldIfs, ", ")))
+    end
+  end
+
+  Emu:INFO("Done")
+end
+
+local function updateFile(fname)
+  Emu:INFO("Updating file",fname)
+  local exist,id,qn = findIdAndName(fname)
+  assert(exist,"No .project file found for " .. fname)
+  assert(id,"No entry for "..fname.." in .project file")
+  local qa = Emu.api.hc3.get("/devices/"..id)
+  if not qa then
+    return Emu:ERROR("QuickApp on HC3 with ID %s not found "..tostring(id))
+  end
+  local content = Emu.lib.readFile(fname)
+  local f = {name=qn, isMain=qn=='main', isOpen=false, type='lua', content=content}
+  local r,err = Emu.api.hc3.put("/quickApp/"..id.."/files/"..qn,f)
+  if not r then 
+    local r,err = Emu.api.hc3.post("/quickApp/"..id.."/files",f)
+    if err then
+      Emu:ERROR(fmt("creating QA:%s, file:%s, QAfile%s",id,fname,qn))
+    else
+      Emu:INFO(fmt("Created QA:%s, file:%s, QAfile%s",id,fname,qn))
+    end
+  else 
+    Emu:INFO(fmt("Updated QA:%s, file%s, QAfile:%s ",id,fname,qn))
+  end
+end
+
+
+Emu.lib.createTempName = createTempName
+Emu.lib.findFirstLine = findFirstLine
+Emu.lib.loadQAString = loadQAString
+Emu.lib.uploadFQA = uploadFQA
+Emu.lib.getFQA = getFQA
+Emu.lib.saveQA = saveQA
+Emu.lib.loadQA = loadQA
+Emu.lib.downloadFQA = downloadFQA
+Emu.lib.saveProject = saveProject
+Emu.lib.updateQA = updateQA
+Emu.lib.updateFile = updateFile

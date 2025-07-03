@@ -290,13 +290,15 @@ class PLuaInterpreter:
             debug=False,
             debugger_enabled=False,
             start_api_server=True,
-            api_server_port=8000):
+            silent=False,
+            api_server_port=8000,
+            api_server_host="0.0.0.0"):
         self.debug = debug
         self.debugger_enabled = debugger_enabled
         self.lua_runtime = LuaRuntime(unpack_returned_tuples=True)
         self.execution_tracker = ExecutionTracker(self)
         self.api_server_port = api_server_port
-        self.api_server_host = "127.0.0.1"
+        self.api_server_host = api_server_host
         self.instance_id = str(uuid.uuid4())  # Generate unique instance ID
         self.embedded_api_server = None
 
@@ -313,13 +315,32 @@ class PLuaInterpreter:
             self.debug_print("Embedded API server startup skipped")
 
         # Print greeting with versions
-        print(f"{Colors.BOLD}{Colors.CYAN}PLua{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{PLUA_VERSION}{Colors.RESET}")
-        print(
-            f"{Colors.BOLD}{Colors.GREEN}Python{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{sys.version.split()[0]}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.MAGENTA}Lua{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{self.lua_runtime.globals()._VERSION}{Colors.RESET}")
-        if self.embedded_api_server and self.embedded_api_server.is_running():
-            print(f"{Colors.BOLD}{Colors.BLUE}API Server{Colors.RESET} {Colors.YELLOW}running on: {Colors.WHITE}http://{self.api_server_host}:{self.api_server_port}{Colors.RESET}")
-        sys.stdout.flush()
+        if not silent:
+            print(f"{Colors.BOLD}{Colors.CYAN}PLua{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{PLUA_VERSION}{Colors.RESET}")
+            print(
+                f"{Colors.BOLD}{Colors.GREEN}Python{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{sys.version.split()[0]}{Colors.RESET}")
+            print(f"{Colors.BOLD}{Colors.MAGENTA}Lua{Colors.RESET} {Colors.YELLOW}version: {Colors.WHITE}{self.lua_runtime.globals()._VERSION}{Colors.RESET}")
+            if self.embedded_api_server and self.embedded_api_server.is_running():
+                print(
+                    f"{Colors.BOLD}{Colors.BLUE}API Server{Colors.RESET} {Colors.YELLOW}running on: "
+                    f"{Colors.WHITE}http://{self.api_server_host}:{self.api_server_port}{Colors.RESET}"
+                )
+                if self.api_server_host == "0.0.0.0":
+                    # Try to get the actual IP address for network access
+                    try:
+                        import socket
+                        hostname = socket.gethostname()
+                        local_ip = socket.gethostbyname(hostname)
+                        print(
+                            f"{Colors.BOLD}{Colors.GREEN}Network{Colors.RESET} {Colors.YELLOW}accessible on: "
+                            f"{Colors.WHITE}http://{local_ip}:{self.api_server_port}{Colors.RESET}"
+                        )
+                    except Exception:
+                        print(
+                            f"{Colors.BOLD}{Colors.GREEN}Network{Colors.RESET} {Colors.YELLOW}accessible on all interfaces: "
+                            f"{Colors.WHITE}http://<your-ip>:{self.api_server_port}{Colors.RESET}"
+                        )
+            sys.stdout.flush()
 
     def debug_print(self, message):
         """Print debug message only if debug mode is enabled"""
@@ -888,7 +909,7 @@ end
         try:
             # Try to free the port before starting the server
             if not free_port(self.api_server_port, self.api_server_host):
-                self.debug_print(f"Could not free port {self.api_server_port}, attempting to start server anyway")
+                self.debug_print(f"Could not free port {self.api_server_port} on {self.api_server_host}, attempting to start server anyway")
             
             from .embedded_api_server import EmbeddedAPIServer
 
@@ -1004,12 +1025,13 @@ end
         args_table = self.lua_runtime.table()
         args_table['debug'] = getattr(args, 'debug', False)
         args_table['port'] = getattr(args, 'port', 8000)
+        args_table['host'] = getattr(args, 'host', '0.0.0.0')
         args_table['task'] = getattr(args, 'task', None)
         
         # Add to _PY table
         lua_globals['_PY']['args'] = args_table
         
-        self.debug_print(f"Command-line args available in _PY.args: debug={args_table['debug']}, port={args_table['port']}, task={args_table['task']}")
+        self.debug_print(f"Command-line args available in _PY.args: debug={args_table['debug']}, host={args_table['host']}, port={args_table['port']}, task={args_table['task']}")
 
         # Load Fibaro API automatically
 
@@ -1044,6 +1066,7 @@ def lua_to_python(obj):
             # If keys() fails, it's not a Lua table
             return obj
     return obj
+
 
 def free_port(port, host="127.0.0.1"):
     """Free a port by terminating any process using it"""

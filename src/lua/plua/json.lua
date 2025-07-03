@@ -36,6 +36,7 @@ do
           res[#res+1] = "[" pretty(e[1])
           for i=2,#e do res[#res+1] = "," pretty(e[i]) end
           res[#res+1] = "]"
+          seen[e]=nil
         else
           seen[e]=true
           if e._var_  then res[#res+1] = fmt('"%s"',e._str) return end
@@ -47,6 +48,7 @@ do
             res[#res+1] = ',"' res[#res+1] = k[i]; res[#res+1] = '":' t = k[i] pretty(e[t])
           end
           res[#res+1] = '}'
+          seen[e]=nil
         end
       elseif e == nil then res[#res+1]='null'
       else error("bad json expr:"..tostring(e)) end

@@ -62,5 +62,8 @@ function QuickApp:onInit()
     self:updateView('multi1','selectedItems',{"2"})
     --self:updateView('lbl1','text',os.date("%c"))
   end,1000)
+
+  local fqa = api.get("/quickApp/export/"..self.id)
+  print(fqa)
   setInterval(function() print("PING") end,2000) -- keep script alive
 end

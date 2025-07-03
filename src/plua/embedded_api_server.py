@@ -384,7 +384,7 @@ class EmbeddedAPIServer:
                 path += "?" + "&".join(query_parts)
             
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '{path}')"
                 )
                 if result.get("success"):
@@ -405,7 +405,7 @@ class EmbeddedAPIServer:
         async def get_device(id: int, request: Request, response: Response):
             """Get a specific device"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/devices/{id}')"
                 )
                 if result.get("success"):
@@ -422,7 +422,7 @@ class EmbeddedAPIServer:
         async def get_device_property(id: int, name: str, response: Response):
             """Get a specific property of a device"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/devices/{id}/properties/{name}')"
                 )
                 if result.get("success"):
@@ -439,7 +439,7 @@ class EmbeddedAPIServer:
         async def get_global_variables(request: Request, response: Response):
             """Get all global variables"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/globalVariables')"
                 )
                 if result.get("success"):
@@ -460,7 +460,7 @@ class EmbeddedAPIServer:
         async def get_global_variable(name: str, request: Request, response: Response):
             """Get a specific global variable"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/globalVariables/{name}')"
                 )
                 if result.get("success"):
@@ -479,8 +479,11 @@ class EmbeddedAPIServer:
             """Call a QuickApp method"""
             t = time.time()
             try:
-                result = self.interpreter.execute_lua_code_remote(
-                    f"return _PY.fibaroapi('POST', '/api/devices/{id}/action/{name}', {args.args})"
+                print(f"Calling {id}/{name} with {args}")
+                import json
+                json_args = json.dumps(args.args)
+                result = self.interpreter.execute_lua_code(
+                    f"return _PY.fibaroapi('POST', '/api/devices/{id}/action/{name}', json.decode([==[{json_args}]==]))"
                 )
                 if result.get("success"):
                     lua_result = result.get("result", [])
@@ -500,7 +503,7 @@ class EmbeddedAPIServer:
         async def get_device_action_info(id: int, name: str, response: Response):
             """Get device action information"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/devices/{id}/action/{name}')"
                 )
                 if result.get("success"):
@@ -527,7 +530,7 @@ class EmbeddedAPIServer:
             
             t = time.time()
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '{path}')"
                 )
                 if result.get("success"):
@@ -554,7 +557,7 @@ class EmbeddedAPIServer:
         async def delete_Device(id: int, response: Response):
             """Delete a device"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('DELETE', '/api/devices/{id}')"
                 )
                 if result.get("success"):
@@ -572,7 +575,7 @@ class EmbeddedAPIServer:
         async def get_Rooms(response: Response):
             """Get all rooms"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/rooms')"
                 )
                 if result.get("success"):
@@ -593,7 +596,7 @@ class EmbeddedAPIServer:
         async def get_Room(id: int, response: Response):
             """Get a specific room"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/rooms/{id}')"
                 )
                 if result.get("success"):
@@ -610,7 +613,7 @@ class EmbeddedAPIServer:
         async def create_Room(room: RoomSpec, response: Response):
             """Create a new room"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/rooms', {room.model_dump()})"
                 )
                 if result.get("success"):
@@ -627,7 +630,7 @@ class EmbeddedAPIServer:
         async def modify_Room(id: int, room: RoomSpec, response: Response):
             """Modify a room"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('PUT', '/api/rooms/{id}', {room.model_dump()})"
                 )
                 if result.get("success"):
@@ -644,7 +647,7 @@ class EmbeddedAPIServer:
         async def delete_Room(id: int, response: Response):
             """Delete a room"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('DELETE', '/api/rooms/{id}')"
                 )
                 if result.get("success"):
@@ -662,7 +665,7 @@ class EmbeddedAPIServer:
         async def get_Sections(response: Response):
             """Get all sections"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/sections')"
                 )
                 if result.get("success"):
@@ -683,7 +686,7 @@ class EmbeddedAPIServer:
         async def get_Section(id: int, response: Response):
             """Get a specific section"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/sections/{id}')"
                 )
                 if result.get("success"):
@@ -700,7 +703,7 @@ class EmbeddedAPIServer:
         async def create_Section(section: SectionSpec, response: Response):
             """Create a new section"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/sections', {section.model_dump()})"
                 )
                 if result.get("success"):
@@ -717,7 +720,7 @@ class EmbeddedAPIServer:
         async def modify_Section(id: int, section: SectionSpec, response: Response):
             """Modify a section"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('PUT', '/api/sections/{id}', {section.model_dump()})"
                 )
                 if result.get("success"):
@@ -734,7 +737,7 @@ class EmbeddedAPIServer:
         async def delete_Section(id: int, response: Response):
             """Delete a section"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('DELETE', '/api/sections/{id}')"
                 )
                 if result.get("success"):
@@ -752,7 +755,7 @@ class EmbeddedAPIServer:
         async def get_CustomEvents(response: Response):
             """Get all custom events"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/customEvents')"
                 )
                 if result.get("success"):
@@ -773,7 +776,7 @@ class EmbeddedAPIServer:
         async def get_CustomEvent(name: str, response: Response):
             """Get a specific custom event"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/customEvents/{name}')"
                 )
                 if result.get("success"):
@@ -790,7 +793,7 @@ class EmbeddedAPIServer:
         async def create_CustomEvent(customEvent: CustomEventSpec, response: Response):
             """Create a new custom event"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/customEvents', {customEvent.model_dump()})"
                 )
                 if result.get("success"):
@@ -807,7 +810,7 @@ class EmbeddedAPIServer:
         async def modify_CustomEvent(name: str, customEvent: CustomEventSpec, response: Response):
             """Modify a custom event"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('PUT', '/api/customEvents/{name}', {customEvent.model_dump()})"
                 )
                 if result.get("success"):
@@ -824,7 +827,7 @@ class EmbeddedAPIServer:
         async def delete_CustomEvent(name: str, response: Response):
             """Delete a custom event"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('DELETE', '/api/customEvents/{name}')"
                 )
                 if result.get("success"):
@@ -841,7 +844,7 @@ class EmbeddedAPIServer:
         async def emit_CustomEvent(name: str, response: Response):
             """Emit a custom event"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/customEvents/{name}/emit')"
                 )
                 if result.get("success"):
@@ -868,7 +871,7 @@ class EmbeddedAPIServer:
                 path += "?" + "&".join(query_parts)
             
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '{path}')"
                 )
                 if result.get("success"):
@@ -886,7 +889,7 @@ class EmbeddedAPIServer:
         async def get_iosDevices(response: Response):
             """Get iOS devices"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/iosDevices')"
                 )
                 if result.get("success"):
@@ -904,7 +907,7 @@ class EmbeddedAPIServer:
         async def get_Home(response: Response):
             """Get home information"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/home')"
                 )
                 if result.get("success"):
@@ -922,7 +925,7 @@ class EmbeddedAPIServer:
         async def add_debug_message(args: DebugMessageSpec, response: Response):
             """Add debug message"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/debugMessages', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -939,7 +942,7 @@ class EmbeddedAPIServer:
         async def get_debug_messages(response: Response):
             """Get debug messages"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/debugMessages')"
                 )
                 if result.get("success"):
@@ -957,7 +960,7 @@ class EmbeddedAPIServer:
         async def get_Weather(response: Response):
             """Get weather information"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/weather')"
                 )
                 if result.get("success"):
@@ -974,7 +977,7 @@ class EmbeddedAPIServer:
         async def modify_Weather(args: WeatherSpec, response: Response):
             """Modify weather information"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('PUT', '/api/weather', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -995,7 +998,7 @@ class EmbeddedAPIServer:
             try:
                 json_args = json.dumps(args.model_dump())
                 lua_code = f"return _PY.fibaroapi('POST', '/api/plugins/callUIEvent', json.decode([==[{json_args}]==]))"
-                result = self.interpreter.execute_lua_code_remote(lua_code)
+                result = self.interpreter.execute_lua_code(lua_code)
                 if result.get("success"):
                     return {
                         "endTimestampMillis": time.time(),
@@ -1019,7 +1022,7 @@ class EmbeddedAPIServer:
             """Update QuickApp property"""
             t = time.time()
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/plugins/updateProperty', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -1041,7 +1044,7 @@ class EmbeddedAPIServer:
             """Update QuickApp view"""
             t = time.time()
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/plugins/updateView', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -1062,7 +1065,7 @@ class EmbeddedAPIServer:
         async def restart_qa(args: RestartParams, response: Response):
             """Restart QuickApp"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/plugins/restart', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -1079,7 +1082,7 @@ class EmbeddedAPIServer:
         async def create_Child_Device(args: ChildParams, response: Response):
             """Create child device"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/plugins/createChildDevice', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -1096,7 +1099,7 @@ class EmbeddedAPIServer:
         async def delete_Child_Device(id: int, response: Response):
             """Remove child device"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('DELETE', '/api/plugins/removeChildDevice/{id}')"
                 )
                 if result.get("success"):
@@ -1113,7 +1116,7 @@ class EmbeddedAPIServer:
         async def publish_event(args: EventParams, response: Response):
             """Publish event"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/plugins/publishEvent', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -1130,7 +1133,7 @@ class EmbeddedAPIServer:
         async def get_plugin_variables(id: int, response: Response):
             """Get plugin variables"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/plugins/{id}/variables')"
                 )
                 if result.get("success"):
@@ -1147,7 +1150,7 @@ class EmbeddedAPIServer:
         async def get_plugin_variable(id: int, name: str, response: Response):
             """Get specific plugin variable"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/plugins/{id}/variables/{name}')"
                 )
                 if result.get("success"):
@@ -1164,7 +1167,7 @@ class EmbeddedAPIServer:
         async def create_plugin_variable(id: int, args: InternalStorageParams, response: Response):
             """Create plugin variable"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/plugins/{id}/variables', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -1181,7 +1184,7 @@ class EmbeddedAPIServer:
         async def update_plugin_variable(id: int, name: str, args: InternalStorageParams, response: Response):
             """Update plugin variable"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('PUT', '/api/plugins/{id}/variables/{name}', {args.model_dump()})"
                 )
                 if result.get("success"):
@@ -1198,7 +1201,7 @@ class EmbeddedAPIServer:
         async def delete_plugin_variable(id: int, name: str, response: Response):
             """Delete plugin variable"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('DELETE', '/api/plugins/{id}/variables/{name}')"
                 )
                 if result.get("success"):
@@ -1215,7 +1218,7 @@ class EmbeddedAPIServer:
         async def delete_all_plugin_variables(id: int, response: Response):
             """Delete all plugin variables"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('DELETE', '/api/plugins/{id}/variables')"
                 )
                 if result.get("success"):
@@ -1233,7 +1236,7 @@ class EmbeddedAPIServer:
         async def get_QuickApp_Files(id: int, response: Response):
             """Get QuickApp files"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/quickApp/{id}/files')"
                 )
                 if result.get("success"):
@@ -1289,7 +1292,7 @@ class EmbeddedAPIServer:
         async def create_QuickApp_Files(id: int, file: QAFileSpec, response: Response):
             """Create QuickApp file"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/quickApp/{id}/files', {file.model_dump()})"
                 )
                 if result.get("success"):
@@ -1306,7 +1309,7 @@ class EmbeddedAPIServer:
         async def get_QuickApp_File(id: int, name: str, response: Response):
             """Get specific QuickApp file"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/quickApp/{id}/files/{name}')"
                 )
                 if result.get("success"):
@@ -1323,7 +1326,7 @@ class EmbeddedAPIServer:
         async def modify_QuickApp_File(id: int, name: str, file: QAFileSpec, response: Response):
             """Modify QuickApp file"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('PUT', '/api/quickApp/{id}/files/{name}', {file.model_dump()})"
                 )
                 if result.get("success"):
@@ -1340,7 +1343,7 @@ class EmbeddedAPIServer:
         async def modify_QuickApp_Files(id: int, args: List[QAFileSpec], response: Response):
             """Modify multiple QuickApp files"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('PUT', '/api/quickApp/{id}/files', {[f.model_dump() for f in args]})"
                 )
                 if result.get("success"):
@@ -1357,7 +1360,7 @@ class EmbeddedAPIServer:
         async def export_QuickApp_FQA(id: int, response: Response):
             """Export QuickApp"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/quickApp/export/{id}')"
                 )
                 if result.get("success"):
@@ -1374,7 +1377,7 @@ class EmbeddedAPIServer:
         async def import_QuickApp(file: QAImportSpec, response: Response):
             """Import QuickApp"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('POST', '/api/quickApp', {file.model_dump()})"
                 )
                 if result.get("success"):
@@ -1391,7 +1394,7 @@ class EmbeddedAPIServer:
         async def delete_QuickApp_File(id: int, name: str, response: Response):
             """Delete QuickApp file"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('DELETE', '/api/quickApp/{id}/files/{name}')"
                 )
                 if result.get("success"):
@@ -1409,7 +1412,7 @@ class EmbeddedAPIServer:
         async def get_Settings(name: str, response: Response):
             """Get setting"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/settings/{name}')"
                 )
                 if result.get("success"):
@@ -1427,7 +1430,7 @@ class EmbeddedAPIServer:
         async def get_Partitions(response: Response):
             """Get partitions"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/alarms/v1/partitions')"
                 )
                 if result.get("success"):
@@ -1444,7 +1447,7 @@ class EmbeddedAPIServer:
         async def get_Partition(id: int, response: Response):
             """Get specific partition"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/alarms/v1/partitions/{id}')"
                 )
                 if result.get("success"):
@@ -1462,7 +1465,7 @@ class EmbeddedAPIServer:
         async def get_alarm_devices(response: Response):
             """Get alarm devices"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/alarms/v1/devices')"
                 )
                 if result.get("success"):
@@ -1480,7 +1483,7 @@ class EmbeddedAPIServer:
         async def get_NotificationCenter(response: Response):
             """Get notification center"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/notificationCenter')"
                 )
                 if result.get("success"):
@@ -1498,7 +1501,7 @@ class EmbeddedAPIServer:
         async def get_Profile(id: int, response: Response):
             """Get specific profile"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/profiles/{id}')"
                 )
                 if result.get("success"):
@@ -1515,7 +1518,7 @@ class EmbeddedAPIServer:
         async def get_Profiles(response: Response):
             """Get all profiles"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/profiles')"
                 )
                 if result.get("success"):
@@ -1533,7 +1536,7 @@ class EmbeddedAPIServer:
         async def get_Icons(response: Response):
             """Get icons"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/icons')"
                 )
                 if result.get("success"):
@@ -1551,7 +1554,7 @@ class EmbeddedAPIServer:
         async def get_Users(response: Response):
             """Get users"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/users')"
                 )
                 if result.get("success"):
@@ -1569,7 +1572,7 @@ class EmbeddedAPIServer:
         async def get_Energy_Devices(response: Response):
             """Get energy devices"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/energy/devices')"
                 )
                 if result.get("success"):
@@ -1587,7 +1590,7 @@ class EmbeddedAPIServer:
         async def get_Panels_Location(response: Response):
             """Get panels location"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/panels/location')"
                 )
                 if result.get("success"):
@@ -1604,7 +1607,7 @@ class EmbeddedAPIServer:
         async def get_Panels_Climate_by_id(id: int, response: Response):
             """Get specific climate panel"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '/api/panels/climate/{id}')"
                 )
                 if result.get("success"):
@@ -1621,7 +1624,7 @@ class EmbeddedAPIServer:
         async def get_Panels_Climate(response: Response):
             """Get climate panels"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/panels/climate')"
                 )
                 if result.get("success"):
@@ -1638,7 +1641,7 @@ class EmbeddedAPIServer:
         async def get_Panels_Notifications(response: Response):
             """Get notifications panels"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/panels/notifications')"
                 )
                 if result.get("success"):
@@ -1655,7 +1658,7 @@ class EmbeddedAPIServer:
         async def get_Panels_Family(response: Response):
             """Get family panels"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/panels/family')"
                 )
                 if result.get("success"):
@@ -1672,7 +1675,7 @@ class EmbeddedAPIServer:
         async def get_Panels_Sprinklers(response: Response):
             """Get sprinklers panels"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/panels/sprinklers')"
                 )
                 if result.get("success"):
@@ -1689,7 +1692,7 @@ class EmbeddedAPIServer:
         async def get_Panels_Humidity(response: Response):
             """Get humidity panels"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/panels/humidity')"
                 )
                 if result.get("success"):
@@ -1706,7 +1709,7 @@ class EmbeddedAPIServer:
         async def get_Favorite_Colors(response: Response):
             """Get favorite colors"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/panels/favoriteColors')"
                 )
                 if result.get("success"):
@@ -1723,7 +1726,7 @@ class EmbeddedAPIServer:
         async def get_Favorite_ColorsV2(response: Response):
             """Get favorite colors v2"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/panels/favoriteColors/v2')"
                 )
                 if result.get("success"):
@@ -1741,7 +1744,7 @@ class EmbeddedAPIServer:
         async def get_Diagnostics(response: Response):
             """Get diagnostics"""
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     "return _PY.fibaroapi('GET', '/api/diagnostics')"
                 )
                 if result.get("success"):
@@ -1762,7 +1765,7 @@ class EmbeddedAPIServer:
             path = f"/api/proxy?url={query.url}"
             
             try:
-                result = self.interpreter.execute_lua_code_remote(
+                result = self.interpreter.execute_lua_code(
                     f"return _PY.fibaroapi('GET', '{path}')"
                 )
                 if result.get("success"):

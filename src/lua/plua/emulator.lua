@@ -7,6 +7,8 @@ local net = require("plua.net")
 __TAG = "<font color='light_blue'>PLUA</font>"
 
 local DEVICEID = 5555-1
+local _print = print
+local print,printErr = print,print -- redefile iater
 
 ---@class Emulator
 Emulator = {}
@@ -26,16 +28,20 @@ function Emulator:__init(plua)
   function api.post(path, data) return self:API_CALL("POST", path, data) end
   function api.put(path, data) return self:API_CALL("PUT", path, data) end
   function api.delete(path) return self:API_CALL("DELETE", path) end
-  self.lib.api = api
+  self.api = api
   
   local hc3api = {}
   function hc3api.get(path) return self:HC3_CALL("GET", path) end
   function hc3api.post(path, data) return self:HC3_CALL("POST", path, data) end
   function hc3api.put(path, data) return self:HC3_CALL("PUT", path, data) end
   function hc3api.delete(path) return self:HC3_CALL("DELETE", path) end
-  self.lib.hc3api = hc3api
+  self.api.hc3 = hc3api
   
+  self.lib.loadLib("utils",self)
+  function print(...) plua.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "DEBUG") end
+  function printErr(...) plua.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "ERROR") end
   self.lib.loadLib("fibaro_api",self)
+  self.lib.loadLib("tools",self)
   self.lib.ui = self.lib.loadLib("ui",self)
 end
 
@@ -46,6 +52,9 @@ function Emulator:registerDevice(info)
     UI = info.UI, UImap = info.UImap, watches = info.watches,
   }
 end
+
+function Emulator:saveState() end
+function Emulator:loadState() end
 
 local function validate(str,typ,key)
   local stat,val = pcall(function() return load("return "..str)() end)
@@ -73,6 +82,7 @@ function headerKeys.latitude(str,info,k) info.latitude = validate(str,"number",k
 function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number",k) end
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
 function headerKeys.save(str,info) info.save = str end
+function headerKeys.project(str,info,k) info.project = validate(str,"boolean",k) end
 function headerKeys.interfaces(str,info) info.interfaces = str end
 function headerKeys.var(str,info,k) 
   local name,value = str:match("^([%w_]+)%s*=%s*(.+)$")
@@ -178,17 +188,30 @@ local deviceTypes = nil
 function Emulator:createInfoFromContent(filename,content)
   local info = {}
   local preprocessed,headers = self:processHeaders(filename,content)
-  if deviceTypes == nil then deviceTypes = self:loadResource(bundled.get_lua_path().."/rsrsc/devices.json",true) end
-  headers.type = headers.type or 'com.fibaro.binarySwitch'
-  local dev = deviceTypes[headers.type]
-  assert(dev,"Unknown device type: "..headers.type)
-  dev = table.copy(dev)
-  if not headers.id then DEVICEID = DEVICEID + 1 end
-  dev.id = headers.id or DEVICEID
-  dev.name = headers.name or "MyQA"
-  dev.enabled = true
-  dev.visible = true
-  info.device = dev
+
+  if headers.proxy then
+    local proxylib = self.lib.loadLib("proxy",self)
+    info = proxylib.existingProxy(headers.name or "myQA",headers)
+    if not info then
+      info = proxylib.createProxy(headers)
+    end
+  end
+
+  if not info.device then
+    if deviceTypes == nil then deviceTypes = self:loadResource(bundled.get_lua_path().."/rsrsc/devices.json",true) end
+    headers.type = headers.type or 'com.fibaro.binarySwitch'
+    local dev = deviceTypes[headers.type]
+    assert(dev,"Unknown device type: "..headers.type)
+    dev = table.copy(dev)
+    if not headers.id then DEVICEID = DEVICEID + 1 end
+    dev.id = headers.id or DEVICEID
+    dev.name = headers.name or "MyQA"
+    dev.enabled = true
+    dev.visible = true
+    info.device = dev
+  end
+
+  local dev = info.device
   info.files = headers.files or {}
   local props = dev.properties or {}
   props.quickAppVariables = headers.vars or {}
@@ -204,6 +227,7 @@ function Emulator:createInfoFromContent(filename,content)
     mode='model',role='deviceRole',
     description='userDescription'
   }
+  props.uiCallbacks = props.uiCallbacks or {}
   local embeds = embedUIs.UI[headers.type]
   if embeds then
     for i,v in ipairs(embeds) do
@@ -270,7 +294,7 @@ function Emulator:createChild(data)
   if data.initialProperties and data.initialProperties.uiView then
     local uiView = data.initialProperties.uiView
     local callbacks = data.initialProperties.uiCallbacks or {}
-    info.UI = Emu.lib.ui.uiView2UI(uiView,callbacks)
+    info.UI = self.lib.ui.uiView2UI(uiView,callbacks)
   end
   props.uiCallbacks,props.viewLayout,props.uiView,info.UImap = self:createUI(info.UI or {})
   local embeds = embedUIs.UI[dev.type]
@@ -302,7 +326,7 @@ local stdLua = {
 function Emulator:loadQA(info)
   -- Load and execute included files + main file
   local env = { 
-    fibaro = { plua = self }, net = net, json = json, api = self.lib.api,
+    fibaro = { plua = self }, net = net, json = json, api = self.api,
     __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
   }
   for _,name in ipairs(stdLua) do env[name] = _G[name] end
@@ -386,7 +410,8 @@ function Emulator:HC3_CALL(method, path, data, redirect)
   end
   
   -- Construct the external URL with the full path (including query parameters)
-  local external_url = self.lib.hc3_url..path
+  path = path:gsub("^/api/","/")
+  local external_url = self.lib.hc3_url.."/api"..path
   if redirect then
     self:DEBUG("Redirect to: " .. external_url)
   else
@@ -451,19 +476,35 @@ function Emulator:getRefreshStates(last) return _PY.getEvents(last) end
 function Emulator:refreshEvent(typ,data) _PY.addEvent(json.encode({type=typ,data=data})) end
 
 function Emulator:DEBUG(...) if self.debugFlag then print(...) end end
-function Emulator:INFO(...) __fibaro_add_debug_message(__TAG, self.lib.logStr(...), "INFO", false) end 
+function Emulator:INFO(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "INFO", false) end 
 function Emulator:ERROR(...) printErr(...) end
 
+local function getFQA(self,fname)
+  local info = self:createInfoFromFile(fname)
+  self:registerDevice(info)
+  return self.lib.getFQA(info.device.id)
+end
+
 function Emulator:runTask(task,arg1)
-  if task == "uploadQA" then
+
+  if task == "uploadQA" then             -- uploadQA <filename>
     self:INFO("Uploading QA",arg1)
-  elseif task == "updateFile" then
-    self:INFO("Updating file",arg1)
-  elseif task == "updateQA" then
+    local fqa = getFQA(self,arg1)
+    self.lib.uploadFQA(fqa)
+
+  elseif task == "updateFile" then        -- updateFile <filename>
+    self.lib.updateFile(arg1)
+
+  elseif task == "updateQA" then          -- updateQA <filename>
     self:INFO("Updating QA",arg1)
-  elseif task == "downloadQA" then
+  elseif task == "downloadQA" then        -- downloadQA <id>:<path>
     local id,path = arg1:match("^([^:]+):(.*)$")
     self:INFO("Downloading QA",id,"to",path)
+
+  elseif task == "packQA" then             -- packQA <filename>
+    local fqa = getFQA(self,arg1)
+    _print(json.encodeFast(fqa))
+
   else
     self:ERROR("Unknown task: "..task)
   end

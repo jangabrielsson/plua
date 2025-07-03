@@ -36,6 +36,7 @@ Examples:
   plua --fibaro -e "print('Hello')" script.lua      # Load fibaro, execute code, then run script
   plua --port 8080 --fibaro -i                      # Run on custom port 8080 with fibaro and interactive shell
   plua --port 9000 script.lua                       # Run script with API server on port 9000
+  plua --host 0.0.0.0 --port 8000 script.lua        # Run script with API server on all interfaces
   plua --task "my-task" script.lua                  # Pass task string to Lua (available in _PY.args.task)
   plua -d --port 8080 --task "debug-task" script.lua # Debug mode with custom port and task
   """
@@ -58,6 +59,8 @@ Examples:
                         help='Load fibaro.lua library (equivalent to -e "require(\'fibaro\')")')
     parser.add_argument('--port', type=int, default=8000, metavar='PORT',
                         help='Port for the embedded API server (default: 8000)')
+    parser.add_argument('--host', type=str, default='0.0.0.0', metavar='HOST',
+                        help='Host for the embedded API server (default: 0.0.0.0 - all interfaces)')
     parser.add_argument('--task', type=str, metavar='TASK',
                         help='Task string to pass to Lua (available in _PY.args.task)')
     parser.add_argument('-v', '--version', action='version', version=f'PLua {__version__}')
@@ -80,7 +83,13 @@ Examples:
         args.execute_list.insert(insert_position, "require('fibaro')")
 
     async def async_main(args):
-        interpreter = PLuaInterpreter(debug=args.debug, debugger_enabled=args.debugger_port if args.debugger else False, api_server_port=args.port)
+        interpreter = PLuaInterpreter(
+            debug=args.debug, 
+            debugger_enabled=args.debugger_port if args.debugger else False, 
+            silent=args.task is not None, 
+            api_server_port=args.port, 
+            api_server_host=args.host
+        )
 
         # Pass command-line arguments to Lua in _PY.args table
         interpreter.setup_command_line_args(args)
@@ -182,7 +191,11 @@ print("<font color='blue'>MobDebug server</font> <font color='yellow'>started on
             interpreter.execution_tracker.start_interactive()
             interpreter.run_interactive()
 
-    loop_manager.run_main(async_main(args))
+    try:
+        loop_manager.run_main(async_main(args))
+    except KeyboardInterrupt:
+        print("\n[PLua] Received Ctrl-C (SIGINT), shutting down gracefully...")
+        sys.exit(0)
 
 
 if __name__ == "__main__":

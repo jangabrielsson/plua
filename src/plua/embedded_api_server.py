@@ -259,7 +259,8 @@ class EmbeddedAPIServer:
             deviceID: int
             elementName: str
             eventType: str
-            value: Optional[str] = None
+            value: Optional[Any] = None
+            values: Optional[List[Any]] = None
 
         # API endpoints
         @app.get("/", response_class=HTMLResponse, tags=["Core"])

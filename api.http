@@ -1,0 +1,141 @@
+### Devices
+GET http://{{host}}/api/devices?interface=quickApp
+Authorization: Basic {{token}}
+
+### Global variables
+GET http://{{host}}/api/globalVariables
+Authorization: Basic {{token}}
+
+### Settings/Location
+GET http://{{host}}/api/settings/location
+Authorization: Basic {{token}}
+
+### Settings/Info
+GET http://{{host}}/api/settings/info
+Authorization: Basic {{token}}
+
+### Home
+GET http://{{host}}/api/home
+Authorization: Basic {{token}}
+
+### Alarms/Devices
+GET http://{{host}}/api/alarms/v1/devices/
+Authorization: Basic {{token}}
+
+### Alarms/Partitions
+GET http://{{host}}/api/alarms/v1/partitions/
+Authorization: Basic {{token}}
+
+### Alarms/Partitions/Actions/Arm
+Get http://{{host}}/api/alarms/v1/partitions/breached
+Authorization: Basic {{token}}
+
+### CustomEvents
+GET http://{{host}}/api/customEvents
+Authorization: Basic {{token}}
+
+### CustomEvents/Name
+GET http://{{host}}/api/customEvents/MyEvent
+Authorization: Basic {{token}}
+
+### Panels/Sprinklers
+GET http://{{host}}/api/panels/sprinklers
+Authorization: Basic {{token}}
+
+### Panels/Humidity
+GET http://{{host}}/api/panels/humidity
+Authorization: Basic {{token}}
+
+### Panels/Location
+GET http://{{host}}/api/panels/location
+Authorization: Basic {{token}}
+
+### Panels/Notifications
+GET http://{{host}}/api/panels/notifications
+Authorization: Basic {{token}}
+
+### AdditionalInterfaces
+GET http://{{host}}/api/additionalInterfaces
+Authorization: Basic {{token}}
+
+### Categories
+GET http://{{host}}/api/categories
+Authorization: Basic {{token}}
+
+### DebugMessages
+GET http://{{host}}/api/debugMessages
+Authorization: Basic {{token}}
+
+### DeviceNotifications/v1
+GET http://{{host}}/api/deviceNotifications/v1
+Authorization: Basic {{token}}
+
+### Diagnostics
+GET http://{{host}}/api/diagnostics
+Authorization: Basic {{token}}
+
+### Panels/FavoriteColors
+GET http://{{host}}/api/panels/favoriteColors
+Authorization: Basic {{token}}
+
+### Panels/FavoriteColors/v2
+GET http://{{host}}/api/panels/favoriteColors/v2
+Authorization: Basic {{token}}
+
+### iosDevices
+GET http://{{host}}/api/iosDevices
+Authorization: Basic {{token}}
+
+### Profiles
+GET http://{{host}}/api/profiles
+Authorization: Basic {{token}}
+
+### RefreshStates
+GET http://{{host}}/api/refreshStates
+Authorization: Basic {{token}}
+
+### RGBPrograms
+GET http://{{host}}/api/RGBPrograms
+Authorization: Basic {{token}}
+
+### Rooms
+GET http://{{host}}/api/rooms
+Authorization: Basic {{token}}
+
+### Scenes
+GET http://{{host}}/api/scenes
+Authorization: Basic {{token}}
+
+### Sections
+GET http://{{host}}/api/sections
+Authorization: Basic {{token}}
+
+### Users
+GET http://{{host}}/api/users
+Authorization: Basic {{token}}
+
+### Weather
+GET http://{{host}}/api/weather
+Authorization: Basic {{token}}
+
+### Service/SystemStatus
+GET http://{{host}}/api/service/systemStatus?lang=en&_=6456465
+Authorization: Basic {{token}}
+
+### LoginStatus
+GET http://{{host}}/api/loginStatus
+Authorization: Basic {{token}}
+
+### quickAppVariables
+GET http://{{host}}/api/plugins/3508/variables/testVar
+Authorization: Basic {{token}}
+
+### quickAppVariables
+POST http://{{host}}/api/plugins/3508/variables
+data:{ "name": "testVar", "value": "testValue" }
+Authorization: Basic {{token}}
+
+### quickAppVariables
+PUT http://{{host}}/api/plugins/3508/variables/testVar
+data:{ "name": "testVar", "value": "testValue2" }
+Authorization: Basic {{token}}

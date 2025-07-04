@@ -1,3 +1,4 @@
+local Emu = ...
 local copas = require("copas")
 
 local helperStarted = false

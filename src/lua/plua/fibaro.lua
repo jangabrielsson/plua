@@ -111,7 +111,7 @@ function fibaro.error(tag,...)
 end
 
 function print(...) fibaro.debug(__TAG, ...) end
-function __print(...) __fibaro_add_debug_message(__TAG, logStr(...), "DEBUG", true) end
+function __print(...) __fibaro_add_debug_message(__TAG, logStr(...), "DEBUG") end
 
 -- Retrieves all alarm partitions.
 -- @return A table of alarm partition objects.

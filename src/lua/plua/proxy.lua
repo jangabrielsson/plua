@@ -26,6 +26,8 @@ function QuickApp:onInit()
     actionUrl = "http://"..ip..":"..port.."/api/devices/%s/action/%s"
     uiUrl = "http://"..ip..":"..port.."/api/plugins/callUIEvent"
   end
+  print(actionUrl)
+  print(uiUrl)
   local send
   
   -- Actions that are handled directly by the proxy rather than forwarded to the emulator
@@ -42,6 +44,8 @@ function QuickApp:onInit()
       actionUrl = "http://"..ip..":"..port.."/api/devices/%s/action/%s"
       uiUrl = "http://"..ip..":"..port.."/api/plugins/callUIEvent"
     end
+    print(actionUrl)
+    print(uiUrl)
     self:debug("Connected")
   end
   
@@ -53,9 +57,10 @@ function QuickApp:onInit()
       print(action.actionName)
       return quickApp:callAction(action.actionName, table.unpack(action.args))
     end
+    json.util.InitArray(action.args)
     local data = { args = action.args }
-    local url = fmt(actionUrl,data.deviceId,data.actionName)
-    net:HTTPClient():request(actionUrl,{
+    local url = fmt(actionUrl,action.deviceId,action.actionName)
+    net:HTTPClient():request(url,{
       optiones = {
         method = "POST",
         headers = {
@@ -63,7 +68,7 @@ function QuickApp:onInit()
         },
         data = json.encode(data)
       },
-      success = function() end,
+      success = function(resp) print("success",resp.status) end,
       error = function(err) self:error(err) end,
     })
   end
@@ -78,14 +83,14 @@ function QuickApp:onInit()
       value = ev.value
     }
     net:HTTPClient():request(uiUrl,{
-      optiones = {
+      options = {
         method = "POST",
         headers = {
           ["Content-Type"] = "application/json",
         },
         data = json.encode(data)
       },
-      success = function() end,
+      success = function(resp) print("success",resp.status) end,
       error = function(err) self:error(err) end,
     })
   end

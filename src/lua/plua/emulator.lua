@@ -358,15 +358,15 @@ function Emulator:loadMainFile(filename)
     self:DEBUG("Offline mode")
   end
   
-  self:loadQA(info)
-
-  self:registerDevice(info)
-  
   if info.headers.offline then
     -- If main files has offline directive, setup offline routes
     self.lib.loadLib("offline",self)
     self.lib.setupOfflineRoutes()
   end
+  
+  self:loadQA(info)
+
+  self:registerDevice(info)
   
   self:startQA(info.device.id)
 end

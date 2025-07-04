@@ -1,17 +1,16 @@
 local Emu, store = ...
 
--- emu.devices[1] = Device{
---   resource = true,
---   id = 1,
---   device = { 
---     id = 1, name = "zwave", roomID = 219,
---     type = "com.fibaro.zwavePrimaryController",
---     properties = {
---       sunriseHour = "03:57",
---       sunsetHour = "21:32",
---     }
---   }
--- }
+Emu:registerDevice({
+  device ={
+    id = 1, name = "zwave", roomID = 219,
+    type = "com.fibaro.zwavePrimaryController",
+    properties = {
+      sunriseHour = "03:57",
+      sunsetHour = "21:32",
+    }
+  }
+})
+
 store['settings/location']['_'] = {
   "INIT",{
     houseNumber = 0,

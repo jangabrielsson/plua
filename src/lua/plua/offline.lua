@@ -259,6 +259,14 @@ local function setup()
     return {data,HTTP.OK}
   end)
 
+  add("GET/api/iosDevices", function(path, data, vars, query)
+    return {{},HTTP.OK}
+  end)
+
+  add("GET/api/debugMessages", function(path, data, vars, query)
+    return {{},HTTP.OK}
+  end)
+
   add("GET/api/weather", function(path, data, vars, query)
     return {strip(store.weather,true),HTTP.OK}
   end)

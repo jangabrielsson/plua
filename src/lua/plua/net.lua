@@ -605,7 +605,7 @@ function net.WebSocketServer(debugFlag)
     websocket_server_add_event_listener(server_id, "message", function(client, msg)
       debug("Received from client: %s", msg)
       if self.callbacks.receive then
-        local stat,res = pcall(self.callback, client, msg)
+        local stat,res = pcall(self.callbacks.receive, client, msg)
         if not stat then
           debug("Error in callback: %s", tostring(res))
         end

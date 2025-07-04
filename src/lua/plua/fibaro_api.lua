@@ -290,6 +290,16 @@ router:add("GET", "/api/globalVariables/<name>", function(path, data, vars, quer
   return create_redirect_response()
 end)
 
+router:add("POST", "/api/globalVariables", function(path, data, vars, query)
+  --return create_response({name = vars.name, value = "foo"})
+  return create_redirect_response()
+end)
+
+router:add("PUT", "/api/globalVariables/<name>", function(path, data, vars, query)
+  --return create_response({name = vars.name, value = "foo"})
+  return create_redirect_response()
+end)
+
 router:add("GET", "/api/home", function(path, data, vars, query)
   --return create_response({hcName = "Home Center", currency = "USD"})
   return create_redirect_response()
@@ -365,50 +375,72 @@ router:add("GET", "/api/panels/sprinklers", function(path, data, vars, query)
   return create_redirect_response()
 end)
 
-router:add("GET", "/api/plugins/<id>/variables", function(path, data, vars, query)
-  --return create_response({key1 = "value1", key2 = "value2"})
-  return create_redirect_response()
+
+router:add("GET","/api/plugins/<id>/variables",function(path, data, vars, query) 
+  local dev = Emu.DIR[vars.id]
+  if dev then
+    local vars,res = dev.vars or {},{}
+    for k,v in pairs(vars) do res[#res+1] = { name=k, value=v } end
+    return res,HTTP.OK
+  end
+  return hc3.restricted.get(path)
 end)
 
-router:add("POST", "/api/plugins/<id>/variables", function(path, data, vars, query)
-  --return create_response({status = "created"}, 201)
-  return create_redirect_response()
+router:add("GET","/api/plugins/<id>/variables/<name>",function(path, data, vars, query) 
+  local dev = Emu.DIR[vars.id]
+  if dev then
+    local value = (dev.vars or {})[vars.name]
+    if value~=nil then return { name=vars.name, value=value },HTTP.OK
+    else return nil,HTTP.NOT_FOUND end
+  end
+  return hc3.restricted.get(path)
 end)
 
-router:add("DELETE", "/api/plugins/<id>/variables", function(path, data, vars, query)
-  --return create_response({status = "deleted"})
-  return create_redirect_response()
+router:add("POST","/api/plugins/<id>/variables",function(path, data, vars, query) 
+  local dev = Emu.DIR[vars.id]
+  if dev then
+    dev.vars = dev.vars or {}
+    local var = dev.vars[vars.name]
+    if var then return nil,HTTP.CONFLICT
+    else dev.vars[data.name] = data.value Emu:saveState() return nil,HTTP.CREATED end
+  end
+  return hc3.restricted.post(path,data)
 end)
 
-router:add("GET", "/api/plugins/<id>/variables/<name>", function(path, data, vars, query)
-  --return create_response({value = "test_value"})
-  return create_redirect_response()
+router:add("PUT","/api/plugins/<id>/variables/<name>",function(path, data, vars, query)
+  local dev = Emu.DIR[vars.id]
+  if dev then
+    local value = (dev.vars or {})[vars.name]
+    if value~=nil then dev.vars[vars.name] = data.value Emu:saveState() return nil,HTTP.OK
+    else return nil,HTTP.NOT_FOUND end
+  end
+  return hc3.restricted.put(path,data)
 end)
 
-router:add("POST", "/api/plugins/<id>/variables/<name>", function(path, data, vars, query)
-  --return create_response({status = "updated"})
-  return create_redirect_response()
+router:add("DELETE","/api/plugins/<id>/variables/<name>",function(path, data, vars, query) 
+  local dev = Emu.DIR[vars.id]
+  if dev then
+    local var = (dev.vars or {})[vars.name]
+    if var~=nil then dev.vars[vars.name] = nil Emu:saveState() return nil,HTTP.OK
+    else return nil,HTTP.NOT_FOUND end
+  end
+  return hc3.restricted.delete(path,data)
 end)
 
-router:add("PUT", "/api/plugins/<id>/variables/<name>", function(path, data, vars, query)
-  --return create_response({status = "updated"})
-  return create_redirect_response()
-end)
-
-router:add("DELETE", "/api/plugins/<id>/variables/<name>", function(path, data, vars, query)
-  --return create_response({status = "deleted"})
-  return create_redirect_response()
+router:add("DELETE","/api/plugins/<id>/variables",function(path, data, vars, query) 
+  local dev = Emu.DIR[vars.id]
+  if dev then
+    dev.vars = {}
+    Emu:saveState()
+    return nil,HTTP.OK
+  end
+  return hc3.restricted.delete(path,data)
 end)
 
 router:add("POST", "/api/plugins/callUIEvent", function(path, data, vars, query)
   --return create_response({status = "ui_event_called"})
   local dev = Emu.DIR[data.deviceID]
   if not dev then return nil,400 end
-  
-  local val = data.value or data.values
-  if type(val)=='string' and val:sub(1,1)=='[' then val = json.decode(val) end
-  data.value,data.values = nil,nil
-  data.values = {val}
   
   if data.elementName:sub(1,2) == "__" then
     --   data.elementName = data.elementName:sub(3)
@@ -540,7 +572,7 @@ end
 
 router:add("GET", "/api/quickApp/<id>/files", function(path, data, vars, query)
   local dev = Emu.DIR[vars.id]
-  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
+  if not (dev and dev.files) then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
   local files = {}
   for name,_ in ipairs(dev.files) do
     files[#files+1] = { name = name, isOpen=false, type='lua', isMain = name == 'main' }
@@ -549,43 +581,61 @@ router:add("GET", "/api/quickApp/<id>/files", function(path, data, vars, query)
 end)
 
 router:add("POST", "/api/quickApp/<id>/files", function(path, data, vars, query)
-  --return create_response({status = "created"}, 201)
-  return create_redirect_response()
+  local dev = Emu.DIR[vars.id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
+  local files = dev.files or {}
+  if files[data.name] then return nil,HTTP.CONFLICT end
+  files[data.name] = { path = nil, content = data.content }
+  Emu.api.post("/plugins/restart",{deviceId=dev.device.id})
+  return nil,HTTP.CREATED
 end)
 
 router:add("PUT", "/api/quickApp/<id>/files", function(path, data, vars, query)
-  --return create_response({status = "modified"})
-  return create_redirect_response()
+  local dev = Emu.DIR[vars.id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
+  local files = dev.files or {}
+  for _,nf in ipairs(data) do
+    if not files[nf.name] then return nil,HTTP.NOT_FOUND end
+  end
+  for _,nf in ipairs(data) do
+    files[nf.name].content = nf.content
+  end
+  Emu.api.post("/plugins/restart",{deviceId=dev.device.id})
+  return nil,HTTP.OK
 end)
 
 router:add("GET", "/api/quickApp/<id>/files/<name>", function(path, data, vars, query)
   local dev = Emu.DIR[vars.id]
   if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
   local files = dev.files or {}
-  local f =  files[data.name]
-  if f then return {name = data.name, content = f.content, isMain = f.isMain, isOpen=false, type='lua'},HTTP.OK else return nil,HTTP.NOT_FOUND end
-end)
-
-router:add("POST", "/api/quickApp/<id>/files/<name>", function(path, data, vars, query)
-  --return create_response({status = "modified"})
-  return create_redirect_response()
+  local f =  files[vars.name]
+  if f then return {name = vars.name, content = f.content, isMain = f.isMain, isOpen=false, type='lua'},HTTP.OK else return nil,HTTP.NOT_FOUND end
 end)
 
 router:add("PUT", "/api/quickApp/<id>/files/<name>", function(path, data, vars, query)
-  --return create_response({status = "modified"})
-  return create_redirect_response()
+  local dev = Emu.DIR[vars.id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
+  local files = dev.files or {}
+  if not files[vars.name] then return nil,HTTP.NOT_FOUND end
+  files[vars.name].content = data.content
+  Emu.api.post("/plugins/restart",{deviceId=dev.device.id})
+  return nil,HTTP.OK
 end)
 
 router:add("DELETE", "/api/quickApp/<id>/files/<name>", function(path, data, vars, query)
-  --return create_response({status = "deleted"})
-  return create_redirect_response()
+  local dev = Emu.DIR[vars.id]
+  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
+  local files = dev.files or {}
+  if not files[vars.name] then return nil,HTTP.NOT_FOUND end
+  files[vars.name] = nil
+  Emu.api.post("/plugins/restart",{deviceId=dev.device.id})
+  return nil,HTTP.OK
 end)
 
 router:add("GET", "/api/quickApp/export/<id>", function(path, data, vars, query)
   local dev = Emu.DIR[vars.id]
   if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return create_redirect_response() end end
-  local tools = Emu.lib.loadLib("tools",Emu)
-  local fqa = tools.getFQA(dev.device.id)
+  local fqa = Emu.lib.getFQA(dev.device.id)
   if fqa then return json.encodeFast(fqa),HTTP.OK else return nil,HTTP.NOT_FOUND end
 end)
 

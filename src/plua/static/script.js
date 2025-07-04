@@ -280,9 +280,19 @@ async function callUIEvent(deviceID, elementName, eventType, value) {
     const payload = {
         deviceID: deviceID,
         elementName: elementName,
-        eventType: eventType
+        eventType: eventType,
+        values: []
     };
-    if (value !== undefined) payload.value = value;
+    
+    // Format values according to HC3 API specification
+    if (value !== undefined) {
+        if (Array.isArray(value)) {
+            payload.values = value;
+        } else {
+            payload.values = [value];
+        }
+    }
+    
     try {
         await fetch('/api/plugins/callUIEvent', {
             method: 'POST',
@@ -405,7 +415,7 @@ function renderUIElement(el, multiPlaceholders, qaIdx, rowIdx, elIdx, deviceID) 
                     if (el.onReleased !== undefined) {
                         btn.addEventListener('click', (e) => {
                             if (!longPressFired) {
-                                callUIEvent(deviceID, el.id, 'onReleased', undefined);
+                                callUIEvent(deviceID, el.id, 'onReleased', []);
                             }
                             longPressFired = false; // reset for next interaction
                         });
@@ -419,14 +429,14 @@ function renderUIElement(el, multiPlaceholders, qaIdx, rowIdx, elIdx, deviceID) 
                             longPressTimer = setTimeout(() => {
                                 longPressFired = true;
                                 if (el.onLongPressDown !== undefined) {
-                                    callUIEvent(deviceID, el.id, 'onLongPressDown', undefined);
+                                    callUIEvent(deviceID, el.id, 'onLongPressDown', []);
                                 }
                             }, LONG_PRESS_MS);
                         };
                         const end = (e) => {
                             if (longPressTimer) clearTimeout(longPressTimer);
                             if (longPressFired && el.onLongPressReleased !== undefined) {
-                                callUIEvent(deviceID, el.id, 'onLongPressReleased', undefined);
+                                callUIEvent(deviceID, el.id, 'onLongPressReleased', []);
                             }
                             longPressFired = false;
                         };
@@ -477,7 +487,7 @@ function renderUIElement(el, multiPlaceholders, qaIdx, rowIdx, elIdx, deviceID) 
                         
                         // Emit events while dragging for real-time updates
                         if (el.onChanged !== undefined) {
-                            callUIEvent(deviceID, el.id, 'onChanged', slider.value);
+                            callUIEvent(deviceID, el.id, 'onChanged', [parseInt(slider.value)]);
                         }
                     });
                     
@@ -500,7 +510,7 @@ function renderUIElement(el, multiPlaceholders, qaIdx, rowIdx, elIdx, deviceID) 
                     // For non-drag interactions (click on track, arrow keys)
                     slider.addEventListener('change', () => {
                         if (!isDragging && el.onChanged !== undefined) {
-                            callUIEvent(deviceID, el.id, 'onChanged', slider.value);
+                            callUIEvent(deviceID, el.id, 'onChanged', [parseInt(slider.value)]);
                         }
                     });
                     slider.addEventListener('mousedown', showTooltip);
@@ -541,7 +551,7 @@ function renderUIElement(el, multiPlaceholders, qaIdx, rowIdx, elIdx, deviceID) 
                         btn.classList.toggle('qa-ui-switch-btn-off');
                         const newState = btn.classList.contains('qa-ui-switch-btn-on');
                         if (el.onToggled !== undefined) {
-                            callUIEvent(deviceID, el.id, 'onToggled', newState ? 'true' : 'false');
+                            callUIEvent(deviceID, el.id, 'onReleased', [newState]);
                         }
                     });
                 }
@@ -555,7 +565,7 @@ function renderUIElement(el, multiPlaceholders, qaIdx, rowIdx, elIdx, deviceID) 
                 if (select) {
                     select.addEventListener('change', () => {
                         if (el.onToggled !== undefined) {
-                            callUIEvent(deviceID, el.id, 'onToggled', select.value);
+                            callUIEvent(deviceID, el.id, 'onToggled', [select.value]);
                         }
                     });
                 }
@@ -588,7 +598,7 @@ function renderUIElement(el, multiPlaceholders, qaIdx, rowIdx, elIdx, deviceID) 
                 selected: el.values || [],
                 onChange: (values) => {
                     if (el.onToggled !== undefined) {
-                        callUIEvent(deviceID, el.id, 'onToggled', '[' + values.join(',') + ']');
+                        callUIEvent(deviceID, el.id, 'onToggled', values);
                     }
                 },
                 deviceID,

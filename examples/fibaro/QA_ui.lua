@@ -1,6 +1,7 @@
 --%%name:UItest
 --%%type:com.fibaro.multilevelSwitch
 --%%debug:false
+--%%proxy:true
 --%% offline:true
 
 --%%u:{label="lbl1",text="Hello Tue Jul 1 06_34:53 2025"}
@@ -64,6 +65,6 @@ function QuickApp:onInit()
   end,1000)
 
   local fqa = api.get("/quickApp/export/"..self.id)
-  print(fqa)
+  --print(fqa)
   setInterval(function() print("PING") end,2000) -- keep script alive
 end

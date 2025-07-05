@@ -259,7 +259,7 @@ class EmbeddedAPIServer:
             deviceID: int
             elementName: str
             eventType: str
-            value: Optional[Any] = None
+            # value: Optional[Any] = None
             values: Optional[List[Any]] = None
 
         # API endpoints
@@ -993,10 +993,14 @@ class EmbeddedAPIServer:
 
         # Plugins endpoints
         @app.post("/api/plugins/callUIEvent", tags=["Plugins methods"])
-        async def call_ui_event(args: CallUIEventParams, response: Response):
+        async def call_ui_event(request: Request, response: Response):
             """Call UI event via POST body"""
             t = time.time()
             try:
+                # Parse the request body
+                body = await request.body()
+                args = CallUIEventParams.model_validate_json(body)
+                
                 json_args = json.dumps(args.model_dump())
                 lua_code = f"return _PY.fibaroapi('POST', '/api/plugins/callUIEvent', json.decode([==[{json_args}]==]))"
                 result = self.interpreter.execute_lua_code(lua_code)

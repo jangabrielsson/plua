@@ -77,6 +77,9 @@ end
 local function prettyCall(fun,errPrint)
   xpcall(fun,function(err)
     local info = debug.getinfo(3)
+    if info.what == "C" then
+      info = debug.getinfo(2)
+    end
     local msg = (type(err) == "string" and err:match("^.-](:%d+:.*)$")) or tostring(err)
     local source = info.source:match("^.+/(.+)$") or info.short_src
     if Emu.traceback then

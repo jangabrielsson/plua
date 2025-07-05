@@ -235,9 +235,8 @@ router:add("POST", "/api/devices/<id>/action/<name>", function(path, data, vars,
   if not dev then 
     if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
   else
-    dev.env.setTimeout(function()
-      dev.env.onAction(id,{ deviceId = id, actionName = vars.name, args = data.args })
-    end,0)
+    -- Call onAction directly instead of using setTimeout to avoid event loop issues
+    dev.env.onAction(id,{ deviceId = id, actionName = vars.name, args = data.args })
     return nil,HTTP.OK
   end
 end)
@@ -253,9 +252,8 @@ router:add("GET", "/api/devices/<id>/action/<name>", function(path, data, vars, 
     for k,v in pairs(query) do data[#data+1] = {k,v} end
     table.sort(data,function(a,b) return a[1] < b[1] end)
     for _,d in ipairs(data) do args[#args+1] = d[2] end
-    dev.env.setTimeout(function()
-      dev.env.onAction(id,{ deviceId = id, actionName = action, args =args})
-    end,0)
+    -- Call onAction directly instead of using setTimeout to avoid event loop issues
+    dev.env.onAction(id,{ deviceId = id, actionName = action, args =args})
     return nil,HTTP.OK
   end
 end)
@@ -455,7 +453,8 @@ router:add("POST", "/api/plugins/callUIEvent", function(path, data, vars, query)
     local env = Emu.DIR[dev.device.id].env
     return env.onAction(dev.device.id,args)
   else
-    dev.env.setTimeout(function() dev.env.onUIEvent(data.deviceID,data) end,0)
+    -- Call onUIEvent directly instead of using setTimeout to avoid event loop issues
+    dev.env.onUIEvent(data.deviceID,data)
   end
   return nil,HTTP.OK
 end)
@@ -541,7 +540,8 @@ router:add("POST", "/api/plugins/updateView", function(path, data, vars, query)
   local dev = Emu.DIR[id]
   if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
 else
-  dev.env.setTimeout(function() Emu:updateView(id,data) end,0)
+  -- Call updateView directly instead of using setTimeout to avoid event loop issues
+  Emu:updateView(id,data)
   return nil,HTTP.OK
 end
 end)

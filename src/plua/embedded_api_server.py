@@ -1001,9 +1001,16 @@ class EmbeddedAPIServer:
                 body = await request.body()
                 args = CallUIEventParams.model_validate_json(body)
                 
-                json_args = json.dumps(args.model_dump())
-                lua_code = f"return _PY.fibaroapi('POST', '/api/plugins/callUIEvent', json.decode([==[{json_args}]==]))"
-                result = self.interpreter.execute_lua_code(lua_code)
+                # Use message passing to communicate with main Lua thread
+                message_id = self.interpreter.send_api_message("fibaroapi", {
+                    "method": "POST",
+                    "path": "/api/plugins/callUIEvent",
+                    "data": args.model_dump()
+                })
+                
+                # Wait for response from main thread
+                result = self.interpreter.get_api_response(message_id, timeout=30)
+                
                 if result.get("success"):
                     return {
                         "endTimestampMillis": time.time(),

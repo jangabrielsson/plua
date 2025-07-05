@@ -10,6 +10,7 @@ import uuid
 import asyncio
 import time
 import re
+import json
 from lupa import LuaRuntime
 from extensions import get_lua_extensions
 from .version import __version__ as PLUA_VERSION
@@ -277,13 +278,21 @@ class PLuaInterpreter:
     """Main Lua interpreter class"""
 
     def __init__(
-            self,
-            debug=False,
-            debugger_enabled=False,
-            start_api_server=True,
-            silent=False,
-            api_server_port=8000,
-            api_server_host="0.0.0.0"):
+        self,
+        debug=False,
+        debugger_enabled=False,
+        start_api_server=True,
+        silent=False,
+        api_server_port=8000,
+        api_server_host="0.0.0.0"):
+        
+        # Message passing system for API server communication
+        import queue
+        import threading
+        self.api_message_queue = queue.Queue()
+        self.api_response_queue = queue.Queue()
+        self.api_message_lock = threading.Lock()
+        
         self.debug = debug
         self.debugger_enabled = debugger_enabled
         self.lua_runtime = LuaRuntime(unpack_returned_tuples=True)
@@ -395,6 +404,8 @@ class PLuaInterpreter:
                             self.lua_busy = True
                             try:
                                 coroutine_manager.coroutine_manager_instance.process_callbacks()
+                                # Also process any pending API messages
+                                self._process_api_messages()
                             finally:
                                 self.lua_busy = False
                 except Exception as e:
@@ -904,6 +915,87 @@ end
 
         except Exception as e:
             return {"success": False, "result": None, "error": str(e)}
+
+    def send_api_message(self, message_type, data):
+        """Send a message to the main Lua thread for processing"""
+        message = {
+            "type": message_type,
+            "data": data,
+            "id": str(uuid.uuid4())
+        }
+        self.api_message_queue.put(message)
+        return message["id"]
+
+    def get_api_response(self, message_id, timeout=30):
+        """Get response for a specific message ID"""
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                # Check if there's a response for this message
+                with self.api_message_lock:
+                    # Process any pending messages in the main thread
+                    self._process_api_messages()
+                
+                # Look for response
+                while not self.api_response_queue.empty():
+                    response = self.api_response_queue.get_nowait()
+                    if response.get("message_id") == message_id:
+                        return response
+                
+                time.sleep(0.01)  # Small delay to avoid busy waiting
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+        
+        return {"success": False, "error": "Timeout waiting for response"}
+
+    def _process_api_messages(self):
+        """Process pending API messages in the main Lua thread"""
+        while not self.api_message_queue.empty():
+            try:
+                message = self.api_message_queue.get_nowait()
+                response = self._handle_api_message(message)
+                if response:
+                    response["message_id"] = message["id"]
+                    self.api_response_queue.put(response)
+            except Exception as e:
+                # Send error response
+                error_response = {
+                    "success": False,
+                    "error": str(e),
+                    "message_id": message.get("id", "unknown")
+                }
+                self.api_response_queue.put(error_response)
+
+    def _handle_api_message(self, message):
+        """Handle a specific API message in the main Lua thread"""
+        message_type = message["type"]
+        data = message["data"]
+        
+        try:
+            if message_type == "fibaroapi":
+                # Handle Fibaro API calls
+                method = data.get("method", "GET")
+                path = data.get("path", "")
+                request_data = data.get("data", {})
+                
+                # Convert to Lua and call the fibaroapi function
+                json_data = json.dumps(request_data)
+                lua_code = f"return _PY.fibaroapi('{method}', '{path}', json.decode([==[{json_data}]==]))"
+                
+                result = self.lua_runtime.execute(lua_code)
+                return {"success": True, "result": result}
+            
+            elif message_type == "execute_lua":
+                # Execute arbitrary Lua code
+                lua_code = data.get("code", "")
+                result = self.lua_runtime.execute(lua_code)
+                return {"success": True, "result": result}
+            
+            else:
+                return {"success": False, "error": f"Unknown message type: {message_type}"}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def get_captured_output(self):
         """Get captured output and clear the buffer"""

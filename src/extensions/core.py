@@ -20,98 +20,6 @@ from threading import Thread, Lock
 # from typing import List, Any, Optional
 
 
-# Timer execution gate for synchronizing timer callbacks
-class TimerExecutionGate:
-    """Controls when timer callbacks are allowed to run using asyncio.Lock"""
-
-    def __init__(self):
-        self.lock = asyncio.Lock()
-        self.queue = []
-        self._locked = True
-        self._initialized = False
-        self._fragment_executing = False  # Track fragment execution state
-
-    async def initialize(self):
-        """Initialize the gate - should be called once when the event loop is ready"""
-        if not self._initialized:
-            await self.lock.acquire()
-            self._initialized = True
-
-    async def acquire(self):
-        """Lock the gate - no timer callbacks can run"""
-        if not self._initialized:
-            await self.initialize()
-        self._locked = True
-        if not self.lock.locked():
-            await self.lock.acquire()
-
-    async def release(self):
-        """Unlock the gate and run all queued callbacks"""
-        self._locked = False
-        self._fragment_executing = False  # Clear fragment execution state
-        if self.lock.locked():
-            self.lock.release()
-
-        # Run all queued callbacks
-        while self.queue:
-            callback, args, kwargs = self.queue.pop(0)
-            try:
-                callback(*args, **kwargs)
-            except Exception as e:
-                print(f"Error in queued callback: {e}", file=sys.stderr)
-
-    def set_fragment_executing(self, executing):
-        """Set whether fragment execution is currently happening"""
-        self._fragment_executing = executing
-
-    def is_socket_operation(self, callback):
-        """Check if a callback is related to socket operations"""
-        try:
-            # Check if the callback is from our network extensions
-            callback_str = str(callback)
-            socket_indicators = [
-                'tcp_', 'udp_', 'socket', 'network', 'mobdebug',
-                'AsyncioNetworkManager', 'TCPServer'
-            ]
-            return any(indicator in callback_str for indicator in socket_indicators)
-        except Exception:
-            return False
-
-    def run_or_queue(self, callback, *args, **kwargs):
-        """Run callback immediately if unlocked, otherwise queue it"""
-        # During fragment execution, be more permissive with operations
-        if self._fragment_executing:
-            # Allow most operations during fragment execution, only block pure timer callbacks
-            callback_str = str(callback)
-            timer_indicators = ['setTimeout', 'setInterval', 'timer_coroutine', 'interval_coroutine']
-            is_timer_callback = any(indicator in callback_str for indicator in timer_indicators)
-
-            if is_timer_callback:
-                # Queue only pure timer callbacks during fragment execution
-                self.queue.append((callback, args, kwargs))
-            else:
-                # Allow all other operations (including socket operations) during fragment execution
-                callback(*args, **kwargs)
-        elif not self._locked:
-            # Normal execution when not locked
-            callback(*args, **kwargs)
-        else:
-            # Queue all callbacks when locked (non-fragment execution)
-            self.queue.append((callback, args, kwargs))
-
-    def is_locked(self):
-        """Check if the gate is currently locked"""
-        return self._locked
-
-    def is_fragment_executing(self):
-        """Check if fragment execution is currently happening"""
-        return self._fragment_executing
-
-
-# Global timer execution gate instance
-timer_gate = TimerExecutionGate()
-
-
 # Timer management class
 class TimerManager:
     """Manages setTimeout and clearTimeout functionality using asyncio Tasks"""
@@ -120,6 +28,8 @@ class TimerManager:
         self.timers = {}
         self.next_id = 1
         self.lock = threading.Lock()
+        self.callback_queue = []
+        self.queue_lock = threading.Lock()
 
     def setTimeout(self, func, ms):
         """Schedule a function to run after ms milliseconds using asyncio"""
@@ -134,45 +44,49 @@ class TimerManager:
                 while time.time() - start_time < ms / 1000.0:
                     await asyncio.sleep(0.01)  # Sleep in small chunks
 
-                # Use the timer gate to control execution
-                timer_gate.run_or_queue(func)
+                # Queue the callback for safe execution
+                with self.queue_lock:
+                    self.callback_queue.append(func)
             except Exception as e:
                 print(f"Timer error: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
             finally:
-                with self.lock:
-                    if timer_id in self.timers:
-                        del self.timers[timer_id]
+                # Delay removal until after the next event loop tick
+                async def remove_timer():
+                    await asyncio.sleep(0)  # Yield to event loop
+                    with self.lock:
+                        if timer_id in self.timers:
+                            del self.timers[timer_id]
+                try:
+                    loop = loop_manager.get_loop()
+                    loop.create_task(remove_timer())
+                except Exception:
+                    # Fallback: remove immediately if loop not available
+                    with self.lock:
+                        if timer_id in self.timers:
+                            del self.timers[timer_id]
 
-        # Check if we're in an event loop context
-        try:
-            asyncio.get_running_loop()
-            # We're in an async context, use asyncio
-            task = loop_manager.create_task(timer_coroutine())
-            self.timers[timer_id] = task
-        except RuntimeError:
-            # No event loop running, use threading for short timers
-            if ms < 1000:  # Only use threading for timers under 1 second
-                def thread_timer():
-                    time.sleep(ms / 1000.0)
-                    try:
-                        # Use the timer gate to control execution
-                        timer_gate.run_or_queue(func)
-                    except Exception as e:
-                        print(f"Timer error: {e}", file=sys.stderr)
-                    finally:
-                        with self.lock:
-                            if timer_id in self.timers:
-                                del self.timers[timer_id]
-
-                thread = threading.Thread(target=thread_timer, daemon=True)
-                thread.start()
-                self.timers[timer_id] = thread
-            else:
-                # For longer timers, still try to use asyncio
-                task = loop_manager.create_task(timer_coroutine())
-                self.timers[timer_id] = task
+        # Always use asyncio for consistency and to avoid thread safety issues
+        # The loop_manager will handle creating the event loop if needed
+        task = loop_manager.create_task(timer_coroutine())
+        self.timers[timer_id] = task
 
         return timer_id
+
+    def process_callbacks(self):
+        """Process any queued callbacks - should be called from the main thread"""
+        with self.queue_lock:
+            callbacks = self.callback_queue.copy()
+            self.callback_queue.clear()
+        
+        for callback in callbacks:
+            try:
+                callback()
+            except Exception as e:
+                print(f"Callback execution error: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
 
     def clearTimeout(self, timer_id):
         """Cancel a timer by its ID"""
@@ -297,7 +211,16 @@ def sleep(seconds):
         import time
         time.sleep(seconds)
 
+    # Process any pending timer callbacks
+    timer_manager.process_callbacks()
+
     return None
+
+
+@registry.register(description="Process pending timer callbacks", category="timers")
+def process_timer_callbacks():
+    """Process any pending timer callbacks - useful for manual control"""
+    timer_manager.process_callbacks()
 
 
 @registry.register(description="Get Python version information", category="system")
@@ -646,8 +569,9 @@ class IntervalManager:
                     while time.time() - start_time < ms / 1000.0:
                         await asyncio.sleep(0.01)  # Sleep in small chunks
 
-                    # Use the timer gate to control execution
-                    timer_gate.run_or_queue(func)
+                    # Queue the callback for safe execution
+                    with timer_manager.queue_lock:
+                        timer_manager.callback_queue.append(func)
             except asyncio.CancelledError:
                 pass
             except Exception as e:
@@ -738,39 +662,12 @@ async def yield_to_event_loop():
 
 @registry.register(description="Yield control to the event loop (sync wrapper)", category="async")
 def yield_to_loop():
-    """Synchronous wrapper that allows the event loop to process pending tasks"""
+    """Yield control to the event loop (synchronous wrapper)"""
     try:
         import time
-        # Simple sleep to allow event loop to process pending tasks
         time.sleep(0.01)  # 10ms sleep
     except Exception as e:
         print(f"Yield error: {e}", file=sys.stderr)
-
-
-# Timer gate control functions (for interpreter use)
-async def acquire_timer_gate():
-    """Lock the timer execution gate - no timer callbacks can run"""
-    await timer_gate.acquire()
-
-
-async def release_timer_gate():
-    """Unlock the timer execution gate and run all queued callbacks"""
-    await timer_gate.release()
-
-
-def set_fragment_executing(executing):
-    """Set whether fragment execution is currently happening"""
-    timer_gate.set_fragment_executing(executing)
-
-
-def is_timer_gate_locked():
-    """Check if the timer execution gate is currently locked"""
-    return timer_gate.is_locked()
-
-
-def is_fragment_executing():
-    """Check if fragment execution is currently happening"""
-    return timer_gate.is_fragment_executing()
 
 
 # Global state for refresh states polling

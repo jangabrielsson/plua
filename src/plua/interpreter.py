@@ -10,10 +10,10 @@ import uuid
 import asyncio
 import time
 import re
-import threading
 from lupa import LuaRuntime
 from extensions import get_lua_extensions
 from .version import __version__ as PLUA_VERSION
+from .coroutine_manager import CoroutineManager
 
 # Import extension modules to register them (side effect: registers all
 # extensions)
@@ -91,67 +91,58 @@ class ExecutionTracker:
         self.web_server_running = running
 
     def get_operation_count(self):
-        """Get the total count of active operations"""
+        """Get the current number of active operations"""
         try:
-            from extensions.network_extensions import loop_manager
-            from extensions.core import timer_manager
+            # Check for active callbacks in the coroutine manager
+            from . import coroutine_manager
+            if coroutine_manager.coroutine_manager_instance:
+                callback_count = coroutine_manager.coroutine_manager_instance.get_active_timer_count()
+                if callback_count > 0:
+                    if self.interpreter.debug:
+                        print(f"DEBUG: Active callbacks in queue: {callback_count}", file=sys.stderr)
+                    return callback_count
 
-            # Get the event loop and check for pending tasks
-            loop = loop_manager.get_loop()
-            if loop and not loop.is_closed():
-                pending_tasks = asyncio.all_tasks(loop)
+            # Check for active network operations
+            try:
+                from extensions.network_extensions import loop_manager
+                loop = loop_manager.get_loop()
+                if loop and not loop.is_closed():
+                    pending_tasks = asyncio.all_tasks(loop)
+                    active_tasks = [task for task in pending_tasks if not task.done()]
+                    
+                    # Filter out the callback loop task and main execution task
+                    filtered_tasks = []
+                    for task in active_tasks:
+                        task_name = task.get_name()
+                        # Skip the callback loop task and main execution task
+                        if (task_name.startswith('Task-') and
+                                ('callback_loop' in str(task) or 'async_main' in str(task))):
+                            if self.interpreter.debug:
+                                print(f"DEBUG: Skipping infrastructure task: {task_name}", file=sys.stderr)
+                            continue
+                        filtered_tasks.append(task)
+                    
+                    if filtered_tasks:
+                        if self.interpreter.debug:
+                            print(f"DEBUG: Active user tasks: {len(filtered_tasks)}", file=sys.stderr)
+                            for i, task in enumerate(filtered_tasks):
+                                print(f"DEBUG: User Task {i}: {task.get_name()} - {task}", file=sys.stderr)
+                        return len(filtered_tasks)
+            except Exception:
+                pass
 
-                # Filter out the main execution task and any system tasks
-                # The main execution task is the one that runs all Lua code
-                # Timer and interval tasks should be counted as active
-                # operations
-                active_tasks = [
-                    task for task in pending_tasks
-                    if not task.done() and
-                    not task.get_name().startswith('asyncio') and
-                    # Exclude the main execution task (Task-1) but keep
-                    # timer/interval tasks
-                    not (task.get_name() == 'Task-1')
-                ]
+            # Check for active WebSocket connections
+            try:
+                from extensions.websocket_extensions import websocket_manager
+                if websocket_manager.has_active_connections():
+                    return 1
+            except ImportError:
+                pass
 
-                # Debug: show all task names
-                if self.interpreter.debug:
-                    print(
-                        f"DEBUG: All pending tasks: {[task.get_name() for task in pending_tasks if not task.done()]}",
-                        file=sys.stderr)
-                    print(
-                        f"DEBUG: Active tasks after filtering: {[task.get_name() for task in active_tasks]}",
-                        file=sys.stderr)
-                    # Show task states
-                    for task in pending_tasks:
-                        if not task.done():
-                            print(
-                                f"DEBUG: Task {task.get_name()}: done={task.done()}, cancelled={task.cancelled()}",
-                                file=sys.stderr)
-
-                # Also check for active timers
-                active_timers = timer_manager.has_active_timers()
-                if self.interpreter.debug and active_timers:
-                    print(
-                        f"DEBUG: Active timers detected: {active_timers}",
-                        file=sys.stderr)
-
-                # Check for active WebSocket operations
-                try:
-                    from extensions.websocket_extensions import has_active_websocket_operations
-                    active_websockets = has_active_websocket_operations()
-                    if self.interpreter.debug and active_websockets:
-                        print(
-                            f"DEBUG: Active WebSocket operations detected: {active_websockets}",
-                            file=sys.stderr)
-                except ImportError:
-                    active_websockets = False
-
-                return len(active_tasks) + (1 if active_timers else 0) + \
-                    (1 if active_websockets else 0)
             return 0
-
-        except Exception:
+        except Exception as e:
+            if self.interpreter.debug:
+                print(f"DEBUG: Error getting operation count: {e}", file=sys.stderr)
             return 0
 
     def should_terminate(self):
@@ -301,6 +292,8 @@ class PLuaInterpreter:
         self.api_server_host = api_server_host
         self.instance_id = str(uuid.uuid4())  # Generate unique instance ID
         self.embedded_api_server = None
+        self.main_coroutine = None  # Store the main coroutine object
+        self.callback_loop_task = None  # Task for the callback processing loop
 
         self.debug_print(
             f"PLuaInterpreter constructor called with start_api_server={start_api_server}")
@@ -341,6 +334,40 @@ class PLuaInterpreter:
                             f"{Colors.WHITE}http://<your-ip>:{self.api_server_port}{Colors.RESET}"
                         )
             sys.stdout.flush()
+
+        # Initialize the seamless coroutine/timer manager and register Python functions
+        from . import coroutine_manager
+        coroutine_manager.coroutine_manager_instance = CoroutineManager(self.lua_runtime, debug=self.debug)
+        self.lua_runtime.globals()["pythonTimer"] = coroutine_manager.pythonTimer
+        self.lua_runtime.globals()["pythonClearTimer"] = coroutine_manager.pythonClearTimer
+        self.lua_runtime.globals()["pythonSetInterval"] = coroutine_manager.pythonSetInterval
+        self.lua_runtime.globals()["pythonClearInterval"] = coroutine_manager.pythonClearInterval
+
+        # Start the callback processing loop
+        self._start_callback_loop()
+
+    def _start_callback_loop(self):
+        """Start the asyncio task that continuously processes Lua callbacks"""
+        async def callback_loop():
+            while True:
+                try:
+                    # Process any queued callbacks in Lua
+                    from . import coroutine_manager
+                    if coroutine_manager.coroutine_manager_instance:
+                        coroutine_manager.coroutine_manager_instance.process_callbacks()
+                    await asyncio.sleep(0.01)  # 10ms
+                except Exception as e:
+                    if self.debug:
+                        print(f"Error in callback loop: {e}", file=sys.stderr)
+                    await asyncio.sleep(0.1)  # Longer delay on error
+
+        # Start the callback loop as a background task
+        try:
+            loop = asyncio.get_event_loop()
+            self.callback_loop_task = loop.create_task(callback_loop())
+        except RuntimeError:
+            # No event loop running, create one
+            self.callback_loop_task = asyncio.create_task(callback_loop())
 
     def debug_print(self, message):
         """Print debug message only if debug mode is enabled"""
@@ -461,21 +488,15 @@ class PLuaInterpreter:
         # Add timer functions to the default Lua environment for convenience
         # These are also available in _PY for backward compatibility
         try:
-            from extensions.core import timer_manager, interval_manager
-
-            # Add timer functions to global scope using the actual functions,
-            # not bound methods
-            lua_globals['setTimeout'] = lambda func, ms: timer_manager.setTimeout(
-                func, ms)
-            lua_globals['clearTimeout'] = lambda timer_id: timer_manager.clearTimeout(
-                timer_id)
-            lua_globals['setInterval'] = lambda func, ms: interval_manager.setInterval(
-                func, ms)
-            lua_globals['clearInterval'] = lambda interval_id: interval_manager.clearInterval(
-                interval_id)
+            # Add timer functions to global scope using the coroutine-based system
+            from . import coroutine_manager
+            lua_globals['setTimeout'] = lambda func, ms: coroutine_manager.coroutine_manager_instance.create_timer(func, ms)
+            lua_globals['clearTimeout'] = lambda timer_id: coroutine_manager.coroutine_manager_instance.clear_timer(timer_id)
+            lua_globals['setInterval'] = lambda func, ms: coroutine_manager.coroutine_manager_instance.create_interval(func, ms)
+            lua_globals['clearInterval'] = lambda interval_id: coroutine_manager.coroutine_manager_instance.clear_interval(interval_id)
 
             self.debug_print(
-                "Added timer functions to default Lua environment")
+                "Added timer functions to default Lua environment (using coroutine-based setTimeout)")
         except ImportError:
             # Timer extensions might not be available, that's okay
             self.debug_print("Timer extensions not available")
@@ -574,10 +595,20 @@ class PLuaInterpreter:
     def execute_code(self, lua_code):
         """Execute Lua code string (for -e commands and interactive mode)"""
         try:
+            # Use direct execution for now to avoid coroutine manager issues
+            return self.execute_code_direct(lua_code)
+        except Exception as e:
+            # Get any captured output before the error
+            error_output = self.get_captured_output()
+            error_msg = f"Lua execution error: {e}"
+            if error_output:
+                error_msg = f"{error_output}\n{error_msg}"
+            raise Exception(error_msg)
+
+    def execute_code_direct(self, lua_code):
+        """Execute Lua code directly without coroutine wrapping (for setup code)"""
+        try:
             self.lua_runtime.execute(lua_code, self.lua_runtime.globals())
-            # Don't wait for operations during execution phases
-            # Operations will be waited for after both fragments and main
-            # phases complete
             return True
         except Exception as e:
             # Get any captured output before the error
@@ -590,22 +621,8 @@ class PLuaInterpreter:
     def execute_code_with_filename(self, lua_code, filename):
         """Execute Lua code with filename for proper debugger support"""
         try:
-            # Use Lua's load() function with filename to provide proper source mapping
-            # This allows the debugger to know which file the code belongs to
-            load_code = f"""
-local func, err = load([[\
-{self._escape_lua_string(lua_code)}\
-]], "{filename}", "t", _G)
-if not func then
-  error("Failed to load code: " .. tostring(err))
-end
-func()
-"""
-            self.lua_runtime.execute(load_code, self.lua_runtime.globals())
-            # Don't wait for operations during execution phases
-            # Operations will be waited for after both fragments and main
-            # phases complete
-            return True
+            # Use direct execution for now to avoid coroutine manager issues
+            return self.execute_code_direct(lua_code)
         except Exception as e:
             print(f"Lua execution error: {e}", file=sys.stderr)
             return False
@@ -723,7 +740,7 @@ end
                 except Exception:
                     # If the expression approach fails, try direct execution
                     try:
-                        self.execute_code(line)
+                        self.execute_code_direct(line)
                     except Exception as e2:
                         print(f"Error: {e2}")
 
@@ -737,172 +754,52 @@ end
         # No unregister needed in embedded mode
 
     async def async_execute_code(self, lua_code):
-        """Async wrapper that runs Lua code in a thread"""
-        def execute_in_thread():
-            try:
-                result = self.execute_code(lua_code)
-                return f"Success: {result}"
-            except Exception as e:
-                return f"Error: {str(e)}"
-
-        # Lock the timer execution gate before starting fragments only
+        """Execute Lua code in the main asyncio event loop (no threads)."""
         try:
-            from extensions.core import acquire_timer_gate, set_fragment_executing
-            await acquire_timer_gate()
-            set_fragment_executing(True)  # Mark that fragment execution is starting
+            from . import coroutine_manager
+            return coroutine_manager.coroutine_manager_instance.execute_user_code(lua_code)
         except Exception as e:
             if self.debug:
-                print(
-                    f"DEBUG: Could not acquire timer gate: {e}",
-                    file=sys.stderr)
-
-        # Run in thread to avoid blocking
-        thread = threading.Thread(target=execute_in_thread)
-        thread.start()
-        thread.join()
-
-        # Release the timer gate after fragments are done
-        try:
-            from extensions.core import release_timer_gate
-            await release_timer_gate()
-        except Exception as e:
-            if self.debug:
-                print(
-                    f"DEBUG: Could not release timer gate: {e}",
-                    file=sys.stderr)
-
-        return "Async execution completed"
+                print(f"Error in async_execute_code: {e}", file=sys.stderr)
+            return False
 
     async def async_execute_file(self, filename):
-        """Async wrapper for execute_file that runs in a thread"""
-        import threading
-        import queue
-
-        result_queue = queue.Queue()
-
-        def execute_in_thread():
-            try:
-                # Check if _PY.mainHook is registered
-                try:
-                    main_hook = self.lua_runtime.globals()['_PY']['mainHook']
-                    if main_hook:
-                        # Call the mainHook function with the filename
-                        self.debug_print(
-                            f"Using _PY.mainHook for file '{filename}'")
-                        hook_code = f"_PY.mainHook('{filename}')"
-                        result = self.execute_code(hook_code)
-                        result_queue.put(("success", result))
-                        return
-                except (KeyError, TypeError):
-                    # mainHook doesn't exist or is not callable, proceed with
-                    # normal execution
-                    pass
-
-                # Normal file execution
-                result = self.execute_file(filename)
-                result_queue.put(("success", result))
-            except Exception as e:
-                result_queue.put(("error", str(e)))
-
-        # Start Lua execution in a thread
-        thread = threading.Thread(target=execute_in_thread)
-        thread.start()
-
-        # Wait for completion while allowing event loop to process other tasks
-        while thread.is_alive():
-            await asyncio.sleep(0.01)  # Yield to event loop every 10ms
-
-        # Get the result
-        status, result = result_queue.get()
-        if status == "error":
-            raise Exception(result)
-
-        return result
+        """Async wrapper for execute_file that runs in the main event loop (no threads)"""
+        # Check if _PY.mainHook is registered
+        try:
+            main_hook = self.lua_runtime.globals()['_PY']['mainHook']
+            if main_hook:
+                self.debug_print(f"Using _PY.mainHook for file '{filename}'")
+                hook_code = f"_PY.mainHook('{filename}')"
+                return self.execute_code(hook_code)
+        except (KeyError, TypeError):
+            pass
+        # Normal file execution
+        return self.execute_file(filename)
 
     async def async_execute_all(self, fragments_code, main_file):
-        """Async wrapper that runs all Lua code (fragments + main) in a single task"""
-        import threading
-        import queue
-
-        result_queue = queue.Queue()
-
-        def execute_in_thread():
+        """Async wrapper that runs all Lua code (fragments + main) in a single task in the main event loop"""
+        # Execute fragments first (direct execution, no coroutine wrapping)
+        if fragments_code:
+            fragments_result = self.execute_code_direct(fragments_code)
+            if not fragments_result:
+                raise Exception("Failed to execute fragments")
+        # Then execute main file
+        if main_file:
+            self.lua_runtime.globals()['_PY']['mainfile'] = main_file
             try:
-                # Execute fragments first
-                if fragments_code:
-                    fragments_result = self.execute_code(fragments_code)
-                    if not fragments_result:
-                        result_queue.put(
-                            ("error", "Failed to execute fragments"))
-                        return
-
-                # Then execute main file
-                if main_file:
-                    # Set the mainfile variable in _PY table
-                    self.lua_runtime.globals()['_PY']['mainfile'] = main_file
-
-                    # Check if _PY.mainHook is registered
-                    try:
-                        main_hook = self.lua_runtime.globals()[
-                            '_PY']['mainHook']
-                        if main_hook:
-                            # Call the mainHook function with the filename
-                            self.debug_print(
-                                f"Using _PY.mainHook for file '{main_file}'")
-                            hook_code = f"_PY.mainHook('{main_file}')"
-                            main_result = self.execute_code(hook_code)
-                        else:
-                            # Normal file execution
-                            main_result = self.execute_file(main_file)
-                    except (KeyError, TypeError):
-                        # mainHook doesn't exist or is not callable, proceed
-                        # with normal execution
-                        main_result = self.execute_file(main_file)
-
-                    if not main_result:
-                        result_queue.put(
-                            ("error", "Failed to execute main file"))
-                        return
-
-                result_queue.put(("success", True))
-            except Exception as e:
-                result_queue.put(("error", str(e)))
-
-        # Start Lua execution in a thread
-        thread = threading.Thread(target=execute_in_thread)
-        thread.start()
-
-        # Lock the timer execution gate before starting fragments only
-        try:
-            from extensions.core import acquire_timer_gate, set_fragment_executing
-            await acquire_timer_gate()
-            set_fragment_executing(True)  # Mark that fragment execution is starting
-        except Exception as e:
-            if self.debug:
-                print(
-                    f"DEBUG: Could not acquire timer gate: {e}",
-                    file=sys.stderr)
-
-        # Wait for completion with very frequent yields to allow socket operations
-        while thread.is_alive():
-            await asyncio.sleep(0.0001)  # Yield every 0.1ms for maximum responsiveness
-
-        # Get the result
-        status, result = result_queue.get()
-        if status == "error":
-            raise Exception(result)
-
-        # Release the timer gate after fragments are done
-        try:
-            from extensions.core import release_timer_gate
-            await release_timer_gate()
-        except Exception as e:
-            if self.debug:
-                print(
-                    f"DEBUG: Could not release timer gate: {e}",
-                    file=sys.stderr)
-
-        return result
+                main_hook = self.lua_runtime.globals()['_PY']['mainHook']
+                if main_hook:
+                    self.debug_print(f"Using _PY.mainHook for file '{main_file}'")
+                    hook_code = f"_PY.mainHook('{main_file}')"
+                    main_result = self.execute_code_direct(hook_code)
+                else:
+                    main_result = self.execute_file(main_file)
+            except (KeyError, TypeError):
+                main_result = self.execute_file(main_file)
+            if not main_result:
+                raise Exception("Failed to execute main file")
+        return True
 
     def start_embedded_api_server(self):
         """Start the embedded API server"""

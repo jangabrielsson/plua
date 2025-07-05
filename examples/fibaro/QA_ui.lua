@@ -12,11 +12,11 @@
 --%%u:{multi="multi1",text="Multi",visible=true,values={"1","3"},onToggled="myMulti",options={{type='option',text='Option 1',value='1'},{type='option',text='Option 2',value='2'},{type='option',text='Option 3',value='3'}}}
 
 function QuickApp:turnOn()
-  self:updateProperty('value',true)
+  self:updateProperty('value',99)
 end
 
 function QuickApp:turnOff()
-  self:updateProperty('value',false)
+  self:updateProperty('value',0)
 end
 
 function QuickApp:setValue(value)

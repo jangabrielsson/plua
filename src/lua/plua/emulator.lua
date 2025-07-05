@@ -260,8 +260,14 @@ function Emulator:startQA(id)
   local info = self.DIR[id]
   local env = info.env
   env.setTimeout(function()
-    if env.QuickApp.onInit then
-      env.quickApp = env.QuickApp(info.device)
+    local ok, err = pcall(function()
+      if env.QuickApp and env.QuickApp.onInit then
+        env.quickApp = env.QuickApp(info.device)
+      else
+      end
+    end)
+    if not ok then
+      print("ERROR in setTimeout callback:", err)
     end
   end, 0)
 end

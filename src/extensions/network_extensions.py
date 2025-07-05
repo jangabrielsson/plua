@@ -1592,26 +1592,13 @@ if _http_callback then
     _http_callback(response)
 end
 """
-            # Use the timer execution gate to control when the callback runs
+            # Execute the callback directly
             try:
-                from extensions.core import timer_gate
-
-                def run_callback_and_decrement():
-                    try:
-                        lua_runtime.execute(callback_code)
-                    except Exception as e:
-                        print(f"Error executing HTTP callback: {e}", file=sys.stderr)
-                    finally:
-                        network_manager._decrement_callbacks()
-                timer_gate.run_or_queue(run_callback_and_decrement)
-            except ImportError:
-                # Fallback to direct execution if timer gate is not available
-                try:
-                    lua_runtime.execute(callback_code)
-                except Exception as e:
-                    print(f"Error executing HTTP callback: {e}", file=sys.stderr)
-                finally:
-                    network_manager._decrement_callbacks()
+                lua_runtime.execute(callback_code)
+            except Exception as e:
+                print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+            finally:
+                network_manager._decrement_callbacks()
             return
 
     # If we get here, we have valid request_data and should proceed with the request
@@ -1647,26 +1634,13 @@ if _http_callback then
     _http_callback(response)
 end
 """
-        # Use the timer execution gate to control when the callback runs
+        # Execute the callback directly
         try:
-            from extensions.core import timer_gate
-
-            def run_callback_and_decrement():
-                try:
-                    lua_runtime.execute(callback_code)
-                except Exception as e:
-                    print(f"Error executing HTTP callback: {e}", file=sys.stderr)
-                finally:
-                    network_manager._decrement_callbacks()
-            timer_gate.run_or_queue(run_callback_and_decrement)
-        except ImportError:
-            # Fallback to direct execution if timer gate is not available
-            try:
-                lua_runtime.execute(callback_code)
-            except Exception as e:
-                print(f"Error executing HTTP callback: {e}", file=sys.stderr)
-            finally:
-                network_manager._decrement_callbacks()
+            lua_runtime.execute(callback_code)
+        except Exception as e:
+            print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+        finally:
+            network_manager._decrement_callbacks()
         return
 
     result_queue = queue.Queue()
@@ -1718,26 +1692,13 @@ if _http_callback then
     _http_callback(response)
 end
 """
-        # Use the timer execution gate to control when the callback runs
+        # Execute the callback directly
         try:
-            from extensions.core import timer_gate
-
-            def run_callback_and_decrement():
-                try:
-                    lua_runtime.execute(callback_code)
-                except Exception as e:
-                    print(f"Error executing HTTP callback: {e}", file=sys.stderr)
-                finally:
-                    network_manager._decrement_callbacks()
-            timer_gate.run_or_queue(run_callback_and_decrement)
-        except ImportError:
-            # Fallback to direct execution if timer gate is not available
-            try:
-                lua_runtime.execute(callback_code)
-            except Exception as e:
-                print(f"Error executing HTTP callback: {e}", file=sys.stderr)
-            finally:
-                network_manager._decrement_callbacks()
+            lua_runtime.execute(callback_code)
+        except Exception as e:
+            print(f"Error executing HTTP callback: {e}", file=sys.stderr)
+        finally:
+            network_manager._decrement_callbacks()
     except Exception as e:
         print(f"Error in HTTP request processing: {e}", file=sys.stderr)
         network_manager._decrement_callbacks()

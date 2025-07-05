@@ -21,6 +21,10 @@ A powerful Lua interpreter implemented in Python using the Lupa library. PLua pr
 - **Fibaro HomeCenter 3 Support**: Complete Lua API compatibility for Fibaro HomeCenter 3 development and testing
 - **Web Server**: Independent HTTP server for receiving callbacks and serving status pages
 
+## Documentation
+
+- **[Coroutine Limitations](docs/COROUTINE_LIMITATIONS.md)** - Important information about Lupa coroutine resumption limitations and PLua's workarounds
+
 ## Requirements
 
 - Python 3.12+

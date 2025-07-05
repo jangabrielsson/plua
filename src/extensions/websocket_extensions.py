@@ -6,7 +6,6 @@ Provides WebSocket client functionality compatible with Fibaro HC3 API
 import threading
 import sys
 from .registry import registry
-from extensions.core import timer_gate
 from extensions.network_extensions import loop_manager
 import websockets
 
@@ -95,19 +94,12 @@ class WebSocketConnection:
         if event_name in self.event_listeners:
             for callback in self.event_listeners[event_name]:
                 try:
-                    # Use timer gate to control callback execution
-                    def run_callback():
-                        try:
-                            callback(*args)
-                        except Exception as e:
-                            print(f"Error in WebSocket {event_name} callback: {e}", file=sys.stderr)
-                        finally:
-                            self.manager._decrement_callbacks()
-
                     self.manager._increment_callbacks()
-                    timer_gate.run_or_queue(run_callback)
+                    callback(*args)
                 except Exception as e:
-                    print(f"Error scheduling WebSocket {event_name} callback: {e}", file=sys.stderr)
+                    print(f"Error in WebSocket {event_name} callback: {e}", file=sys.stderr)
+                finally:
+                    self.manager._decrement_callbacks()
 
     def connect(self, url, headers=None):
         """Connect to WebSocket server"""
@@ -341,17 +333,12 @@ class WebSocketServer:
         if event_name in self.event_listeners:
             for callback in self.event_listeners[event_name]:
                 try:
-                    def run_callback():
-                        try:
-                            callback(*args)
-                        except Exception as e:
-                            print(f"Error in WebSocketServer {event_name} callback: {e}", file=sys.stderr)
-                        finally:
-                            self.manager._decrement_callbacks()
                     self.manager._increment_callbacks()
-                    timer_gate.run_or_queue(run_callback)
+                    callback(*args)
                 except Exception as e:
-                    print(f"Error scheduling WebSocketServer {event_name} callback: {e}", file=sys.stderr)
+                    print(f"Error in WebSocketServer {event_name} callback: {e}", file=sys.stderr)
+                finally:
+                    self.manager._decrement_callbacks()
 
     async def _handler(self, websocket, path):
         self.clients.add(websocket)

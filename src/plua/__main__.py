@@ -104,7 +104,7 @@ local mobdebug = require("mobdebug")
 mobdebug.start('0.0.0.0', {debugger_port})
 print("<font color='blue'>MobDebug server</font> <font color='yellow'>started on:</font> <font color='white'>0.0.0.0:{debugger_port}</font>")
 """
-                interpreter.execute_code(mobdebug_code)
+                interpreter.execute_code_direct(mobdebug_code)
             except Exception as e:
                 print(f"Failed to start MobDebug: {e}", file=sys.stderr)
                 sys.exit(1)

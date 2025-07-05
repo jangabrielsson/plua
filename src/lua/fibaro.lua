@@ -50,9 +50,13 @@ local function printError(func)
   return function(filename)
     local ok,err = pcall(func,filename)
     if not ok then
-      err = err:match("^.-qa_mgr%.lua:%d+:(.*)") or err
-      local msg = err:match("^.-](:%d+:.*)$")
-      if msg then err = filename..msg end
+      print(err)
+      err = type(err) == "string" and err or tostring(err)
+      if type(err) == "string" then
+        err = err:match("^.-qa_mgr%.lua:%d+:(.*)") or err
+        local msg = err:match("^.-](:%d+:.*)$")
+        if msg then err = filename..msg end
+      end
       Emu:ERROR(err)
     end
   end

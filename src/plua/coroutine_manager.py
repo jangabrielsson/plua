@@ -18,26 +18,26 @@ import asyncio
 
 
 class CoroutineManager:
-    """Manages Lua coroutine execution with pure Lua-based timer system"""
+    """Manages Lua coroutine execution with simplified Python-based callback system"""
 
     def __init__(self, lua_runtime: lupa.LuaRuntime, debug: bool = False):
         self.lua_runtime = lua_runtime
         self.timers = {}  # timer_id -> timer_handle
         self.intervals = {}  # interval_id -> interval_handle
+        self.callback_queue = []  # Python list for queued callbacks
+        self.callback_semaphore = asyncio.Semaphore(0)  # Semaphore to wake up callback loop
         self.next_id = 1
         self.main_coroutine = None  # Reference to the main coroutine
         self.lock = threading.Lock()
         self.debug = debug
-        self._setup_lua_environment()
+        # Note: _setup_lua_environment() will be called explicitly after Python functions are exposed
 
     def set_main_coroutine(self, main_co):
         """Set the main coroutine that should be resumed by timers"""
         self.main_coroutine = main_co
         # Also set it in Lua
         try:
-            self.lua_runtime.globals()["__temp_main_co"] = main_co
-            self.lua_runtime.execute("_PY.setMainCoroutine(__temp_main_co)")
-            self.lua_runtime.globals()["__temp_main_co"] = None
+            self.lua_runtime.globals()["__main_coroutine"] = main_co
         except Exception as e:
             if self.debug:
                 print(f"[TIMER DEBUG] Failed to set main coroutine in Lua: {e}", file=sys.stderr)
@@ -46,58 +46,72 @@ class CoroutineManager:
         setup_code = """
         _PY = _PY or {}
         
-        print('[LUA DEBUG] Setting up timer system...')
-        
-        -- Timer system using Python callbacks with queue-based approach
+        -- Timer system using Python callbacks with closure storage in Lua
         _PY.timer_id = 1
-        _PY.callback_queue = {}
+        _PY.callbacks = {}  -- Store closures in Lua
+        _PY._interval_ids = {}  -- Track which callbacks are intervals
         
         function _PY.setTimeout(fun, ms)
             local timer_id = _PY.timer_id
             _PY.timer_id = _PY.timer_id + 1
-            pythonTimer(fun, ms, timer_id)
+            
+            -- Store the closure in Lua
+            _PY.callbacks[timer_id] = fun
+            
+            -- Pass only the timer_id to Python
+            pythonTimer(timer_id, ms, timer_id)
             return timer_id
         end
         
         function _PY.setInterval(fun, ms)
             local interval_id = _PY.timer_id
             _PY.timer_id = _PY.timer_id + 1
-            pythonSetInterval(fun, ms, interval_id)
+            
+            -- Store the closure in Lua
+            _PY.callbacks[interval_id] = fun
+            -- Mark this as an interval
+            _PY._interval_ids[interval_id] = true
+            
+            -- Pass only the interval_id to Python
+            pythonSetInterval(interval_id, ms, interval_id)
             return interval_id
         end
         
         function _PY.clearTimeout(timer_id)
+            -- Remove the callback from Lua storage
+            _PY.callbacks[timer_id] = nil
             return pythonClearTimer(timer_id)
         end
         
         function _PY.clearInterval(interval_id)
+            -- Remove the callback from Lua storage
+            _PY.callbacks[interval_id] = nil
+            -- Remove from interval tracking
+            _PY._interval_ids[interval_id] = nil
             return pythonClearInterval(interval_id)
         end
         
         function _PY.sleep(seconds)
-            local co = coroutine.running()
-            if not co then
-                error("_PY.sleep can only be called from within a coroutine")
+            -- Use a blocking sleep that doesn't require coroutines
+            -- This is simpler and works in all contexts
+            local start_time = os.time()
+            while os.time() - start_time < seconds do
+                -- Small delay to avoid busy waiting
+                os.execute("sleep 0.1")
             end
-            -- Use a simple timer that just resumes the coroutine
-            pythonTimer(function()
-                coroutine.resume(co)
-            end, seconds * 1000, -1)  -- -1 for sleep timers
-            coroutine.yield()
         end
         
-        function _PY.runCallbacks()
-            -- Process all queued callbacks
-            while #_PY.callback_queue > 0 do
-                local callback = table.remove(_PY.callback_queue, 1)
-                local ok, err = pcall(callback)
-                if not ok then
-                    print("Error in callback:", err)
+        -- Function to execute a callback by ID (called from Python)
+        function _PY.executeCallback(callback_id)
+            local callback = _PY.callbacks[callback_id]
+            if callback then
+                callback()
+                -- Remove the callback after execution only for timers (not intervals)
+                if callback_id > 0 and not _PY._interval_ids[callback_id] then  -- Not a sleep timer and not an interval
+                    _PY.callbacks[callback_id] = nil
                 end
             end
         end
-        
-        print('[LUA DEBUG] Timer system setup complete')
         """
         try:
             self.lua_runtime.execute(setup_code)
@@ -191,22 +205,30 @@ class CoroutineManager:
             raise RuntimeError(f"Failed to execute user code: {e}") from e
 
     def process_callbacks(self):
-        """Process any pending operations (kept for compatibility)"""
-        # Process any queued callbacks in Lua
-        try:
-            self.lua_runtime.execute("_PY.runCallbacks()")
-        except Exception as e:
-            if self.debug:
-                print(f"[TIMER DEBUG] Failed to process callbacks: {e}", file=sys.stderr)
+        """Process all queued callbacks in Lua context"""
+        with self.lock:
+            if not self.callback_queue:
+                return
+            
+            # Get all callbacks to process
+            callbacks_to_process = self.callback_queue.copy()
+            self.callback_queue.clear()
+        
+        # Process all callbacks in Lua context
+        for callback_id in callbacks_to_process:
+            try:
+                self.lua_runtime.execute(f"_PY.executeCallback({callback_id})")
+            except Exception as e:
+                print(f"[PY ERROR] Exception executing callback ID {callback_id}: {e}")
+                import traceback
+                traceback.print_exc()
 
 
 # Expose to Lua
 coroutine_manager_instance = None
 
 
-def pythonTimer(lua_function, delay_ms, timer_id):
-    loop = asyncio.get_event_loop()
-
+def pythonTimer(callback_id, delay_ms, timer_id):
     def queue_callback():
         global coroutine_manager_instance
         if coroutine_manager_instance:
@@ -215,17 +237,24 @@ def pythonTimer(lua_function, delay_ms, timer_id):
                 if timer_id in coroutine_manager_instance.timers:
                     del coroutine_manager_instance.timers[timer_id]
                 
-                # Queue the callback instead of calling it directly
-                coroutine_manager_instance.lua_runtime.execute("""
-                    table.insert(_PY.callback_queue, __temp_callback_function)
-                """)
+                # Queue the callback ID for execution in Lua
+                with coroutine_manager_instance.lock:
+                    coroutine_manager_instance.callback_queue.append(callback_id)
+                
+                # Wake up the callback loop
+                coroutine_manager_instance.callback_semaphore.release()
             except Exception as e:
                 print(f"Error in timer callback: {e}")
+                import traceback
+                traceback.print_exc()
 
-    # Store the function in Lua for the callback
-    coroutine_manager_instance.lua_runtime.globals()["__temp_callback_function"] = lua_function
-    
-    handle = loop.call_later(delay_ms / 1000.0, queue_callback)
+    # Use asyncio.create_task with asyncio.sleep instead of loop.call_later
+    # This ensures the callback is queued properly and doesn't execute immediately
+    async def delayed_callback():
+        await asyncio.sleep(delay_ms / 1000.0)
+        queue_callback()
+
+    handle = asyncio.create_task(delayed_callback())
     
     # Track the timer handle if it's not a sleep timer (timer_id != -1)
     if timer_id != -1 and coroutine_manager_instance:
@@ -241,8 +270,7 @@ def pythonClearTimer(timer_id):
     return coroutine_manager_instance.clear_timer(timer_id)
 
 
-def pythonSetInterval(lua_function, delay_ms, interval_id):
-    loop = asyncio.get_event_loop()
+def pythonSetInterval(callback_id, delay_ms, interval_id):
 
     def queue_callback():
         global coroutine_manager_instance
@@ -252,23 +280,33 @@ def pythonSetInterval(lua_function, delay_ms, interval_id):
                 if interval_id not in coroutine_manager_instance.intervals:
                     return  # Interval was cleared, don't execute or reschedule
                 
-                # Queue the callback instead of calling it directly
-                coroutine_manager_instance.lua_runtime.execute("""
-                    table.insert(_PY.callback_queue, __temp_interval_callback_function)
-                """)
+                # Queue the callback ID for execution in Lua
+                with coroutine_manager_instance.lock:
+                    coroutine_manager_instance.callback_queue.append(callback_id)
+                
+                # Wake up the callback loop
+                coroutine_manager_instance.callback_semaphore.release()
             except Exception as e:
                 print(f"Error in interval callback: {e}")
             
             # Only schedule the next interval if this interval is still active
             if coroutine_manager_instance and interval_id in coroutine_manager_instance.intervals:
-                handle = loop.call_later(delay_ms / 1000.0, queue_callback)
+                # Schedule the next interval using asyncio.create_task
+                async def next_interval():
+                    await asyncio.sleep(delay_ms / 1000.0)
+                    queue_callback()
+                
+                handle = asyncio.create_task(next_interval())
                 # Update the handle in tracking
                 coroutine_manager_instance.intervals[interval_id] = handle
 
-    # Store the function in Lua for the callback
-    coroutine_manager_instance.lua_runtime.globals()["__temp_interval_callback_function"] = lua_function
-    
-    handle = loop.call_later(delay_ms / 1000.0, queue_callback)
+    # Use asyncio.create_task with asyncio.sleep instead of loop.call_later
+    # This ensures the callback is queued properly and doesn't execute immediately
+    async def delayed_callback():
+        await asyncio.sleep(delay_ms / 1000.0)
+        queue_callback()
+
+    handle = asyncio.create_task(delayed_callback())
     
     # Track the interval handle
     if coroutine_manager_instance:

@@ -294,11 +294,57 @@ class PLuaInterpreter:
         self.embedded_api_server = None
         self.main_coroutine = None  # Store the main coroutine object
         self.callback_loop_task = None  # Task for the callback processing loop
+        self.lua_busy = False  # Guard flag to prevent re-entrancy
 
         self.debug_print(
             f"PLuaInterpreter constructor called with start_api_server={start_api_server}")
 
+        # Initialize coroutine manager and timer system FIRST
+        from . import coroutine_manager
+        coroutine_manager.coroutine_manager_instance = CoroutineManager(self.lua_runtime, debug=self.debug)
+        
+        # Expose Python timer functions to Lua
+        self.lua_runtime.globals()["pythonTimer"] = coroutine_manager.pythonTimer
+        self.lua_runtime.globals()["pythonClearTimer"] = coroutine_manager.pythonClearTimer
+        self.lua_runtime.globals()["pythonSetInterval"] = coroutine_manager.pythonSetInterval
+        self.lua_runtime.globals()["pythonClearInterval"] = coroutine_manager.pythonClearInterval
+        
+        # Initialize _PY table and timer_id before any Lua code is loaded
+        self.lua_runtime.globals()["_PY"] = {}
+        self.lua_runtime.execute("_PY.timer_id = 1")
+        self.lua_runtime.execute("_PY.callbacks = {}")
+        
+        # Now set up the Lua environment (after Python functions are exposed)
+        coroutine_manager.coroutine_manager_instance._setup_lua_environment()
+
+        # Set up global timer functions immediately after timer system is initialized
+        try:
+            lua_globals = self.lua_runtime.globals()
+            lua_globals['setTimeout'] = lua_globals['_PY']['setTimeout']
+            lua_globals['clearTimeout'] = lua_globals['_PY']['clearTimeout']
+            lua_globals['setInterval'] = lua_globals['_PY']['setInterval']
+            lua_globals['clearInterval'] = lua_globals['_PY']['clearInterval']
+            self.debug_print("Added global timer functions (early)")
+        except Exception as e:
+            self.debug_print(f"Failed to add global timer functions (early): {e}")
+
+        # Start the callback processing loop
+        self._start_callback_loop()
+
+        # Now set up the rest of the Lua environment
         self.setup_lua_environment()
+
+        # RE-INJECT coroutine manager's timer system after all extensions are loaded
+        coroutine_manager.coroutine_manager_instance._setup_lua_environment()
+        try:
+            lua_globals = self.lua_runtime.globals()
+            lua_globals['setTimeout'] = lua_globals['_PY']['setTimeout']
+            lua_globals['clearTimeout'] = lua_globals['_PY']['clearTimeout']
+            lua_globals['setInterval'] = lua_globals['_PY']['setInterval']
+            lua_globals['clearInterval'] = lua_globals['_PY']['clearInterval']
+            self.debug_print("Re-injected global timer functions after extension loading")
+        except Exception as e:
+            self.debug_print(f"Failed to re-inject global timer functions: {e}")
 
         # Start embedded API server if requested
         if start_api_server:
@@ -335,38 +381,33 @@ class PLuaInterpreter:
                         )
             sys.stdout.flush()
 
-        # Initialize the seamless coroutine/timer manager and register Python functions
-        from . import coroutine_manager
-        coroutine_manager.coroutine_manager_instance = CoroutineManager(self.lua_runtime, debug=self.debug)
-        self.lua_runtime.globals()["pythonTimer"] = coroutine_manager.pythonTimer
-        self.lua_runtime.globals()["pythonClearTimer"] = coroutine_manager.pythonClearTimer
-        self.lua_runtime.globals()["pythonSetInterval"] = coroutine_manager.pythonSetInterval
-        self.lua_runtime.globals()["pythonClearInterval"] = coroutine_manager.pythonClearInterval
-
-        # Start the callback processing loop
-        self._start_callback_loop()
-
     def _start_callback_loop(self):
-        """Start the asyncio task that continuously processes Lua callbacks"""
+        """Start the asyncio task that processes Lua callbacks when available"""
         async def callback_loop():
             while True:
                 try:
-                    # Process any queued callbacks in Lua
                     from . import coroutine_manager
                     if coroutine_manager.coroutine_manager_instance:
-                        coroutine_manager.coroutine_manager_instance.process_callbacks()
-                    await asyncio.sleep(0.01)  # 10ms
+                        await coroutine_manager.coroutine_manager_instance.callback_semaphore.acquire()
+                        if self.lua_busy:
+                            print("[GUARD] Attempted to call _PY.process_callbacks while Lua is busy!", flush=True)
+                        else:
+                            self.lua_busy = True
+                            try:
+                                coroutine_manager.coroutine_manager_instance.process_callbacks()
+                            finally:
+                                self.lua_busy = False
                 except Exception as e:
-                    if self.debug:
-                        print(f"Error in callback loop: {e}", file=sys.stderr)
-                    await asyncio.sleep(0.1)  # Longer delay on error
+                    print(f"[PY ERROR] Exception in callback loop: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    await asyncio.sleep(0.1)
 
         # Start the callback loop as a background task
         try:
             loop = asyncio.get_event_loop()
             self.callback_loop_task = loop.create_task(callback_loop())
         except RuntimeError:
-            # No event loop running, create one
             self.callback_loop_task = asyncio.create_task(callback_loop())
 
     def debug_print(self, message):
@@ -488,18 +529,17 @@ class PLuaInterpreter:
         # Add timer functions to the default Lua environment for convenience
         # These are also available in _PY for backward compatibility
         try:
-            # Add timer functions to global scope using the coroutine-based system
-            from . import coroutine_manager
-            lua_globals['setTimeout'] = lambda func, ms: coroutine_manager.coroutine_manager_instance.create_timer(func, ms)
-            lua_globals['clearTimeout'] = lambda timer_id: coroutine_manager.coroutine_manager_instance.clear_timer(timer_id)
-            lua_globals['setInterval'] = lambda func, ms: coroutine_manager.coroutine_manager_instance.create_interval(func, ms)
-            lua_globals['clearInterval'] = lambda interval_id: coroutine_manager.coroutine_manager_instance.clear_interval(interval_id)
+            # Add timer functions to global scope - directly call the Lua functions
+            lua_globals['setTimeout'] = lua_globals['_PY']['setTimeout']
+            lua_globals['clearTimeout'] = lua_globals['_PY']['clearTimeout']
+            lua_globals['setInterval'] = lua_globals['_PY']['setInterval']
+            lua_globals['clearInterval'] = lua_globals['_PY']['clearInterval']
 
             self.debug_print(
-                "Added timer functions to default Lua environment (using coroutine-based setTimeout)")
-        except ImportError:
+                "Added timer functions to default Lua environment (using _PY functions)")
+        except Exception as e:
             # Timer extensions might not be available, that's okay
-            self.debug_print("Timer extensions not available")
+            self.debug_print(f"Timer extensions not available: {e}")
 
         # Add some standard Python functions that might be helpful
         # Note: Lua's native print function is already available
@@ -611,6 +651,7 @@ class PLuaInterpreter:
             self.lua_runtime.execute(lua_code, self.lua_runtime.globals())
             return True
         except Exception as e:
+            print("PYTHON EXCEPTION:", repr(e), file=sys.stderr)
             # Get any captured output before the error
             error_output = self.get_captured_output()
             error_msg = f"Lua execution error: {e}"

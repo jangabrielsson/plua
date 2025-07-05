@@ -39,7 +39,9 @@ function Emulator:__init(plua)
   
   self.lib.loadLib("utils",self)
   function print(...) plua.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "DEBUG") end
-  function printErr(...) plua.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "ERROR") end
+  function printErr(...) 
+    plua.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "ERROR") 
+  end
   self.lib.loadLib("fibaro_api",self)
   self.lib.loadLib("tools",self)
   self.lib.ui = self.lib.loadLib("ui",self)

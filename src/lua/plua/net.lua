@@ -661,7 +661,7 @@ function net.WebSocketEchoServer(host,port,debugFlag)
   end
   
   server:start(host, port, {
-    receieve = function(client, msg)
+    receive = function(client, msg)
       debug("Received from client: %s", msg)
       server:send(client, "Echo "..msg)
     end,

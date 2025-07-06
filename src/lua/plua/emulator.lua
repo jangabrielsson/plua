@@ -37,6 +37,7 @@ function Emulator:__init(plua)
   function hc3api.delete(path) return self:HC3_CALL("DELETE", path) end
   self.api.hc3 = hc3api
   
+  self.tempDir = _PY.create_temp_directory("plua")
   self.lib.loadLib("utils",self)
   function print(...) plua.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "DEBUG") end
   function printErr(...) 
@@ -85,7 +86,7 @@ function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number"
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
 function headerKeys.save(str,info) info.save = str end
 function headerKeys.project(str,info,k) info.project = validate(str,"boolean",k) end
-function headerKeys.interfaces(str,info) info.interfaces = str end
+function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
 function headerKeys.var(str,info,k) 
   local name,value = str:match("^([%w_]+)%s*=%s*(.+)$")
   assert(name,"Invalid var header: "..str)
@@ -211,6 +212,7 @@ function Emulator:createInfoFromContent(filename,content)
     dev.enabled = true
     dev.visible = true
     info.device = dev
+    dev.interfaces = headers.interfaces or {}
   end
 
   local dev = info.device
@@ -258,13 +260,21 @@ function Emulator:createInfoFromFile(filename)
   return self:createInfoFromContent(filename,content)
 end
 
+function Emulator:saveQA(fname,id)
+  local info = self.DIR[id]
+  local fqa = self.lib.getFQA(id)
+  self.lib.writeFile(fname,json.encode(fqa))
+  self:INFO("Saved QA to",fname)
+end
+
 function Emulator:startQA(id)
   local info = self.DIR[id]
+  if info.headers.save then self:saveQA(info.headers.save ,id) end
   local env = info.env
   env.setTimeout(function()
     local ok, err = pcall(function()
       if env.QuickApp and env.QuickApp.onInit then
-        env.quickApp = env.QuickApp(info.device)
+        env.quickApp = coroutine.wrap(function() env.QuickApp(info.device) end)()
       else
       end
     end)
@@ -352,9 +362,18 @@ end
 
 function Emulator:loadMainFile(filename)
   if _PY.args.task then return self:runTask(_PY.args.task,filename) end
-  if not (filename and filename:match("%.lua$")) then 
-    self:ERROR("Invalid filename: "..filename)
-    return false 
+  if not filename then self:ERROR("No filename provided") return false end
+  if filename:match("%.lua$") then 
+    -- OK
+  elseif filename:match("%.fqa$") then
+    -- Unpack fqa file into temp directory, and run it.
+    local fqaStr = self.lib.readFile(filename)
+    assert(fqaStr,"Can' read file "..filename)
+    local fqa = json.decode(fqaStr)
+    filename = self.lib.unpackFQAAux(nil,fqa,self.tempDir)
+  else
+    self:ERROR("Invalid file type: "..filename)
+    return false
   end
   
   local info = self:createInfoFromFile(filename)

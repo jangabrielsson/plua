@@ -12,6 +12,7 @@ import os
 import base64
 import re
 import asyncio
+import tempfile
 from extensions.network_extensions import loop_manager
 import requests
 from datetime import datetime
@@ -419,6 +420,36 @@ def create_directory(path):
     except OSError as e:
         print(f"Error creating directory '{path}': {e}", file=sys.stderr)
         return False
+
+
+@registry.register(description="Create a temporary directory with specified name", category="filesystem")
+def create_temp_directory(name):
+    """Create a temporary directory with the specified name in the OS temp directory
+    
+    Args:
+        name: Name of the directory to create
+        
+    Returns:
+        str: Full path to the created temporary directory, or None on error
+        
+    Examples:
+        - On macOS: /var/tmp/myapp/
+        - On Windows: C:/Users/<user>/AppData/Local/Temp/myapp/
+    """
+    try:
+        # Get the system temp directory
+        temp_dir = tempfile.gettempdir()
+        
+        # Create the full path for the temporary directory
+        temp_path = os.path.join(temp_dir, name)
+        
+        # Create the directory (and parent directories if needed)
+        os.makedirs(temp_path, exist_ok=True)
+        
+        return temp_path
+    except OSError as e:
+        print(f"Error creating temporary directory '{name}': {e}", file=sys.stderr)
+        return None
 
 
 # Network functions

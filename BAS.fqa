@@ -1,7 +1,0 @@
-{"type":"com.fibaro.binarySwitch","apiVersion":"1.3","files":[{"content":"--%%name:Basic
---%%type:com.fibaro.binarySwitch
-
-function QuickApp:onInit()
-  self:debug(self.name,self.id)
-end
-","isMain":true,"isOpen":false,"name":"main"}],"initialInterfaces":["autoTurnOff","light","quickApp"],"initialProperties":{"apiVersion":"1.3","buildNumber":1,"deviceRole":"Light","quickAppVariables":[],"typeTemplateInitialized":true,"uiView":[],"useEmbededView":true,"useUiView":true,"userDescription":"","viewLayout":{"$jason":{"body":{"header":{"style":{"height":"0"},"title":"quickApp_device_57"},"sections":{"items":[]}},"head":{"title":"quickApp_device_57"}}}},"name":"Basic"}

@@ -5,7 +5,7 @@ local fmt = string.format
 local fileNum = 0
 local function createTempName(suffix)
   fileNum = fileNum + 1
-  return os.date("hc3emu%M%M")..fileNum..suffix
+  return os.date("plua%M%M")..fileNum..suffix
 end
 
 local function printBuff()
@@ -141,7 +141,7 @@ end
 
 local saveProject
 local function unpackFQAAux(id,fqa,path) -- Unpack fqa and save it to disk
-  local sep = Emu.config.fileSeparator
+  local sep = "/"
   assert(type(path) == "string", "path must be a string")
   local fname = ""
   fqa = fqa or Emu.api.hc3.get("/quickApp/export/"..id) 
@@ -172,27 +172,28 @@ local function unpackFQAAux(id,fqa,path) -- Unpack fqa and save it to disk
   mainContent = mainContent:gsub("(%-%-%%%%.-\n)","") -- Remove old directives
   
   local pr = printBuff()
-  pr:printf('if require and not QuickApp then require("hc3emu") end')
-  pr:printf('--%%%%name=%s',name)
-  pr:printf('--%%%%type=%s',typ)
-  if ifs then pr:printf('--%%%%interfaces=%s',json.encode(ifs):gsub('.',{['[']='{', [']']='}'})) end
+  pr:printf('--%%%%name:%s',name)
+  pr:printf('--%%%%type:%s',typ)
+  if ifs then pr:printf('--%%%%interfaces:%s',json.encode(ifs):gsub('.',{['[']='{', [']']='}'})) end
   
   local qvars = props.quickAppVariables or {}
   for _,v in ipairs(qvars) do
-    pr:printf('--%%%%var=%s:%s',v.name,type(v.value)=='string' and '"'..v.value..'"' or v.value)
+    pr:printf('--%%%%var:%s=%s',v.name,type(v.value)=='string' and '"'..v.value..'"' or v.value)
   end
-  pr:printf('--%%%%project=%s',id)
-  if props.quickAppUuid then pr:printf('--%%%%uid=%s',props.quickAppUuid) end
-  if props.model then pr:printf('--%%%%model=%s',props.model) end
-  if props.manufacturer then pr:printf('--%%%%manufacturer=%s',props.manufacturer) end
-  if props.deviceRole then pr:printf('--%%%%role=%s',props.deviceRole) end
-  if props.userDescription then pr:printf('--%%%%description=%s',props.userDescription) end
+  if id then pr:printf('--%%%%project:%s',id) end
+  if props.quickAppUuid then pr:printf('--%%%%uid:%s',props.quickAppUuid) end
+  if props.model then pr:printf('--%%%%model:%s',props.model) end
+  if props.manufacturer then pr:printf('--%%%%manufacturer:%s',props.manufacturer) end
+  if props.deviceRole then pr:printf('--%%%%role:%s',props.deviceRole) end
+  if props.userDescription and props.userDescription ~= "" then 
+    pr:printf('--%%%%description:%s',props.userDescription)
+  end
   
   local savedFiles = {}
   for _,f in ipairs(files) do
     local fn = path..fname.."_"..f.name..".lua"
     Emu.lib.writeFile(fn,f.content)
-    pr:printf("--%%%%file=%s:%s",fn,f.name)
+    pr:printf("--%%%%file:%s,%s",fn,f.name)
     savedFiles[#savedFiles+1] = {name=f.name, fname=fn}
   end
   
@@ -204,14 +205,16 @@ local function unpackFQAAux(id,fqa,path) -- Unpack fqa and save it to disk
     Emu.lib.ui.dumpUI(UIstruct,function(str) UI = str end)
   end
   UI = UI:match(".-\n(.*)") or ""
-  pr:print(UI)
+  if UI ~= "" then pr:print(UI) end
   
   pr:print("")
-  pr:print(mainContent)
+  if mainContent ~= "" then pr:print(mainContent) end
   local mainFilePath = path..fname..".lua"
-  Emu.lib.writeFile(mainFilePath,pr:tostring())
+  local content = pr:tostring()
+  print(content)
+  Emu.lib.writeFile(mainFilePath,content)
   savedFiles[#savedFiles+1] = {name='main', fname=mainFilePath}
-  saveProject(id,{files=savedFiles},path) -- Save project file
+  if id then saveProject(id,{files=savedFiles},path) end -- Save project file
   return mainFilePath
 end
 
@@ -430,6 +433,7 @@ Emu.lib.getFQA = getFQA
 Emu.lib.saveQA = saveQA
 Emu.lib.loadQA = loadQA
 Emu.lib.downloadFQA = downloadFQA
+Emu.lib.unpackFQAAux = unpackFQAAux
 Emu.lib.saveProject = saveProject
 Emu.lib.updateQA = updateQA
 Emu.lib.updateFile = updateFile

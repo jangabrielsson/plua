@@ -59,8 +59,8 @@ test_build() {
 # Test all builds
 echo "Testing builds..."
 
-# Test macOS Intel build
-test_build "macos-intel" "scripts/build_macos_intel.py" "macOS Intel Build"
+# Test macOS Universal build (works on both Intel and Apple Silicon)
+test_build "macos-universal" "scripts/build.py" "macOS Universal Build"
 
 # Test macOS Apple Silicon build (if on Apple Silicon)
 if [ "$(uname -m)" = "arm64" ]; then

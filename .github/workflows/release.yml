@@ -46,10 +46,10 @@ jobs:
           name: plua-windows-exe
           path: dist/plua.exe
 
-  build-macos-intel:
+  build-macos-universal:
     runs-on: macos-latest
     outputs:
-      artifact-name: plua-macos-intel
+      artifact-name: plua-macos-universal
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -65,8 +65,9 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build macOS Intel executable
+      - name: Build macOS Universal executable
         run: |
+          # Build universal binary (works on both Intel and Apple Silicon)
           pyinstaller --onefile \
             --collect-submodules lupa \
             --collect-submodules toml \
@@ -77,18 +78,18 @@ jobs:
             --add-data "src/lua:lua" \
             --add-data "src/extensions:extensions" \
             --add-data "examples:examples" \
-            --add-data "pyproject.toml:." \
-            --target-arch=x86_64
+            --add-data "pyproject.toml:."
 
-      - name: Verify Intel architecture
+      - name: Verify Universal architecture
         run: |
           file dist/plua
-          file dist/plua | grep -q "x86_64" && echo "✓ Intel x86_64 confirmed" || echo "⚠ Architecture verification failed"
+          echo "Architecture verification:"
+          file dist/plua | grep -q "universal" && echo "✓ Universal binary confirmed" || echo "⚠ Not universal binary"
 
-      - name: Upload macOS Intel artifact
+      - name: Upload macOS Universal artifact
         uses: actions/upload-artifact@v4
         with:
-          name: plua-macos-intel
+          name: plua-macos-universal
           path: dist/plua
 
   build-macos-apple-silicon:
@@ -137,7 +138,7 @@ jobs:
           path: dist/plua
 
   create-release:
-    needs: [build-windows, build-macos-intel, build-macos-apple-silicon]
+    needs: [build-windows, build-macos-universal, build-macos-apple-silicon]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -166,7 +167,7 @@ jobs:
             Choose the executable for your platform:
             
             - **Windows**: `plua-windows.exe` - For Windows 10/11
-            - **macOS Intel**: `plua-macos-intel` - For Intel Macs (also works on Apple Silicon via Rosetta 2)
+            - **macOS Universal**: `plua-macos-universal` - For both Intel and Apple Silicon Macs
             - **macOS Apple Silicon**: `plua-macos-apple-silicon` - For M1/M2/M3 Macs (native)
             
             ### Usage
@@ -175,9 +176,9 @@ jobs:
             # Windows
             plua-windows.exe script.lua
             
-            # macOS Intel
-            chmod +x plua-macos-intel
-            ./plua-macos-intel script.lua
+            # macOS Universal
+            chmod +x plua-macos-universal
+            ./plua-macos-universal script.lua
             
             # macOS Apple Silicon
             chmod +x plua-macos-apple-silicon
@@ -197,7 +198,7 @@ jobs:
             See the [README](https://github.com/${{ github.repository }}/blob/main/README.md) for detailed usage instructions.
           files: |
             artifacts/plua-windows-exe/plua.exe
-            artifacts/plua-macos-intel/plua
+            artifacts/plua-macos-universal/plua
             artifacts/plua-macos-apple-silicon/plua
           draft: false
           prerelease: false

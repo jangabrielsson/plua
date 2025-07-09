@@ -63,7 +63,6 @@ Download the latest release from [GitHub Releases](https://github.com/jangabriel
 **Available platforms:**
 - **Windows**: `plua-windows.exe` - For Windows 10/11
 - **macOS Universal**: `plua-macos-universal` - For both Intel and Apple Silicon Macs
-- **macOS Apple Silicon**: `plua-macos-apple-silicon` - For M1/M2/M3 Macs (native)
 
 ### Usage
 
@@ -74,10 +73,6 @@ plua-windows.exe script.lua
 # macOS Universal
 chmod +x plua-macos-universal
 ./plua-macos-universal script.lua
-
-# macOS Apple Silicon
-chmod +x plua-macos-apple-silicon
-./plua-macos-apple-silicon script.lua
 ```
 
 ### All Releases

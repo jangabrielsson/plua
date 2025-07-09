@@ -482,6 +482,80 @@ net.QoS = {
     EXACTLY_ONCE = 2,
 }
 
+-- Synchronous TCP Functions (for coroutine-based programming)
+-- These functions work with coroutines to provide synchronous-looking async operations
+
+function net.tcp_connect_sync(host, port)
+  local co = coroutine.running()
+  if not co then
+    error("net.tcp_connect_sync must be called from within a coroutine")
+  end
+  
+  _PY.tcp_connect(host, port, function(success, conn_id, message)
+    coroutine.resume(co, success, conn_id, message)
+  end)
+  
+  return coroutine.yield()
+end
+
+function net.tcp_write_sync(conn_id, data)
+  local co = coroutine.running()
+  if not co then
+    error("net.tcp_write_sync must be called from within a coroutine")
+  end
+  
+  _PY.tcp_write(conn_id, data, function(success, bytes_written, message)
+    coroutine.resume(co, success, bytes_written, message)
+  end)
+  
+  return coroutine.yield()
+end
+
+function net.tcp_read_sync(conn_id, pattern)
+  local co = coroutine.running()
+  if not co then
+    error("net.tcp_read_sync must be called from within a coroutine")
+  end
+  
+  _PY.tcp_read(conn_id, pattern, function(success, data, message)
+    coroutine.resume(co, success, data, message)
+  end)
+  
+  return coroutine.yield()
+end
+
+function net.tcp_close_sync(conn_id)
+  local co = coroutine.running()
+  if not co then
+    error("net.tcp_close_sync must be called from within a coroutine")
+  end
+  
+  _PY.tcp_close(conn_id, function(success, message)
+    coroutine.resume(co, success, message)
+  end)
+  
+  return coroutine.yield()
+end
+
+-- Alternative: Direct synchronous functions (blocking, no coroutines needed)
+-- These use the Python synchronous TCP functions directly
+
+function net.tcp_connect_direct(host, port)
+  return _PY.tcp_connect_sync(host, port)
+end
+
+function net.tcp_write_direct(conn_id, data)
+  return _PY.tcp_write_sync(conn_id, data)
+end
+
+function net.tcp_read_direct(conn_id, pattern)
+  return _PY.tcp_read_sync(conn_id, pattern)
+end
+
+function net.tcp_close_direct(conn_id)
+  return _PY.tcp_close_sync(conn_id)
+end
+
 -------------------- Extra net utilities, not standard Fibaro ------------------
 -- Create TCP server
 

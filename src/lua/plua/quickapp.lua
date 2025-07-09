@@ -39,10 +39,17 @@ local qaTimers = {}
 
 local function timerErr(ref) return function(...) qaTimers[ref]= nil printErr(...) end end
 
+local mobdebug = require("mobdebug")
+fibaro.plua = fibaro.plua or {}
+
 local oldSetTimeout = setTimeout
 function setTimeout(func,ms)
   local ref
-  ref = oldSetTimeout(function() qaTimers[ref]= nil fibaro.plua.lib.prettyCall(func,timerErr(ref)) end,ms)
+  ref = oldSetTimeout(function() 
+    mobdebug.on()
+    qaTimers[ref]= nil 
+    fibaro.plua.lib.prettyCall(func,timerErr(ref)) 
+  end,ms)
   qaTimers[ref]= 'timer'
   return ref
 end
@@ -51,6 +58,7 @@ local oldSetInterval = setInterval
 function setInterval(func,ms)
   local ref
   ref =oldSetInterval(function()
+    mobdebug.on()
     local ok = fibaro.plua.lib.prettyCall(func,timerErr(ref))
     if not ok then clearInterval(ref) end
   end,ms)

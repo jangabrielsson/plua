@@ -381,58 +381,63 @@ router:add("GET","/api/plugins/<id>/variables",function(path, data, vars, query)
     for k,v in pairs(vars) do res[#res+1] = { name=k, value=v } end
     return res,HTTP.OK
   end
-  return hc3.restricted.get(path)
+  return Emu.apihc3.restricted.get(path)
 end)
 
 router:add("GET","/api/plugins/<id>/variables/<name>",function(path, data, vars, query) 
   local dev = Emu.DIR[vars.id]
   if dev then
+    if dev.device.isProxy then return Emu.api.hc3.restricted.get(path) end
     local value = (dev.vars or {})[vars.name]
     if value~=nil then return { name=vars.name, value=value },HTTP.OK
     else return nil,HTTP.NOT_FOUND end
   end
-  return hc3.restricted.get(path)
+  return Emu.api.hc3.restricted.get(path)
 end)
 
 router:add("POST","/api/plugins/<id>/variables",function(path, data, vars, query) 
   local dev = Emu.DIR[vars.id]
   if dev then
+    if dev.device.isProxy then return Emu.api.hc3.restricted.post(path,data) end
     dev.vars = dev.vars or {}
     local var = dev.vars[vars.name]
     if var then return nil,HTTP.CONFLICT
     else dev.vars[data.name] = data.value Emu:saveState() return nil,HTTP.CREATED end
   end
-  return hc3.restricted.post(path,data)
+  return Emu.api.hc3.restricted.post(path,data)
 end)
 
 router:add("PUT","/api/plugins/<id>/variables/<name>",function(path, data, vars, query)
   local dev = Emu.DIR[vars.id]
   if dev then
+    if dev.device.isProxy then return Emu.api.hc3.restricted.put(path,data) end
     local value = (dev.vars or {})[vars.name]
     if value~=nil then dev.vars[vars.name] = data.value Emu:saveState() return nil,HTTP.OK
     else return nil,HTTP.NOT_FOUND end
   end
-  return hc3.restricted.put(path,data)
+  return Emu.api.hc3.restricted.put(path,data)
 end)
 
 router:add("DELETE","/api/plugins/<id>/variables/<name>",function(path, data, vars, query) 
   local dev = Emu.DIR[vars.id]
   if dev then
+    if dev.device.isProxy then return Emu.api.hc3.restricted.delete(path,data) end
     local var = (dev.vars or {})[vars.name]
     if var~=nil then dev.vars[vars.name] = nil Emu:saveState() return nil,HTTP.OK
     else return nil,HTTP.NOT_FOUND end
   end
-  return hc3.restricted.delete(path,data)
+  return Emu.api.hc3.restricted.delete(path,data)
 end)
 
 router:add("DELETE","/api/plugins/<id>/variables",function(path, data, vars, query) 
   local dev = Emu.DIR[vars.id]
   if dev then
+    if dev.device.isProxy then return Emu.api.hc3.restricted.delete(path,data) end
     dev.vars = {}
     Emu:saveState()
     return nil,HTTP.OK
   end
-  return hc3.restricted.delete(path,data)
+  return Emu.api.hc3.restricted.delete(path,data)
 end)
 
 router:add("POST", "/api/plugins/callUIEvent", function(path, data, vars, query)

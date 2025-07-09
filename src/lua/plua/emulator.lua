@@ -36,6 +36,24 @@ function Emulator:__init(plua)
   function hc3api.put(path, data) return self:HC3_CALL("PUT", path, data) end
   function hc3api.delete(path) return self:HC3_CALL("DELETE", path) end
   self.api.hc3 = hc3api
+
+  local restricted = {}
+  local function cr(method,path,data)
+    path = path:gsub("^/api/","/")
+    local res = self.lib.sendSyncHc3(json.encode({method=method,path=path,data=data}))
+    if res == nil then return nil,408 end
+    local stat,data = pcall(json.decode,res)
+    if stat then
+      if data[1] then return data[2],data[3]
+      else return nil,501 end
+    end
+    return nil,501
+  end
+  function restricted.get(path) return cr('get',path) end
+  function restricted.post(path, data) return cr('post',path,data) end
+  function restricted.put(path, data) return cr('put',path,data) end
+  function restricted.delete(path) return cr('delete',path) end
+  self.api.hc3.restricted = restricted
   
   self.tempDir = _PY.create_temp_directory("plua")
   self.lib.loadLib("utils",self)
@@ -85,7 +103,7 @@ function headerKeys.latitude(str,info,k) info.latitude = validate(str,"number",k
 function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number",k) end
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
 function headerKeys.save(str,info) info.save = str end
-function headerKeys.project(str,info,k) info.project = validate(str,"boolean",k) end
+function headerKeys.project(str,info,k) info.project = validate(str,"number",k) end
 function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
 function headerKeys.var(str,info,k) 
   local name,value = str:match("^([%w_]+)%s*=%s*(.+)$")
@@ -96,6 +114,11 @@ function headerKeys.u(str,info) info._UI[#info._UI+1] = str end
 function headerKeys.file(str,info)
   local path,name = str:match("^([^,]+),(.+)$")
   assert(path,"Invalid file header: "..str)
+  if path:sub(1,1) == '$' then
+    local lpath = package.searchpath(path:sub(2),package.path)
+    if _PY.file_exists(lpath) then path = lpath
+    else error(fmt("Library not found: '%s'",path)) end
+  end
   if _PY.file_exists(path) then
     info.files[name] = {path = path, content = nil }
   else
@@ -270,18 +293,20 @@ end
 function Emulator:startQA(id)
   local info = self.DIR[id]
   if info.headers.save then self:saveQA(info.headers.save ,id) end
+  if info.headers.project then self.lib.saveProject(id,info,nil) end
   local env = info.env
   env.setTimeout(function()
     local ok, err = pcall(function()
       if env.QuickApp and env.QuickApp.onInit then
-        env.quickApp = coroutine.wrap(function() env.QuickApp(info.device) end)()
+        env.quickApp = env.QuickApp(info.device)
       else
+        -- No quickApp object, no onInit function
       end
     end)
     if not ok then
       print("ERROR in setTimeout callback:", err)
     end
-  end, 0)
+  end, 200)
 end
 
 function Emulator:restartQA(id)
@@ -353,6 +378,7 @@ function Emulator:loadQA(info)
   local luapath = bundled.get_lua_path()
   loadfile(luapath.."/plua/fibaro.lua","t",env)()
   loadfile(luapath.."/plua/quickapp.lua","t",env)()
+  env._G = env
   env.plugin.mainDeviceId = info.device.id
   for name,f in pairs(info.files) do
     if name ~= 'main' then loadFile(env,f.path,name,f.content) end
@@ -389,6 +415,9 @@ function Emulator:loadMainFile(filename)
     -- If main files has offline directive, setup offline routes
     self.lib.loadLib("offline",self)
     self.lib.setupOfflineRoutes()
+  else
+    self.lib.loadLib("helper",self)
+    self.lib.startHelper()
   end
   
   self:loadQA(info)

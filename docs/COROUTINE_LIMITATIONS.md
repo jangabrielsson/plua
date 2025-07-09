@@ -2,7 +2,7 @@
 
 ## Overview
 
-PLua uses the Lupa library to provide Lua 5.4 functionality within Python. While Lupa provides excellent Lua integration, it has specific limitations regarding coroutine resumption that affect how timers and asynchronous operations work.
+PLua uses the Lupa library to provide Lua 5.4 functionality within Python. While Lupa has specific limitations regarding coroutine resumption, PLua implements a queue-based workaround that makes it behave like standard Lua for most use cases.
 
 ## The Core Limitation
 
@@ -10,10 +10,10 @@ PLua uses the Lupa library to provide Lua 5.4 functionality within Python. While
 
 This is a fundamental limitation of the Lupa library due to how it handles the Python→Lua C boundary. Attempting to resume a coroutine directly from a Python callback will cause a segmentation fault.
 
-### Example of What Doesn't Work
+### Example of What Doesn't Work (Raw Lupa)
 
 ```lua
--- This will crash with a segmentation fault
+-- This would crash with a segmentation fault in raw Lupa
 local function test()
   print("A")
   local co = coroutine.running()
@@ -43,7 +43,7 @@ PLua implements a workaround using a queue-based system that schedules coroutine
 
 3. **Safe Coroutine Resumption**: Coroutine resumes happen from the main event loop, not from Python callbacks, avoiding the C boundary issue.
 
-### Example of What Works
+### Example of What Works in PLua
 
 ```lua
 -- This works correctly in PLua with the queue-based system
@@ -90,7 +90,7 @@ end, 1000)
 
 ### What Works in PLua
 
-**Good news: The same pattern now works in PLua!** The queue-based system makes PLua behave like standard Lua:
+**Good news: The same pattern works in PLua!** The queue-based system makes PLua behave like standard Lua:
 
 ```lua
 -- PLua-compatible pattern (same as standard Lua)
@@ -102,7 +102,7 @@ end)
 
 coroutine.resume(co)  -- Prints "Starting..."
 
--- This now works in PLua!
+-- This works in PLua!
 setTimeout(function()
   coroutine.resume(co)  -- Prints "Resumed!" - works in PLua
 end, 1000)

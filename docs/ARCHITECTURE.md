@@ -1,5 +1,54 @@
 # PLua Architecture Documentation
 
+## Unified Coroutine Callback Model
+
+**All Lua callbacks in PLua (timers, network, WebSocket, etc.) are always wrapped in coroutines by the runtime.**
+
+- When a callback is invoked (e.g., timer fires, network event, WebSocket message), PLua automatically creates a coroutine and runs the callback inside it.
+- If the callback yields (e.g., waiting for another event), the coroutine is suspended and can be resumed by a future callback.
+- If the callback returns or errors, the coroutine is cleaned up. Errors are caught and printed to the log.
+- **User code can always yield/resume in any callback, without worrying about coroutine context.**
+- There is no need for users to check `coroutine.isyieldable()` or manually wrap their own coroutines for event handlers.
+- This model applies to all timer, interval, network, and WebSocket callbacks.
+
+### Example
+
+```lua
+setTimeout(function()
+  print("Timer fired!")
+  local ok, data = coroutine.yield("wait for something")
+  print("Resumed with:", ok, data)
+end, 1000)
+```
+
+The above will always work, regardless of how the callback is invoked.
+
+---
+
+## Timer and Interval System
+
+PLua implements timers and intervals in pure Lua, using the unified coroutine callback model. All timer callbacks are run in coroutines, so they can yield/resume as needed.
+
+## Network and WebSocket Callbacks
+
+All network and WebSocket event callbacks are also run in coroutines. This means you can write synchronous-looking code using `yield`/`resume` patterns in any network or WebSocket event handler.
+
+---
+
+## Error Handling
+
+If a callback errors, the error is caught and printed to the log. Dead coroutines are cleaned up automatically.
+
+---
+
+## Benefits
+
+- **Simplicity:** Users never need to check coroutine context or wrap their own coroutines for event handlers.
+- **Consistency:** All callbacks behave the same way, regardless of source.
+- **Safety:** Errors are caught and reported, and resources are managed automatically.
+
+---
+
 ## Overview
 
 PLua is a Python-based Lua interpreter that uses the Lupa library to provide a Lua 5.4 environment with custom Python-extended functions. The system is built around an asyncio event loop architecture that enables true asynchronous operations while maintaining compatibility with Lua's synchronous programming model.

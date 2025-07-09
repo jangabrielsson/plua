@@ -48,7 +48,8 @@ class CoroutineManager:
         
         -- Timer system using Python callbacks with closure storage in Lua
         _PY.timer_id = 1
-        _PY.callbacks = {}  -- Store closures in Lua
+        _PY.callbacks = {}  -- Store closures in Lua for timers/intervals
+        _PY.net_callbacks = {}  -- Store closures in Lua for network events
         _PY._interval_ids = {}  -- Track which callbacks are intervals
         
         function _PY.setTimeout(fun, ms)
@@ -105,10 +106,76 @@ class CoroutineManager:
         function _PY.executeCallback(callback_id)
             local callback = _PY.callbacks[callback_id]
             if callback then
-                callback()
-                -- Remove the callback after execution only for timers (not intervals)
-                if callback_id > 0 and not _PY._interval_ids[callback_id] then  -- Not a sleep timer and not an interval
-                    _PY.callbacks[callback_id] = nil
+                -- Always wrap callback in a coroutine for consistency
+                local co = coroutine.create(callback)
+                local success, result = coroutine.resume(co)
+                if not success then
+                    print("[ERROR] Timer callback failed:", result)
+                else
+                    -- Check if coroutine is dead (finished) or suspended (waiting)
+                    local status = coroutine.status(co)
+                    if status == "dead" then
+                        -- Coroutine finished normally, remove callback
+                        if callback_id > 0 and not _PY._interval_ids[callback_id] then
+                            _PY.callbacks[callback_id] = nil
+                        end
+                    elseif status == "suspended" then
+                        -- Coroutine yielded, keep it for future resumption
+                        -- Store the coroutine for potential future resume
+                        _PY.callbacks[callback_id] = co
+                    end
+                end
+            end
+        end
+        
+        -- Function to execute a network callback by ID with parameters (called from Python)
+        function _PY.executeCallbackWithParams(callback_id, ...)
+            if _PY.debug then
+                print("[DEBUG] executeCallbackWithParams: called with ID", callback_id, "and args:", ...)
+            end
+            local callback = _PY.net_callbacks[callback_id]
+            if callback then
+                if _PY.debug then
+                    print("[DEBUG] executeCallbackWithParams: executing callback")
+                end
+                -- Always wrap callback in a coroutine for consistency
+                local args = {...}
+                local co = coroutine.create(function()
+                    return callback(table.unpack(args))
+                end)
+                local success, result = coroutine.resume(co)
+                if not success then
+                    print("[ERROR] Network callback failed:", result)
+                else
+                    if _PY.debug then
+                        print("[DEBUG] executeCallbackWithParams: callback executed successfully, result:", result)
+                        -- Check if coroutine is dead (finished) or suspended (waiting)
+                        local status = coroutine.status(co)
+                        print("[DEBUG] executeCallbackWithParams: coroutine status:", status)
+                        if status == "dead" then
+                            -- Coroutine finished normally, remove callback
+                            _PY.net_callbacks[callback_id] = nil
+                            print("[DEBUG] executeCallbackWithParams: callback removed (dead)")
+                        elseif status == "suspended" then
+                            -- Coroutine yielded, keep it for future resumption
+                            _PY.net_callbacks[callback_id] = co
+                            print("[DEBUG] executeCallbackWithParams: callback kept for resumption (suspended)")
+                        end
+                    else
+                        -- Check if coroutine is dead (finished) or suspended (waiting)
+                        local status = coroutine.status(co)
+                        if status == "dead" then
+                            -- Coroutine finished normally, remove callback
+                            _PY.net_callbacks[callback_id] = nil
+                        elseif status == "suspended" then
+                            -- Coroutine yielded, keep it for future resumption
+                            _PY.net_callbacks[callback_id] = co
+                        end
+                    end
+                end
+            else
+                if _PY.debug then
+                    print("[DEBUG] executeCallbackWithParams: no callback found for ID", callback_id)
                 end
             end
         end
@@ -204,28 +271,115 @@ class CoroutineManager:
                 print(f"[TIMER DEBUG] Failed to execute user code: {e}", file=sys.stderr)
             raise RuntimeError(f"Failed to execute user code: {e}") from e
 
+    def _lua_escape_string(self, s):
+        """Escape a string for safe use as a Lua string literal (double-quoted)."""
+        if not isinstance(s, str):
+            s = str(s)
+        
+        # Handle Unicode and special characters properly
+        result = []
+        for char in s:
+            if char == '\\':
+                result.append(r'\\')
+            elif char == '"':
+                result.append(r'\"')
+            elif char == '\n':
+                result.append(r'\n')
+            elif char == '\r':
+                result.append(r'\r')
+            elif char == '\t':
+                result.append(r'\t')
+            elif char == '\b':
+                result.append(r'\b')
+            elif char == '\f':
+                result.append(r'\f')
+            elif ord(char) < 32 or ord(char) > 126:
+                # Escape non-printable and non-ASCII characters using Lua's escape sequences
+                if ord(char) < 256:
+                    result.append(f'\\{ord(char):03d}')
+                else:
+                    # For Unicode characters, use UTF-8 encoding
+                    result.append(char)
+            else:
+                result.append(char)
+        
+        return ''.join(result)
+
     def process_callbacks(self):
         """Process all queued callbacks in Lua context"""
+        # print(f"[DEBUG] process_callbacks: called, queue size: {len(self.callback_queue)}")
         with self.lock:
             if not self.callback_queue:
+                # print("[DEBUG] process_callbacks: no callbacks to process")
                 return
-            
-            # Get all callbacks to process
             callbacks_to_process = self.callback_queue.copy()
             self.callback_queue.clear()
-        
-        # Process all callbacks in Lua context
-        for callback_id in callbacks_to_process:
+            # print(f"[DEBUG] process_callbacks: processing {len(callbacks_to_process)} callbacks")
+        for i, callback_data in enumerate(callbacks_to_process):
             try:
-                self.lua_runtime.execute(f"_PY.executeCallback({callback_id})")
+                # print(f"[DEBUG] process_callbacks: processing callback {i+1}/{len(callbacks_to_process)}: {callback_data}")
+                if isinstance(callback_data, tuple):
+                    callback_id = callback_data[0]
+                    args = callback_data[1:]
+                    # print(f"[DEBUG] process_callbacks: callback with params - ID: {callback_id}, args: {args}")
+                    lua_args = []
+                    for arg in args:
+                        if arg is True:
+                            lua_args.append("true")
+                        elif arg is False:
+                            lua_args.append("false")
+                        elif arg is None:
+                            lua_args.append("nil")
+                        elif isinstance(arg, str):
+                            # Use improved Lua string escaping
+                            escaped = self._lua_escape_string(arg)
+                            lua_args.append(f'"{escaped}"')
+                        else:
+                            lua_args.append(str(arg))
+                    args_str = ", ".join(lua_args)
+                    if args_str:
+                        call = f"_PY.executeCallbackWithParams({callback_id}, {args_str})"
+                    else:
+                        call = f"_PY.executeCallbackWithParams({callback_id})"
+                    if self.debug:
+                        print(f"[DEBUG] process_callbacks: executing {call}")
+                    try:
+                        self.lua_runtime.execute(call)
+                    except Exception as e:
+                        print(f"[DEBUG] Failed to execute: {call}")
+                        print(f"[DEBUG] Error: {e}")
+                        raise
+                else:
+                    callback_id = callback_data
+                    # print(f"[DEBUG] process_callbacks: executing _PY.executeCallback({callback_id})")
+                    self.lua_runtime.execute(f"_PY.executeCallback({callback_id})")
+                # print(f"[DEBUG] process_callbacks: callback {i+1} executed successfully")
             except Exception as e:
                 print(f"[PY ERROR] Exception executing callback ID {callback_id}: {e}")
                 import traceback
                 traceback.print_exc()
+        # print("[DEBUG] process_callbacks: finished processing all callbacks")
 
 
 # Expose to Lua
 coroutine_manager_instance = None
+
+
+def queue_callback_with_params(callback_id, *args):
+    """Queue a callback with parameters for execution in Lua context"""
+    global coroutine_manager_instance
+    if coroutine_manager_instance:
+        try:
+            # Queue the callback ID and parameters for execution in Lua
+            with coroutine_manager_instance.lock:
+                coroutine_manager_instance.callback_queue.append((callback_id, *args))
+            
+            # Wake up the callback loop
+            coroutine_manager_instance.callback_semaphore.release()
+        except Exception as e:
+            print(f"Error in callback with params: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 def pythonTimer(callback_id, delay_ms, timer_id):

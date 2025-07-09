@@ -18,6 +18,16 @@ import sys
 import errno
 
 
+# Global debug flag - will be set by the interpreter
+DEBUG_MODE = False
+
+
+def set_debug_mode(debug):
+    """Set debug mode for network extensions"""
+    global DEBUG_MODE
+    DEBUG_MODE = debug
+
+
 # --- Event Loop Manager ---
 class AsyncioLoopManager:
     """Manages asyncio event loop in the main thread"""
@@ -186,7 +196,8 @@ class AsyncioNetworkManager:
         # Check if this connection belongs to any TCP server
         for server in tcp_server_manager.servers.values():
             if conn_id in server.clients:
-                print(f"[DEBUG] AsyncioNetworkManager._notify_server_client_disconnect: Notifying server {server.server_id} about client {conn_id} disconnect")
+                if DEBUG_MODE:
+                    print(f"[DEBUG] AsyncioNetworkManager._notify_server_client_disconnect: Notifying server {server.server_id} about client {conn_id} disconnect")
                 # Get the writer from the server's clients dict
                 reader, writer = server.clients.get(conn_id, (None, None))
                 if writer:
@@ -198,41 +209,56 @@ class AsyncioNetworkManager:
         """Connect to TCP server using asyncio (consistent with TCP server)"""
         self._increment_operations()
         self._increment_callbacks()
-        
+
+        # Generate a unique callback ID for this operation
+        callback_id = self._next_conn_id()
+
+        # Store the callback in Lua (similar to timer callbacks)
+        try:
+            from plua.coroutine_manager import coroutine_manager_instance
+            if coroutine_manager_instance:
+                # Store the callback in Lua's network callback system
+                coroutine_manager_instance.lua_runtime.globals()["__temp_network_callback"] = callback
+                coroutine_manager_instance.lua_runtime.execute(f"_PY.net_callbacks[{callback_id}] = __temp_network_callback")
+                coroutine_manager_instance.lua_runtime.globals()["__temp_network_callback"] = None
+        except Exception as e:
+            print(f"[DEBUG] Failed to store network callback: {e}")
+            self._decrement_operations()
+            self._decrement_callbacks()
+            return
+
         async def tcp_connect_async():
             try:
                 # Use asyncio to create the connection
                 reader, writer = await asyncio.open_connection(host, port)
-                
+
                 # Store connection with a unique ID
                 conn_id = self._next_conn_id()
                 self.tcp_connections[conn_id] = (reader, writer)
-                
-                loop_manager.call_soon(
-                    callback, True, conn_id, f"Connected to {host}:{port}"
-                )
-                
+
+                # Queue callback through coroutine manager with parameters
+                from plua.coroutine_manager import queue_callback_with_params
+                queue_callback_with_params(callback_id, True, conn_id, f"Connected to {host}:{port}")
+
             except Exception as e:
-                loop_manager.call_soon(
-                    callback, False, None, f"TCP connect error: {str(e)}"
-                )
+                # Queue callback through coroutine manager with parameters
+                from plua.coroutine_manager import queue_callback_with_params
+                queue_callback_with_params(callback_id, False, None, f"TCP connect error: {str(e)}")
             finally:
                 self._decrement_operations()
                 self._decrement_callbacks()
-        
+
         # Create task on the main thread event loop
         task = loop_manager.create_task(tcp_connect_async())
         task.add_done_callback(lambda t: None)
 
-    async def tcp_write_async(self, conn_id, data, callback):
-        self._increment_operations()
-        self._increment_callbacks()
+    async def tcp_write_async(self, conn_id, data, callback_id):
+        """Write data to TCP connection asynchronously"""
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not writer:
-                loop_manager.call_soon(
-                    callback, False, None, f"TCP connection {conn_id} not found"
-                )
+                from plua.coroutine_manager import queue_callback_with_params
+                queue_callback_with_params(callback_id, False, None, f"TCP connection {conn_id} not found")
                 return
 
             if isinstance(data, str):
@@ -240,132 +266,147 @@ class AsyncioNetworkManager:
             else:
                 data_bytes = bytes(data)
 
-            # Check if this is an asyncio StreamWriter (from tcp_connect or tcp_server) or socket object (from tcp_connect_sync)
-            if hasattr(writer, 'write'):
-                # This is an asyncio StreamWriter (from tcp_connect or tcp_server)
-                writer.write(data_bytes)
-                await writer.drain()
-            else:
-                # This is a socket object (from tcp_connect_sync)
-                sock = writer  # writer is actually a socket object
-                sock.send(data_bytes)
+            writer.write(data_bytes)
+            await writer.drain()
 
-            loop_manager.call_soon(
-                callback, True, len(data_bytes), f"Sent {len(data_bytes)} bytes"
-            )
+            # Only queue the parameterized callback
+            from plua.coroutine_manager import queue_callback_with_params
+            queue_callback_with_params(callback_id, True, len(data_bytes), f"Sent {len(data_bytes)} bytes")
         except Exception as e:
-            loop_manager.call_soon(
-                callback, False, None, f"TCP write error: {str(e)}"
-            )
+            from plua.coroutine_manager import queue_callback_with_params
+            queue_callback_with_params(callback_id, False, None, f"TCP write error: {str(e)}")
         finally:
             self._decrement_operations()
             self._decrement_callbacks()
 
     def tcp_write(self, conn_id, data, callback):
-        # Create task on the main thread event loop
-        task = loop_manager.create_task(
-            self.tcp_write_async(conn_id, data, callback)
-        )
-        task.add_done_callback(lambda t: None)
-
-    async def tcp_read_async(self, conn_id, max_bytes, callback):
+        """Write data to TCP connection asynchronously"""
         self._increment_operations()
         self._increment_callbacks()
+
+        # Generate a unique callback ID for this operation
+        callback_id = self._next_conn_id()
+
+        # Store the callback in Lua (similar to timer callbacks)
+        try:
+            from plua.coroutine_manager import coroutine_manager_instance
+            if coroutine_manager_instance:
+                # Store the callback in Lua's network callback system
+                coroutine_manager_instance.lua_runtime.globals()["__temp_network_callback"] = callback
+                coroutine_manager_instance.lua_runtime.execute(f"_PY.net_callbacks[{callback_id}] = __temp_network_callback")
+                coroutine_manager_instance.lua_runtime.globals()["__temp_network_callback"] = None
+        except Exception as e:
+            print(f"[DEBUG] Failed to store network callback: {e}")
+            self._decrement_operations()
+            self._decrement_callbacks()
+            return
+
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(self.tcp_write_async(conn_id, data, callback_id))
+        task.add_done_callback(lambda t: None)
+
+    async def tcp_read_async(self, conn_id, max_bytes, callback_id):
+        """Read data from TCP connection asynchronously"""
         try:
             reader, writer = self.tcp_connections.get(conn_id, (None, None))
             if not reader:
-                loop_manager.call_soon(
-                    callback, False, None, f"TCP connection {conn_id} not found"
-                )
+                from plua.coroutine_manager import queue_callback_with_params
+                queue_callback_with_params(callback_id, False, None, f"TCP connection {conn_id} not found")
                 return
 
-            # Check if this is an asyncio StreamReader (from tcp_connect or tcp_server) or socket object (from tcp_connect_sync)
-            if hasattr(reader, 'read'):
-                # This is an asyncio StreamReader (from tcp_connect or tcp_server)
-                try:
-                    data = await reader.read(max_bytes)
-                except Exception as e:
-                    loop_manager.call_soon(
-                        callback, False, None, f"TCP read error: {str(e)}"
-                    )
-                    return
-            else:
-                # This is a socket object (from tcp_connect_sync)
-                sock = reader  # reader is actually a socket object
-                # Set a short timeout for the read operation
-                sock.settimeout(2)  # 2 second timeout for read operations
-                try:
-                    data = sock.recv(max_bytes)
-                except socket.timeout:
-                    loop_manager.call_soon(
-                        callback, False, None, "TCP read timeout"
-                    )
-                    return
-
-            if data:
-                data_str = data.decode("utf-8", errors="ignore")
-                loop_manager.call_soon(
-                    callback, True, data_str, f"Received {len(data)} bytes"
-                )
-            else:
-                loop_manager.call_soon(
-                    callback, False, None, "Connection closed by peer"
-                )
-                # Remove from network manager
-                self.tcp_connections.pop(conn_id, None)
-                
-                # Notify TCP server if this is a server client connection
-                self._notify_server_client_disconnect(conn_id)
+            try:
+                data = await asyncio.wait_for(reader.read(max_bytes), timeout=5.0)
+                if data:
+                    data_str = data.decode("utf-8", errors="ignore")
+                    from plua.coroutine_manager import queue_callback_with_params
+                    queue_callback_with_params(callback_id, True, data_str, f"Received {len(data)} bytes")
+                else:
+                    from plua.coroutine_manager import queue_callback_with_params
+                    queue_callback_with_params(callback_id, False, None, "Connection closed by peer")
+                    self.tcp_connections.pop(conn_id, None)
+                    self._notify_server_client_disconnect(conn_id)
+            except asyncio.TimeoutError:
+                from plua.coroutine_manager import queue_callback_with_params
+                queue_callback_with_params(callback_id, False, None, "Read timeout")
         except Exception as e:
-            loop_manager.call_soon(
-                callback, False, None, f"TCP read error: {str(e)}"
-            )
+            from plua.coroutine_manager import queue_callback_with_params
+            queue_callback_with_params(callback_id, False, None, f"Read error: {str(e)}")
         finally:
             self._decrement_operations()
             self._decrement_callbacks()
 
     def tcp_read(self, conn_id, max_bytes, callback):
-        # Create task on the main thread event loop
-        task = loop_manager.create_task(
-            self.tcp_read_async(conn_id, max_bytes, callback)
-        )
-        task.add_done_callback(lambda t: None)
-
-    async def tcp_close_async(self, conn_id, callback):
+        """Read data from TCP connection asynchronously"""
         self._increment_operations()
         self._increment_callbacks()
+
+        # Generate a unique callback ID for this operation
+        callback_id = self._next_conn_id()
+
+        # Store the callback in Lua (similar to timer callbacks)
+        try:
+            from plua.coroutine_manager import coroutine_manager_instance
+            if coroutine_manager_instance:
+                # Store the callback in Lua's network callback system
+                coroutine_manager_instance.lua_runtime.globals()["__temp_network_callback"] = callback
+                coroutine_manager_instance.lua_runtime.execute(f"_PY.net_callbacks[{callback_id}] = __temp_network_callback")
+                coroutine_manager_instance.lua_runtime.globals()["__temp_network_callback"] = None
+        except Exception as e:
+            print(f"[DEBUG] Failed to store network callback: {e}")
+            self._decrement_operations()
+            self._decrement_callbacks()
+            return
+
+        # Create task on the main thread event loop
+        task = loop_manager.create_task(self.tcp_read_async(conn_id, max_bytes, callback_id))
+        task.add_done_callback(lambda t: None)
+
+    async def tcp_close_async(self, conn_id, callback_id):
         try:
             reader, writer = self.tcp_connections.pop(conn_id, (None, None))
             if writer:
-                # Check if this is a socket object (client connection) or asyncio writer (server client)
                 if hasattr(writer, 'close') and hasattr(writer, 'wait_closed'):
-                    # This is an asyncio writer (server client connection)
                     writer.close()
                     await writer.wait_closed()
                 else:
-                    # This is a socket object (client connection)
-                    sock = writer  # writer is actually a socket object
+                    sock = writer
                     sock.close()
-                loop_manager.call_soon(
-                    callback, True, f"Connection {conn_id} closed"
-                )
+                from plua.coroutine_manager import queue_callback_with_params
+                queue_callback_with_params(callback_id, True, f"Connection {conn_id} closed")
             else:
-                loop_manager.call_soon(
-                    callback, False, f"Connection {conn_id} not found"
-                )
+                from plua.coroutine_manager import queue_callback_with_params
+                queue_callback_with_params(callback_id, False, f"Connection {conn_id} not found")
         except Exception as e:
-            loop_manager.call_soon(
-                callback, False, f"Close error: {str(e)}"
-            )
+            from plua.coroutine_manager import queue_callback_with_params
+            queue_callback_with_params(callback_id, False, f"Close error: {str(e)}")
         finally:
             self._decrement_operations()
             self._decrement_callbacks()
 
     def tcp_close(self, conn_id, callback):
+        """Close TCP connection asynchronously"""
+        self._increment_operations()
+        self._increment_callbacks()
+
+        # Generate a unique callback ID for this operation
+        callback_id = self._next_conn_id()
+
+        # Store the callback in Lua (similar to timer callbacks)
+        try:
+            from plua.coroutine_manager import coroutine_manager_instance
+            if coroutine_manager_instance:
+                # Store the callback in Lua's network callback system
+                coroutine_manager_instance.lua_runtime.globals()["__temp_network_callback"] = callback
+                coroutine_manager_instance.lua_runtime.execute(f"_PY.net_callbacks[{callback_id}] = __temp_network_callback")
+                coroutine_manager_instance.lua_runtime.globals()["__temp_network_callback"] = None
+        except Exception as e:
+            print(f"[DEBUG] Failed to store network callback: {e}")
+            self._decrement_operations()
+            self._decrement_callbacks()
+            return
+
         # Create task on the main thread event loop
-        task = loop_manager.create_task(
-            self.tcp_close_async(conn_id, callback)
-        )
+        task = loop_manager.create_task(self.tcp_close_async(conn_id, callback_id))
         task.add_done_callback(lambda t: None)
 
     # --- Synchronous TCP Functions ---
@@ -995,7 +1036,7 @@ class AsyncioNetworkManager:
                 sock = reader  # reader is actually a socket object
                 # Set a short timeout for the read operation
                 sock.settimeout(2)  # 2 second timeout for read operations
-                
+
                 try:
                     while total_bytes < max_bytes:
                         # Read one byte at a time to check for delimiter
@@ -1785,23 +1826,28 @@ class TCPServer:
         self.ready = False  # Track if server is ready to accept connections
 
     def add_event_listener(self, event_name, callback):
-        cb_info = f"{callback}, id={id(callback)}, type={type(callback)}, repr={repr(callback)}"
-        print(f"[DEBUG] TCPServer._emit_event: Calling callback {len(self.event_listeners[event_name])+1}/{len(self.event_listeners[event_name])}: {cb_info}")
+        if DEBUG_MODE:
+            cb_info = f"{callback}, id={id(callback)}, type={type(callback)}, repr={repr(callback)}"
+            print(f"[DEBUG] TCPServer._emit_event: Calling callback {len(self.event_listeners[event_name])+1}/{len(self.event_listeners[event_name])}: {cb_info}")
         if event_name in self.event_listeners:
             self.event_listeners[event_name].append(callback)
-            print(f"[DEBUG] TCPServer.add_event_listener: Added callback. Total listeners for {event_name}: {len(self.event_listeners[event_name])}")
-            listeners_repr = [repr(cb) + ' id=' + str(id(cb)) for cb in self.event_listeners[event_name]]
-            print(f"[DEBUG] TCPServer._emit_event: Listener list for {event_name}: {listeners_repr}")
+            if DEBUG_MODE:
+                print(f"[DEBUG] TCPServer.add_event_listener: Added callback. Total listeners for {event_name}: {len(self.event_listeners[event_name])}")
+                listeners_repr = [repr(cb) + ' id=' + str(id(cb)) for cb in self.event_listeners[event_name]]
+                print(f"[DEBUG] TCPServer._emit_event: Listener list for {event_name}: {listeners_repr}")
         else:
-            print(f"[DEBUG] TCPServer.add_event_listener: Unknown event '{event_name}'")
+            if DEBUG_MODE:
+                print(f"[DEBUG] TCPServer.add_event_listener: Unknown event '{event_name}'")
 
     def start(self, host, port):
         """Start the TCP server"""
         if self.running:
-            print(f"[DEBUG] TCPServer.start: Server {self.server_id} is already running")
+            if DEBUG_MODE:
+                print(f"[DEBUG] TCPServer.start: Server {self.server_id} is already running")
             return
 
-        print(f"[DEBUG] TCPServer.start: Starting server {self.server_id} on {host}:{port}")
+        if DEBUG_MODE:
+            print(f"[DEBUG] TCPServer.start: Starting server {self.server_id} on {host}:{port}")
 
         async def start_server():
             try:
@@ -1810,19 +1856,36 @@ class TCPServer:
                 )
                 self.running = True
                 self.ready = True  # Server is now ready to accept connections
-                print(f"[DEBUG] TCPServer.start: Server {self.server_id} started successfully on {host}:{port}")
+                if DEBUG_MODE:
+                    print(f"[DEBUG] TCPServer.start: Server {self.server_id} started successfully on {host}:{port}")
 
                 # Keep the server running
                 async with self.server:
                     await self.server.serve_forever()
 
             except Exception as e:
-                print(f"[DEBUG] TCPServer.start: Error starting server {self.server_id}: {e}")
+                if DEBUG_MODE:
+                    print(f"[DEBUG] TCPServer.start: Error starting server {self.server_id}: {e}")
                 self._emit_event('error', str(e))
 
-        # Start the server in a separate task
+        # Start the server in a separate task and ensure event loop is running
         task = loop_manager.create_task(start_server())
         task.add_done_callback(lambda t: None)
+
+        # Start event loop in background if not already running
+        def start_event_loop():
+            try:
+                loop = loop_manager.get_loop()
+                if not loop.is_running():
+                    loop.run_forever()
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"[DEBUG] TCPServer.start: Event loop error: {e}")
+
+        # Start event loop in background thread
+        import threading
+        event_loop_thread = threading.Thread(target=start_event_loop, daemon=True)
+        event_loop_thread.start()
 
     def is_ready(self):
         """Check if the server is ready to accept connections"""
@@ -1834,7 +1897,8 @@ class TCPServer:
         self.next_client_id += 1
 
         addr = writer.get_extra_info('peername')
-        print(f"[DEBUG] TCPServer._handle_client: New client {client_id} connected from {addr}")
+        if DEBUG_MODE:
+            print(f"[DEBUG] TCPServer._handle_client: New client {client_id} connected from {addr}")
 
         # Store the client connection in the server's clients dict
         self.clients[client_id] = (reader, writer)
@@ -1851,7 +1915,8 @@ class TCPServer:
     def _handle_client_disconnect(self, client_id, writer):
         """Handle client disconnection"""
         addr = writer.get_extra_info('peername')
-        print(f"[DEBUG] TCPServer._handle_client_disconnect: Client {client_id} disconnected from {addr}")
+        if DEBUG_MODE:
+            print(f"[DEBUG] TCPServer._handle_client_disconnect: Client {client_id} disconnected from {addr}")
 
         # Remove from clients dict
         self.clients.pop(client_id, None)
@@ -1874,29 +1939,34 @@ class TCPServer:
     def _emit_event(self, event_name, *args):
         """Emit an event to all registered listeners"""
         if event_name not in self.event_listeners:
-            print(f"[DEBUG] TCPServer._emit_event: Unknown event '{event_name}'")
+            if DEBUG_MODE:
+                print(f"[DEBUG] TCPServer._emit_event: Unknown event '{event_name}'")
             return
 
         listeners = self.event_listeners[event_name]
-        print(f"[DEBUG] TCPServer._emit_event: Emitting '{event_name}' to {len(listeners)} listeners")
+        if DEBUG_MODE:
+            print(f"[DEBUG] TCPServer._emit_event: Emitting '{event_name}' to {len(listeners)} listeners")
 
         for i, callback in enumerate(listeners):
             try:
-                cb_info = f"{callback}, id={id(callback)}, type={type(callback)}, repr={repr(callback)}"
-                print(f"[DEBUG] TCPServer._emit_event: Calling callback {i+1}/{len(listeners)}: {cb_info}")
+                if DEBUG_MODE:
+                    cb_info = f"{callback}, id={id(callback)}, type={type(callback)}, repr={repr(callback)}"
+                    print(f"[DEBUG] TCPServer._emit_event: Calling callback {i+1}/{len(listeners)}: {cb_info}")
 
                 # Schedule the callback to run on the main thread
                 loop_manager.call_soon(callback, *args)
 
             except Exception as e:
-                print(f"[DEBUG] TCPServer._emit_event: Error in {event_name} callback: {e}")
+                if DEBUG_MODE:
+                    print(f"[DEBUG] TCPServer._emit_event: Error in {event_name} callback: {e}")
 
     def close(self):
         """Close the TCP server and all client connections"""
         if not self.running:
             return
 
-        print(f"[DEBUG] TCPServer.close: Closing server {self.server_id}")
+        if DEBUG_MODE:
+            print(f"[DEBUG] TCPServer.close: Closing server {self.server_id}")
 
         # Close all client connections
         for client_id in list(self.clients.keys()):
@@ -1914,7 +1984,8 @@ class TCPServer:
             self.server.close()
 
         self.running = False
-        print(f"[DEBUG] TCPServer.close: Server {self.server_id} closed")
+        if DEBUG_MODE:
+            print(f"[DEBUG] TCPServer.close: Server {self.server_id} closed")
 
 
 # Global TCP server manager instance
@@ -1931,13 +2002,16 @@ def tcp_server_create():
 
 @registry.register(description="Add event listener to TCP server", category="tcp_server")
 def tcp_server_add_event_listener(server_id, event_name, callback):
-    print(f"[DEBUG] tcp_server_add_event_listener: server_id={server_id}, event_name={event_name}, callback={callback}")
+    if DEBUG_MODE:
+        print(f"[DEBUG] tcp_server_add_event_listener: server_id={server_id}, event_name={event_name}, callback={callback}")
     server = tcp_server_manager.servers.get(server_id)
     if server:
-        print(f"[DEBUG] tcp_server_add_event_listener: Found server {server_id}, adding listener")
+        if DEBUG_MODE:
+            print(f"[DEBUG] tcp_server_add_event_listener: Found server {server_id}, adding listener")
         server.add_event_listener(event_name, callback)
     else:
-        print(f"[DEBUG] tcp_server_add_event_listener: Server {server_id} not found!")
+        if DEBUG_MODE:
+            print(f"[DEBUG] tcp_server_add_event_listener: Server {server_id} not found!")
 
 
 @registry.register(description="Start TCP server", category="tcp_server")
@@ -1965,3 +2039,379 @@ def tcp_server_close(server_id):
 @registry.register(description="Check if there are active TCP server operations", category="tcp_server")
 def has_active_tcp_server_operations():
     return tcp_server_manager.has_active_operations()
+
+
+# --- Synchronous API Manager for External System Communication ---
+class SynchronousAPIManager:
+    """Manages synchronous API calls using traditional socket server"""
+
+    def __init__(self):
+        self.pending_requests = {}  # request_id: (event, result_holder)
+        self.next_request_id = 1
+        self.lock = threading.Lock()
+        self.server_socket = None
+        self.client_socket = None
+        self.server_thread = None
+        self.running = False
+
+    def _next_request_id(self):
+        with self.lock:
+            rid = self.next_request_id
+            self.next_request_id += 1
+            return rid
+
+    def setup_tcp_server(self, host, port):
+        """Setup traditional TCP server for external system connections"""
+        import socket
+
+        try:
+            # Create a traditional socket server
+            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.server_socket.bind((host, port))
+            self.server_socket.listen(1)
+            self.server_socket.settimeout(0.1)  # Non-blocking accept
+            self.running = True
+
+            # Start server thread
+            self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
+            self.server_thread.start()
+
+            print(f"[SYNC API] Traditional socket server started on {host}:{port}")
+            return True
+
+        except Exception as e:
+            print(f"[SYNC API] Failed to start server: {e}")
+            return False
+
+    def _server_loop(self):
+        """Server loop that accepts connections"""
+        while self.running:
+            try:
+                client_socket, addr = self.server_socket.accept()
+                print(f"[SYNC API] External system connected: {addr}")
+                self.client_socket = client_socket
+                # Keep the connection open
+                while self.running and self.client_socket:
+                    try:
+                        # Just keep the connection alive
+                        time.sleep(0.1)
+                    except Exception:
+                        break
+            except socket.timeout:
+                continue
+            except Exception as e:
+                if self.running:
+                    print(f"[SYNC API] Server error: {e}")
+                break
+
+    def send_sync(self, message, timeout_seconds=5.0):
+        """Synchronous send to external system with automatic response handling"""
+        print(f"[SYNC API] send_sync called, message: {message!r}")
+
+        if not self.client_socket:
+            print("[SYNC API] No external system connected")
+            return False, None, "No external system connected"
+
+        try:
+            # Send the message using the socket directly
+            print("[SYNC API] Writing to client...")
+            self.client_socket.send(message.encode('utf-8'))
+            print("[SYNC API] Write successful")
+
+            # Read the response
+            print("[SYNC API] Reading from client...")
+            self.client_socket.settimeout(timeout_seconds)
+            response = self.client_socket.recv(1024).decode('utf-8')
+            print(f"[SYNC API] Read result: {response!r}")
+
+            if response:
+                print("[SYNC API] Returning success")
+                return True, response, "Success"
+            else:
+                print("[SYNC API] Empty response")
+                return False, None, "Empty response"
+
+        except socket.timeout:
+            print("[SYNC API] Read timeout")
+            return False, None, "Read timeout"
+        except Exception as e:
+            print(f"[SYNC API] Exception: {e}")
+            return False, None, f"Exception: {str(e)}"
+
+    def close(self):
+        """Close the TCP server"""
+        self.running = False
+        if self.client_socket:
+            try:
+                self.client_socket.close()
+            except Exception:
+                pass
+            self.client_socket = None
+        if self.server_socket:
+            try:
+                self.server_socket.close()
+            except Exception:
+                pass
+            self.server_socket = None
+        print("[SYNC API] Server closed")
+
+
+# Global synchronous API manager instance
+sync_api_manager = SynchronousAPIManager()
+
+
+@registry.register(description="Setup synchronous API TCP server", category="sync_api")
+def sync_api_setup_server(host, port):
+    """Setup traditional TCP server for external system connections"""
+    return sync_api_manager.setup_tcp_server(host, port)
+
+
+@registry.register(description="Synchronous send to external system", category="sync_api")
+def sync_api_send(message, timeout_seconds=5.0):
+    """Send message to external system and wait for response"""
+    return sync_api_manager.send_sync(message, timeout_seconds)
+
+
+@registry.register(description="Close synchronous API server", category="sync_api")
+def sync_api_close():
+    """Close the synchronous API server"""
+    sync_api_manager.close()
+
+
+# --- Synchronous TCP Server Manager ---
+
+
+class SyncTCPServerManager:
+    def __init__(self):
+        self.servers = {}  # server_id: socket
+        self.clients = {}  # client_id: socket
+        self.next_server_id = 10000
+        self.next_client_id = 20000
+        self.lock = threading.Lock()
+
+    def create_server(self, host, port):
+        with self.lock:
+            server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            server_sock.bind((host, port))
+            server_sock.listen(5)
+            server_id = self.next_server_id
+            self.next_server_id += 1
+            self.servers[server_id] = server_sock
+            return server_id
+
+    def accept_client(self, server_id, timeout=10.0):
+        server_sock = self.servers.get(server_id)
+        if not server_sock:
+            return False, None, "Server not found"
+        server_sock.settimeout(timeout)
+        try:
+            client_sock, addr = server_sock.accept()
+            client_id = self.next_client_id
+            self.next_client_id += 1
+            self.clients[client_id] = client_sock
+            return True, client_id, f"Accepted from {addr}"
+        except socket.timeout:
+            return False, None, "Accept timeout"
+        except Exception as e:
+            return False, None, str(e)
+
+    def close_server(self, server_id):
+        server_sock = self.servers.pop(server_id, None)
+        if server_sock:
+            server_sock.close()
+            return True
+        return False
+
+    def close_client(self, client_id):
+        client_sock = self.clients.pop(client_id, None)
+        if client_sock:
+            client_sock.close()
+            return True
+        return False
+
+
+# Global instance
+sync_tcp_server_manager = SyncTCPServerManager()
+
+
+@registry.register(description="Create synchronous TCP server", category="tcp_sync")
+def tcp_server_create_sync(host, port):
+    return sync_tcp_server_manager.create_server(host, port)
+
+
+@registry.register(description="Accept client on synchronous TCP server", category="tcp_sync")
+def tcp_server_accept_sync(server_id, timeout=10.0):
+    server_sock = sync_tcp_server_manager.servers.get(server_id)
+    if not server_sock:
+        result = {"success": False, "client_id": None, "message": "Server not found"}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_server_accept_sync returning: {result}")
+        return result
+    server_sock.settimeout(timeout)
+    try:
+        client_sock, addr = server_sock.accept()
+        client_id = sync_tcp_server_manager.next_client_id
+        sync_tcp_server_manager.next_client_id += 1
+        sync_tcp_server_manager.clients[client_id] = client_sock
+        result = {"success": True, "client_id": int(client_id), "message": f"Accepted from {addr}"}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_server_accept_sync returning: {result}")
+        return result
+    except socket.timeout:
+        result = {"success": False, "client_id": None, "message": "Accept timeout"}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_server_accept_sync returning: {result}")
+        return result
+    except Exception as e:
+        result = {"success": False, "client_id": None, "message": str(e)}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_server_accept_sync returning: {result}")
+        return result
+
+
+@registry.register(description="Close synchronous TCP server", category="tcp_sync")
+def tcp_server_close_sync(server_id):
+    return sync_tcp_server_manager.close_server(server_id)
+
+
+@registry.register(description="Connect to synchronous TCP server", category="tcp_sync")
+def tcp_connect_to_sync_server(host, port):
+    """Connect to a synchronous TCP server (not the async one)"""
+    try:
+        # Create a regular socket connection
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10.0)  # 10 second timeout
+        sock.connect((host, port))
+
+        # Generate a unique connection ID
+        client_id = sync_tcp_server_manager.next_client_id
+        sync_tcp_server_manager.next_client_id += 1
+
+        # Store the socket in the sync manager for consistency
+        sync_tcp_server_manager.clients[client_id] = sock
+        result = {"success": True, "client_id": int(client_id), "message": "Connected to sync server"}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_connect_to_sync_server returning: {result}")
+        return result
+    except Exception as e:
+        result = {"success": False, "client_id": None, "message": str(e)}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_connect_to_sync_server returning: {result}")
+        return result
+
+
+@registry.register(description="Write to synchronous TCP client", category="tcp_sync")
+def tcp_write_sync_client(client_id, data):
+    """Write data to a synchronous TCP client connection"""
+    client_sock = sync_tcp_server_manager.clients.get(client_id)
+    if not client_sock:
+        result = {"success": False, "bytes_written": 0, "message": "Client not found"}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_write_sync_client returning: {result}")
+        return result
+    try:
+        bytes_written = client_sock.send(data.encode('utf-8'))
+        result = {"success": True, "bytes_written": bytes_written, "message": "Success"}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_write_sync_client returning: {result}")
+        return result
+    except Exception as e:
+        result = {"success": False, "bytes_written": 0, "message": str(e)}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_write_sync_client returning: {result}")
+        return result
+
+
+@registry.register(description="Read from synchronous TCP client", category="tcp_sync")
+def tcp_read_sync_client(client_id, max_bytes=1024):
+    """Read data from a synchronous TCP client connection"""
+    client_sock = sync_tcp_server_manager.clients.get(client_id)
+    if not client_sock:
+        result = {"success": False, "data": None, "message": "Client not found"}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_read_sync_client returning: {result}")
+        return result
+    try:
+        data = client_sock.recv(max_bytes)
+        if data:
+            result = {"success": True, "data": data.decode('utf-8'), "message": "Success"}
+            if DEBUG_MODE:
+                print(f"[PYDEBUG] tcp_read_sync_client returning: {result}")
+            return result
+        else:
+            result = {"success": False, "data": None, "message": "Connection closed"}
+            if DEBUG_MODE:
+                print(f"[PYDEBUG] tcp_read_sync_client returning: {result}")
+            return result
+    except Exception as e:
+        result = {"success": False, "data": None, "message": str(e)}
+        if DEBUG_MODE:
+            print(f"[PYDEBUG] tcp_read_sync_client returning: {result}")
+        return result
+
+
+@registry.register(description="Close synchronous TCP client", category="tcp_sync")
+def tcp_close_sync_client(client_id):
+    """Close a synchronous TCP client connection"""
+    return sync_tcp_server_manager.close_client(client_id)
+
+
+# --- Synchronous functions for async server connections ---
+@registry.register(description="Synchronous write to async server client", category="tcp_server")
+def tcp_server_write_sync(client_id, data):
+    """Synchronous write to a client connected to an async TCP server"""
+    try:
+        # Get the client connection from the network manager
+        reader, writer = network_manager.tcp_connections.get(client_id, (None, None))
+        if not writer:
+            return False, f"Client {client_id} not found"
+
+        if isinstance(data, str):
+            data_bytes = data.encode("utf-8")
+        else:
+            data_bytes = bytes(data)
+
+        # Use asyncio to write synchronously
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            writer.write(data_bytes)
+            loop.run_until_complete(writer.drain())
+            return True, f"Sent {len(data_bytes)} bytes to client {client_id}"
+        finally:
+            loop.close()
+
+    except Exception as e:
+        return False, f"Write error: {str(e)}"
+
+
+@registry.register(description="Synchronous read from async server client", category="tcp_server")
+def tcp_server_read_sync(client_id, max_bytes=1024):
+    """Synchronous read from a client connected to an async TCP server"""
+    try:
+        # Get the client connection from the network manager
+        reader, writer = network_manager.tcp_connections.get(client_id, (None, None))
+        if not reader:
+            return False, None, f"Client {client_id} not found"
+
+        # Use asyncio to read synchronously
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            data = loop.run_until_complete(reader.read(max_bytes))
+            if data:
+                data_str = data.decode("utf-8", errors="ignore")
+                return True, data_str, f"Received {len(data)} bytes from client {client_id}"
+            else:
+                # Connection closed
+                network_manager.tcp_connections.pop(client_id, None)
+                return False, None, f"Client {client_id} disconnected"
+        finally:
+            loop.close()
+
+    except Exception as e:
+        return False, None, f"Read error: {str(e)}"

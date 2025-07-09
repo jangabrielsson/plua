@@ -228,8 +228,8 @@ end
 function saveProject(id,dev,path)  -- Save project to .project file
   path = path or ""
   local r = {}
-  for _,f in ipairs(dev.files) do
-    r[f.name] = f.fname
+  for name,f in pairs(dev.files) do
+    r[name] = f.path
   end
   local f = io.open(path..".project","w")
   assert(f,"Can't open file "..path..".project")
@@ -271,11 +271,11 @@ local function updateQA(fname)
   if not qa then
     return Emu:ERROR(fmt("QuickApp on HC3 with ID %s not found %s", tostring(id)))
   end
-  local device = emu.loadQA(fname,{proxy="false"}, true)
-  assert(device, "Emulator installation error")
-  assert(qa.type == device.type, "QuickApp type mismatch: expected " .. device.type .. ", got " .. qa.type)
-  local fqa = emu.getFQA(device.id)
-  assert(fqa, "FQA creation error")
+  local info = Emu:createInfoFromFile(fname)
+  Emu:registerDevice(info)
+  local fqa = Emu.lib.getFQA(info.device.id)
+  assert(fqa, "Emulator installation error")
+  assert(qa.type == fqa.type, "QuickApp type mismatch: expected " .. fqa.type .. ", got " .. qa.type)
 
   local oldFiles = Emu.api.hc3.get("/quickApp/"..id.."/files") or {}
   local oldMap,existingFiles,newFiles = {},{},{}
@@ -360,7 +360,7 @@ local function updateQA(fname)
   }
   for _,prop in ipairs(updateProps) do 
     local value = fqa.initialProperties[prop]
-    if value ~= nil and value ~= "" and value ~= device.properties[prop] then 
+    if value ~= nil and value ~= "" and value ~= fqa.initialProperties[prop] then 
       update(prop, value) 
       if prop == "quickAppVariables" then
         value = json.encode(value)

@@ -284,7 +284,8 @@ class PLuaInterpreter:
         start_api_server=True,
         silent=False,
         api_server_port=8000,
-        api_server_host="0.0.0.0"):
+        api_server_host="0.0.0.0",
+    ):
         
         # Message passing system for API server communication
         import queue
@@ -296,6 +297,9 @@ class PLuaInterpreter:
         self.debug = debug
         self.debugger_enabled = debugger_enabled
         self.lua_runtime = LuaRuntime(unpack_returned_tuples=True)
+        
+        # Set debug mode in network extensions
+        extensions.network_extensions.set_debug_mode(debug)
         self.execution_tracker = ExecutionTracker(self)
         self.api_server_port = api_server_port
         self.api_server_host = api_server_host

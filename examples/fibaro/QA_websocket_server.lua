@@ -6,7 +6,7 @@
 function QuickApp:onInit()
   self:debug(self.name)
   
-  local server = net.WebSocketEchoServer("127.0.0.1", 8765, true)
+  local server = net.WebSocketEchoServer("127.0.0.1", 8765, false)
   
   -- Wait a moment for the server to start
   setTimeout(function()

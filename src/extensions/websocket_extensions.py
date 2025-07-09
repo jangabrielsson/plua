@@ -6,7 +6,7 @@ Provides WebSocket client functionality compatible with Fibaro HC3 API
 import threading
 import sys
 from .registry import registry
-from extensions.network_extensions import loop_manager
+from extensions.network_extensions import loop_manager, DEBUG_MODE
 import websockets
 
 
@@ -95,7 +95,31 @@ class WebSocketConnection:
             for callback in self.event_listeners[event_name]:
                 try:
                     self.manager._increment_callbacks()
-                    callback(*args)
+                    
+                    # Generate a unique callback ID for this operation
+                    callback_id = self.manager._next_conn_id()
+                    
+                    # Store the callback in Lua (similar to TCP callbacks)
+                    try:
+                        from plua.coroutine_manager import coroutine_manager_instance
+                        if coroutine_manager_instance:
+                            # Store the callback in Lua's network callback system
+                            coroutine_manager_instance.lua_runtime.globals()["__temp_websocket_callback"] = callback
+                            coroutine_manager_instance.lua_runtime.execute(f"_PY.net_callbacks[{callback_id}] = __temp_websocket_callback")
+                            coroutine_manager_instance.lua_runtime.globals()["__temp_websocket_callback"] = None
+                            
+                            # Queue callback through coroutine manager with parameters
+                            from plua.coroutine_manager import queue_callback_with_params
+                            queue_callback_with_params(callback_id, *args)
+                        else:
+                            # Fallback to old method if coroutine manager not available
+                            loop_manager.call_soon(callback, *args)
+                    except Exception as e:
+                        if DEBUG_MODE:
+                            print(f"[DEBUG] Failed to store WebSocket callback: {e}")
+                        # Fallback to old method
+                        loop_manager.call_soon(callback, *args)
+                        
                 except Exception as e:
                     print(f"Error in WebSocket {event_name} callback: {e}", file=sys.stderr)
                 finally:
@@ -315,7 +339,9 @@ class WebSocketServer:
         self.server_id = server_id
         self.manager = manager
         self.server = None
-        self.clients = set()
+        self.clients = {}  # client_id: websocket
+        self.websocket_to_id = {}  # websocket: client_id
+        self.next_client_id = 1
         self.event_listeners = {
             'client_connected': [],
             'client_disconnected': [],
@@ -325,35 +351,66 @@ class WebSocketServer:
         self.loop = None
         self.running = False
 
+    def _get_next_client_id(self):
+        cid = self.next_client_id
+        self.next_client_id += 1
+        return cid
+
     def add_event_listener(self, event_name, callback):
         if event_name in self.event_listeners:
             self.event_listeners[event_name].append(callback)
 
     def _emit_event(self, event_name, *args):
+        if DEBUG_MODE:
+            print(f"[DEBUG] WebSocket server emitting event: {event_name} with args: {args}")
         if event_name in self.event_listeners:
             for callback in self.event_listeners[event_name]:
                 try:
                     self.manager._increment_callbacks()
-                    callback(*args)
+                    callback_id = self.manager._next_server_id()
+                    try:
+                        from plua.coroutine_manager import coroutine_manager_instance
+                        if coroutine_manager_instance:
+                            coroutine_manager_instance.lua_runtime.globals()["__temp_websocket_server_callback"] = callback
+                            coroutine_manager_instance.lua_runtime.execute(f"_PY.net_callbacks[{callback_id}] = __temp_websocket_server_callback")
+                            coroutine_manager_instance.lua_runtime.globals()["__temp_websocket_server_callback"] = None
+                            from plua.coroutine_manager import queue_callback_with_params
+                            queue_callback_with_params(callback_id, *args)
+                            if DEBUG_MODE:
+                                print(f"[DEBUG] WebSocket server callback queued with ID: {callback_id}")
+                        else:
+                            loop_manager.call_soon(callback, *args)
+                    except Exception as e:
+                        if DEBUG_MODE:
+                            print(f"[DEBUG] Failed to store WebSocket server callback: {e}")
+                        loop_manager.call_soon(callback, *args)
                 except Exception as e:
                     print(f"Error in WebSocketServer {event_name} callback: {e}", file=sys.stderr)
                 finally:
                     self.manager._decrement_callbacks()
+        else:
+            # print(f"[DEBUG] No listeners for event: {event_name}")
+            pass
 
     async def _handler(self, websocket, path):
-        self.clients.add(websocket)
-        self._emit_event('client_connected', websocket)
+        client_id = self._get_next_client_id()
+        self.clients[client_id] = websocket
+        self.websocket_to_id[websocket] = client_id
+        self._emit_event('client_connected', client_id)
         try:
             async for message in websocket:
-                self._emit_event('message', websocket, message)
+                self._emit_event('message', client_id, message)
         except Exception as e:
             self._emit_event('error', str(e))
         finally:
-            self.clients.discard(websocket)
-            self._emit_event('client_disconnected', websocket)
+            self.clients.pop(client_id, None)
+            self.websocket_to_id.pop(websocket, None)
+            self._emit_event('client_disconnected', client_id)
 
     def start(self, host, port):
         self.manager._increment_operations()
+        if DEBUG_MODE:
+            print(f"[DEBUG] WebSocket server starting on {host}:{port}")
 
         async def start_server():
             try:
@@ -361,13 +418,23 @@ class WebSocketServer:
                     await self._handler(websocket, path)
                 self.server = await websockets.serve(handler, host, port)
                 self.running = True
+                if DEBUG_MODE:
+                    print(f"[DEBUG] WebSocket server started successfully on {host}:{port}")
             except Exception as e:
+                if DEBUG_MODE:
+                    print(f"[DEBUG] WebSocket server start error: {e}")
                 self._emit_event('error', str(e))
             finally:
                 self.manager._decrement_operations()
         loop_manager.create_task(start_server())
 
-    def send(self, websocket, data):
+    def send(self, client_id, data):
+        websocket = self.clients.get(client_id)
+        if not websocket:
+            if DEBUG_MODE:
+                print(f"[DEBUG] No websocket found for client_id {client_id}")
+            return
+
         async def send_msg():
             try:
                 await websocket.send(data)
@@ -409,10 +476,10 @@ def websocket_server_start(server_id, host, port):
 
 
 @registry.register(description="Send data to WebSocket client", category="websocket_server")
-def websocket_server_send(server_id, websocket, data):
+def websocket_server_send(server_id, client_id, data):
     server = websocket_server_manager.servers.get(server_id)
     if server:
-        server.send(websocket, data)
+        server.send(client_id, data)
 
 
 @registry.register(description="Close WebSocket server", category="websocket_server")

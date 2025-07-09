@@ -1,0 +1,9 @@
+{
+  "id": 5555,
+  "files": {
+    "libB": "examples/fibaro/libQB.lua",
+    "aes": "/Users/jangabrielsson/Documents/dev/plua/src/lua/plua/lib/aeslua53.lua",
+    "libA": "examples/fibaro/libQA.lua",
+    "main": "/Users/jangabrielsson/Documents/dev/plua/examples/fibaro/QA_includeFiles.lua"
+  }
+}

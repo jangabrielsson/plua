@@ -1,14 +1,16 @@
 name: Auto Version Bump
 
 on:
-  push:
-    branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - '.github/workflows/version-bump.yml'
-      - '.github/workflows/**'
-      - 'docs/**'
-      - '*.md'
+  workflow_dispatch:  # Manual trigger only
+  # DISABLED - Manual version management only
+  # push:
+  #   branches: [ main ]
+  #   paths-ignore:
+  #     - '**.md'
+  #     - '.github/workflows/version-bump.yml'
+  #     - '.github/workflows/**'
+  #     - 'docs/**'
+  #     - '*.md'
 
 jobs:
   bump-version:

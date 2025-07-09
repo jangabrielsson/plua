@@ -52,14 +52,9 @@ echo "Updating version in pyproject.toml..."
 sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
 rm pyproject.toml.bak
 
-# Check if version was actually changed
-if git diff --quiet pyproject.toml; then
-    echo "Version was already $VERSION in pyproject.toml"
-else
-    # Commit version change
-    git add pyproject.toml
-    git commit -m "Bump version to $VERSION"
-fi
+# Always commit version change (manual releases)
+git add pyproject.toml
+git commit -m "Bump version to $VERSION"
 
 # Create and push tag
 echo "Creating tag v$VERSION..."

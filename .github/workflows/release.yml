@@ -28,17 +28,7 @@ jobs:
 
       - name: Build Windows executable
         run: |
-          pyinstaller --onefile \
-            --collect-submodules lupa \
-            --collect-submodules toml \
-            --collect-submodules plua \
-            --collect-submodules extensions \
-            src/plua/__main__.py \
-            --name plua \
-            --add-data "src/lua;lua" \
-            --add-data "src/extensions;extensions" \
-            --add-data "examples;examples" \
-            --add-data "pyproject.toml;."
+          pyinstaller --onefile --collect-submodules lupa --collect-submodules toml --collect-submodules plua --collect-submodules extensions src/plua/__main__.py --name plua --add-data "src/lua;lua" --add-data "src/extensions;extensions" --add-data "examples;examples" --add-data "pyproject.toml;."
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
@@ -68,17 +58,7 @@ jobs:
       - name: Build macOS Universal executable
         run: |
           # Build universal binary (works on both Intel and Apple Silicon)
-          pyinstaller --onefile \
-            --collect-submodules lupa \
-            --collect-submodules toml \
-            --collect-submodules plua \
-            --collect-submodules extensions \
-            src/plua/__main__.py \
-            --name plua \
-            --add-data "src/lua:lua" \
-            --add-data "src/extensions:extensions" \
-            --add-data "examples:examples" \
-            --add-data "pyproject.toml:."
+          pyinstaller --onefile --collect-submodules lupa --collect-submodules toml --collect-submodules plua --collect-submodules extensions src/plua/__main__.py --name plua --add-data "src/lua:lua" --add-data "src/extensions:extensions" --add-data "examples:examples" --add-data "pyproject.toml:."
 
       - name: Verify Universal architecture
         run: |
@@ -113,18 +93,7 @@ jobs:
 
       - name: Build macOS Apple Silicon executable
         run: |
-          pyinstaller --onefile \
-            --collect-submodules lupa \
-            --collect-submodules toml \
-            --collect-submodules plua \
-            --collect-submodules extensions \
-            src/plua/__main__.py \
-            --name plua \
-            --add-data "src/lua:lua" \
-            --add-data "src/extensions:extensions" \
-            --add-data "examples:examples" \
-            --add-data "pyproject.toml:." \
-            --target-arch=arm64
+          pyinstaller --onefile --collect-submodules lupa --collect-submodules toml --collect-submodules plua --collect-submodules extensions src/plua/__main__.py --name plua --add-data "src/lua:lua" --add-data "src/extensions:extensions" --add-data "examples:examples" --add-data "pyproject.toml:." --target-arch=arm64
 
       - name: Verify Apple Silicon architecture
         run: |

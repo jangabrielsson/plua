@@ -72,42 +72,10 @@ jobs:
           name: plua-macos-universal
           path: dist/plua
 
-  build-macos-apple-silicon:
-    runs-on: macos-latest
-    outputs:
-      artifact-name: plua-macos-apple-silicon
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install build dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-
-      - name: Build macOS Apple Silicon executable
-        run: |
-          pyinstaller --onefile --collect-submodules lupa --collect-submodules toml --collect-submodules plua --collect-submodules extensions src/plua/__main__.py --name plua --add-data "src/lua:lua" --add-data "src/extensions:extensions" --add-data "examples:examples" --add-data "pyproject.toml:." --target-arch=arm64
-
-      - name: Verify Apple Silicon architecture
-        run: |
-          file dist/plua
-          file dist/plua | grep -q "arm64" && echo "✓ Apple Silicon arm64 confirmed" || echo "⚠ Architecture verification failed"
-
-      - name: Upload macOS Apple Silicon artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: plua-macos-apple-silicon
-          path: dist/plua
 
   create-release:
-    needs: [build-windows, build-macos-universal, build-macos-apple-silicon]
+    needs: [build-windows, build-macos-universal]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -137,7 +105,6 @@ jobs:
             
             - **Windows**: `plua-windows.exe` - For Windows 10/11
             - **macOS Universal**: `plua-macos-universal` - For both Intel and Apple Silicon Macs
-            - **macOS Apple Silicon**: `plua-macos-apple-silicon` - For M1/M2/M3 Macs (native)
             
             ### Usage
             
@@ -148,10 +115,6 @@ jobs:
             # macOS Universal
             chmod +x plua-macos-universal
             ./plua-macos-universal script.lua
-            
-            # macOS Apple Silicon
-            chmod +x plua-macos-apple-silicon
-            ./plua-macos-apple-silicon script.lua
             ```
             
             ### Features
@@ -168,7 +131,6 @@ jobs:
           files: |
             artifacts/plua-windows-exe/plua.exe
             artifacts/plua-macos-universal/plua
-            artifacts/plua-macos-apple-silicon/plua
           draft: false
           prerelease: false
         env:

@@ -9,7 +9,8 @@ local startServer
 
 local PORT = Emu.lib.webport+2
 local function installHelper()
-  local fqa = Emu.config.loadResource("LupaHelper.fqa",true)
+  local bundled = require("plua.bundled_files")
+  local fqa =  Emu:loadResource(bundled.get_lua_path().."/rsrsc/pluaHelper.fqa",true)
   if not fqa then
     Emu:ERRORF("Failed to load helper")
     return nil
@@ -23,6 +24,7 @@ local function installHelper()
     return nil
   end
   Emu.api.hc3.put("/devices/"..helper.id,{visible=false}) -- Hide helper
+  Emu:INFO("Helper installed")
   return helper
 end
 
@@ -58,10 +60,11 @@ local cb = nil
 function startServer(helperId,wsurl)
   server = net.WebSocketServer(false)
   local host,port = Emu.lib.IPAddress,PORT
+  --Emu:INFO("Starting helper server on",host,port)
   server:start(host, port, {
     receive = function(client_id, msg) if cb then cb(msg) end end,
     connected = function(client_id)
-      if Emu.debug then Emu:INFO("Helper connected") end
+      if Emu.debugFlag then Emu:INFO("Helper connected") end
       client = client_id
     end,
     disconnected = function(client_id) client = nil end
@@ -72,6 +75,10 @@ function startServer(helperId,wsurl)
 end
 
 local function send(msg)
+  if Emu.offline then
+    Emu:WARNING("api.hc3.restricted: Offline mode")
+    return '{false,"Offline mode"}'
+  end
   if not (client and server) then return nil end
   local co = coroutine.running()
   if not co then return nil end

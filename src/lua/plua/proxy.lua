@@ -174,6 +174,7 @@ local function existingProxy(name,headers)
         child.properties.uiCallbacks or {}
       )
       local cdev = { device=child, UI=ui, headers=headers }
+      Emu:addEmbeds(cdev)
       Emu:registerDevice(cdev)
       Emu:INFO(fmt("Existing Child proxy found: %s %s",child.id,child.name))
     end

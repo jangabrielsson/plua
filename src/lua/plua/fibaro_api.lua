@@ -1,4 +1,5 @@
 local Emu = ...
+local json = require("plua.json")
 local fmt = string.format
 
 function string.split(inputstr, sep)
@@ -470,9 +471,21 @@ router:add("POST", "/api/plugins/createChildDevice", function(path, data, vars, 
   local dev = Emu.DIR[parent]
   if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end end
   if dev.device.isProxy then
-    local res = hc3api.post(path,data) -- create child on HC3
-    res.isProxy = true
-    data = res
+    local child = hc3api.post(path,data) -- create child on HC3
+    if not child then 
+      Emu:WARNING("Failed to create child device",json.encode(data or {}))
+      return nil,HTTP.BAD_REQUEST
+    end
+    child.isProxy,child.isChild = true, true
+    local ui = Emu.lib.ui.viewLayout2UI(
+      child.properties.viewLayout,
+      child.properties.uiCallbacks or {}
+    )
+    local cdev = { device=child, UI=ui, headers=dev.headers }
+    Emu:addEmbeds(cdev)
+    Emu:registerDevice(cdev)
+    ---Emu:INFO(fmt("HC3 proxy child created: %s %s",child.id,child.name))
+    return child,HTTP.OK
   end
   local dev = Emu:createChild(data)
   if dev then return dev,HTTP.OK else return nil,HTTP.BAD_REQUEST end
@@ -483,14 +496,18 @@ router:add("POST", "/api/plugins/publishEvent", function(path, data, vars, query
   return create_redirect_response()
 end)
 
-router:add("POST", "/api/plugins/removeChildDevice/<id>", function(path, data, vars, query)
+router:add("DELETE", "/api/plugins/removeChildDevice/<id>", function(path, data, vars, query)
   local id = vars.id
   local dev = Emu.DIR[id]
-  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.delete(path) end
-elseif dev.device.isChild then
-  Emu.DIR[id] = nil
-  return nil,HTTP.OK
-else return nil,HTTP.NOT_IMPLEMENTED end
+  if not dev then 
+    if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.delete(path) end
+  elseif dev.device.isChild then
+    Emu.DIR[id] = nil
+    if dev.device.isProxy then
+      hc3api.delete("/plugins/removeChildDevice/"..id)
+    end
+    return nil,HTTP.OK
+  else return nil,HTTP.NOT_IMPLEMENTED end
 end)
 
 router:add("POST", "/api/plugins/restart", function(path, data, vars, query)

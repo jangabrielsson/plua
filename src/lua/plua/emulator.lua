@@ -39,6 +39,10 @@ function Emulator:__init(plua)
 
   local restricted = {}
   local function cr(method,path,data)
+    if self.offline then
+      self:WARNING("api.hc3.restricted: Offline mode")
+      return nil,408
+    end
     path = path:gsub("^/api/","/")
     local res = self.lib.sendSyncHc3(json.encode({method=method,path=path,data=data}))
     if res == nil then return nil,408 end
@@ -104,6 +108,7 @@ function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number"
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
 function headerKeys.save(str,info) info.save = str end
 function headerKeys.project(str,info,k) info.project = validate(str,"number",k) end
+function headerKeys.nop(str,info,k) validate(str,"boolean",k) end
 function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
 function headerKeys.var(str,info,k) 
   local name,value = str:match("^([%w_]+)%s*=%s*(.+)$")
@@ -126,6 +131,22 @@ function headerKeys.file(str,info)
   end
 end
 
+local function compatHeaders(code)
+  code = code:gsub("%-%-%%%%([%w_]+)=([^\n\r]+)",function(key,str) 
+    if key == 'var' then
+      str = str:gsub(":","=")
+    elseif key == 'debug' then
+      str = "true"
+    elseif key == 'conceal' then
+      str = str:gsub(":","=")
+    elseif key == 'webui' then
+      key,str = "nop","true"
+    end
+    return fmt("--%%%%%s:%s",key,str)
+  end)
+  return code
+end
+
 function Emulator:processHeaders(filename,content)
   local shortname = filename:match("([^/\\]+%.lua)")
   local name = shortname:match("(.+)%.lua")
@@ -137,6 +158,7 @@ function Emulator:processHeaders(filename,content)
     _UI={},
   }
   local code = "\n"..content
+  if code:match("%-%-%%%%name=") then code = compatHeaders(code) end
   code:gsub("\n%-%-%%%%([%w_]-):([^\n]*)",function(key,str) 
     str = str:match("^%s*(.-)%s*$") or str
     str = str:match("^(.*)%s* %-%- (.*)$") or str
@@ -215,6 +237,11 @@ function Emulator:createInfoFromContent(filename,content)
   local info = {}
   local preprocessed,headers = self:processHeaders(filename,content)
 
+  if headers.offline and headers.proxy then
+    headers.proxy = false
+    self:WARNING("Offline mode, proxy disabled")
+  end
+  
   if headers.proxy then
     local proxylib = self.lib.loadLib("proxy",self)
     info = proxylib.existingProxy(headers.name or "myQA",headers)
@@ -318,6 +345,24 @@ function Emulator:restartQA(id)
   end,4000)
 end
 
+function Emulator:addEmbeds(info)
+  local dev = info.device
+  local props = dev.properties or {}
+  props.uiCallbacks = props.uiCallbacks or {}
+  info.UImap = info.UImap or {}
+  local embeds = embedUIs.UI[dev.type]
+  if embeds then
+    for i,v in ipairs(embeds) do
+      table.insert(info.UI,i,v)
+    end
+    for _,cb in ipairs(self.lib.ui.UI2uiCallbacks(embeds) or{}) do
+      props.uiCallbacks[#props.uiCallbacks+1] = cb
+    end
+    self.lib.ui.extendUI(info.UI,info.UImap)
+    info.watches = embedUIs.watches[dev.type] or {}
+  end
+end
+
 function Emulator:createChild(data)
   local info = { UI = {}, headers = {} }
   if deviceTypes == nil then deviceTypes = self:loadResource(bundled.get_lua_path().."/rsrsc/devices.json",true) end
@@ -340,17 +385,7 @@ function Emulator:createChild(data)
     info.UI = self.lib.ui.uiView2UI(uiView,callbacks)
   end
   props.uiCallbacks,props.viewLayout,props.uiView,info.UImap = self:createUI(info.UI or {})
-  local embeds = embedUIs.UI[dev.type]
-  if embeds then
-    for i,v in ipairs(embeds) do
-      table.insert(info.UI,i,v)
-    end
-    for _,cb in ipairs(self.lib.ui.UI2uiCallbacks(embeds) or{}) do
-      props.uiCallbacks[#props.uiCallbacks+1] = cb
-    end
-    self.lib.ui.extendUI(info.UI,info.UImap)
-    info.watches = embedUIs.watches[dev.type] or {}
-  end
+  self:addEmbeds(info)
   info.device = dev
   self:registerDevice(info)
   return dev
@@ -403,7 +438,7 @@ function Emulator:loadMainFile(filename)
   end
   
   local info = self:createInfoFromFile(filename)
-  if info.debug then self.debugFlag = true end
+  if info.headers.debug then self.debugFlag = true end
   if _PY.args.debug == true then self.debugFlag = true end
 
   if info.headers.offline then
@@ -533,6 +568,7 @@ function Emulator:refreshEvent(typ,data) _PY.addEvent(json.encode({type=typ,data
 
 function Emulator:DEBUG(...) if self.debugFlag then print(...) end end
 function Emulator:INFO(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "INFO", false) end 
+function Emulator:WARNING(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "WARNING", false) end 
 function Emulator:ERROR(...) printErr(...) end
 
 local function getFQA(self,fname)

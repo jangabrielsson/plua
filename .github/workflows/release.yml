@@ -30,11 +30,15 @@ jobs:
         run: |
           pyinstaller --onefile --collect-submodules lupa --collect-submodules toml --collect-submodules plua --collect-submodules extensions src/plua/__main__.py --name plua --add-data "src/lua;lua" --add-data "src/extensions;extensions" --add-data "examples;examples" --add-data "pyproject.toml;."
 
+      - name: Rename Windows executable
+        run: |
+          mv dist/plua.exe dist/plua-windows.exe
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: plua-windows-exe
-          path: dist/plua.exe
+          path: dist/plua-windows.exe
 
   build-macos-universal:
     runs-on: macos-latest
@@ -57,22 +61,23 @@ jobs:
 
       - name: Build macOS Universal executable
         run: |
-          # Build universal binary (works on both Intel and Apple Silicon)
           pyinstaller --onefile --collect-submodules lupa --collect-submodules toml --collect-submodules plua --collect-submodules extensions src/plua/__main__.py --name plua --add-data "src/lua:lua" --add-data "src/extensions:extensions" --add-data "examples:examples" --add-data "pyproject.toml:."
+
+      - name: Rename macOS Universal executable
+        run: |
+          mv dist/plua dist/plua-macos-universal
 
       - name: Verify Universal architecture
         run: |
-          file dist/plua
+          file dist/plua-macos-universal
           echo "Architecture verification:"
-          file dist/plua | grep -q "universal" && echo "✓ Universal binary confirmed" || echo "⚠ Not universal binary"
+          file dist/plua-macos-universal | grep -q "universal" && echo "✓ Universal binary confirmed" || echo "⚠ Not universal binary"
 
       - name: Upload macOS Universal artifact
         uses: actions/upload-artifact@v4
         with:
           name: plua-macos-universal
-          path: dist/plua
-
-
+          path: dist/plua-macos-universal
 
   create-release:
     needs: [build-windows, build-macos-universal]
@@ -132,8 +137,8 @@ jobs:
             
             See the [README](https://github.com/${{ github.repository }}/blob/main/README.md) for detailed usage instructions.
           files: |
-            artifacts/plua-windows-exe/plua.exe
-            artifacts/plua-macos-universal/plua
+            artifacts/plua-windows-exe/plua-windows.exe
+            artifacts/plua-macos-universal/plua-macos-universal
           draft: false
           prerelease: false
         env:

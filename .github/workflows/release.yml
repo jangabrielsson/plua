@@ -1,0 +1,205 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    outputs:
+      artifact-name: plua-windows-exe
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Windows executable
+        run: |
+          pyinstaller --onefile \
+            --collect-submodules lupa \
+            --collect-submodules toml \
+            --collect-submodules plua \
+            --collect-submodules extensions \
+            src/plua/__main__.py \
+            --name plua \
+            --add-data "src/lua;lua" \
+            --add-data "src/extensions;extensions" \
+            --add-data "examples;examples" \
+            --add-data "pyproject.toml;."
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plua-windows-exe
+          path: dist/plua.exe
+
+  build-macos-intel:
+    runs-on: macos-latest
+    outputs:
+      artifact-name: plua-macos-intel
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build macOS Intel executable
+        run: |
+          pyinstaller --onefile \
+            --collect-submodules lupa \
+            --collect-submodules toml \
+            --collect-submodules plua \
+            --collect-submodules extensions \
+            src/plua/__main__.py \
+            --name plua \
+            --add-data "src/lua:lua" \
+            --add-data "src/extensions:extensions" \
+            --add-data "examples:examples" \
+            --add-data "pyproject.toml:." \
+            --target-arch=x86_64
+
+      - name: Verify Intel architecture
+        run: |
+          file dist/plua
+          file dist/plua | grep -q "x86_64" && echo "✓ Intel x86_64 confirmed" || echo "⚠ Architecture verification failed"
+
+      - name: Upload macOS Intel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plua-macos-intel
+          path: dist/plua
+
+  build-macos-apple-silicon:
+    runs-on: macos-latest
+    outputs:
+      artifact-name: plua-macos-apple-silicon
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build macOS Apple Silicon executable
+        run: |
+          pyinstaller --onefile \
+            --collect-submodules lupa \
+            --collect-submodules toml \
+            --collect-submodules plua \
+            --collect-submodules extensions \
+            src/plua/__main__.py \
+            --name plua \
+            --add-data "src/lua:lua" \
+            --add-data "src/extensions:extensions" \
+            --add-data "examples:examples" \
+            --add-data "pyproject.toml:." \
+            --target-arch=arm64
+
+      - name: Verify Apple Silicon architecture
+        run: |
+          file dist/plua
+          file dist/plua | grep -q "arm64" && echo "✓ Apple Silicon arm64 confirmed" || echo "⚠ Architecture verification failed"
+
+      - name: Upload macOS Apple Silicon artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plua-macos-apple-silicon
+          path: dist/plua
+
+  create-release:
+    needs: [build-windows, build-macos-intel, build-macos-apple-silicon]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: PLua ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## PLua ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Downloads
+            
+            Choose the executable for your platform:
+            
+            - **Windows**: `plua-windows.exe` - For Windows 10/11
+            - **macOS Intel**: `plua-macos-intel` - For Intel Macs (also works on Apple Silicon via Rosetta 2)
+            - **macOS Apple Silicon**: `plua-macos-apple-silicon` - For M1/M2/M3 Macs (native)
+            
+            ### Usage
+            
+            ```bash
+            # Windows
+            plua-windows.exe script.lua
+            
+            # macOS Intel
+            chmod +x plua-macos-intel
+            ./plua-macos-intel script.lua
+            
+            # macOS Apple Silicon
+            chmod +x plua-macos-apple-silicon
+            ./plua-macos-apple-silicon script.lua
+            ```
+            
+            ### Features
+            
+            - Full Lua 5.4 compatibility
+            - Fibaro HomeCenter 3 QuickApp development support
+            - Async networking capabilities
+            - Debugging support
+            - Modular extension system
+            
+            ### Documentation
+            
+            See the [README](https://github.com/${{ github.repository }}/blob/main/README.md) for detailed usage instructions.
+          files: |
+            artifacts/plua-windows-exe/plua.exe
+            artifacts/plua-macos-intel/plua
+            artifacts/plua-macos-apple-silicon/plua
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

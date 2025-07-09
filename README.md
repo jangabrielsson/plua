@@ -52,6 +52,38 @@ A powerful Lua interpreter implemented in Python using the Lupa library. PLua pr
    pip install -r requirements.txt
    ```
 
+## Pre-built Executables
+
+For users who don't want to install Python and dependencies, pre-built executables are available for download:
+
+### Latest Release
+
+Download the latest release from [GitHub Releases](https://github.com/jangabrielsson/plua/releases/latest).
+
+**Available platforms:**
+- **Windows**: `plua-windows.exe` - For Windows 10/11
+- **macOS Intel**: `plua-macos-intel` - For Intel Macs (also works on Apple Silicon via Rosetta 2)
+- **macOS Apple Silicon**: `plua-macos-apple-silicon` - For M1/M2/M3 Macs (native)
+
+### Usage
+
+```bash
+# Windows
+plua-windows.exe script.lua
+
+# macOS Intel
+chmod +x plua-macos-intel
+./plua-macos-intel script.lua
+
+# macOS Apple Silicon
+chmod +x plua-macos-apple-silicon
+./plua-macos-apple-silicon script.lua
+```
+
+### All Releases
+
+View all releases at: https://github.com/your-username/plua/releases
+
 ## Getting Started
 
 ### Installation
@@ -1082,19 +1114,30 @@ end
 testLightControl()
 ```
 
-## Building Executable
+## Building Executables
 
-Create a standalone executable using PyInstaller:
+### Local Builds
+
+Create standalone executables using PyInstaller:
 
 ```bash
-# Using uv
-uv run python build.py
+# macOS (Apple Silicon or Intel)
+python scripts/build.py
 
-# Using pip
-python build.py
+# macOS Intel specifically
+python scripts/build_macos_intel.py
+
+# Test all local builds
+./scripts/test_release_builds.sh
 ```
 
-The executable will be created in `dist/` directory and includes all dependencies.
+### Automated Builds
+
+- **Windows**: Built automatically via GitHub Actions on every push/PR
+- **macOS Intel & Apple Silicon**: Built automatically when creating releases
+- **All platforms**: Built and released together when you create a GitHub release
+
+The executables will be created in `dist/` directory and include all dependencies.
 
 ## Extension System
 

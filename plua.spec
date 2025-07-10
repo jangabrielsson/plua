@@ -4,11 +4,13 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('src/lua', 'lua'), ('src/extensions', 'extensions'), ('pyproject.toml', '.')]
 binaries = []
-hiddenimports = ['lupa', 'lupa._lupa', 'lupa.lua', 'lupa.lua_types', 'asyncio', 'threading', 'socket', 'urllib.request', 'urllib.parse', 'urllib.error', 'ssl', 'json', 'time', 'os', 'sys', 'argparse', 'queue']
+hiddenimports = ['lupa', 'lupa._lupa', 'lupa.lua', 'lupa.lua_types', 'asyncio', 'threading', 'socket', 'urllib.request', 'urllib.parse', 'urllib.error', 'ssl', 'json', 'time', 'os', 'sys', 'argparse', 'queue', 'requests']
 hiddenimports += collect_submodules('lupa')
 hiddenimports += collect_submodules('plua')
 hiddenimports += collect_submodules('extensions')
 tmp_ret = collect_all('lupa')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('requests')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 

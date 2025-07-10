@@ -34,7 +34,7 @@ jobs:
         run: python -c "import lupa; print('Lupa import successful')"
 
       - name: Build executable with PyInstaller
-        run: pyinstaller --onefile --collect-submodules lupa --collect-submodules toml --collect-submodules plua --collect-submodules extensions src/plua/__main__.py --name plua --add-data "src/lua;lua" --add-data "src/extensions;extensions" --add-data "examples;examples" --add-data "pyproject.toml;."
+        run: pyinstaller --onefile --collect-submodules lupa --collect-submodules toml --collect-submodules plua --collect-submodules extensions --collect-all requests src/plua/__main__.py --name plua --add-data "src/lua;lua" --add-data "src/extensions;extensions" --add-data "examples;examples" --add-data "pyproject.toml;."
 
       - name: Upload executable
         uses: actions/upload-artifact@v4

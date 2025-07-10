@@ -3,6 +3,7 @@ lupa>=1.13.0
 toml>=0.10.0
 websocket-client>=1.6.0
 psutil>=5.9.0
+requests>=2.31.0
 
 # API server dependencies (embedded)
 fastapi>=0.104.0

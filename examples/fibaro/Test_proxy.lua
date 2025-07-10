@@ -2,7 +2,7 @@
 --%%proxy:true
 --%%var:x=42
 --%%interfaces:{}
---%%proxyupdate:ui,vars,interfaces
+--%% proxyupdate:ui,vars,interfaces
 --%% offline:true
 
 --%%u:{label='l1', text="Hello"}

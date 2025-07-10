@@ -236,6 +236,7 @@ router:add("POST", "/api/devices/<id>/action/<name>", function(path, data, vars,
   if not dev then 
     if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
   else
+    if dev.device.isChild then dev = Emu.DIR[dev.device.parentId] end
     -- Call onAction directly instead of using setTimeout to avoid event loop issues
     dev.env.onAction(id,{ deviceId = id, actionName = vars.name, args = data.args })
     return nil,HTTP.OK
@@ -254,6 +255,7 @@ router:add("GET", "/api/devices/<id>/action/<name>", function(path, data, vars, 
     table.sort(data,function(a,b) return a[1] < b[1] end)
     for _,d in ipairs(data) do args[#args+1] = d[2] end
     -- Call onAction directly instead of using setTimeout to avoid event loop issues
+    if dev.device.isChild then dev = Emu.DIR[dev.device.parentId] end
     dev.env.onAction(id,{ deviceId = id, actionName = action, args =args})
     return nil,HTTP.OK
   end

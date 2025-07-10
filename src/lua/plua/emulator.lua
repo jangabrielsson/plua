@@ -405,6 +405,7 @@ function Emulator:createChild(data)
   end
   props.uiCallbacks,props.viewLayout,props.uiView,info.UImap = self:createUI(info.UI or {})
   self:addEmbeds(info)
+  info.env = self.DIR[dev.parentId].env
   info.device = dev
   self:registerDevice(info)
   return dev

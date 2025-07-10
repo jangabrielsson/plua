@@ -401,7 +401,7 @@ function onAction(id,event) -- { deviceID = 1234, actionName = "test", args = {1
   if event.deviceId == self.id then
     return self:callAction(event.actionName, table.unpack(event.args))
   elseif self.childDevices[event.deviceId] then
-    return self.childDevices[event.deviceId]:callAction(event.actionName, table.unpack(event.args))
+    return self.childDevices[event.deviceId]:callAction(event.actionName, table.unpack(event.args or {}))
   end
   self:error(fmt("Child with id:%s not found",id))
 end

@@ -303,7 +303,7 @@ wheels = [
 
 [[package]]
 name = "plua"
-version = "1.0.51"
+version = "1.0.52"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },

@@ -458,9 +458,10 @@ class PLuaInterpreter:
         # Set package.path with local paths first
         existing_path = lua_globals.package.path
         new_path = ";".join(local_paths + [existing_path])
-        # Properly escape the path string for Lua execution
-        escaped_path = new_path.replace('\\', '\\\\').replace('"', '\\"')
-        self.lua_runtime.execute(f'package.path = "{escaped_path}"')
+        
+        # Use Lua's long string literals to avoid escape sequence issues on Windows
+        # This prevents problems with backslashes in Windows paths
+        self.lua_runtime.execute(f'package.path = [[{new_path}]]')
 
         self.debug_print(f"Set package.path to: {new_path}")
         

@@ -105,11 +105,15 @@ Examples:
         if args.debugger:
             debugger_port = args.debugger_port
             try:
+                # Use 127.0.0.1 on Windows to avoid connection issues
+                import platform
+                mobdebug_host = '127.0.0.1' if platform.system() == 'Windows' else '0.0.0.0'
+                
                 # Load and start MobDebug
                 mobdebug_code = f"""
 local mobdebug = require("mobdebug")
-mobdebug.start('0.0.0.0', {debugger_port})
-print("<font color='blue'>MobDebug server</font> <font color='yellow'>started on:</font> <font color='white'>0.0.0.0:{debugger_port}</font>")
+mobdebug.start('{mobdebug_host}', {debugger_port})
+print("<font color='blue'>MobDebug server</font> <font color='yellow'>started on:</font> <font color='white'>{mobdebug_host}:{debugger_port}</font>")
 """
                 interpreter.execute_code_direct(mobdebug_code)
             except Exception as e:

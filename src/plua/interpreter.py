@@ -16,11 +16,11 @@ from extensions import get_lua_extensions
 from .version import __version__ as PLUA_VERSION
 from .coroutine_manager import CoroutineManager
 
-# Import extension modules to register them (side effect: registers all
-# extensions)
+# Import only core extensions at startup for faster initialization
+# Other extensions will be loaded lazily when needed
 import extensions.core  # noqa: F401
-import extensions.network_extensions  # noqa: F401
-import extensions.web_server  # noqa: F401
+# import extensions.network_extensions  # noqa: F401 - Loaded lazily
+# import extensions.web_server  # noqa: F401 - Loaded lazily
 
 
 # ANSI color codes for terminal output

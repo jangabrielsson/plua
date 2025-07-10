@@ -7,7 +7,6 @@ import threading
 import sys
 from .registry import registry
 from extensions.network_extensions import loop_manager, DEBUG_MODE
-import websockets
 
 
 class WebSocketManager:
@@ -413,6 +412,7 @@ class WebSocketServer:
             print(f"[DEBUG] WebSocket server starting on {host}:{port}")
 
         async def start_server():
+            import websockets
             try:
                 async def handler(websocket, path=None):
                     await self._handler(websocket, path)

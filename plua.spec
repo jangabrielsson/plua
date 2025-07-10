@@ -13,6 +13,31 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('requests')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
+# Exclude unnecessary modules for faster startup
+excludes = [
+    'matplotlib', 'numpy', 'pandas', 'scipy', 'PIL', 'Pillow', 'tkinter', 'wx',
+    'PyQt5', 'PyQt6', 'PySide2', 'PySide6', 'IPython', 'jupyter', 'notebook',
+    'pytest', 'pytest_*', 'unittest', 'doctest', 'test', 'tests',
+    'setuptools', 'distutils', 'wheel', 'pip', 'pkg_resources',
+    'email', 'html', 'xml', 'xmlrpc', 'ftplib', 'telnetlib',
+    'multiprocessing', 'concurrent.futures',
+    'sqlite3', 'dbm', 'shelve',
+    'calendar', 'locale', 'gettext',
+    'pydoc', 'doctest', 'unittest', 'test', 'lib2to3',
+    'pkg_resources', 'setuptools', 'distutils', 'wheel',
+    'pip', 'ensurepip', 'venv', 'virtualenv',
+    'pdb', 'bdb', 'faulthandler',
+    'warnings', 'weakref', 'abc', 'collections.abc',
+    'typing', 'typing_extensions', 'dataclasses',
+    'functools', 'itertools', 'operator',
+    'contextlib', 'contextvars', 'copy', 'copyreg',
+    'gc', 'inspect', 'linecache',
+    'pickle', 'pickletools', 'pkgutil', 'platform',
+    'posixpath', 'site', 'sre_compile', 'sre_constants',
+    'sre_parse', 'stat', 'string', 'struct', 'sysconfig',
+    'token', 'tokenize', 'traceback', 'types', 'warnings',
+    'weakref', 'zipimport', 'zlib',
+]
 
 a = Analysis(
     ['src/plua/__main__.py'],
@@ -23,11 +48,11 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=excludes,
     noarchive=False,
-    optimize=0,
+    optimize=0,  # Disable optimization to avoid compatibility issues
 )
-pyz = PYZ(a.pure)
+pyz = PYZ(a.pure, cipher=None)
 
 exe = EXE(
     pyz,
@@ -38,7 +63,7 @@ exe = EXE(
     name='plua',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
+    strip=True,  # Strip debug symbols for smaller size
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,

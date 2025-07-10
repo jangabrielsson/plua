@@ -3,9 +3,12 @@ import argparse
 
 from plua import PLuaInterpreter
 from plua.version import __version__
-import extensions.network_extensions
 
-loop_manager = extensions.network_extensions.loop_manager
+
+# Lazy import of network extensions to avoid startup delay
+def get_loop_manager():
+    import extensions.network_extensions
+    return extensions.network_extensions.loop_manager
 
 
 def main():
@@ -192,7 +195,7 @@ print("<font color='blue'>MobDebug server</font> <font color='yellow'>started on
             interpreter.run_interactive()
 
     try:
-        loop_manager.run_main(async_main(args))
+        get_loop_manager().run_main(async_main(args))
     except KeyboardInterrupt:
         print("\n[PLua] Received Ctrl-C (SIGINT), shutting down gracefully...")
         sys.exit(0)

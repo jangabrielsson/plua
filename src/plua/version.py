@@ -2,15 +2,28 @@ import os
 import sys
 
 try:
-    import toml
+    import importlib.metadata
+    METADATA_AVAILABLE = True
 except ImportError:
-    # Fallback if toml is not available
-    toml = None
+    METADATA_AVAILABLE = False
+
+try:
+    import toml
+    TOML_AVAILABLE = True
+except ImportError:
+    TOML_AVAILABLE = False
 
 
 def get_version():
+    # First, try to get version from installed package metadata
+    if METADATA_AVAILABLE:
+        try:
+            return importlib.metadata.version("plua")
+        except importlib.metadata.PackageNotFoundError:
+            pass
+    
     # If toml is not available, return a default version
-    if toml is None:
+    if not TOML_AVAILABLE:
         return "1.0.2"
     
     # Detect if running in a PyInstaller bundle
@@ -31,7 +44,9 @@ def get_version():
         return data['project']['version']
     except (FileNotFoundError, KeyError, Exception) as e:
         # Fallback if file is not found or has unexpected format
-        print(f"Warning: Could not read version from pyproject.toml: {e}", file=sys.stderr)
+        # Only show warning in development mode, not in installed package
+        if not METADATA_AVAILABLE:
+            print(f"Warning: Could not read version from pyproject.toml: {e}", file=sys.stderr)
         return "1.0.2"
 
 

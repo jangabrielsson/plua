@@ -40,6 +40,7 @@ Examples:
   plua --port 8080 --fibaro -i                      # Run on custom port 8080 with fibaro and interactive shell
   plua --port 9000 script.lua                       # Run script with API server on port 9000
   plua --host 0.0.0.0 --port 8000 script.lua        # Run script with API server on all interfaces
+  plua --no-api-server script.lua                   # Run script without API server (faster startup)
   plua --task "my-task" script.lua                  # Pass task string to Lua (available in _PY.args.task)
   plua -d --port 8080 --task "debug-task" script.lua # Debug mode with custom port and task
   """
@@ -66,6 +67,8 @@ Examples:
                         help='Host for the embedded API server (default: 0.0.0.0 - all interfaces)')
     parser.add_argument('--task', type=str, metavar='TASK',
                         help='Task string to pass to Lua (available in _PY.args.task)')
+    parser.add_argument('--no-api-server', action='store_true',
+                        help='Disable the embedded API server (faster startup)')
     parser.add_argument('-v', '--version', action='version', version=f'PLua {__version__}')
 
     args = parser.parse_args()
@@ -90,6 +93,7 @@ Examples:
             debug=args.debug, 
             debugger_enabled=args.debugger_port if args.debugger else False, 
             silent=args.task is not None, 
+            start_api_server=not args.no_api_server,
             api_server_port=args.port, 
             api_server_host=args.host
         )

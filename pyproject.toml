@@ -1,10 +1,10 @@
 [project]
 name = "plua"
-version = "1.0.46"
+version = "1.0.52"
 description = "A Lua interpreter in Python using Lupa library"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [ "lupa>=1.13.0", "psutil>=7.0.0",]
+dependencies = [ "lupa>=1.13.0", "psutil>=7.0.0", "toml>=0.10.0", "websocket-client>=1.6.0", "requests>=2.31.0", "fastapi>=0.104.0", "uvicorn[standard]>=0.24.0", "pydantic>=2.0.0", "httpx>=0.25.0", "paho-mqtt>=1.6.1", "websockets>=10.0",]
 [[project.authors]]
 name = "PLua Developer"
 email = "developer@example.com"
@@ -36,3 +36,9 @@ omit = [ "*/tests/*", "*/test_*", "*/__pycache__/*",]
 
 [tool.coverage.report]
 exclude_lines = [ "pragma: no cover", "def __repr__", "if self.debug:", "if settings.DEBUG", "raise AssertionError", "raise NotImplementedError", "if 0:", "if __name__ == .__main__.:", "class .*\\bProtocol\\):", "raise ImportError",]
+
+[tool.hatch.build.targets.wheel]
+packages = [ "src/plua", "src/extensions",]
+
+[tool.hatch.build.targets.sdist]
+include = [ "/src/plua", "/src/extensions", "/src/lua", "/examples", "/pyproject.toml", "/README.md",]

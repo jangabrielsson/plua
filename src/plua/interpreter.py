@@ -298,6 +298,9 @@ class PLuaInterpreter:
         self.debugger_enabled = debugger_enabled
         self.lua_runtime = LuaRuntime(unpack_returned_tuples=True)
         
+        # Set up package.path IMMEDIATELY to ensure our local modules are found first
+        self._setup_package_path_early()
+        
         # Set debug mode in network extensions
         extensions.network_extensions.set_debug_mode(debug)
         self.execution_tracker = ExecutionTracker(self)
@@ -359,10 +362,13 @@ class PLuaInterpreter:
         except Exception as e:
             self.debug_print(f"Failed to re-inject global timer functions: {e}")
 
-        # Start embedded API server if requested
+        # Start embedded API server if requested (in background for faster startup)
         if start_api_server:
-            self.debug_print("Starting embedded API server")
-            self.start_embedded_api_server()
+            self.debug_print("Starting embedded API server in background")
+            # Start API server in background thread to avoid blocking startup
+            import threading
+            api_thread = threading.Thread(target=self.start_embedded_api_server, daemon=True)
+            api_thread.start()
         else:
             self.debug_print("Embedded API server startup skipped")
 
@@ -375,6 +381,11 @@ class PLuaInterpreter:
             if self.embedded_api_server and self.embedded_api_server.is_running():
                 print(
                     f"{Colors.BOLD}{Colors.BLUE}API Server{Colors.RESET} {Colors.YELLOW}running on: "
+                    f"{Colors.WHITE}http://{self.api_server_host}:{self.api_server_port}{Colors.RESET}"
+                )
+            elif start_api_server:
+                print(
+                    f"{Colors.BOLD}{Colors.BLUE}API Server{Colors.RESET} {Colors.YELLOW}starting in background... "
                     f"{Colors.WHITE}http://{self.api_server_host}:{self.api_server_port}{Colors.RESET}"
                 )
                 if self.api_server_host == "0.0.0.0":
@@ -430,16 +441,13 @@ class PLuaInterpreter:
         if self.debug:
             print(f"DEBUG: {message}", file=sys.stderr)
 
-    def setup_lua_environment(self):
-        """Setup Lua environment with custom functions using the extension system"""
+    def _setup_package_path_early(self):
+        """Set up package.path immediately after Lua runtime creation to ensure local modules are found first"""
         # Get the Lua globals table
         lua_globals = self.lua_runtime.globals()
 
-        # Set up package.path to include our local directories first
-        # Calculate path relative to project root (one level up from plua/
-        # directory)
-        plua_dir = os.path.dirname(os.path.abspath(
-            __file__))  # This is the plua/ directory
+        # Calculate path relative to project root (one level up from plua/ directory)
+        plua_dir = os.path.dirname(os.path.abspath(__file__))  # This is the plua/ directory
         # Go up one level to project root
         project_root = os.path.dirname(plua_dir)
         local_paths = [
@@ -453,10 +461,24 @@ class PLuaInterpreter:
         # Properly escape the path string for Lua execution
         escaped_path = new_path.replace('\\', '\\\\').replace('"', '\\"')
         self.lua_runtime.execute(f'package.path = "{escaped_path}"')
-        # lua_globals.package.path = new_path
 
         self.debug_print(f"Set package.path to: {new_path}")
+        
+        # Also clear any already loaded modules that might conflict
+        # This ensures our local socket.lua takes precedence over global socket
+        self.lua_runtime.execute('package.loaded.socket = nil')
+        self.debug_print("Cleared package.loaded.socket to ensure local version is used")
 
+    def setup_lua_environment(self):
+        """Setup Lua environment with custom functions using the extension system"""
+        # Get the Lua globals table
+        lua_globals = self.lua_runtime.globals()
+
+        # Package path is already set up in _setup_package_path_early()
+        # Calculate project root for other uses
+        plua_dir = os.path.dirname(os.path.abspath(__file__))  # This is the plua/ directory
+        project_root = os.path.dirname(plua_dir)  # Go up one level to project root
+        
         # Initialize output capture buffer
         self.output_buffer = []
 
@@ -1019,6 +1041,18 @@ end
     def is_api_server_running(self):
         """Check if API server is running"""
         return self.embedded_api_server and self.embedded_api_server.is_running()
+
+    def wait_for_api_server(self, timeout=10):
+        """Wait for API server to be ready"""
+        if not self.embedded_api_server:
+            return False
+        
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if self.embedded_api_server.is_running():
+                return True
+            time.sleep(0.1)
+        return False
 
     def stop_api_server(self):
         """Stop the API server"""

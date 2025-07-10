@@ -1,5 +1,7 @@
 print("Hello")
 
+local p = package.searchpath("socket",package.path)
+print(p)
 local a =setTimeout(function() print("A") end, 5000)
 clearTimeout(a)
  fibaro.sleep(1000)

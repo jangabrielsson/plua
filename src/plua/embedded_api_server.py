@@ -480,7 +480,7 @@ class EmbeddedAPIServer:
             """Call a QuickApp method"""
             t = time.time()
             try:
-                print(f"Calling {id}/{name} with {args}")
+                # print(f"Calling {id}/{name} with {args}")
                 import json
                 json_args = json.dumps(args.args)
                 result = self.interpreter.execute_lua_code(

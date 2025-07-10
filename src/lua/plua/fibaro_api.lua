@@ -560,12 +560,14 @@ router:add("POST", "/api/plugins/updateView", function(path, data, vars, query)
   --return create_response({status = "view_updated"})
   local id = data.deviceId
   local dev = Emu.DIR[id]
-  if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
-else
-  -- Call updateView directly instead of using setTimeout to avoid event loop issues
-  Emu:updateView(id,data)
-  return nil,HTTP.OK
-end
+  if not dev then 
+    if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.post(path,data) end
+  else
+    -- Call updateView directly instead of using setTimeout to avoid event loop issues
+    Emu:updateView(id,data)
+    if dev.device.isProxy then return hc3api.post(path,data) end
+    return nil,HTTP.OK
+  end
 end)
 
 router:add("GET", "/api/profiles", function(path, data, vars, query)

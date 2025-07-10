@@ -133,7 +133,7 @@ wheels = [
 
 [[package]]
 name = "plua"
-version = "1.0.42"
+version = "1.0.43"
 source = { editable = "." }
 dependencies = [
     { name = "lupa" },

@@ -107,6 +107,7 @@ function headerKeys.latitude(str,info,k) info.latitude = validate(str,"number",k
 function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number",k) end
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
 function headerKeys.save(str,info) info.save = str end
+function headerKeys.proxyupdate(str,info) info.proxyupdate = str end
 function headerKeys.project(str,info,k) info.project = validate(str,"number",k) end
 function headerKeys.nop(str,info,k) validate(str,"boolean",k) end
 function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
@@ -236,17 +237,35 @@ local deviceTypes = nil
 function Emulator:createInfoFromContent(filename,content)
   local info = {}
   local preprocessed,headers = self:processHeaders(filename,content)
-
+  local orgUI = table.copy(headers.UI or {})
   if headers.offline and headers.proxy then
     headers.proxy = false
     self:WARNING("Offline mode, proxy disabled")
   end
-  
+  if not headers.offline then
+    self.lib.loadLib("helper",self)
+    self.lib.startHelper()
+  end
   if headers.proxy then
     local proxylib = self.lib.loadLib("proxy",self)
     info = proxylib.existingProxy(headers.name or "myQA",headers)
     if not info then
       info = proxylib.createProxy(headers)
+    else -- Existing proxy, mau need updates
+      local proxyupdate = headers.proxyupdate or ""
+      local ifs = proxyupdate:match("interfaces")
+      local qvars = proxyupdate:match("vars")
+      local ui = proxyupdate:match("ui")
+      if ifs or qvars or ui then
+        local parts = {}
+        if ifs then parts.interfaces = headers.interfaces or {} end
+        if qvars then parts.props = {quickAppVariables = headers.vars or {}} end
+        if ui then parts.UI = orgUI end
+        setTimeout(function()
+          require("mobdebug").on()
+          self.lib.updateQAparts(info.device.id,parts,true)
+        end,100)
+      end
     end
   end
 
@@ -451,8 +470,8 @@ function Emulator:loadMainFile(filename)
     self.lib.loadLib("offline",self)
     self.lib.setupOfflineRoutes()
   else
-    self.lib.loadLib("helper",self)
-    self.lib.startHelper()
+    -- self.lib.loadLib("helper",self)
+    -- self.lib.startHelper()
   end
   
   self:loadQA(info)

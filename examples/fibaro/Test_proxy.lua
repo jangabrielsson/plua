@@ -1,8 +1,11 @@
 --%%name:TestProxy
 --%%proxy:true
+--%%var:x=42
+--%%interfaces:{}
+--%%proxyupdate:ui,vars,interfaces
 --%% offline:true
 
---%%u={label='l1', text="Hello"}
+--%%u:{label='l1', text="Hello"}
 
 ---@class MyChild : QuickAppChild
 MyChild = {}
@@ -16,7 +19,7 @@ function MyChild:turnOff() self:updateProperty("value",false) end
 
 function QuickApp:onInit()
   self:debug(self.name,self.id)
-
+  --api.delete("/devices/4119")
   -- Set variable through internal api, should be visible on proxy
   self:internalStorageSet("testVar","testValue")
 
@@ -39,5 +42,6 @@ function QuickApp:onInit()
     self:initChildDevices(map)
   end
 
+  self:updateView('l1','text','Hello again')
   setInterval(function() print("PING")end,4000) -- Keep alive
 end

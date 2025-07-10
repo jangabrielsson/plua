@@ -261,13 +261,164 @@ local function findIdAndName(fname)
   return find(p2)
 end
 
+local function updateQAparts(id,parts,silent)
+  local qa = Emu.api.hc3.get("/devices/"..id)
+  if not qa then
+    return Emu:ERROR(fmt("QuickApp on HC3 with ID %s not found %s", tostring(id)))
+  end
+  
+  if parts.files then
+    local oldFiles = Emu.api.hc3.get("/quickApp/"..id.."/files") or {}
+    local oldMap,existingFiles,newFiles = {},{},{}
+    for _,f in ipairs(oldFiles) do oldMap[f.name] = f end
+    for n,_ in pairs(parts.files) do
+      local flag = oldMap[n]
+      oldMap[n]=nil
+      if flag then existingFiles[n] = true else newFiles[n] = true end
+    end
+    
+    -- Delete files no longer part of QA
+    for name,_ in pairs(oldMap) do
+      local r,err = Emu.api.hc3.delete("/quickApp/"..id.."/files/"..name)
+      if err > 206 then
+        return Emu:ERROR(fmt("Failed to delete file %s from QuickApp %s: %s", name, id, err))
+      else
+        Emu:INFO(fmt("Deleted file %s from QuickApp %s", name, id))
+      end
+    end
+    
+    -- Create new files
+    for name,_ in pairs(newFiles) do
+      local path = parts.files[name]
+      local f = {name=name, isMain=false, isOpen=false, type='lua', content=Emu.lib.readFile(path)}
+      local r,err = Emu.api.hc3.post("/quickApp/"..id.."/files",f)
+      if err > 206 then
+        return Emu:ERROR(fmt("Failed to create file %s in QuickApp %s: %s", name, id, err))
+      else
+        Emu:INFO(fmt("Created file %s in QuickApp %s", name, id))
+      end
+    end
+    
+    -- Update existing files
+    local ufiles = {}
+    for name,_ in pairs(existingFiles) do
+      local path = parts.files[name]
+      local ef = Emu.api.hc3.get("/quickApp/"..id.."/files/"..name)
+      local content = Emu.lib.readFile(path)
+      if content == ef.content then
+        Emu:INFO(fmt("Untouched file %s:%s in QuickApp %s", name, path, id))
+      else
+        local f = {name=name, isMain=name=='main', isOpen=false, type='lua', content=content}
+        ufiles[#ufiles+1] = f
+      end
+    end
+    if ufiles[1] then
+      local r,err = Emu.api.hc3.put("/quickApp/"..id.."/files",ufiles)
+      if err > 206 then
+        return Emu:ERROR(fmt("Failed to update files for QuickApp %s: %s", id, err))
+      else
+        for name,_ in pairs(existingFiles) do
+          Emu:INFO(fmt("Updated file %s:%s in QuickApp %s", name, parts.files[name], id))
+        end
+      end
+    end
+    
+  end
+  
+  local function update(prop,value)
+    return Emu.api.hc3.post("/plugins/updateProperty",{
+      deviceId = id,
+      propertyName = prop,
+      value = value
+    })
+  end
+  
+  -- Update UI...
+  if parts.viewLayout then
+    local res,err = Emu.api.hc3.put("/devices/"..id,{
+      properties = {
+        viewLayout = parts.viewLayout,
+        uiCallbacks = parts.uiCallbacks
+      }
+    })
+    if err > 206 then return Emu:ERROR(fmt("Failed to update QuickApp viewLayout for %s: %s", id, err)) end
+    -- r, err = update("uiView", fqa.initialProperties.uiView)
+    -- if err > 206 then ERROR("Failed to update QuickApp uiView for %s: %s", id, err) end
+    -- r, err = update("uiCallbacks", fqa.initialProperties.uiCallbacks)
+    -- if err > 206 then ERROR("Failed to update QuickApp uiCallbacks for %s: %s", id, err) end
+  end
+  
+  if parts.UI then
+    local uiCallbacks,viewLayout,uiView,UImap = Emu:createUI(parts.UI or {})
+    local res,err = Emu.api.hc3.put("/devices/"..id,{
+      properties = {
+        viewLayout = viewLayout,
+        uiCallbacks = uiCallbacks
+      }
+    })
+    if err > 206 then return Emu:ERROR(fmt("Failed to update QuickApp viewLayout for %s: %s", id, err)) end
+  end
+
+  -- Update other properties
+  if parts.props then
+    local updateProps = {
+      "quickAppVariables","manufacturer","model","buildNumber",
+      "userDescription","quickAppUuid","deviceRole"
+    }
+    for _,prop in ipairs(updateProps) do 
+      local value = parts.props[prop]
+      if value ~= nil and value ~= "" and value ~= qa.properties[prop] then 
+        update(prop, value) 
+        if prop == "quickAppVariables" then
+          value = json.encode(value)
+          if #value > 40 then 
+            value = value:sub(1, 40) .. "..."
+          end
+        end
+        if not silent then Emu:INFO(fmt("Updated property %s to '%s' for QuickApp %s", prop, value, id)) end
+      end
+    end
+    
+  end
+  
+  if parts.interfaces then
+    local function trueMap(arr) local r={} for _,v in ipairs(arr) do r[v]=true end return r end
+    -- Update interfaces
+    local interfaces = parts.interfaces or {}
+    local oldInterfaces = qa.interfaces or {}
+    local newMap,oldMap = trueMap(interfaces),trueMap(oldInterfaces)
+    if not newMap.quickApp then newMap.quickApp = true end
+    local newIfs,oldIfs = {},{}
+    for i,_ in pairs(newMap) do if not oldMap[i] then newIfs[#newIfs+1] = i end end
+    for i,_ in pairs(oldMap) do if not newMap[i] then oldIfs[#oldIfs+1] = i end end
+    if #newIfs > 0 then 
+      local res,code = Emu.api.hc3.restricted.post("/plugins/interfaces", {action = 'add', deviceId = id, interfaces = newIfs})  -- TODO
+      if code > 206 then
+        return Emu:ERROR(fmt("Failed to add interfaces to QuickApp %s: %s", id, code))
+      else
+        if not silent then Emu:INFO(fmt("Added interfaces to QuickApp %s: %s", id, table.concat(newIfs, ", "))) end
+      end
+    end
+    if #oldIfs > 0 then 
+      local res,code = Emu.api.hc3.restricted.post("/plugins/interfaces", {action = 'delete', deviceId = id, interfaces = oldIfs}) -- TODO
+      if code > 206 then
+        return Emu:ERROR(fmt("Failed to delete interfaces from QuickApp %s: %s", id, code))
+      else
+        if not silent then Emu:INFO(fmt("Deleted interfaces from QuickApp %s: %s", id, table.concat(oldIfs, ", "))) end
+      end
+    end
+  end
+
+  if not silent then Emu:INFO("Done") end
+end
+
 local function updateQA(fname)
   Emu:INFO(fmt("Updating QA: %s",tostring(fname))) -- fname
   local exist,id,qn,data = findIdAndName(fname)
   assert(exist,"No .project file found for " .. fname)
   assert(id,"No entry for "..fname.." in .project file")
   assert(data,"No .project found for "..fname)
-  local qa = api.hc3.get("/devices/"..id)
+  local qa = Emu.api.hc3.get("/devices/"..id)
   if not qa then
     return Emu:ERROR(fmt("QuickApp on HC3 with ID %s not found %s", tostring(id)))
   end
@@ -276,128 +427,14 @@ local function updateQA(fname)
   local fqa = Emu.lib.getFQA(info.device.id)
   assert(fqa, "Emulator installation error")
   assert(qa.type == fqa.type, "QuickApp type mismatch: expected " .. fqa.type .. ", got " .. qa.type)
-
-  local oldFiles = Emu.api.hc3.get("/quickApp/"..id.."/files") or {}
-  local oldMap,existingFiles,newFiles = {},{},{}
-  for _,f in ipairs(oldFiles) do oldMap[f.name] = f end
-  for n,_ in pairs(data.files) do
-    local flag = oldMap[n]
-    oldMap[n]=nil
-    if flag then existingFiles[n] = true else newFiles[n] = true end
-  end
-
-  -- Delete files no longer part of QA
-  for name,_ in pairs(oldMap) do
-    local r,err = Emu.api.hc3.delete("/quickApp/"..id.."/files/"..name)
-    if err > 206 then
-      return Emu:ERROR(fmt("Failed to delete file %s from QuickApp %s: %s", name, id, err))
-    else
-      Emu:INFO(fmt("Deleted file %s from QuickApp %s", name, id))
-    end
-  end
-
-  -- Create new files
-  for name,_ in pairs(newFiles) do
-    local path = data.files[name]
-    local f = {name=name, isMain=false, isOpen=false, type='lua', content=Emu.lib.readFile(path)}
-    local r,err = Emu.api.hc3.post("/quickApp/"..id.."/files",f)
-    if err > 206 then
-      return Emu:ERROR(fmt("Failed to create file %s in QuickApp %s: %s", name, id, err))
-    else
-      Emu:INFO(fmt("Created file %s in QuickApp %s", name, id))
-    end
-  end
-
-  -- Update existing files
-  local ufiles = {}
-  for name,_ in pairs(existingFiles) do
-    local path = data.files[name]
-    local ef = Emu.api.hc3.get("/quickApp/"..id.."/files/"..name)
-    local content = Emu.lib.readFile(path)
-    if content == ef.content then
-      Emu:INFO(fmt("Untouched file %s:%s in QuickApp %s", name, path, id))
-    else
-      local f = {name=name, isMain=name=='main', isOpen=false, type='lua', content=content}
-      ufiles[#ufiles+1] = f
-    end
-  end
-  if ufiles[1] then
-    local r,err = Emu.api.hc3.put("/quickApp/"..id.."/files",ufiles)
-    if err > 206 then
-      return Emu:ERROR(fmt("Failed to update files for QuickApp %s: %s", id, err))
-    else
-      for name,_ in pairs(existingFiles) do
-        Emu:INFO(fmt("Updated file %s:%s in QuickApp %s", name, data.files[name], id))
-      end
-    end
-  end
-
-  local function update(prop,value)
-    return Emu.api.hc3.post("/plugins/updateProperty",{
-      deviceId = id,
-      propertyName = prop,
-      value = value
-    })
-  end
-
-  -- Update UI...
-  local res,err = Emu.api.hc3.put("/devices/"..id,{
-    properties = {
-      viewLayout = fqa.initialProperties.viewLayout,
-      uiCallbacks = fqa.initialProperties.uiCallbacks
-    }
+  updateQAparts(id,{
+    files = fqa.files, 
+    interfaces = fqa.initialInterfaces, 
+    quickVars = fqa.initialProperties.quickAppVariables,
+    props = fqa.initialProperties,
+    viewLayout = fqa.initialProperties.viewLayout,
+    uiCallbacks = fqa.initialProperties.uiCallbacks
   })
-  if err > 206 then return Emu:ERROR(fmt("Failed to update QuickApp viewLayout for %s: %s", id, err)) end
-  -- r, err = update("uiView", fqa.initialProperties.uiView)
-  -- if err > 206 then ERROR("Failed to update QuickApp uiView for %s: %s", id, err) end
-  -- r, err = update("uiCallbacks", fqa.initialProperties.uiCallbacks)
-  -- if err > 206 then ERROR("Failed to update QuickApp uiCallbacks for %s: %s", id, err) end
-
-  -- Update other properties
-  local updateProps = {
-    "quickAppVariables","manufacturer","model","buildNumber",
-    "userDescription","quickAppUuid","deviceRole"
-  }
-  for _,prop in ipairs(updateProps) do 
-    local value = fqa.initialProperties[prop]
-    if value ~= nil and value ~= "" and value ~= fqa.initialProperties[prop] then 
-      update(prop, value) 
-      if prop == "quickAppVariables" then
-        value = json.encode(value)
-        if #value > 40 then 
-          value = value:sub(1, 40) .. "..."
-        end
-      end
-      Emu:INFO(fmt("Updated property %s to '%s' for QuickApp %s", prop, value, id))
-    end
-  end
-
-  local function trueMap(arr) local r={} for _,v in ipairs(arr) do r[v]=true end return r end
-  -- Update interfaces
-  local interfaces = fqa.initialInterfaces or {}
-  local oldInterfaces = qa.interfaces or {}
-  local newMap,oldMap = trueMap(interfaces),trueMap(oldInterfaces)
-  local newIfs,oldIfs = {},{}
-  for i,_ in pairs(newMap) do if not oldMap[i] then newIfs[#newIfs+1] = i end end
-  for i,_ in pairs(oldMap) do if not newMap[i] then oldIfs[#oldIfs+1] = i end end
-  if #newIfs > 0 then 
-    local res,code = api.hc3.restricted.post("/plugins/interfaces", {action = 'add', deviceId = id, interfaces = newIfs})  -- TODO
-    if code > 206 then
-      return Emu:ERROR(fmt("Failed to add interfaces to QuickApp %s: %s", id, code))
-    else
-      Emu:INFO(fmt("Added interfaces to QuickApp %s: %s", id, table.concat(newIfs, ", ")))
-    end
-  end
-  if #oldIfs > 0 then 
-    local res,code = api.hc3.restricted.post("/plugins/interfaces", {action = 'delete', deviceId = id, interfaces = oldIfs}) -- TODO
-    if code > 206 then
-      return Emu:ERROR(fmt("Failed to delete interfaces from QuickApp %s: %s", id, code))
-    else
-      Emu:INFO(fmt("Deleted interfaces from QuickApp %s: %s", id, table.concat(oldIfs, ", ")))
-    end
-  end
-
-  Emu:INFO("Done")
 end
 
 local function updateFile(fname)
@@ -424,7 +461,6 @@ local function updateFile(fname)
   end
 end
 
-
 Emu.lib.createTempName = createTempName
 Emu.lib.findFirstLine = findFirstLine
 Emu.lib.loadQAString = loadQAString
@@ -437,3 +473,4 @@ Emu.lib.unpackFQAAux = unpackFQAAux
 Emu.lib.saveProject = saveProject
 Emu.lib.updateQA = updateQA
 Emu.lib.updateFile = updateFile
+Emu.lib.updateQAparts = updateQAparts

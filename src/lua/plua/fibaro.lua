@@ -1,6 +1,6 @@
 fibaro = fibaro or {}
 local fmt = string.format
-__TAG = __TAG or "FIBARO"
+__TAG = __TAG or "PLUA"
 
 -- A simple ternary operator implementation.
 -- @param c - The condition.

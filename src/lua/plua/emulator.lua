@@ -190,7 +190,7 @@ local function loadFile(env,path,name,content)
     file:close()
   end
   local func, err = load(content, path, "t", env)
-  if func then func() return true
+  if func then func() env._G = env return true
   else error(err) end
 end
 
@@ -434,6 +434,7 @@ function Emulator:loadQA(info)
   loadfile(luapath.."/plua/fibaro.lua","t",env)()
   loadfile(luapath.."/plua/quickapp.lua","t",env)()
   env._G = env
+  env.__TAG = info.device.name:upper()..info.device.id
   env.plugin.mainDeviceId = info.device.id
   for name,f in pairs(info.files) do
     if name ~= 'main' then loadFile(env,f.path,name,f.content) end

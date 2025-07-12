@@ -1,5 +1,5 @@
 --%%name=Init
---%%debug=http:true
+--%% debug=http:true
 --%%offline=true
 --%%state=true
 --%%webui=true

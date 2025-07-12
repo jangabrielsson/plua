@@ -517,6 +517,7 @@ function Emulator:HC3_CALL(method, path, data, redirect)
   
   if not self.lib.hc3_creds then
     self:ERROR("HC3 credentials not configured")
+    os.exit()
     return {error = "HC3 credentials not configured"}, 401
   end
   

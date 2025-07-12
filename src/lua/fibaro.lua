@@ -84,5 +84,5 @@ function _PY.getAllQAInfo()
 end
 
 if not _PY.args.task then
-  _print(fmt("<font color='blue'>Fibaro API loaded%s</font>",_PY.args.task and (" with task ".._PY.args.task) or ""))
+  _print(fmt("<font color='yellow'>Fibaro API loaded%s</font>",_PY.args.task and (" with task ".._PY.args.task) or ""))
 end

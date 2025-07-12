@@ -843,16 +843,17 @@ end
             return False
 
     async def async_execute_file(self, filename):
-        """Async wrapper for execute_file that runs in the main event loop (no threads)"""
+        """Async wrapper for execute_file, that runs in the main event loop (no threads)"""
         # Check if _PY.mainHook is registered
         try:
             main_hook = self.lua_runtime.globals()['_PY']['mainHook']
             if main_hook:
                 self.debug_print(f"Using _PY.mainHook for file '{filename}'")
-                hook_code = f"_PY.mainHook('{filename}')"
+                escaped_filename = self._escape_lua_string(filename)
+                hook_code = f"_PY.mainHook('{escaped_filename}')"
                 return self.execute_code(hook_code)
         except (KeyError, TypeError):
-            pass
+            pass 
         # Normal file execution
         return self.execute_file(filename)
 
@@ -870,7 +871,8 @@ end
                 main_hook = self.lua_runtime.globals()['_PY']['mainHook']
                 if main_hook:
                     self.debug_print(f"Using _PY.mainHook for file '{main_file}'")
-                    hook_code = f"_PY.mainHook('{main_file}')"
+                    escaped_main_file = self._escape_lua_string(main_file)
+                    hook_code = f"_PY.mainHook('{escaped_main_file}')"
                     main_result = self.execute_code_direct(hook_code)
                 else:
                     main_result = self.execute_file(main_file)

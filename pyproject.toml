@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plua2"
+dynamic = ["version"]
+description = "Python-Lua async runtime with timer support"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Jan Gabrielsson", email = "jan@gabrielsson.com"},
+]
+keywords = ["lua", "async", "timer", "coroutine"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "lupa>=2.0",
+    "aiohttp>=3.8.0",
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=22.0",
+    "flake8>=5.0",
+    "mypy>=1.0",
+]
+
+[project.scripts]
+plua2 = "plua2.main:main"
+
+[project.urls]
+Homepage = "https://github.com/jangabrielsson/plua2"
+Documentation = "https://github.com/jangabrielsson/plua2/docs"
+Repository = "https://github.com/jangabrielsson/plua2.git"
+Issues = "https://github.com/jangabrielsson/plua2/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.dynamic]
+version = {attr = "plua2.__version__"}
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

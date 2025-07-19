@@ -1,0 +1,89 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "QA, upload current file as QA to HC3",
+      "type": "shell",
+      "command": "lua",
+      "args": [
+        "-e",
+        "\"require('hc3emu2')\"",
+        "uploadQA",
+        "${relativeFile}"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "QA, update single file (part of .project)",
+      "type": "shell",
+      "command": "lua",
+      "args": [
+        "-e",
+        "\"require('hc3emu2')\"",
+        "updateFile",
+        "${relativeFile}"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "QA, update QA (defined in .project)",
+      "type": "shell",
+      "command": "lua",
+      "args": [
+        "-e",
+        "\"require('hc3emu2')\"",
+        "updateQA",
+        "${relativeFile}"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "QA, Download and unpack from HC3",
+      "type": "shell",
+      "command": "lua",
+      "args": [
+        "-e",
+        "\"require('hc3emu2')\"",
+        "downloadQA",
+        "${input:QA_id}",
+        "${input:path_id}"
+      ],
+      "group": "build"
+    }
+  ],
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "QA_id",
+      "description": "deviceId of QA from HC3 you want to download?",
+      "default": "-"
+    },
+    {
+      "type": "promptString",
+      "id": "path_id",
+      "description": "path where to store the QA",
+      "default": "dev"
+    },
+    {
+      "type": "promptString",
+      "id": "QA_name",
+      "description": "'.' for open file, or QA path name",
+      "default": "."
+    },
+    {
+      "id": "pickEnvFile",
+      "type": "command",
+      "command": "launch-file-picker.pick",
+      "args": {
+        "options": {
+          "title": "pick env file",
+          "path": ".",
+          "filterExt": ".env"
+        },
+        "output": {
+          "defaultPath": "client/env/dev.env"
+        }
+      }
+    }
+  ]
+}

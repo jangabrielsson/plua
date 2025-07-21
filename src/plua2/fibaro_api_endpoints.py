@@ -1,12 +1,17 @@
 """
-Fibaro HC3 API Emulation Server
-Auto-generated from Swagger/OpenAPI specifications.
-Delegates all requests to Lua via _PY.fibaro_api_hook function.
+Fibaro HC3 API Emulation Server with Full Type Safety
+Auto-generated from Swagger/OpenAPI specifications with Pydantic models.
+Delegates all requests to Lua via simplified (method, path, data) pattern.
 """
 
-from fastapi import FastAPI, Query, Body, HTTPException, Depends
+from fastapi import FastAPI, Query, Body, HTTPException, Request
 from typing import Optional, Dict, Any, List
+from datetime import datetime, date
 import logging
+import json
+
+# Import all models from the separate models file
+from .fibaro_api_models import *
 
 logger = logging.getLogger(__name__)
 
@@ -18,5028 +23,3472 @@ def set_interpreter(lua_interpreter):
     global interpreter
     interpreter = lua_interpreter
 
+# Helper function to handle all requests
+async def handle_request(request: Request, method: str, body_data: Any = None):
+    """Common handler for all API requests"""
+    full_path = str(request.url.path)
+    if request.url.query:
+        full_path += f"?{request.url.query}"
+    
+    # Convert body data to JSON string if present
+    data = ""
+    if body_data is not None:
+        if hasattr(body_data, 'dict'):
+            data = json.dumps(body_data.dict())
+        elif isinstance(body_data, dict):
+            data = json.dumps(body_data)
+        else:
+            data = str(body_data)
+    
+    try:
+        result = interpreter.lua.globals()._PY.fibaro_api_hook(method, full_path, data)
+        return result
+    except Exception as e:
+        logger.error(f"Error in Fibaro API hook for {method} {full_path}: {e}")
+        return {"error": "Internal server error", "message": str(e)}
+
+
+
 def create_fibaro_api_routes(app: FastAPI):
-    """Create all Fibaro API routes."""
+    """Create all typed Fibaro API routes."""
     
     # Check if we have an interpreter set
     if interpreter is None:
         raise RuntimeError("Interpreter not set. Call set_interpreter() first.")
     
+    # Add plua-specific endpoints
+    @app.get("/api/plua/status", tags=["plua"])
+    async def plua_status(request: Request):
+        """Get plua runtime status"""
+        return await handle_request(request, "GET")
+    
+    @app.post("/api/plua/eval", tags=["plua"])
+    async def plua_eval(request: Request, request_data: Dict[str, Any] = Body(...)):
+        """Evaluate Lua code"""
+        return await handle_request(request, "POST", request_data)
+    
+    # Generated Fibaro API endpoints
 
-        # Endpoints from categories.json
-
-    @app.get("/api/categories")
-    async def getCategories():
-        """
-        List of supported categories
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/categories"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from scenes.json
-
-    @app.get("/api/scenes")
-    async def getSceneList(alexaProhibited: Optional[str] = Query(None)):
+    @app.get("/api/scenes", tags=["scenes"])
+    async def getSceneList(request: Request, alexaProhibited: Optional[str] = Query(None, description="Scene list filtered by alexa prohibited")):
         """
         Get a list of all available scenes
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/scenes"
-        query_params = {}
-        path_params = {}
         
-        if alexaProhibited is not None:
-            query_params["alexaProhibited"] = alexaProhibited
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/scenes")
-    async def createScene(request_data: dict = Body(...)):
+    @app.post("/api/scenes", tags=["scenes"])
+    async def createScene(request: Request, request_data: CreateSceneRequest = Body(...)):
         """
         Create scene
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/scenes"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/scenes/hasTriggers")
-    async def filterScenesByTriggers(request_data: dict = Body(...)):
+    @app.post("/api/scenes/hasTriggers", tags=["scenes"])
+    async def filterScenesByTriggers(request: Request, request_data: FilterSceneRequest = Body(...)):
         """
         Filter scenes by triggers
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/scenes/hasTriggers"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/scenes/{sceneID}")
-    async def getScene(sceneID: int, alexaProhibited: Optional[str] = Query(None)):
+    @app.get("/api/scenes/{sceneID}", tags=["scenes"])
+    async def getScene(request: Request, sceneID: int, alexaProhibited: Optional[str] = Query(None, description="Get scene by alexaProhibited")):
         """
         Get scene object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/scenes/{sceneID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        if alexaProhibited is not None:
-            query_params["alexaProhibited"] = alexaProhibited
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/scenes/{sceneID}")
-    async def modifyScene(sceneID: int, request_data: dict = Body(...)):
+    @app.put("/api/scenes/{sceneID}", tags=["scenes"])
+    async def modifyScene(request: Request, sceneID: int, request_data: UpdateSceneRequest = Body(...)):
         """
         Modify scene
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/scenes/{sceneID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/scenes/{sceneID}")
-    async def deleteScene(sceneID: int):
+    @app.delete("/api/scenes/{sceneID}", tags=["scenes"])
+    async def deleteScene(request: Request, sceneID: int):
         """
         Delete scene
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/scenes/{sceneID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/scenes/{sceneID}/execute")
-    async def executeSceneByGet(sceneID: int, pin: Optional[str] = Query(None)):
+    @app.get("/api/scenes/{sceneID}/execute", tags=["scenes"])
+    async def executeSceneByGet(request: Request, sceneID: int, pin: Optional[str] = Query(None, description="PIN")):
         """
         Executes asynchronously executive part of the scene neglecting conditional part.
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/scenes/{sceneID}/execute"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        if pin is not None:
-            query_params["pin"] = pin
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/scenes/{sceneID}/execute")
-    async def executeScene(sceneID: int, request_data: dict = Body(...)):
+    @app.post("/api/scenes/{sceneID}/execute", tags=["scenes"])
+    async def executeScene(request: Request, sceneID: int, request_data: ExecuteSceneRequest = Body(...)):
         """
         Executes asynchronously executive part of the scene neglecting conditional part.
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/scenes/{sceneID}/execute"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/scenes/{sceneID}/executeSync")
-    async def executeSceneSyncByGet(sceneID: int, pin: Optional[str] = Query(None)):
+    @app.get("/api/scenes/{sceneID}/executeSync", tags=["scenes"])
+    async def executeSceneSyncByGet(request: Request, sceneID: int, pin: Optional[str] = Query(None, description="PIN")):
         """
         Executes synchronously executive part of the scene neglecting conditional part.
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/scenes/{sceneID}/executeSync"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        if pin is not None:
-            query_params["pin"] = pin
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/scenes/{sceneID}/executeSync")
-    async def executeSceneSync(sceneID: int, request_data: dict = Body(...)):
+    @app.post("/api/scenes/{sceneID}/executeSync", tags=["scenes"])
+    async def executeSceneSync(request: Request, sceneID: int, request_data: ExecuteSceneRequest = Body(...)):
         """
         Executes synchronously executive part of the scene neglecting conditional part.
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/scenes/{sceneID}/executeSync"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/scenes/{sceneID}/convert")
-    async def convertScene(sceneID: int):
+    @app.post("/api/scenes/{sceneID}/convert", tags=["scenes"])
+    async def convertScene(request: Request, sceneID: int):
         """
         Convert block scene to lua.
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/scenes/{sceneID}/convert"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/scenes/{sceneID}/copy")
-    async def copyScene(sceneID: int):
+    @app.post("/api/scenes/{sceneID}/copy", tags=["scenes"])
+    async def copyScene(request: Request, sceneID: int):
         """
         Create scene copy.
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/scenes/{sceneID}/copy"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/scenes/{sceneID}/copyAndConvert")
-    async def copyAndConvertScene(sceneID: int):
+    @app.post("/api/scenes/{sceneID}/copyAndConvert", tags=["scenes"])
+    async def copyAndConvertScene(request: Request, sceneID: int):
         """
         Copy and convert block scene to lua.
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/scenes/{sceneID}/copyAndConvert"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/scenes/{sceneID}/kill")
-    async def killSceneByGet(sceneID: int, pin: Optional[str] = Query(None)):
+    @app.get("/api/scenes/{sceneID}/kill", tags=["scenes"])
+    async def killSceneByGet(request: Request, sceneID: int, pin: Optional[str] = Query(None, description="PIN")):
         """
         Kill running scene.
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/scenes/{sceneID}/kill"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        if pin is not None:
-            query_params["pin"] = pin
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/scenes/{sceneID}/kill")
-    async def killScene(sceneID: int):
+    @app.post("/api/scenes/{sceneID}/kill", tags=["scenes"])
+    async def killScene(request: Request, sceneID: int):
         """
         Kill running scene.
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/scenes/{sceneID}/kill"
-        query_params = {}
-        path_params = {}
         
-        path_params["sceneID"] = sceneID
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from resetZigbee.json
-
-    @app.post("/api/service/resetZigbee")
-    async def resetZigbee():
         """
-        Reset Zigbee network
-        Reset Zigbee network
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/service/resetZigbee"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from icons.json
-
-    @app.get("/api/icons")
-    async def getIcons(deviceType: Optional[str] = Query(None)):
+    @app.get("/api/icons", tags=["icons"])
+    async def getIcons(request: Request, deviceType: Optional[str] = Query(None, description="Device type to filter icons")):
         """
         Get a list of all available icons
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/icons"
-        query_params = {}
-        path_params = {}
         
-        if deviceType is not None:
-            query_params["deviceType"] = deviceType
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/icons")
-    async def uploadIcon(request_data: dict = Body(...)):
+    @app.post("/api/icons", tags=["icons"])
+    async def uploadIcon(request: Request, request_data: Dict[str, Any] = Body(...)):
         """
         Upload icon
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/icons"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/icons")
-    async def deleteIcon(id: Optional[int] = Query(None), name: Optional[str] = Query(None), type_param: str = Query(...), fileExtension: Optional[str] = Query(None)):
+    @app.delete("/api/icons", tags=["icons"])
+    async def deleteIcon(request: Request, type_: str = Query(..., description="Icon type"), id: Optional[int] = Query(None, description="Icon Id"), name: Optional[str] = Query(None, description="Icon name"), fileExtension: Optional[str] = Query(None, description="File extension")):
         """
         Delete icon
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/icons"
-        query_params = {}
-        path_params = {}
-        
-        if id is not None:
-            query_params["id"] = id
-        if name is not None:
-            query_params["name"] = name
-        if type_param is not None:
-            query_params["type"] = type_param
-        if fileExtension is not None:
-            query_params["fileExtension"] = fileExtension
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from capabilities.json
-
-    @app.get("/api/service/capabilities")
-    async def getCapabilities():
-        """
-        Get communication protocols capabilities
         
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/capabilities"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from limits.json
-
-    @app.get("/api/limits")
-    async def getLimits():
-        """
-        Get limits object
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/limits"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from sortOrder.json
-
-    @app.post("/api/sortOrder")
-    async def updateSortOrder(request_data: dict = Body(...)):
+    @app.post("/api/sortOrder", tags=["sortOrder"])
+    async def updateSortOrder(request: Request, request_data: SortOrderRequest = Body(...)):
         """
         Update sort order
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/sortOrder"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from favoriteColors.json
-
-    @app.get("/api/panels/favoriteColors")
-    async def getFavoriteColors():
+    @app.get("/api/panels/favoriteColors", tags=["favoriteColors"])
+    async def getFavoriteColors(request: Request):
         """
         Get favorite colors
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/panels/favoriteColors"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/panels/favoriteColors")
-    async def newFavoriteColor(request_data: dict = Body(...)):
+    @app.post("/api/panels/favoriteColors", tags=["favoriteColors"])
+    async def newFavoriteColor(request: Request, request_data: NewFavoriteColor = Body(...)):
         """
         Create favorite colors object
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/panels/favoriteColors"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/panels/favoriteColors/{favoriteColorID}")
-    async def modifyFavoriteColor(favoriteColorID: int, request_data: dict = Body(...)):
+    @app.put("/api/panels/favoriteColors/{favoriteColorID}", tags=["favoriteColors"])
+    async def modifyFavoriteColor(request: Request, favoriteColorID: int, request_data: FavoriteColor = Body(...)):
         """
         Modify favorite colors object
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/panels/favoriteColors/{favoriteColorID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["favoriteColorID"] = favoriteColorID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/panels/favoriteColors/{favoriteColorID}")
-    async def deleteFavoriteColor(favoriteColorID: int):
+    @app.delete("/api/panels/favoriteColors/{favoriteColorID}", tags=["favoriteColors"])
+    async def deleteFavoriteColor(request: Request, favoriteColorID: int):
         """
         Delete favorite colors
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/panels/favoriteColors/{favoriteColorID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["favoriteColorID"] = favoriteColorID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from refreshStates.json
-
-    @app.get("/api/refreshStates")
-    async def refreshStates(last: int = Query(...), lang: str = Query(...), rand: str = Query(...), logs: Optional[str] = Query(None)):
+    @app.get("/api/refreshStates", tags=["refreshStates"])
+    async def refreshStates(request: Request, last: int = Query(..., description="Last refresh"), lang: str = Query(..., description="Language"), rand: str = Query(..., description="Random number"), logs: Optional[str] = Query(None, description="Return logs if true.")):
         """
         Refresh sates
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/refreshStates"
-        query_params = {}
-        path_params = {}
         
-        if last is not None:
-            query_params["last"] = last
-        if lang is not None:
-            query_params["lang"] = lang
-        if rand is not None:
-            query_params["rand"] = rand
-        if logs is not None:
-            query_params["logs"] = logs
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from profiles.json
-
-    @app.get("/api/profiles")
-    async def getProfiles(showHidden: Optional[str] = Query(None)):
+    @app.get("/api/profiles", tags=["profiles"])
+    async def getProfiles(request: Request, showHidden: Optional[str] = Query(None, description="Return all or visible actors.")):
         """
         Get all profiles and active profile
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/profiles"
-        query_params = {}
-        path_params = {}
         
-        if showHidden is not None:
-            query_params["showHidden"] = showHidden
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/profiles")
-    async def updateProfiles(request_data: dict = Body(...)):
+    @app.put("/api/profiles", tags=["profiles"])
+    async def updateProfiles(request: Request, request_data: ProfileServiceDto = Body(...)):
         """
         Update profiles and set active profile
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/profiles"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/profiles")
-    async def createProfile(request_data: dict = Body(...)):
+    @app.post("/api/profiles", tags=["profiles"])
+    async def createProfile(request: Request, request_data: ProfileCreateDto = Body(...)):
         """
         Create new profile with provided name
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/profiles"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/profiles/{profileId}")
-    async def getProfileById(profileId: int, showHidden: Optional[str] = Query(None)):
+    @app.get("/api/profiles/{profileId}", tags=["profiles"])
+    async def getProfileById(request: Request, profileId: int, showHidden: Optional[str] = Query(None, description="Return all or visible actors.")):
         """
         Get profile
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/profiles/{profileId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["profileId"] = profileId
-        if showHidden is not None:
-            query_params["showHidden"] = showHidden
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/profiles/{profileId}")
-    async def updateProfileById(profileId: int, request_data: dict = Body(...)):
+    @app.put("/api/profiles/{profileId}", tags=["profiles"])
+    async def updateProfileById(request: Request, profileId: int, request_data: ProfileDto = Body(...)):
         """
         Update existing profile
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/profiles/{profileId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["profileId"] = profileId
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/profiles/{profileId}")
-    async def removeProfileById(profileId: int):
+    @app.delete("/api/profiles/{profileId}", tags=["profiles"])
+    async def removeProfileById(request: Request, profileId: int):
         """
         Remove existing profile
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/profiles/{profileId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["profileId"] = profileId
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/profiles/{profileId}/partitions/{partitionId}")
-    async def updateProfilePartitionAction(profileId: int, partitionId: int, request_data: dict = Body(...)):
+    @app.put("/api/profiles/{profileId}/partitions/{partitionId}", tags=["profiles"])
+    async def updateProfilePartitionAction(request: Request, profileId: int, partitionId: int, request_data: PartitionActionUpdateDto = Body(...)):
         """
         Update profile partition action
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/profiles/{profileId}/partitions/{partitionId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["profileId"] = profileId
-        path_params["partitionId"] = partitionId
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/profiles/{profileId}/climateZones/{zoneId}")
-    async def updateProfileClimateZoneAction(profileId: int, zoneId: int, request_data: dict = Body(...)):
+    @app.put("/api/profiles/{profileId}/climateZones/{zoneId}", tags=["profiles"])
+    async def updateProfileClimateZoneAction(request: Request, profileId: int, zoneId: int, request_data: ClimateZoneActionUpdateDto = Body(...)):
         """
         Update profile climate zone action
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/profiles/{profileId}/climateZones/{zoneId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["profileId"] = profileId
-        path_params["zoneId"] = zoneId
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/profiles/{profileId}/scenes/{sceneId}")
-    async def updateProfileSceneActor(profileId: int, sceneId: int, request_data: dict = Body(...)):
+    @app.put("/api/profiles/{profileId}/scenes/{sceneId}", tags=["profiles"])
+    async def updateProfileSceneActor(request: Request, profileId: int, sceneId: int, request_data: SceneActorUpdateDto = Body(...)):
         """
         Update profile scene actor
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/profiles/{profileId}/scenes/{sceneId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["profileId"] = profileId
-        path_params["sceneId"] = sceneId
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/profiles/reset")
-    async def resetProfiles():
+    @app.post("/api/profiles/reset", tags=["profiles"])
+    async def resetProfiles(request: Request):
         """
         Rest profiles model to default value
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/profiles/reset"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/profiles/activeProfile/{profileId}")
-    async def setActiveProfile(profileId: int):
+    @app.post("/api/profiles/activeProfile/{profileId}", tags=["profiles"])
+    async def setActiveProfile(request: Request, profileId: int):
         """
         Set active profile
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/profiles/activeProfile/{profileId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["profileId"] = profileId
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from diagnostics.json
-
-    @app.get("/api/diagnostics")
-    async def getDiagnostics():
+    @app.get("/api/diagnostics", tags=["diagnostics"])
+    async def getDiagnostics(request: Request):
         """
         Get diagnostics
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/diagnostics"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/apps/com.fibaro.zwave/diagnostics/transmissions")
-    async def get__apps_com_fibaro_zwave_diagnostics_transmissions():
+    @app.get("/api/apps/com.fibaro.zwave/diagnostics/transmissions", tags=["diagnostics"])
+    async def get__apps_com_fibaro_zwave_diagnostics_transmissions(request: Request):
         """
         Returns information about zwave transmissions
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/apps/com.fibaro.zwave/diagnostics/transmissions"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from users.json
-
-    @app.get("/api/users")
-    async def getUsers(hasDeviceRights: Optional[str] = Query(None), hasSceneRights: Optional[str] = Query(None)):
+    @app.get("/api/users", tags=["users"])
+    async def getUsers(request: Request, hasDeviceRights: Optional[str] = Query(None, description="Filter users by rights to given devices"), hasSceneRights: Optional[str] = Query(None, description="Filter users by rights to given scenes")):
         """
         Get a list of available users
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/users"
-        query_params = {}
-        path_params = {}
         
-        if hasDeviceRights is not None:
-            query_params["hasDeviceRights"] = hasDeviceRights
-        if hasSceneRights is not None:
-            query_params["hasSceneRights"] = hasSceneRights
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/users")
-    async def createUser(isOffline: Optional[str] = Query(None), request_data: dict = Body(...)):
+    @app.post("/api/users", tags=["users"])
+    async def createUser(request: Request, isOffline: Optional[str] = Query(None, description="Is user created offline"), request_data: UserCreateRequest = Body(...)):
         """
         Create User
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/users"
-        query_params = {}
-        path_params = {}
         
-        if isOffline is not None:
-            query_params["isOffline"] = isOffline
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/users/{userID}")
-    async def getUser(userID: int):
+    @app.get("/api/users/{userID}", tags=["users"])
+    async def getUser(request: Request, userID: int):
         """
         Get user object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/users/{userID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["userID"] = userID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/users/{userID}")
-    async def modifyUser(userID: int, request_data: dict = Body(...)):
+    @app.put("/api/users/{userID}", tags=["users"])
+    async def modifyUser(request: Request, userID: int, request_data: UserDto = Body(...)):
         """
         Modify user
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/users/{userID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["userID"] = userID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/users/{userID}")
-    async def deleteUser(userID: int, keepLocalUser: Optional[str] = Query(None)):
+    @app.delete("/api/users/{userID}", tags=["users"])
+    async def deleteUser(request: Request, userID: int, keepLocalUser: Optional[str] = Query(None, description="Keep Local User")):
         """
         Delete user
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/users/{userID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["userID"] = userID
-        if keepLocalUser is not None:
-            query_params["keepLocalUser"] = keepLocalUser
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/users/{userID}/raInvite")
-    async def inviteUser(userID: int):
+    @app.post("/api/users/{userID}/raInvite", tags=["users"])
+    async def inviteUser(request: Request, userID: int):
         """
         User invitation
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/users/{userID}/raInvite"
-        query_params = {}
-        path_params = {}
         
-        path_params["userID"] = userID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/users/action/changeAdmin/{newAdminId}")
-    async def transferAdminRoleInit(newAdminId: int):
+    @app.post("/api/users/action/changeAdmin/{newAdminId}", tags=["users"])
+    async def transferAdminRoleInit(request: Request, newAdminId: int):
         """
         Initiates transfer of administrator role to {newAdminId}
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/users/action/changeAdmin/{newAdminId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["newAdminId"] = newAdminId
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/users/action/confirmAdminTransfer")
-    async def transferAdminRoleConfirm():
+    @app.post("/api/users/action/confirmAdminTransfer", tags=["users"])
+    async def transferAdminRoleConfirm(request: Request):
         """
         Confirms pending admin role transfer. Only user that is target for admin role may call this endpoint successfully
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/users/action/confirmAdminTransfer"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/users/action/cancelAdminTransfer")
-    async def transferAdminRoleCancel():
+    @app.post("/api/users/action/cancelAdminTransfer", tags=["users"])
+    async def transferAdminRoleCancel(request: Request):
         """
         Cancels pending admin role transfer. Only current superuser may call this endpoint successfully
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/users/action/cancelAdminTransfer"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/users/action/synchronize")
-    async def synchronize():
+    @app.post("/api/users/action/synchronize", tags=["users"])
+    async def synchronize(request: Request):
         """
         Users synchronization
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/users/action/synchronize"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from debugMessages.json
-
-    @app.get("/api/debugMessages")
-    async def getDebugMessages(filter_param: Optional[str] = Query(None), types: Optional[str] = Query(None), from_param: Optional[int] = Query(None), to_param: Optional[int] = Query(None), last: Optional[int] = Query(None), offset: Optional[int] = Query(None)):
+    @app.get("/api/debugMessages", tags=["debugMessages"])
+    async def getDebugMessages(request: Request, filter_: Optional[str] = Query(None, description="Filter messages by tags."), types: Optional[str] = Query(None, description="Filter messages by types."), from_: Optional[int] = Query(None, description="Filter messages younger than or equal to parameter value in timestamp."), to_: Optional[int] = Query(None, description="Filter messages older than or equal to parameter value in timestamp."), last: Optional[int] = Query(None, description="The identifier of the message that will be returned first. If last is set to 0 then return from the newest message."), offset: Optional[int] = Query(None, description="Number of returned messages. -1 means all messages.")):
         """
         Get a list of debug messages
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/debugMessages"
-        query_params = {}
-        path_params = {}
         
-        if filter_param is not None:
-            query_params["filter"] = filter_param
-        if types is not None:
-            query_params["types"] = types
-        if from_param is not None:
-            query_params["from"] = from_param
-        if to_param is not None:
-            query_params["to"] = to_param
-        if last is not None:
-            query_params["last"] = last
-        if offset is not None:
-            query_params["offset"] = offset
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/debugMessages")
-    async def deleteDebugMessages():
+    @app.delete("/api/debugMessages", tags=["debugMessages"])
+    async def deleteDebugMessages(request: Request):
         """
         Delete debug messages
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/debugMessages"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/debugMessages/tags")
-    async def getDebugMessagesTags():
+    @app.get("/api/debugMessages/tags", tags=["debugMessages"])
+    async def getDebugMessagesTags(request: Request):
         """
         Get a list of defined debug tags
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/debugMessages/tags"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from testSatelConnection.json
-
-    @app.post("/api/testSatelConnection")
-    async def getTestSatelConnection(request_data: dict = Body(...)):
-        """
-        Get Satel Connection Status
         
         """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/testSatelConnection"
-        query_params = {}
-        path_params = {}
-        
-        body_data = request_data
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from rooms.json
-
-    @app.get("/api/rooms")
-    async def getRooms(visible: Optional[str] = Query(None), empty: Optional[str] = Query(None)):
+    @app.get("/api/rooms", tags=["rooms"])
+    async def getRooms(request: Request, visible: Optional[str] = Query(None, description="Filter rooms by visible."), empty: Optional[str] = Query(None, description="Filter rooms if are empty or not.")):
         """
         Get a list of all available rooms
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/rooms"
-        query_params = {}
-        path_params = {}
         
-        if visible is not None:
-            query_params["visible"] = visible
-        if empty is not None:
-            query_params["empty"] = empty
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/rooms")
-    async def newRoom(request_data: dict = Body(...)):
+    @app.post("/api/rooms", tags=["rooms"])
+    async def newRoom(request: Request, request_data: RoomCreateRequest = Body(...)):
         """
         Create room
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/rooms"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/rooms/{roomID}")
-    async def getRoom(roomID: int):
+    @app.get("/api/rooms/{roomID}", tags=["rooms"])
+    async def getRoom(request: Request, roomID: int):
         """
         Get room object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/rooms/{roomID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["roomID"] = roomID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/rooms/{roomID}")
-    async def modifyRoom(roomID: int, request_data: dict = Body(...)):
+    @app.put("/api/rooms/{roomID}", tags=["rooms"])
+    async def modifyRoom(request: Request, roomID: int, request_data: RoomUpdateRequest = Body(...)):
         """
         Modify room
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/rooms/{roomID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["roomID"] = roomID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/rooms/{roomID}")
-    async def deleteRoom(roomID: int):
+    @app.delete("/api/rooms/{roomID}", tags=["rooms"])
+    async def deleteRoom(request: Request, roomID: int):
         """
         Delete room
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/rooms/{roomID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["roomID"] = roomID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/rooms/{roomID}/action/setAsDefault")
-    async def setAsDefault(roomID: int):
+    @app.post("/api/rooms/{roomID}/action/setAsDefault", tags=["rooms"])
+    async def setAsDefault(request: Request, roomID: int):
         """
         Sets as default room in system
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/rooms/{roomID}/action/setAsDefault"
-        query_params = {}
-        path_params = {}
         
-        path_params["roomID"] = roomID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/rooms/{roomID}/groupAssignment")
-    async def groupAssignment(roomID: int, request_data: dict = Body(...)):
+    @app.post("/api/rooms/{roomID}/groupAssignment", tags=["rooms"])
+    async def groupAssignment(request: Request, roomID: int, request_data: RoomGroupAssignment = Body(...)):
         """
         Assigns roomID to all entities given in a body
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/rooms/{roomID}/groupAssignment"
-        query_params = {}
-        path_params = {}
         
-        path_params["roomID"] = roomID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from energy.json
-
-    @app.get("/api/energy/devices")
-    async def getEnergyDevices():
+    @app.get("/api/energy/devices", tags=["energy"])
+    async def getEnergyDevices(request: Request):
         """
         Energy devices info
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/devices"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/consumption/summary")
-    async def getConsumptionSummary(period: str = Query(...)):
+    @app.get("/api/energy/consumption/summary", tags=["energy"])
+    async def getConsumptionSummary(request: Request, period: str = Query(..., description="Time period for which data is returned")):
         """
         Summary of energy production/consumption
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/consumption/summary"
-        query_params = {}
-        path_params = {}
         
-        if period is not None:
-            query_params["period"] = period
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/consumption/metrics")
-    async def getConsumptionMetrics():
+    @app.get("/api/energy/consumption/metrics", tags=["energy"])
+    async def getConsumptionMetrics(request: Request):
         """
         Metrics of energy production/consumption
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/consumption/metrics"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/consumption/detail")
-    async def getConsumptionDetail(period: str = Query(...)):
+    @app.get("/api/energy/consumption/detail", tags=["energy"])
+    async def getConsumptionDetail(request: Request, period: str = Query(..., description="Array of time periods for which data is returned")):
         """
         Details of energy production/consumption
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/consumption/detail"
-        query_params = {}
-        path_params = {}
         
-        if period is not None:
-            query_params["period"] = period
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/consumption/room/{roomId}/detail")
-    async def getConsumptionRoomDetail(roomId: int, period: str = Query(...)):
+    @app.get("/api/energy/consumption/room/{roomId}/detail", tags=["energy"])
+    async def getConsumptionRoomDetail(request: Request, roomId: int, period: str = Query(..., description="Array of time periods for which data is returned")):
         """
         Details of energy production/consumption in room
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/consumption/room/{roomId}/detail"
-        query_params = {}
-        path_params = {}
         
-        path_params["roomId"] = roomId
-        if period is not None:
-            query_params["period"] = period
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/consumption/device/{deviceId}/detail")
-    async def getConsumptionDeviceDetail(deviceId: int, periods: str = Query(...)):
+    @app.get("/api/energy/consumption/device/{deviceId}/detail", tags=["energy"])
+    async def getConsumptionDeviceDetail(request: Request, deviceId: int, periods: str = Query(..., description="Array of time periods for which data is returned")):
         """
         Details of given device energy production/consumption in given periods of time
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/consumption/device/{deviceId}/detail"
-        query_params = {}
-        path_params = {}
         
-        path_params["deviceId"] = deviceId
-        if periods is not None:
-            query_params["periods"] = periods
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/billing/summary")
-    async def getBillingSummary():
+    @app.get("/api/energy/billing/summary", tags=["energy"])
+    async def getBillingSummary(request: Request):
         """
         Summary of energy cost and consumption during current and last billing periods
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/billing/summary"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/billing/periods")
-    async def getBillingPeriods():
+    @app.get("/api/energy/billing/periods", tags=["energy"])
+    async def getBillingPeriods(request: Request):
         """
         List of billing periods
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/billing/periods"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/energy/billing/periods")
-    async def postBillingPeriods(request_data: dict = Body(...)):
+    @app.post("/api/energy/billing/periods", tags=["energy"])
+    async def postBillingPeriods(request: Request, request_data: EnergyBillingPeriodDto = Body(...)):
         """
         Sets new billing period
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/energy/billing/periods"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/billing/tariff")
-    async def getBillingTariff():
+    @app.get("/api/energy/billing/tariff", tags=["energy"])
+    async def getBillingTariff(request: Request):
         """
         Energy billing tariff
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/billing/tariff"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/energy/billing/tariff")
-    async def putBillingTariff(request_data: dict = Body(...)):
+    @app.put("/api/energy/billing/tariff", tags=["energy"])
+    async def putBillingTariff(request: Request, request_data: EnergyTariffDto = Body(...)):
         """
         Changes energy tariff
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/energy/billing/tariff"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/installationCost")
-    async def getInstallationCosts():
+    @app.get("/api/energy/installationCost", tags=["energy"])
+    async def getInstallationCosts(request: Request):
         """
         List of energy installation costs
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/installationCost"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/energy/installationCost")
-    async def createInstallationCost(request_data: dict = Body(...)):
+    @app.post("/api/energy/installationCost", tags=["energy"])
+    async def createInstallationCost(request: Request, request_data: InstallationCostDto = Body(...)):
         """
         Creates installation cost
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/energy/installationCost"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/installationCost/{id}")
-    async def getInstallationCostById(id: int):
+    @app.get("/api/energy/installationCost/{id}", tags=["energy"])
+    async def getInstallationCostById(request: Request, id: int):
         """
         Energy installation cost by id
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/installationCost/{id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["id"] = id
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/energy/installationCost/{id}")
-    async def updateInstallationCostById(id: int, request_data: dict = Body(...)):
+    @app.put("/api/energy/installationCost/{id}", tags=["energy"])
+    async def updateInstallationCostById(request: Request, id: int, request_data: InstallationCostDto = Body(...)):
         """
         Updates energy installation cost with given id.
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/energy/installationCost/{id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["id"] = id
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/energy/installationCost/{id}")
-    async def deleteInstallationCostById(id: int):
+    @app.delete("/api/energy/installationCost/{id}", tags=["energy"])
+    async def deleteInstallationCostById(request: Request, id: int):
         """
         Deletes installation cost with given id. Main installation cost with id 1 cannot deleted.
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/energy/installationCost/{id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["id"] = id
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/savings/detail")
-    async def getSavingsDetail(startDate: str = Query(...), endDate: str = Query(...), intervalType: Optional[str] = Query(None), interval: Optional[str] = Query(None)):
+    @app.get("/api/energy/savings/detail", tags=["energy"])
+    async def getSavingsDetail(request: Request, startDate: str = Query(..., description="Start of time period for which data is returned."), endDate: str = Query(..., description="End of time period for which data is returned."), intervalType: Optional[str] = Query(None, description="Time interval seed for data to be returned. Default is Daily."), interval: Optional[str] = Query(None, description="Time interval seed for data to be returned. Default is 1.")):
         """
         Details of energy savings
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/savings/detail"
-        query_params = {}
-        path_params = {}
         
-        if startDate is not None:
-            query_params["startDate"] = startDate
-        if endDate is not None:
-            query_params["endDate"] = endDate
-        if intervalType is not None:
-            query_params["intervalType"] = intervalType
-        if interval is not None:
-            query_params["interval"] = interval
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/savings/summary")
-    async def getSavingsSummary():
+    @app.get("/api/energy/savings/summary", tags=["energy"])
+    async def getSavingsSummary(request: Request):
         """
         Summary of energy savings
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/savings/summary"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/savings/installation")
-    async def getSavingsInstallation():
+    @app.get("/api/energy/savings/installation", tags=["energy"])
+    async def getSavingsInstallation(request: Request):
         """
         Energy savings data from beginning of installation
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/savings/installation"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/ecology/summary")
-    async def getEcologySummary():
+    @app.get("/api/energy/ecology/summary", tags=["energy"])
+    async def getEcologySummary(request: Request):
         """
         Summary of energy ecology
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/ecology/summary"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/ecology/detail")
-    async def getEcologyDetail(startDate: str = Query(...), endDate: str = Query(...), intervalType: Optional[str] = Query(None), interval: Optional[str] = Query(None)):
+    @app.get("/api/energy/ecology/detail", tags=["energy"])
+    async def getEcologyDetail(request: Request, startDate: str = Query(..., description="Start of time period for which data is returned."), endDate: str = Query(..., description="End of time period for which data is returned."), intervalType: Optional[str] = Query(None, description="Time interval seed for data to be returned. Default is Daily."), interval: Optional[str] = Query(None, description="Time interval seed for data to be returned. Default is 1.")):
         """
         Details of energy ecology
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/ecology/detail"
-        query_params = {}
-        path_params = {}
         
-        if startDate is not None:
-            query_params["startDate"] = startDate
-        if endDate is not None:
-            query_params["endDate"] = endDate
-        if intervalType is not None:
-            query_params["intervalType"] = intervalType
-        if interval is not None:
-            query_params["interval"] = interval
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/energy/consumption")
-    async def clearEnergyData(deviceIds: Optional[str] = Query(None), startPeriod: Optional[str] = Query(None), endPeriod: Optional[str] = Query(None), subtractWholeHouseEnergy: Optional[str] = Query(None)):
+    @app.delete("/api/energy/consumption", tags=["energy"])
+    async def clearEnergyData(request: Request, deviceIds: Optional[str] = Query(None, description="Device ids for which energy data should be cleared. If not given then energy data for all devices will be cleared."), startPeriod: Optional[str] = Query(None, description="Start period (inclusive) of the data to be cleared."), endPeriod: Optional[str] = Query(None, description="End period (exclusive) of the data to be cleared."), subtractWholeHouseEnergy: Optional[str] = Query(None, description="Flag indicating if removed devices energy data should be subtracted from cumulative house energy data")):
         """
         Clears energy data. Clears all energy data when no parameters are passed.
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/energy/consumption"
-        query_params = {}
-        path_params = {}
         
-        if deviceIds is not None:
-            query_params["deviceIds"] = deviceIds
-        if startPeriod is not None:
-            query_params["startPeriod"] = startPeriod
-        if endPeriod is not None:
-            query_params["endPeriod"] = endPeriod
-        if subtractWholeHouseEnergy is not None:
-            query_params["subtractWholeHouseEnergy"] = subtractWholeHouseEnergy
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/energy/settings")
-    async def getSettings():
+    @app.get("/api/energy/settings", tags=["energy"])
+    async def getSettings(request: Request):
         """
         Energy related settings
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/settings"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/energy/settings")
-    async def updateSettings(request_data: dict = Body(...)):
+    @app.put("/api/energy/settings", tags=["energy"])
+    async def updateSettings(request: Request, request_data: EnergySettingsDto = Body(...)):
         """
         Updates energy related settings
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/energy/settings"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from reboot.json
-
-    @app.post("/api/service/reboot")
-    async def reboot(request_data: dict = Body(...)):
+    @app.post("/api/service/reboot", tags=["reboot"])
+    async def reboot(request: Request, request_data: ResetRequestDto = Body(...)):
         """
         Reboot device
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/service/reboot"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from consumption.json
-
-    @app.get("/api/energy/{timestampFrom}/{timestampTo}/{dataSet}/{type}/{unit}/{id}")
-    async def getEnergyFromTo(timestampFrom: int, timestampTo: int, dataSet: str, type: str, unit: str, id: int):
+    @app.get("/api/energy/{timestampFrom}/{timestampTo}/{dataSet}/{type}/{unit}/{id}", tags=["consumption"])
+    async def getEnergyFromTo(request: Request, timestampFrom: int, timestampTo: int, dataSet: str, type_: str, unit: str, id: int):
         """
         Get energy from/to
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/energy/{timestampFrom}/{timestampTo}/{dataSet}/{type}/{unit}/{id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["timestampFrom"] = timestampFrom
-        path_params["timestampTo"] = timestampTo
-        path_params["dataSet"] = dataSet
-        path_params["type"] = type
-        path_params["unit"] = unit
-        path_params["id"] = id
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/panels/energy?id={id}")
-    async def getEnergy(id: int):
+    @app.get("/api/panels/energy?id={id}", tags=["consumption"])
+    async def getEnergy(request: Request, id: int):
         """
         Get energy
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/panels/energy?id={id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["id"] = id
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/coPlot?id={id}&from={timestampFrom}&to={timestampTo}")
-    async def getCoFromTo(id: int, timestampFrom: int, timestampTo: int):
+    @app.get("/api/coPlot?id={id}&from={timestampFrom}&to={timestampTo}", tags=["consumption"])
+    async def getCoFromTo(request: Request, id: int, timestampFrom: int, timestampTo: int):
         """
         Get co from/to
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/coPlot?id={id}&from={timestampFrom}&to={timestampTo}"
-        query_params = {}
-        path_params = {}
         
-        path_params["id"] = id
-        path_params["timestampFrom"] = timestampFrom
-        path_params["timestampTo"] = timestampTo
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/temperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/temperature/{id}")
-    async def getTemperatureFromTo(timestampFrom: int, timestampTo: int, dataSet: str, type: str, id: int):
+    @app.get("/api/temperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/temperature/{id}", tags=["consumption"])
+    async def getTemperatureFromTo(request: Request, timestampFrom: int, timestampTo: int, dataSet: str, type_: str, id: int):
         """
         Get temperature from/to
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/temperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/temperature/{id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["timestampFrom"] = timestampFrom
-        path_params["timestampTo"] = timestampTo
-        path_params["dataSet"] = dataSet
-        path_params["type"] = type
-        path_params["id"] = id
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/smokeTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/smoke/{id}")
-    async def getSmokeFromTo(timestampFrom: int, timestampTo: int, dataSet: str, type: str, id: int):
+    @app.get("/api/smokeTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/smoke/{id}", tags=["consumption"])
+    async def getSmokeFromTo(request: Request, timestampFrom: int, timestampTo: int, dataSet: str, type_: str, id: int):
         """
         Get smoke from/to
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/smokeTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/smoke/{id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["timestampFrom"] = timestampFrom
-        path_params["timestampTo"] = timestampTo
-        path_params["dataSet"] = dataSet
-        path_params["type"] = type
-        path_params["id"] = id
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/thermostatTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/thermostat/{id}")
-    async def getThermostatFromTo(timestampFrom: int, timestampTo: int, dataSet: str, type: str, id: int):
+    @app.get("/api/thermostatTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/thermostat/{id}", tags=["consumption"])
+    async def getThermostatFromTo(request: Request, timestampFrom: int, timestampTo: int, dataSet: str, type_: str, id: int):
         """
         Get thermostat from/to
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/thermostatTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/thermostat/{id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["timestampFrom"] = timestampFrom
-        path_params["timestampTo"] = timestampTo
-        path_params["dataSet"] = dataSet
-        path_params["type"] = type
-        path_params["id"] = id
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from iosDevices.json
-
-    @app.get("/api/iosDevices")
-    async def getIosDevices():
+    @app.get("/api/iosDevices", tags=["iosDevices"])
+    async def getIosDevices(request: Request):
         """
         Get a list of all available iosDevices
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/iosDevices"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from weather.json
-
-    @app.get("/api/weather")
-    async def getWeather():
+    @app.get("/api/weather", tags=["weather"])
+    async def getWeather(request: Request):
         """
         Get weather object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/weather"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from deviceNotifications.json
-
-    @app.get("/api/deviceNotifications/v1")
-    async def getAllDeviceNotificationsSettings():
+    @app.get("/api/deviceNotifications/v1", tags=["deviceNotifications"])
+    async def getAllDeviceNotificationsSettings(request: Request):
         """
         Get information about device notifications settings
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/deviceNotifications/v1"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/deviceNotifications/v1/{deviceID}")
-    async def updateDeviceNotificationsSettings(deviceID: int, request_data: dict = Body(...)):
+    @app.put("/api/deviceNotifications/v1/{deviceID}", tags=["deviceNotifications"])
+    async def updateDeviceNotificationsSettings(request: Request, deviceID: int, request_data: Dict[str, Any] = Body(...)):
         """
         Update notifications settings for given device
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/deviceNotifications/v1/{deviceID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["deviceID"] = deviceID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/deviceNotifications/v1/{deviceID}")
-    async def getDeviceNotificationsSettings(deviceID: int):
+    @app.get("/api/deviceNotifications/v1/{deviceID}", tags=["deviceNotifications"])
+    async def getDeviceNotificationsSettings(request: Request, deviceID: int):
         """
         Get notifications settings for given device
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/deviceNotifications/v1/{deviceID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["deviceID"] = deviceID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/deviceNotifications/v1/{deviceID}")
-    async def deleteNotificationsSettings(deviceID: int):
+    @app.delete("/api/deviceNotifications/v1/{deviceID}", tags=["deviceNotifications"])
+    async def deleteNotificationsSettings(request: Request, deviceID: int):
         """
         Clear notifications settings for given device
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/deviceNotifications/v1/{deviceID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["deviceID"] = deviceID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from sections.json
-
-    @app.get("/api/sections")
-    async def getSections():
+    @app.get("/api/sections", tags=["sections"])
+    async def getSections(request: Request):
         """
         Get list of all available sections
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/sections"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/sections")
-    async def newSection(request_data: dict = Body(...)):
+    @app.post("/api/sections", tags=["sections"])
+    async def newSection(request: Request, request_data: SectionCreateRequest = Body(...)):
         """
         Create section
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/sections"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/sections/{sectionID}")
-    async def getSection(sectionID: int):
+    @app.get("/api/sections/{sectionID}", tags=["sections"])
+    async def getSection(request: Request, sectionID: int):
         """
         Get section object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/sections/{sectionID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["sectionID"] = sectionID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/sections/{sectionID}")
-    async def modifySection(sectionID: int, request_data: dict = Body(...)):
+    @app.put("/api/sections/{sectionID}", tags=["sections"])
+    async def modifySection(request: Request, sectionID: int, request_data: SectionUpdateRequest = Body(...)):
         """
         Modify section
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/sections/{sectionID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["sectionID"] = sectionID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/sections/{sectionID}")
-    async def deleteSection(sectionID: int):
+    @app.delete("/api/sections/{sectionID}", tags=["sections"])
+    async def deleteSection(request: Request, sectionID: int):
         """
         Delete section
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/sections/{sectionID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["sectionID"] = sectionID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from favoriteColorsV2.json
-
-    @app.get("/api/panels/favoriteColors/v2")
-    async def getFavoriteColorsV2(colorComponents: Optional[str] = Query(None)):
+    @app.get("/api/panels/favoriteColors/v2", tags=["favoriteColors"])
+    async def getFavoriteColorsV2(request: Request, colorComponents: Optional[str] = Query(None, description="Time period for which data is returned")):
         """
         Get favorite colors
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/panels/favoriteColors/v2"
-        query_params = {}
-        path_params = {}
         
-        if colorComponents is not None:
-            query_params["colorComponents"] = colorComponents
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/panels/favoriteColors/v2")
-    async def newFavoriteColorV2(request_data: dict = Body(...)):
+    @app.post("/api/panels/favoriteColors/v2", tags=["favoriteColors"])
+    async def newFavoriteColorV2(request: Request, request_data: NewFavoriteColorV2 = Body(...)):
         """
         Create favorite colors object
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/panels/favoriteColors/v2"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/panels/favoriteColors/v2/{favoriteColorID}")
-    async def modifyFavoriteColorV2(favoriteColorID: int, request_data: dict = Body(...)):
+    @app.put("/api/panels/favoriteColors/v2/{favoriteColorID}", tags=["favoriteColors"])
+    async def modifyFavoriteColorV2(request: Request, favoriteColorID: int, request_data: FavoriteColorV2 = Body(...)):
         """
         Modify favorite colors object
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/panels/favoriteColors/v2/{favoriteColorID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["favoriteColorID"] = favoriteColorID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from networkDiscovery.json
-
-    @app.post("/api/networkDiscovery/arp")
-    async def networkDiscoveryAction(request_data: dict = Body(...)):
+    @app.post("/api/networkDiscovery/arp", tags=["networkDiscovery"])
+    async def networkDiscoveryAction(request: Request, request_data: NetworkDiscoveryDto = Body(...)):
         """
         Network Discovery
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/networkDiscovery/arp"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from notificationCenter.json
-
-    @app.post("/api/notificationCenter")
-    async def createNotification(request_data: dict = Body(...)):
+    @app.post("/api/notificationCenter", tags=["notificationCenter"])
+    async def createNotification(request: Request, request_data: NotificationCenterRequestDto = Body(...)):
         """
         Create notification
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/notificationCenter"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/notificationCenter/{notificationId}")
-    async def getNotification(notificationId: int):
+    @app.get("/api/notificationCenter/{notificationId}", tags=["notificationCenter"])
+    async def getNotification(request: Request, notificationId: int):
         """
         Notification
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/notificationCenter/{notificationId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["notificationId"] = notificationId
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/notificationCenter/{notificationId}")
-    async def putNotification(notificationId: int, request_data: dict = Body(...)):
+    @app.put("/api/notificationCenter/{notificationId}", tags=["notificationCenter"])
+    async def putNotification(request: Request, notificationId: int, request_data: NotificationCenterRequestDto = Body(...)):
         """
         Edit notification
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/notificationCenter/{notificationId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["notificationId"] = notificationId
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/notificationCenter/{notificationId}")
-    async def deleteNotification(notificationId: int):
+    @app.delete("/api/notificationCenter/{notificationId}", tags=["notificationCenter"])
+    async def deleteNotification(request: Request, notificationId: int):
         """
         Delete notification
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/notificationCenter/{notificationId}"
-        query_params = {}
-        path_params = {}
         
-        path_params["notificationId"] = notificationId
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from RGBPrograms.json
-
-    @app.get("/api/RGBPrograms")
-    async def getRGBPrograms():
+    @app.get("/api/RGBPrograms", tags=["RGBPrograms"])
+    async def getRGBPrograms(request: Request):
         """
         Get a list of all available RGB programs
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/RGBPrograms"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/RGBPrograms")
-    async def newRGBProgram(request_data: dict = Body(...)):
+    @app.post("/api/RGBPrograms", tags=["RGBPrograms"])
+    async def newRGBProgram(request: Request, request_data: CreateProgramRequest = Body(...)):
         """
         Create RGB program
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/RGBPrograms"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/RGBPrograms/{programID}")
-    async def getRGBProgram(programID: int):
+    @app.get("/api/RGBPrograms/{programID}", tags=["RGBPrograms"])
+    async def getRGBProgram(request: Request, programID: int):
         """
         Get RGB program object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/RGBPrograms/{programID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["programID"] = programID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/RGBPrograms/{programID}")
-    async def modifyRGBProgram(programID: int, request_data: dict = Body(...)):
+    @app.put("/api/RGBPrograms/{programID}", tags=["RGBPrograms"])
+    async def modifyRGBProgram(request: Request, programID: int, request_data: ProgramDto = Body(...)):
         """
         Modify RGB program
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/RGBPrograms/{programID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["programID"] = programID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/RGBPrograms/{programID}")
-    async def deleteProgram(programID: int):
+    @app.delete("/api/RGBPrograms/{programID}", tags=["RGBPrograms"])
+    async def deleteProgram(request: Request, programID: int):
         """
         Delete RGB program
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/RGBPrograms/{programID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["programID"] = programID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from quickapp.json
-
-    @app.post("/api/quickApp")
-    async def createQuickApp(request_data: dict = Body(...)):
+    @app.post("/api/quickApp", tags=["quickApp"])
+    async def createQuickApp(request: Request, request_data: CreateQuickAppRequest = Body(...)):
         """
         Create QuickApp device
+        
         Create QuickApp Device by CreateQuickAppRequest data
         """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/quickApp"
-        query_params = {}
-        path_params = {}
-        
-        body_data = request_data
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/quickApp/availableTypes")
-    async def getQuickAppTypes():
+    @app.get("/api/quickApp/availableTypes", tags=["quickApp"])
+    async def getQuickAppTypes(request: Request):
         """
         Get quick apps available types
+        
         Returns device types that can be used when creating new quick app.
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/quickApp/availableTypes"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/quickApp/export/{deviceId}")
-    async def exportFile(deviceId: int):
+    @app.get("/api/quickApp/export/{deviceId}", tags=["quickApp"])
+    async def exportFile(request: Request, deviceId: int):
         """
         Export QuickApp Device
+        
         Export QuickApp Device to .fqa file
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/quickApp/export/{deviceId}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceId"] = deviceId
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/quickApp/export/{deviceId}")
-    async def exportEncryptedFile(deviceId: int, request_data: dict = Body(...)):
+    @app.post("/api/quickApp/export/{deviceId}", tags=["quickApp"])
+    async def exportEncryptedFile(request: Request, deviceId: int, request_data: QuickAppExportRequest = Body(...)):
         """
         Export QuickApp Device
+        
         Export QuickApp Device to .fqa or .fqax (encrypted) file. Exporting encrypted quick app requires internet connection.
         """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/quickApp/export/{deviceId}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceId"] = deviceId
-        body_data = request_data
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/quickApp/import")
-    async def importFile(request_data: dict = Body(...)):
+    @app.post("/api/quickApp/import", tags=["quickApp"])
+    async def importFile(request: Request, request_data: Dict[str, Any] = Body(...)):
         """
         Import QuickApp Device
+        
         Import and create QuickApp device from .fqa file
         """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/quickApp/import"
-        query_params = {}
-        path_params = {}
-        
-        body_data = request_data
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/quickApp/{deviceId}/files")
-    async def getFiles(deviceId: str):
+    @app.get("/api/quickApp/{deviceId}/files", tags=["quickApp"])
+    async def getFiles(request: Request, deviceId: str):
         """
         Get QuickApp Source Files
+        
         Get files list without content
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/quickApp/{deviceId}/files"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceId"] = deviceId
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/quickApp/{deviceId}/files")
-    async def createFile(deviceId: str, request_data: dict = Body(...)):
+    @app.post("/api/quickApp/{deviceId}/files", tags=["quickApp"])
+    async def createFile(request: Request, deviceId: str, request_data: QuickAppFile = Body(...)):
         """
         Create QuickApp Source File
+        
         Create quickapp file
         """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/quickApp/{deviceId}/files"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceId"] = deviceId
-        body_data = request_data
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/quickApp/{deviceId}/files")
-    async def updateFiles(deviceId: str, request_data: dict = Body(...)):
+    @app.put("/api/quickApp/{deviceId}/files", tags=["quickApp"])
+    async def updateFiles(request: Request, deviceId: str, request_data: Dict[str, Any] = Body(...)):
         """
         Update QuickApp Source Files
+        
         Update quickapp files
         """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/quickApp/{deviceId}/files"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceId"] = deviceId
-        body_data = request_data
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/quickApp/{deviceId}/files/{fileName}")
-    async def getFileDetails(deviceId: str, fileName: str):
+    @app.get("/api/quickApp/{deviceId}/files/{fileName}", tags=["quickApp"])
+    async def getFileDetails(request: Request, deviceId: str, fileName: str):
         """
         Get QuickApp Source File
+        
         Get file details
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/quickApp/{deviceId}/files/{fileName}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceId"] = deviceId
-        path_params["fileName"] = fileName
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/quickApp/{deviceId}/files/{fileName}")
-    async def updateFile(deviceId: str, fileName: str, request_data: dict = Body(...)):
+    @app.put("/api/quickApp/{deviceId}/files/{fileName}", tags=["quickApp"])
+    async def updateFile(request: Request, deviceId: str, fileName: str, request_data: QuickAppFileDetails = Body(...)):
         """
         Update QuickApp Source File
+        
         Update quickapp file
         """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/quickApp/{deviceId}/files/{fileName}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceId"] = deviceId
-        path_params["fileName"] = fileName
-        body_data = request_data
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/quickApp/{deviceId}/files/{fileName}")
-    async def deleteFile(deviceId: str, fileName: str):
+    @app.delete("/api/quickApp/{deviceId}/files/{fileName}", tags=["quickApp"])
+    async def deleteFile(request: Request, deviceId: str, fileName: str):
         """
         Delete QuickApp Source File
+        
         Delete file, main file can't be deleted
         """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/quickApp/{deviceId}/files/{fileName}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceId"] = deviceId
-        path_params["fileName"] = fileName
-        body_data = None
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from devices.json
-
-    @app.get("/api/devices")
-    async def getDevices(roomID: Optional[int] = Query(None), interface: Optional[str] = Query(None), type_param: Optional[str] = Query(None), viewVersion: Optional[str] = Query(None)):
+    @app.get("/api/devices", tags=["devices"])
+    async def getDevices(request: Request, roomID: Optional[int] = Query(None, description="Device list filtered by roomId"), interface: Optional[str] = Query(None, description="Device list filtered by interface"), type_: Optional[str] = Query(None, description="Device list filtered by type"), viewVersion: Optional[str] = Query(None, description="UI view version supported by the client (eg. v2)")):
         """
         Get list of available devices for authenticated user
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/devices"
-        query_params = {}
-        path_params = {}
         
-        if roomID is not None:
-            query_params["roomID"] = roomID
-        if interface is not None:
-            query_params["interface"] = interface
-        if type_param is not None:
-            query_params["type"] = type_param
-        if viewVersion is not None:
-            query_params["viewVersion"] = viewVersion
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/devices")
-    async def create(request_data: dict = Body(...)):
+    @app.post("/api/devices", tags=["devices"])
+    async def create(request: Request, request_data: PluginCreateDto = Body(...)):
         """
         Create plugin
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/devices"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/devices/filter")
-    async def filterDevices(viewVersion: Optional[str] = Query(None), request_data: dict = Body(...)):
+    @app.post("/api/devices/filter", tags=["devices"])
+    async def filterDevices(request: Request, viewVersion: Optional[str] = Query(None, description="UI view version supported by the client (eg. v2)"), request_data: DeviceListFiltersDto = Body(...)):
         """
         Get list of filtered devices available for authenticated user
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/devices/filter"
-        query_params = {}
-        path_params = {}
         
-        if viewVersion is not None:
-            query_params["viewVersion"] = viewVersion
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/devices/addInterface")
-    async def addInterface(request_data: dict = Body(...)):
+    @app.post("/api/devices/addInterface", tags=["devices"])
+    async def addInterface(request: Request, request_data: DevicesInterfacesDto = Body(...)):
         """
         Add interfaces to devices
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/devices/addInterface"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/devices/deleteInterface")
-    async def deleteInterface(request_data: dict = Body(...)):
+    @app.post("/api/devices/deleteInterface", tags=["devices"])
+    async def deleteInterface(request: Request, request_data: DevicesInterfacesDto = Body(...)):
         """
         Delete interfaces from devices
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/devices/deleteInterface"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/devices?property=[lastLoggedUser,{userId}]")
-    async def getMobileDeviceForUser(userId: int):
+    @app.get("/api/devices?property=[lastLoggedUser,{userId}]", tags=["devices"])
+    async def getMobileDeviceForUser(request: Request, userId: int):
         """
         Get mobile device list for user with specified id
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/devices?property=[lastLoggedUser,{userId}]"
-        query_params = {}
-        path_params = {}
         
-        path_params["userId"] = userId
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/devices/groupAction/{actionName}")
-    async def callGroupAction(actionName: str, request_data: dict = Body(...)):
+    @app.post("/api/devices/groupAction/{actionName}", tags=["devices"])
+    async def callGroupAction(request: Request, actionName: str, request_data: GroupActionArguments = Body(...)):
         """
         Call group action
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/devices/groupAction/{actionName}"
-        query_params = {}
-        path_params = {}
         
-        path_params["actionName"] = actionName
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/devices/{deviceID}")
-    async def getDevice(deviceID: int, viewVersion: Optional[str] = Query(None)):
+    @app.get("/api/devices/{deviceID}", tags=["devices"])
+    async def getDevice(request: Request, deviceID: int, viewVersion: Optional[str] = Query(None, description="UI view version supported by the client (eg. v2)")):
         """
         Get device object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/devices/{deviceID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["deviceID"] = deviceID
-        if viewVersion is not None:
-            query_params["viewVersion"] = viewVersion
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/devices/{deviceID}")
-    async def modifyDevice(deviceID: int, request_data: dict = Body(...)):
+    @app.put("/api/devices/{deviceID}", tags=["devices"])
+    async def modifyDevice(request: Request, deviceID: int, request_data: DeviceDto = Body(...)):
         """
         Modify device
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/devices/{deviceID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["deviceID"] = deviceID
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/devices/{deviceID}")
-    async def delDevice(deviceID: int):
+    @app.delete("/api/devices/{deviceID}", tags=["devices"])
+    async def delDevice(request: Request, deviceID: int):
         """
         Delete device
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/devices/{deviceID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["deviceID"] = deviceID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/slave/{uuid}/api/devices/{deviceID}")
-    async def delDeviceProxy(uuid: str, deviceID: int):
+    @app.delete("/api/slave/{uuid}/api/devices/{deviceID}", tags=["devices"])
+    async def delDeviceProxy(request: Request, uuid: str, deviceID: int):
         """
         Delete device using master as a proxy for slave
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/slave/{uuid}/api/devices/{deviceID}"
-        query_params = {}
-        path_params = {}
         
-        path_params["uuid"] = uuid
-        path_params["deviceID"] = deviceID
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/devices/{deviceID}/action/{actionName}")
-    async def callAction(deviceID: int, actionName: str, request_data: dict = Body(...)):
+    @app.post("/api/devices/{deviceID}/action/{actionName}", tags=["devices"])
+    async def callAction(request: Request, deviceID: int, actionName: str, request_data: DeviceActionArgumentsDto = Body(...)):
         """
         Call action on given device
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/devices/{deviceID}/action/{actionName}"
-        query_params = {}
-        path_params = {}
         
-        path_params["deviceID"] = deviceID
-        path_params["actionName"] = actionName
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/devices/action/{timestamp}/{id}")
-    async def deleteDelayedAction(timestamp: int, id: int):
+    @app.delete("/api/devices/action/{timestamp}/{id}", tags=["devices"])
+    async def deleteDelayedAction(request: Request, timestamp: int, id: int):
         """
         Delete delayed action
         
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/devices/action/{timestamp}/{id}"
-        query_params = {}
-        path_params = {}
         
-        path_params["timestamp"] = timestamp
-        path_params["id"] = id
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/slave/{uuid}/api/devices/{deviceID}/action/{actionName}")
-    async def callActionProxySlave(uuid: str, deviceID: int, actionName: str, request_data: dict = Body(...)):
+    @app.post("/api/slave/{uuid}/api/devices/{deviceID}/action/{actionName}", tags=["devices"])
+    async def callActionProxySlave(request: Request, uuid: str, deviceID: int, actionName: str, request_data: DeviceActionArgumentsDto = Body(...)):
         """
         Call action using master as a proxy for slave
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/slave/{uuid}/api/devices/{deviceID}/action/{actionName}"
-        query_params = {}
-        path_params = {}
         
-        path_params["uuid"] = uuid
-        path_params["deviceID"] = deviceID
-        path_params["actionName"] = actionName
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/uiDeviceInfo")
-    async def getUIDeviceInfo(roomId: Optional[int] = Query(None), type_param: Optional[str] = Query(None), selectors: Optional[str] = Query(None), source: Optional[str] = Query(None), visible: Optional[str] = Query(None), classification: Optional[str] = Query(None)):
+    @app.get("/api/uiDeviceInfo", tags=["devices"])
+    async def getUIDeviceInfo(request: Request, roomId: Optional[int] = Query(None, description="Filter ui device types by room id."), type_: Optional[str] = Query(None, description="Filter ui device info by type."), selectors: Optional[str] = Query(None, description="Returns specified fields only."), source: Optional[str] = Query(None, description="Filter ui device info by source."), visible: Optional[str] = Query(None, description="Filter ui device info by device visibility."), classification: Optional[str] = Query(None, description="Filter ui device info by device classification.")):
         """
         Get device info
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/uiDeviceInfo"
-        query_params = {}
-        path_params = {}
         
-        if roomId is not None:
-            query_params["roomId"] = roomId
-        if type_param is not None:
-            query_params["type"] = type_param
-        if selectors is not None:
-            query_params["selectors"] = selectors
-        if source is not None:
-            query_params["source"] = source
-        if visible is not None:
-            query_params["visible"] = visible
-        if classification is not None:
-            query_params["classification"] = classification
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/devices/hierarchy")
-    async def getDeviceTypeHierarchy():
+    @app.get("/api/devices/hierarchy", tags=["devices"])
+    async def getDeviceTypeHierarchy(request: Request):
         """
         Get device type hierarchy
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/devices/hierarchy"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from additionalInterfaces.json
-
-    @app.get("/api/additionalInterfaces")
-    async def getAdditionalInterfaces(deviceId: int = Query(...)):
+    @app.get("/api/additionalInterfaces", tags=["additionalInterfaces"])
+    async def getAdditionalInterfaces(request: Request, deviceId: int = Query(..., description="Device id")):
         """
         Get list of all additional interfaces
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/additionalInterfaces"
-        query_params = {}
-        path_params = {}
         
-        if deviceId is not None:
-            query_params["deviceId"] = deviceId
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/additionalInterfaces/{interfaceName}")
-    async def getDevicesIdByAdditionalInterfaceName(interfaceName: str):
+    @app.get("/api/additionalInterfaces/{interfaceName}", tags=["additionalInterfaces"])
+    async def getDevicesIdByAdditionalInterfaceName(request: Request, interfaceName: str):
         """
         Get list of all devices id which can add this additional interface.
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/additionalInterfaces/{interfaceName}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["interfaceName"] = interfaceName
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from fti.json
-
-    @app.get("/api/fti/v2")
-    async def getFTIModel():
-        """
-        Get FTI model
         
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/fti/v2"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/fti/v2/changeStep/{step}")
-    async def setFTIStep(step: str):
-        """
-        Set current FTI step
-        
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/fti/v2/changeStep/{step}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["step"] = step
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/fti/v2/finish")
-    async def finishFTI():
-        """
-        Finish FTI
-        
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/fti/v2/finish"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/fti/v2/reset")
-    async def resetFTI():
-        """
-        Reset FTI
-        
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/fti/v2/reset"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from systemStatus.json
-
-    @app.get("/api/service/systemStatus")
-    async def systemStatus(lang: str = Query(...), _: int = Query(...)):
+    @app.get("/api/service/systemStatus", tags=["systemStatus"])
+    async def systemStatus(request: Request, lang: str = Query(..., description="System status language"), _: int = Query(..., description="System status random number")):
         """
         System status
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/systemStatus"
-        query_params = {}
-        path_params = {}
         
-        if lang is not None:
-            query_params["lang"] = lang
-        if _ is not None:
-            query_params["_"] = _
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/service/systemStatus")
-    async def setSystemStatus(lang: str = Query(...), request_data: dict = Body(...)):
+    @app.post("/api/service/systemStatus", tags=["systemStatus"])
+    async def setSystemStatus(request: Request, lang: str = Query(..., description="System status language"), request_data: Dict[str, Any] = Body(...)):
         """
         Set system status
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/service/systemStatus"
-        query_params = {}
-        path_params = {}
         
-        if lang is not None:
-            query_params["lang"] = lang
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/service/restartServices")
-    async def clearError(lang: str = Query(...), request_data: dict = Body(...)):
+    @app.post("/api/service/restartServices", tags=["systemStatus"])
+    async def clearError(request: Request, lang: str = Query(..., description="System status language"), request_data: Dict[str, Any] = Body(...)):
         """
         Clear error
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/service/restartServices"
-        query_params = {}
-        path_params = {}
-        
-        if lang is not None:
-            query_params["lang"] = lang
-        body_data = request_data
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from linkedDevices.json
-
-    @app.get("/api/linkedDevices/v1/devices")
-    async def getLinkedDevices(type_param: Optional[str] = Query(None)):
-        """
-        Get information about linked devices
         
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/linkedDevices/v1/devices"
-        query_params = {}
-        path_params = {}
-        
-        if type_param is not None:
-            query_params["type"] = type_param
-        body_data = None
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/linkedDevices/v1/devices")
-    async def createLinkedDevice(request_data: dict = Body(...)):
-        """
-        Create new linked device
-        
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/linkedDevices/v1/devices"
-        query_params = {}
-        path_params = {}
-        
-        body_data = request_data
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/linkedDevices/v1/providers")
-    async def getLinkedDevicesProviders():
-        """
-        Get linked devices providers list and information about available links
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/linkedDevices/v1/providers"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/linkedDevices/v1/devices/{deviceID}")
-    async def getLinkedDevice(deviceID: int):
-        """
-        Get information about linked device
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/linkedDevices/v1/devices/{deviceID}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceID"] = deviceID
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/linkedDevices/v1/devices/{deviceID}")
-    async def updateLinkedDevice(deviceID: int, request_data: dict = Body(...)):
-        """
-        Update linked device
-        
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/linkedDevices/v1/devices/{deviceID}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceID"] = deviceID
-        body_data = request_data
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/linkedDevices/v1/devices/{deviceID}")
-    async def deleteLinkedDevice(deviceID: int):
-        """
-        Delete existing linked device
-        
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/linkedDevices/v1/devices/{deviceID}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["deviceID"] = deviceID
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/linkedDevices/v1/inputDevices")
-    async def getLinkedDevicesInputs():
-        """
-        Get id list of all input devices
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/linkedDevices/v1/inputDevices"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from home.json
-
-    @app.get("/api/home")
-    async def getHomeInfo():
+    @app.get("/api/home", tags=["home"])
+    async def getHomeInfo(request: Request):
         """
         Get home info
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/home"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/home")
-    async def updateHomeInfo(request_data: dict = Body(...)):
+    @app.put("/api/home", tags=["home"])
+    async def updateHomeInfo(request: Request, request_data: HomeDto = Body(...)):
         """
         Update home info
         
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/home"
-        query_params = {}
-        path_params = {}
-        
-        body_data = request_data
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from passwordForgotten.json
-
-    @app.get("/api/passwordForgotten")
-    async def passwordForgotten(login: str = Query(...), lang: Optional[str] = Query(None)):
-        """
-        Password Forgotten
         
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/passwordForgotten"
-        query_params = {}
-        path_params = {}
-        
-        if login is not None:
-            query_params["login"] = login
-        if lang is not None:
-            query_params["lang"] = lang
-        body_data = None
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from gatewayConnection.json
-
-    @app.get("/api/service/discovery/resolve/{type}/{value}")
-    async def discoveryResolve(type: str, value: str, options: Optional[str] = Query(None)):
-        """
-        Gateway connection resolve
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/discovery/resolve/{type}/{value}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["type"] = type
-        path_params["value"] = value
-        if options is not None:
-            query_params["options"] = options
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/service/discovery/search")
-    async def discoverySearch(filterMap: Optional[str] = Query(None)):
-        """
-        Discovery search
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/discovery/search"
-        query_params = {}
-        path_params = {}
-        
-        if filterMap is not None:
-            query_params["filterMap"] = filterMap
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/service/resolve/{type}/{value}")
-    async def discoveryGateway(type: str, value: str):
-        """
-        Discover gateway in the network by serial number or ip
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/resolve/{type}/{value}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["type"] = type
-        path_params["value"] = value
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/service/gateway/role")
-    async def getGatewayRole():
-        """
-        Gateway role
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/gateway/role"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/service/gateway/role")
-    async def switchGatewayRole(request_data: dict = Body(...)):
-        """
-        Switch role
-        Switch role from master to slave.
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/service/gateway/role"
-        query_params = {}
-        path_params = {}
-        
-        body_data = request_data
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/service/slaves")
-    async def getSlavesList():
-        """
-        Get list of slaves
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/slaves"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/service/slaves")
-    async def addNewSlave(request_data: dict = Body(...)):
-        """
-        
-        
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/service/slaves"
-        query_params = {}
-        path_params = {}
-        
-        body_data = request_data
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/service/slaves/{id}/password")
-    async def slavePassword(id: str):
-        """
-        Slave login and password (Base64 encoded)
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/slaves/{id}/password"
-        query_params = {}
-        path_params = {}
-        
-        path_params["id"] = id
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.put("/api/service/slaves/{id}")
-    async def replaceSlave(id: str, request_data: dict = Body(...)):
-        """
-        Replace slave
-        
-        """
-        # Prepare data for Lua hook
-        method = "PUT"
-        path = "/api/service/slaves/{id}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["id"] = id
-        body_data = request_data
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/service/slaves/{id}")
-    async def deleteSlave(id: str):
-        """
-        Delete slave
-        
-        """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/service/slaves/{id}"
-        query_params = {}
-        path_params = {}
-        
-        path_params["id"] = id
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/service/slaves/{serialOrId}/ip")
-    async def getSlaveIp(serialOrId: str, rediscover: Optional[str] = Query(None)):
-        """
-        Get slave IP address
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/service/slaves/{serialOrId}/ip"
-        query_params = {}
-        path_params = {}
-        
-        path_params["serialOrId"] = serialOrId
-        if rediscover is not None:
-            query_params["rediscover"] = rediscover
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/remoteGateway/verifyGateway")
-    async def verifyGateway(ip: Optional[str] = Query(None), serial: Optional[str] = Query(None)):
-        """
-        Verify the serial of given gateway
-        
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/remoteGateway/verifyGateway"
-        query_params = {}
-        path_params = {}
-        
-        if ip is not None:
-            query_params["ip"] = ip
-        if serial is not None:
-            query_params["serial"] = serial
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from userActivity.json
-
-    @app.get("/api/userActivity")
-    async def getUserActivity():
+    @app.get("/api/userActivity", tags=["userActivity"])
+    async def getUserActivity(request: Request):
         """
         Get user activity list
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/userActivity"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from loginStatus.json
-
-    @app.get("/api/loginStatus")
-    async def getLoginStatus():
+    @app.get("/api/loginStatus", tags=["loginStatus"])
+    async def getLoginStatus(request: Request):
         """
         Get login status
+        
         Produces different response when not logged in (optional parameters not included).
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/loginStatus"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/loginStatus")
-    async def callLoginAction(action: str = Query(...), tosAccepted: Optional[str] = Query(None)):
+    @app.post("/api/loginStatus", tags=["loginStatus"])
+    async def callLoginAction(request: Request, action: str = Query(..., description="Name of an action"), tosAccepted: Optional[str] = Query(None)):
         """
         Call login action
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/loginStatus"
-        query_params = {}
-        path_params = {}
         
-        if action is not None:
-            query_params["action"] = action
-        if tosAccepted is not None:
-            query_params["tosAccepted"] = tosAccepted
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from plugins.json
-
-    @app.get("/api/plugins")
-    async def getPlugins():
+    @app.get("/api/plugins", tags=["plugins"])
+    async def getPlugins(request: Request):
         """
         Get all plugins object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/plugins"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/plugins/callUIEvent")
-    async def callUIEvent(deviceID: int = Query(...), elementName: str = Query(...), eventType: str = Query(...), value: Optional[str] = Query(None)):
+    @app.get("/api/plugins/callUIEvent", tags=["plugins"])
+    async def callUIEvent(request: Request, deviceID: int = Query(..., description="Device ID"), elementName: str = Query(..., description="Element name"), eventType: str = Query(..., description="Event type"), value: Optional[str] = Query(None, description="Event value")):
         """
         Call UiEvent Action
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/plugins/callUIEvent"
-        query_params = {}
-        path_params = {}
         
-        if deviceID is not None:
-            query_params["deviceID"] = deviceID
-        if elementName is not None:
-            query_params["elementName"] = elementName
-        if eventType is not None:
-            query_params["eventType"] = eventType
-        if value is not None:
-            query_params["value"] = value
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/plugins/createChildDevice")
-    async def createChildDevice(request_data: dict = Body(...)):
+    @app.post("/api/plugins/createChildDevice", tags=["plugins"])
+    async def createChildDevice(request: Request, request_data: CreateChildDeviceDto = Body(...)):
         """
         Create child device
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/plugins/createChildDevice"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/plugins/getView")
-    async def getView(id: Optional[int] = Query(None), name: Optional[str] = Query(None), type_param: Optional[str] = Query(None), version: Optional[str] = Query(None)):
+    @app.get("/api/plugins/getView", tags=["plugins"])
+    async def getView(request: Request, id: Optional[int] = Query(None, description="Device id"), name: Optional[str] = Query(None, description="Device type name"), type_: Optional[str] = Query(None, description="View type (config or view). Only use for application/xml"), version: Optional[str] = Query(None, description="View type (config or view). Only use for application/xml")):
         """
         Get plugin view
+        
         Get plugin view. Required parameters:
  * **id** - get plugin view by id 
  * **name**, **Accept** and **Accept-Language** - get plugin view by type, parameter **type** is optional.
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/plugins/getView"
-        query_params = {}
-        path_params = {}
-        
-        if id is not None:
-            query_params["id"] = id
-        if name is not None:
-            query_params["name"] = name
-        if type_param is not None:
-            query_params["type"] = type_param
-        if version is not None:
-            query_params["version"] = version
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/plugins/installed")
-    async def getInstalledPlugins():
+    @app.get("/api/plugins/installed", tags=["plugins"])
+    async def getInstalledPlugins(request: Request):
         """
         Get installed plugins
+        
         Get installed plugins
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/plugins/installed"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/plugins/installed")
-    async def installPlugin(type_param: Optional[str] = Query(None)):
+    @app.post("/api/plugins/installed", tags=["plugins"])
+    async def installPlugin(request: Request, type_: Optional[str] = Query(None, description="Type of installing plugin. Type it like a **form data**.")):
         """
         Install plugin
+        
         Install plugin. Valid only for HC2. In HC3 each plugin is being installed during the adding.
         """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/plugins/installed"
-        query_params = {}
-        path_params = {}
-        
-        if type_param is not None:
-            query_params["type"] = type_param
-        body_data = None
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.delete("/api/plugins/installed")
-    async def deletePlugin(type_param: Optional[str] = Query(None)):
+    @app.delete("/api/plugins/installed", tags=["plugins"])
+    async def deletePlugin(request: Request, type_: Optional[str] = Query(None, description="Type of installing plugin. Type it like a **form data**.")):
         """
         Delete plugin
+        
         Delete plugin
         """
-        # Prepare data for Lua hook
-        method = "DELETE"
-        path = "/api/plugins/installed"
-        query_params = {}
-        path_params = {}
-        
-        if type_param is not None:
-            query_params["type"] = type_param
-        body_data = None
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/plugins/interfaces")
-    async def interfaces(request_data: dict = Body(...)):
+    @app.post("/api/plugins/interfaces", tags=["plugins"])
+    async def interfaces(request: Request, request_data: PluginsInterfaceParamDto = Body(...)):
         """
         Add or remove interfaces
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/plugins/interfaces"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/plugins/ipCameras")
-    async def getIPCameras():
+    @app.get("/api/plugins/ipCameras", tags=["plugins"])
+    async def getIPCameras(request: Request):
         """
         Get all IP cameras object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/plugins/ipCameras"
-        query_params = {}
-        path_params = {}
         
-        body_data = None
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/plugins/publishEvent")
-    async def pluginPublishEvent(request_data: dict = Body(...)):
+    @app.post("/api/plugins/publishEvent", tags=["plugins"])
+    async def pluginPublishEvent(request: Request, request_data: Dict[str, Any] = Body(...)):
         """
         Publish event
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/plugins/publishEvent"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/plugins/restart")
-    async def restartPlugin(request_data: dict = Body(...)):
+    @app.post("/api/plugins/restart", tags=["plugins"])
+    async def restartPlugin(request: Request, request_data: RestartPluginRequestDto = Body(...)):
         """
         Restart plugin
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/plugins/restart"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/plugins/types")
-    async def getPluginsTypes():
+    @app.get("/api/plugins/types", tags=["plugins"])
+    async def getPluginsTypes(request: Request):
         """
         Get information about plugins in system
+        
         Get information about plugins in system
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/plugins/types"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/plugins/updateProperty")
-    async def updateProperty(request_data: dict = Body(...)):
+    @app.post("/api/plugins/updateProperty", tags=["plugins"])
+    async def updateProperty(request: Request, request_data: UpdatePropertyDto = Body(...)):
         """
         Update property
         
-        """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/plugins/updateProperty"
-        query_params = {}
-        path_params = {}
         
-        body_data = request_data
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.post("/api/plugins/updateView")
-    async def updateView(request_data: dict = Body(...)):
+    @app.post("/api/plugins/updateView", tags=["plugins"])
+    async def updateView(request: Request, request_data: PluginUpdateDto = Body(...)):
         """
         Update plugin view
+        
         Update plugin view
         """
-        # Prepare data for Lua hook
-        method = "POST"
-        path = "/api/plugins/updateView"
-        query_params = {}
-        path_params = {}
-        
-        body_data = request_data
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-    @app.get("/api/plugins/v2")
-    async def getPluginsV2():
+    @app.get("/api/plugins/v2", tags=["plugins"])
+    async def getPluginsV2(request: Request):
         """
         Get all plugins object
         
-        """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/api/plugins/v2"
-        query_params = {}
-        path_params = {}
-        
-        body_data = None
-
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
-
-        # Endpoints from fibaro/json.json
-
-    @app.get("/fibaro/json/{parametersTemplate}.json")
-    async def getDeviceParametersTemplate(parametersTemplate: str):
-        """
-        Get device parameters template
         
         """
-        # Prepare data for Lua hook
-        method = "GET"
-        path = "/fibaro/json/{parametersTemplate}.json"
-        query_params = {}
-        path_params = {}
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/settings/location", tags=["location settings"])
+    async def getLocation(request: Request):
+        """
+        Get current location
         
-        path_params["parametersTemplate"] = parametersTemplate
-        body_data = None
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
 
-        # Call Fibaro API hook in Lua
-        try:
-            result = interpreter.lua.globals()._PY.fibaro_api_hook(
-                method, path, path_params, query_params, body_data
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error in Fibaro API hook for {method} {path}: {e}")
-            return {"error": "Internal server error", "message": str(e)}
+    @app.put("/api/settings/location", tags=["location settings"])
+    async def modifyLocation(request: Request, reboot: Optional[str] = Query(None), request_data: LocationSettings = Body(...)):
+        """
+        Modify current location.
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
 
-        logger.info(f"Created 194 Fibaro API endpoints")
+    @app.get("/api/settings/led", tags=["led settings"])
+    async def getLedBrightness(request: Request):
+        """
+        Get Home Center LED brightness
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/settings/led", tags=["led settings"])
+    async def changeLedBrightness(request: Request, request_data: LedDto = Body(...)):
+        """
+        Modify current Home Center LED brightness
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/settings/network", tags=["network"])
+    async def getNetworkConfigurations(request: Request):
+        """
+        Get network configuration
+        
+        Return list of network interfaces with their configuration
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/settings/network/connectivity", tags=["network"])
+    async def getInternetConnectivity(request: Request):
+        """
+        Get Internet connectivity status
+        
+        Returns Internet connectivity status
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/settings/network/radio", tags=["network"])
+    async def getRadioConfiguration(request: Request):
+        """
+        Get radio configuration
+        
+        Returns radio configuration
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/settings/network/radio", tags=["network"])
+    async def setRadioConfiguration(request: Request, request_data: radioListConfiguration = Body(...)):
+        """
+        Update radio configuration
+        
+        Set radio configuration
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/settings/network/radio/{radioType}", tags=["network"])
+    async def getRadioConfigurationByType(request: Request, radioType: str):
+        """
+        Get radio configuration by device type
+        
+        Get radio configuration by device type
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/settings/network/radio/{radioType}", tags=["network"])
+    async def setRadioConfigurationByType(request: Request, radioType: str, request_data: radioConfiguration = Body(...)):
+        """
+        Update radio configuration by device type
+        
+        Set radio configuration by device type
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/settings/network/interfaces", tags=["network"])
+    async def getNetworkInterfaces(request: Request):
+        """
+        Get list of network interfaces
+        
+        Get array with names of network interfaces
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/settings/network/interfaces/{interfaceName}", tags=["network"])
+    async def getNetworkConfigurationByName(request: Request, interfaceName: str):
+        """
+        Get interface configuration
+        
+        Get configuration for the network interface
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/settings/network/interfaces/{interfaceName}", tags=["network"])
+    async def setNetworkConfigurationByName(request: Request, interfaceName: str, request_data: interfaceConfiguration = Body(...)):
+        """
+        Update interface configuration
+        
+        Set network configuration for the network interface
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/settings/network/interfaces/{interfaceName}/apList", tags=["network"])
+    async def getListOfAccessPoints(request: Request, interfaceName: str):
+        """
+        Get list of APs
+        
+        Get list of available access points
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/settings/network/interfaces/{interfaceName}/apInfo", tags=["network"])
+    async def getListOfAccessPointsWithInfo(request: Request, interfaceName: str):
+        """
+        Get list of APs with additional information
+        
+        Get list of available access points with additional information
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/settings/network/connections", tags=["network"])
+    async def getConnections(request: Request):
+        """
+        Get list of network connections
+        
+        Returns list of connections
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/settings/network/connections", tags=["network"])
+    async def addConnection(request: Request, request_data: connection = Body(...)):
+        """
+        Add a new connection
+        
+        Add a new connection
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/settings/network/connections/{connectionUuid}", tags=["network"])
+    async def getConnection(request: Request, connectionUuid: str):
+        """
+        Get connection status
+        
+        Returns connection status
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.delete("/api/settings/network/connections/{connectionUuid}", tags=["network"])
+    async def removeConnection(request: Request, connectionUuid: str):
+        """
+        Remove the network connection
+        
+        Remove the network connection
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.put("/api/settings/network/connections/{connectionUuid}", tags=["network"])
+    async def updateConnection(request: Request, connectionUuid: str, request_data: connection = Body(...)):
+        """
+        Update the network connection
+        
+        Update the network connection
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.post("/api/settings/network/connections/{connectionUuid}/check", tags=["network"])
+    async def checkConnection(request: Request, connectionUuid: str):
+        """
+        Check the connection status
+        
+        Check the connection status
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.post("/api/settings/network/connections/{connectionUuid}/connect", tags=["network"])
+    async def connectConnection(request: Request, connectionUuid: str):
+        """
+        Connect to the wireless network
+        
+        Connect to the wireless network
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.post("/api/settings/network/connections/{connectionUuid}/disconnect", tags=["network"])
+    async def disconnectConnection(request: Request, connectionUuid: str):
+        """
+        Disconnect from the wireless network
+        
+        Disconnect from the wireless network
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.put("/api/settings/network/resetInterfaces", tags=["network"])
+    async def resetNetworkInterfaces(request: Request):
+        """
+        Reset network interfaces configuration
+        
+        Resets network interfaces configuration to defaults
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            None
+        )
+
+    @app.get("/api/settings/network/AccessPointMode", tags=["network"])
+    async def getAccessPointMode(request: Request):
+        """
+        Get AccessPoint status
+        
+        Get AccessPoint status
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/settings/network/AccessPointMode", tags=["network"])
+    async def setAccessPointMode(request: Request, request_data: accessPointMode = Body(...)):
+        """
+        Set AccessPoint mode
+        
+        Set AccessPoint mode
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/settings/network/enabledProtocols", tags=["network"])
+    async def getEnabledProtocols(request: Request):
+        """
+        Get enabled protocols
+        
+        Get enabled protocols
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/settings/network/enabledProtocols", tags=["network"])
+    async def setEnabledProtocols(request: Request, request_data: protocols = Body(...)):
+        """
+        Set enabled protocols
+        
+        Set enabled protocols
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/settings/remoteAccess/status", tags=["remoteAccess"])
+    async def getRemoteAccessStatus(request: Request):
+        """
+        Get all remote access statuses
+        
+        Get all remote access statuses
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/settings/remoteAccess/status/{typeName}", tags=["remoteAccess"])
+    async def getRemoteAccessTypeState(request: Request, typeName: str):
+        """
+        Get remote access type state
+        
+        Get remote access type state
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/settings/remoteAccess/status/{typeName}", tags=["remoteAccess"])
+    async def setRemoteAccessTypeState(request: Request, typeName: str, request_data: remoteAccessState = Body(...)):
+        """
+        Set remote access type state
+        
+        Set remote access type state
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/settings/certificates/ca", tags=["certificates"])
+    async def getRootCACertificate(request: Request):
+        """
+        Get the Root CA certificate
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/settings/info", tags=["info settings"])
+    async def getSettings(request: Request):
+        """
+        Get current info settings
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/settings/info", tags=["info settings"])
+    async def modifySettings(request: Request, request_data: Settings = Body(...)):
+        """
+        Modify current info settings
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/alarms/v1/history/", tags=["alarms"])
+    async def getAlarmHistory(request: Request, from_: Optional[str] = Query(None, description="The start time 'from' which historical entries will be shown. Default value is 0 if not specifiad."), to_: Optional[str] = Query(None, description="The end time 'to' which historical entries will be shown. Default value is current timestamp if not specifiad."), pageSize: Optional[str] = Query(None, description="The number of items to skip before starting to collect the result set. Default value is 50 if not specifiad."), page: Optional[str] = Query(None, description="The number of items to return. Default value is 0 if not specifiad."), order: Optional[str] = Query(None, description="Sort history records by timestamp either in ascending or descending(default) order."), type_: Optional[str] = Query(None, description="Filter history records by type. If not specified return all records.")):
+        """
+        Get alarm history entries
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/alarms/v1/partitions", tags=["alarms"])
+    async def getAlarmPartitions(request: Request):
+        """
+        Get all alarm partitions
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/alarms/v1/partitions", tags=["alarms"])
+    async def createAlarmPartition(request: Request, request_data: NewPartitionDto = Body(...)):
+        """
+        Creates new alarm partition. The partition will be disarmed by default.
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/alarms/v1/partitions/breached", tags=["alarms"])
+    async def getBreachedAlarmPartitions(request: Request):
+        """
+        Get breached partition ids
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/alarms/v1/partitions/{partitionID}", tags=["alarms"])
+    async def getAlarmPartitionById(request: Request, partitionID: int):
+        """
+        Get existing partition
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/alarms/v1/partitions/{partitionID}", tags=["alarms"])
+    async def updateAlarmPartitionById(request: Request, partitionID: int, request_data: NewPartitionDto = Body(...)):
+        """
+        Update existing partition
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/alarms/v1/partitions/{partitionID}", tags=["alarms"])
+    async def deleteAlarmPartitionById(request: Request, partitionID: int):
+        """
+        Delete existing partition
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.post("/api/alarms/v1/partitions/actions/tryArm", tags=["alarms"])
+    async def tryArmAlarmPartitions(request: Request):
+        """
+        Try to arm all alarm partitions after sensor breached status verification
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.post("/api/alarms/v1/partitions/actions/arm", tags=["alarms"])
+    async def armAlarmPartitions(request: Request):
+        """
+        Arm all alarm partitions
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.delete("/api/alarms/v1/partitions/actions/arm", tags=["alarms"])
+    async def disarmAlarmPartitions(request: Request):
+        """
+        Disarm all alarm partitions
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.post("/api/alarms/v1/partitions/{partitionID}/actions/tryArm", tags=["alarms"])
+    async def tryArmAlarmPartitionById(request: Request, partitionID: int):
+        """
+        Try to arm alarm partition after sensor breached status verification
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.post("/api/alarms/v1/partitions/{partitionID}/actions/arm", tags=["alarms"])
+    async def armAlarmPartitionById(request: Request, partitionID: int):
+        """
+        Arm alarm partition
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.delete("/api/alarms/v1/partitions/{partitionID}/actions/arm", tags=["alarms"])
+    async def disarmAlarmPartitionById(request: Request, partitionID: int):
+        """
+        Disarm alarm partition
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.get("/api/alarms/v1/devices/", tags=["alarms"])
+    async def getAlarmDevices(request: Request):
+        """
+        Get alarm devices
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/panels/humidity", tags=["humidity panel"])
+    async def getHumidity(request: Request):
+        """
+        Get a list of all available humidity objects
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/panels/humidity", tags=["humidity panel"])
+    async def createHumidity(request: Request, request_data: inline_object = Body(...)):
+        """
+        Create humidity
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/panels/humidity/{humidityID}", tags=["humidity panel"])
+    async def getHumidityById(request: Request, humidityID: int):
+        """
+        Get humidity object
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/panels/humidity/{humidityID}", tags=["humidity panel"])
+    async def modifyHumidity(request: Request, humidityID: int, request_data: HumidityZone = Body(...)):
+        """
+        Modify humidity
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/panels/humidity/{humidityID}", tags=["humidity panel"])
+    async def deleteHumidity(request: Request, humidityID: int):
+        """
+        Delete humidity
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.get("/api/panels/location", tags=["location panel"])
+    async def getPanelsLocations(request: Request):
+        """
+        Get a list of all available locations
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/panels/location", tags=["location panel"])
+    async def newPanelsLocation(request: Request, request_data: LocationRequest = Body(...)):
+        """
+        Create location
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/panels/location/{locationID}", tags=["location panel"])
+    async def getPanelsLocation(request: Request, locationID: int):
+        """
+        Get location
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/panels/location/{locationID}", tags=["location panel"])
+    async def modifyPanelsLocationById(request: Request, locationID: int, request_data: LocationRequest = Body(...)):
+        """
+        Modify location
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/panels/location/{locationID}", tags=["location panel"])
+    async def deletePanelsLocation(request: Request, locationID: int):
+        """
+        Delete location
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.get("/api/panels/sprinklers", tags=["sprinklers panel"])
+    async def getSprinklerSchedules(request: Request):
+        """
+        Get all available sprinkler schedules
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/panels/sprinklers", tags=["sprinklers panel"])
+    async def postSprinklerSchedules(request: Request, request_data: SprinklerScheduleCreateRequest = Body(...)):
+        """
+        Creates new sprinkler schedule
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/panels/sprinklers/{scheduleId}", tags=["sprinklers panel"])
+    async def getSprinklerSchedule(request: Request, scheduleId: int):
+        """
+        Get specific sprinkler schedule
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/panels/sprinklers/{scheduleId}", tags=["sprinklers panel"])
+    async def putSprinklerSchedule(request: Request, scheduleId: int, request_data: SprinklerScheduleRequest = Body(...)):
+        """
+        Update specific sprinkler schedule
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/panels/sprinklers/{scheduleId}", tags=["sprinklers panel"])
+    async def deleteSprinklerSchedule(request: Request, scheduleId: int):
+        """
+        Removes specific sprinkler schedule
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.post("/api/panels/sprinklers/{scheduleId}/sequences", tags=["sprinklers panel"])
+    async def postSprinklerSequence(request: Request, scheduleId: int, request_data: SprinklerSequenceRequest = Body(...)):
+        """
+        Create new sprinkler sequence
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.put("/api/panels/sprinklers/{scheduleId}/sequences/{sequenceId}", tags=["sprinklers panel"])
+    async def putSprinklerSequence(request: Request, scheduleId: int, sequenceId: int, request_data: SprinklerSequenceRequest = Body(...)):
+        """
+        Update specific sprinkler sequence
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/panels/sprinklers/{scheduleId}/sequences/{sequenceId}", tags=["sprinklers panel"])
+    async def deleteSprinklerSequence(request: Request, scheduleId: int, sequenceId: int):
+        """
+        Removes specific sprinkler sequence from schedule
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.post("/api/panels/sprinklers/{scheduleId}/sequences/{sequenceId}/startWatering", tags=["sprinklers panel"])
+    async def postSprinklerSequenceStartWatering(request: Request, scheduleId: int, sequenceId: int, wateringTime: Optional[str] = Query(None, description="Watering time in seconds")):
+        """
+        Start given sequence
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.post("/api/panels/sprinklers/{scheduleId}/sequences/{sequenceId}/stopWatering", tags=["sprinklers panel"])
+    async def postSprinklerSequenceStopWatering(request: Request, scheduleId: int, sequenceId: int):
+        """
+        Stop given sequence
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.get("/api/panels/family", tags=["family panel"])
+    async def getFamily(request: Request, userID: int = Query(..., description="Request userID"), from_: int = Query(..., description="Request timestamp for from"), to_: int = Query(..., description="Request timestamp for to")):
+        """
+        Get users family
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/panels/notifications", tags=["notification panel"])
+    async def getPanelsNotifications(request: Request):
+        """
+        Get a list of all available notifications
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/panels/notifications", tags=["notification panel"])
+    async def newPanelsNotification(request: Request, request_data: inline_object = Body(...)):
+        """
+        Create notification
+        
+        Notification body
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/panels/notifications/{notificationID}", tags=["notification panel"])
+    async def getPanelsNotification(request: Request, notificationID: int):
+        """
+        Get notification
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/panels/notifications/{notificationID}", tags=["notification panel"])
+    async def modifyPanelsNotificationById(request: Request, notificationID: int, request_data: Dict[str, Any] = Body(...)):
+        """
+        Modify notification
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/panels/notifications/{notificationID}", tags=["notification panel"])
+    async def deletePanelsNotification(request: Request, notificationID: int):
+        """
+        Delete notification
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.get("/api/customEvents", tags=["customEvents panel"])
+    async def getCustomEvents(request: Request):
+        """
+        Get a list of all defined custom events
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/customEvents", tags=["customEvents panel"])
+    async def createCustomEvent(request: Request, request_data: CustomEventDto = Body(...)):
+        """
+        Create custom event
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/customEvents/{customEventName}", tags=["customEvents panel"])
+    async def getCustomEvent(request: Request, customEventName: str):
+        """
+        Get custom event with provided name
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/customEvents/{customEventName}", tags=["customEvents panel"])
+    async def emitCustomEvent(request: Request, customEventName: str):
+        """
+        Emit custom event
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.put("/api/customEvents/{customEventName}", tags=["customEvents panel"])
+    async def modifyCustomEvent(request: Request, customEventName: str, request_data: CustomEventDto = Body(...)):
+        """
+        Modify custom event
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/customEvents/{customEventName}", tags=["customEvents panel"])
+    async def deleteCustomEvent(request: Request, customEventName: str):
+        """
+        Delete custom event
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.get("/api/customEvents/{customEventName}/publish", tags=["customEvents panel"])
+    async def emitCustomEventByGet(request: Request, customEventName: str):
+        """
+        Emit custom event
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.get("/api/globalVariables", tags=["globalVariables panel"])
+    async def getGlobalVariables(request: Request):
+        """
+        Get a list of all available global variables
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/globalVariables", tags=["globalVariables panel"])
+    async def createGlobalVariable(request: Request, request_data: GlobalVariableDto = Body(...)):
+        """
+        Create global variable
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/globalVariables/{globalVariableName}", tags=["globalVariables panel"])
+    async def getGlobalVariable(request: Request, globalVariableName: str):
+        """
+        Get global variable
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/globalVariables/{globalVariableName}", tags=["globalVariables panel"])
+    async def modifyGlobalVariable(request: Request, globalVariableName: str, request_data: GlobalVariableDto = Body(...)):
+        """
+        Modify global variable
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/globalVariables/{globalVariableName}", tags=["globalVariables panel"])
+    async def deleteGlobalVariable(request: Request, globalVariableName: str):
+        """
+        Delete global variable
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.get("/api/panels/climate", tags=["Climate panel"])
+    async def getClimates(request: Request, detailed: Optional[str] = Query(None, description="True value returns advanced climate zone model. False value returns basic climate zone model. Default (if 'detailed' not exist) returns basic climate zone model.")):
+        """
+        Get a list of all available climate zones
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/panels/climate", tags=["Climate panel"])
+    async def createClimateZone(request: Request, request_data: AdvancedClimateZone = Body(...)):
+        """
+        Create climate zone
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/panels/climate/{climateID}", tags=["Climate panel"])
+    async def getClimate(request: Request, climateID: int):
+        """
+        Get specific climate zone
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.put("/api/panels/climate/{climateID}", tags=["Climate panel"])
+    async def modifyClimateWithIdInPath(request: Request, climateID: int, request_data: AdvancedClimateZone = Body(...)):
+        """
+        Modify specific climate zone
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "PUT", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.delete("/api/panels/climate/{climateID}", tags=["Climate panel"])
+    async def deleteClimate(request: Request, climateID: int):
+        """
+        Delete specific climate zone
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.post("/api/panels/climate/action/createDefaultZones", tags=["Climate panel"])
+    async def createClimateDefaultZones(request: Request):
+        """
+        Create climate default zones
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.get("/api/panels/climate/availableDevices", tags=["Climate panel"])
+    async def getClimateDevices(request: Request):
+        """
+        Get a list of all available climate devices
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.post("/api/mobile/push", tags=["push"])
+    async def createPushMessage(request: Request, request_data: CreatePushRequest = Body(...)):
+        """
+        Create push message
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.post("/api/mobile/push/{id}", tags=["push"])
+    async def pushDoAction(request: Request, id: int):
+        """
+        Do action of push.
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            None
+        )
+
+    @app.delete("/api/mobile/push/{id}", tags=["push"])
+    async def deletePush(request: Request, id: int):
+        """
+        Delete push.
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    @app.post("/api/service/factoryReset", tags=["system"])
+    async def factoryReset(request: Request, request_data: FactoryResetRequestBody = Body(...)):
+        """
+        Performs asynchronous system reset to factory defaults
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data.dict() if hasattr(request_data, 'dict') else request_data
+        )
+
+    @app.get("/api/events/history", tags=["historyEvent"])
+    async def getHistoryEvents(request: Request, eventType: Optional[str] = Query(None, description="event type"), from_: Optional[int] = Query(None, description="time from"), to_: Optional[int] = Query(None, description="time to"), sourceType: Optional[str] = Query(None, description="event source object type"), sourceId: Optional[int] = Query(None, description="event source object id"), objectType: Optional[str] = Query(None, description="event related object type"), objectId: Optional[int] = Query(None, description="event related object id"), lastId: Optional[int] = Query(None, description="requests with id<=lastId will be skipped (only more recent entries then lastId will be returned)"), numberOfRecords: Optional[int] = Query(None, description="response will be limited to numberOfRecords entries"), roomId: Optional[int] = Query(None, description="response will be filtered to objects having roomId"), sectionId: Optional[int] = Query(None, description="response will be filtered to objects having sectionId"), category: Optional[int] = Query(None, description="response will be filtered to objects having category")):
+        """
+        Retrieves list of events that match filters
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "GET", 
+            None
+        )
+
+    @app.delete("/api/events/history", tags=["historyEvent"])
+    async def deleteHistoryEvents(request: Request, eventType: Optional[str] = Query(None, description="event type"), timestamp: Optional[int] = Query(None, description="affects events before timestamp"), shrink: Optional[int] = Query(None, description="deletes oldest events limiting number of events left to this value"), objectType: Optional[str] = Query(None, description="event related object type"), objectId: Optional[int] = Query(None, description="event related object id")):
+        """
+        deletes events that fulfill conditions
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "DELETE", 
+            None
+        )
+
+    
+    logger.info(f"Created 269 API endpoints with full type safety")

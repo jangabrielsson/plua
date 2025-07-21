@@ -306,6 +306,42 @@ Comprehensive documentation is available in the `docs/` directory:
 - 📡 **API Integration**: [REST API Docs](docs/api/README.md)
 - 🔧 **Contributing**: [Developer Docs](docs/dev/README.md)
 
+## Fibaro HC3 API Integration
+
+plua2 includes a comprehensive Fibaro Home Center 3 API emulator with full type safety and documentation:
+
+### Generated API Endpoints
+
+The Fibaro API endpoints are auto-generated from official Swagger/OpenAPI specifications:
+
+```bash
+# Regenerate Fibaro API endpoints and models
+python src/plua2/generate_typed_fibaro_api.py
+
+# Generate with custom paths
+python src/plua2/generate_typed_fibaro_api.py --docs-dir fibaro_api_docs --output-dir src/plua2
+```
+
+This generates:
+- **`fibaro_api_models.py`**: 305+ Pydantic models with full type validation
+- **`fibaro_api_endpoints.py`**: 267+ FastAPI endpoints with proper documentation
+
+### Fibaro API Features
+
+- **Complete Coverage**: All major Fibaro HC3 API endpoints
+- **Type Safety**: Full Pydantic validation for request/response data
+- **Swagger Documentation**: Auto-generated API docs at `/docs`
+- **Lua Integration**: All calls delegate to `_PY.fibaro_api_hook(method, path, data)`
+- **Easy Testing**: Use web interface or curl to test endpoints
+
+```bash
+# Start server with Fibaro API
+plua2 --api-port 8888 --fibaro
+
+# Test an endpoint
+curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
+```
+
 ## Development
 
 ### Setup Development Environment

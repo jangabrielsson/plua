@@ -24,6 +24,7 @@ class LuaInterpreter:
         self.tcp_manager = SynchronousTCPManager(debug_print=self.debug_print)  # Handle TCP socket operations
         self.output_buffer = []  # Buffer for capturing print output
         self.web_mode = False  # Flag to control HTML/ANSI conversion
+        self._fastapi_app = None  # Store FastAPI app reference for internal calls
         
     def debug_print(self, message: str) -> None:
         """Centralized debug printing - can be extended with other global utilities"""
@@ -37,24 +38,51 @@ class LuaInterpreter:
         self.tcp_manager._debug_print = self.debug_print
 
     def _get_init_script(self) -> str:
-        """Get the Lua initialization script from external file"""
-        import os
-        init_script_path = os.path.join(os.path.dirname(__file__), '..', 'lua', 'init.lua')
-        try:
-            with open(init_script_path, 'r') as f:
-                return f.read()
-        except FileNotFoundError:
-            # Fallback to embedded script if file not found
-            self.debug_print(f"Warning: Could not find {init_script_path}, using embedded fallback")
-            return """
-            -- Fallback initialization script
-            local _pending_timers = {}
-            local _timer_id_counter = 0
-            
-            function _executeTimer(timer_id)
-              print("Timer", timer_id, "executed (fallback)")
-            end
-            """
+        """Get fallback Lua initialization script if file loading fails"""
+        return """
+-- Fallback initialization script (embedded)
+_callback_registry = {}
+_persistent_callbacks = {}
+local _callback_counter = 0
+_pending_timers = {}
+
+function _PY.registerCallback(callback_func, persistent)
+    _callback_counter = _callback_counter + 1
+    _callback_registry[_callback_counter] = callback_func
+    if persistent then
+        _persistent_callbacks[_callback_counter] = true
+    end
+    return _callback_counter
+end
+
+function _PY.executeCallback(callback_id, ...)
+    local callback = _callback_registry[callback_id]
+    if callback then
+        if not _persistent_callbacks[callback_id] then
+            _callback_registry[callback_id] = nil
+        end
+        callback(...)
+    end
+end
+
+function setTimeout(fun, ms)
+    local callback_id = _PY.registerCallback(fun, false)
+    _pending_timers[callback_id] = true
+    _PY.pythonTimer(callback_id, ms)
+    return callback_id
+end
+
+function clearTimeout(callback_id)
+    _pending_timers[callback_id] = nil
+    return _PY.pythonCancelTimer(callback_id)
+end
+
+json = {}
+json.encode = _PY.json_encode
+json.decode = _PY.json_decode
+
+print("Fallback init script loaded")
+"""
 
     def curr_time(self) -> str:
         """Get current time formatted as HH:MM:SS.mmm"""
@@ -153,7 +181,25 @@ class LuaInterpreter:
             py_table.config = {}
         
         # Execute init script after all functions are registered
-        self.lua.execute(self._init_script)
+        # Use loadfile for proper source mapping and debugging support
+        import os
+        init_script_path = os.path.join(os.path.dirname(__file__), '..', 'lua', 'init.lua')
+        
+        try:
+            # Use Lua's loadfile for proper source mapping
+            init_load_script = f"""
+local func, err = loadfile({init_script_path!r})
+if func then
+    func()
+else
+    error("Failed to load init.lua: " .. tostring(err))
+end
+"""
+            self.lua.execute(init_load_script)
+        except Exception as e:
+            # Fallback to the embedded script if file loading fails
+            self.debug_print(f"Warning: Could not load {init_script_path}, using embedded fallback: {e}")
+            self.lua.execute(self._init_script)
         
         self.debug_print(f"Lua runtime initialized")
 
@@ -227,56 +273,6 @@ end
         except Exception as e:
             raise RuntimeError(f"main_file_hook failed for {filepath}: {e}")
 
-    def execute_script(self, script: str, source_name: str = None, debugging: bool = False, debug: bool = False) -> None:
-        """
-        Execute a Lua script
-        
-        Args:
-            script: The Lua script to execute
-            source_name: Optional source file name for source mapping (e.g., "test_debugger.lua")
-            debugging: Whether this script should be loaded for debugging (deferred execution)
-            debug: Whether debug logging is enabled
-        """
-        if not self.lua:
-            raise RuntimeError("Lua runtime not initialized. Call initialize() first.")
-        
-        execution_time = self.curr_time()
-        self.debug_print(f"Executing Lua script...")
-        
-        if source_name:
-            # Use source name for proper debugging source mapping
-            debug_source = f"@{source_name}"
-            
-            if debugging:
-                # For debugging: load the function but defer execution
-                load_script = f"""
-local func, err = (loadstring or load)({script!r}, {debug_source!r})
-if func then
-    _PY._debug_main_function = func
-    if {str(debug).lower()} then
-        print("[MOBDEBUG-LOAD] Script loaded, ready for debugging")
-    end
-else
-    error("Failed to load script: " .. tostring(err))
-end
-"""
-            else:
-                # Normal execution with source mapping
-                load_script = f"""
-local func, err = (loadstring or load)({script!r}, {debug_source!r})
-if func then
-    coroutine.wrap(func)()
-else
-    error("Failed to load script: " .. tostring(err))
-end
-"""
-            if debug:
-                print(f"[{self.curr_time()}] LUA: Loading script with source: {debug_source} (debugging={debugging})")
-            self.lua.execute(load_script)
-        else:
-            # No source mapping needed (fragments, inline scripts)
-            self.lua.execute(f"coroutine.wrap(function () {script} end)()")
-
     def execute_debug_main(self, debug: bool = False) -> None:
         """Execute the main debug function that was previously loaded"""
         if not self.lua:
@@ -327,6 +323,13 @@ end
         """Get the Lua runtime instance"""
         return self.lua
 
+    def set_fastapi_app(self, app):
+        """Set the FastAPI app reference for internal HTTP calls"""
+        self._fastapi_app = app
+        # Also store it in the Lua runtime if available
+        if self.lua:
+            self.lua._api_server_app = app
+        
     def _register_exported_functions(self, py_table: Any) -> None:
         """
         Register all exported Python functions to the _PY table

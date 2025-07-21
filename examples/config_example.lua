@@ -1,6 +1,8 @@
 -- Configuration Example using .env file
 -- This example shows how to use environment variables for configuration
 
+require('mobdebug').on()
+
 print("=== Configuration with .env Example ===")
 
 -- Load configuration from .env file

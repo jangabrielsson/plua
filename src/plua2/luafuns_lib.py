@@ -449,3 +449,213 @@ def get_config() -> Dict[str, Any]:
     return config
 
 
+@lua_exporter.export(description="Make a synchronous HTTP call from Lua", category="network")
+def http_call_sync(method, url, data=None, headers=None):
+    """Make a synchronous HTTP call from Lua"""
+    import requests
+    
+    try:
+        method = method.upper()
+        
+        # Default headers
+        if headers is None:
+            headers = {}
+        
+        # Make the HTTP request
+        if method == "GET":
+            response = requests.get(url, headers=headers, timeout=30)
+        elif method == "POST":
+            response = requests.post(url, json=data, headers=headers, timeout=30)
+        elif method == "PUT":
+            response = requests.put(url, json=data, headers=headers, timeout=30)
+        elif method == "DELETE":
+            response = requests.delete(url, headers=headers, timeout=30)
+        else:
+            return {"success": False, "error": f"Unsupported HTTP method: {method}"}
+        
+        # Return response data
+        return {
+            "success": True,
+            "status_code": response.status_code,
+            "data": response.text,
+            "headers": dict(response.headers)
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@lua_exporter.export(description="Make internal HTTP call to our own FastAPI server", category="network")
+def http_call_internal(method, path, data=None, headers=None):
+    """Make internal HTTP call to our own FastAPI server by calling function directly"""
+    
+    # Get the interpreter via the runtime reference (same pattern as network module)
+    from . import network
+    runtime = network._current_runtime
+    if not runtime:
+        return {"success": False, "error": "Runtime not available"}
+    
+    interpreter = runtime.interpreter
+    if not interpreter:
+        return {"success": False, "error": "Interpreter not available"}
+    
+    try:
+        # Extract the endpoint and parameters from the path
+        if path.startswith("/api/"):
+            # Parse query parameters from the path if present
+            import urllib.parse
+            import re
+            parsed_url = urllib.parse.urlparse(path)
+            clean_path = parsed_url.path
+            query_params = urllib.parse.parse_qs(parsed_url.query) if parsed_url.query else {}
+            
+            # Extract path parameters by matching against common FastAPI patterns
+            path_params = {}
+            template_path = clean_path  # Default to original path if no template matches
+            
+            # Common Fibaro API path patterns with their templates
+            patterns = [
+                (r'^/api/devices/(\d+)$', '/api/devices/{deviceID}', ['deviceID']),
+                (r'^/api/devices/(\d+)/action/(.+)$', '/api/devices/{deviceID}/action/{actionName}', ['deviceID', 'actionName']),
+                (r'^/api/devices/(\d+)/properties/(.+)$', '/api/devices/{deviceID}/properties/{propertyName}', ['deviceID', 'propertyName']),
+                (r'^/api/rooms/(\d+)$', '/api/rooms/{roomID}', ['roomID']),
+                (r'^/api/scenes/(\d+)$', '/api/scenes/{sceneID}', ['sceneID']),
+                (r'^/api/users/(\d+)$', '/api/users/{userID}', ['userID']),
+                (r'^/api/sections/(\d+)$', '/api/sections/{sectionID}', ['sectionID']),
+                (r'^/api/profiles/(\d+)$', '/api/profiles/{profileId}', ['profileId']),
+                (r'^/api/quickApp/(\d+)/files/(.+)$', '/api/quickApp/{deviceId}/files/{fileName}', ['deviceId', 'fileName']),
+                (r'^/api/quickApp/(\d+)/files$', '/api/quickApp/{deviceId}/files', ['deviceId']),
+                (r'^/api/RGBPrograms/(\d+)$', '/api/RGBPrograms/{programID}', ['programID']),
+                (r'^/api/notificationCenter/(\d+)$', '/api/notificationCenter/{notificationId}', ['notificationId']),
+                (r'^/api/energy/(\d+)/(\d+)/([^/]+)/([^/]+)/([^/]+)/(\d+)$', '/api/energy/{timestampFrom}/{timestampTo}/{dataSet}/{type}/{unit}/{id}', ['timestampFrom', 'timestampTo', 'dataSet', 'type', 'unit', 'id']),
+                (r'^/api/temperature/(\d+)/(\d+)/([^/]+)/([^/]+)/temperature/(\d+)$', '/api/temperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/temperature/{id}', ['timestampFrom', 'timestampTo', 'dataSet', 'type', 'id']),
+                (r'^/api/smokeTemperature/(\d+)/(\d+)/([^/]+)/([^/]+)/smoke/(\d+)$', '/api/smokeTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/smoke/{id}', ['timestampFrom', 'timestampTo', 'dataSet', 'type', 'id']),
+                (r'^/api/thermostatTemperature/(\d+)/(\d+)/([^/]+)/([^/]+)/thermostat/(\d+)$', '/api/thermostatTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/thermostat/{id}', ['timestampFrom', 'timestampTo', 'dataSet', 'type', 'id']),
+                (r'^/api/deviceNotifications/v1/(\d+)$', '/api/deviceNotifications/v1/{deviceID}', ['deviceID']),
+                (r'^/api/panels/favoriteColors/v2/(\d+)$', '/api/panels/favoriteColors/v2/{favoriteColorID}', ['favoriteColorID']),
+                (r'^/api/devices/action/(\d+)/(\d+)$', '/api/devices/action/{timestamp}/{id}', ['timestamp', 'id']),
+                (r'^/api/slave/([^/]+)/api/devices/(\d+)$', '/api/slave/{uuid}/api/devices/{deviceID}', ['uuid', 'deviceID']),
+                (r'^/api/slave/([^/]+)/api/devices/(\d+)/action/(.+)$', '/api/slave/{uuid}/api/devices/{deviceID}/action/{actionName}', ['uuid', 'deviceID', 'actionName']),
+                (r'^/api/energy/installationCost/(\d+)$', '/api/energy/installationCost/{id}', ['id']),
+                (r'^/api/energy/consumption/room/(\d+)/detail$', '/api/energy/consumption/room/{roomId}/detail', ['roomId']),
+                (r'^/api/energy/consumption/device/(\d+)/detail$', '/api/energy/consumption/device/{deviceId}/detail', ['deviceId']),
+                (r'^/api/linkedDevices/v1/devices/(\d+)$', '/api/linkedDevices/v1/devices/{deviceID}', ['deviceID']),
+                (r'^/api/additionalInterfaces/([^/]+)$', '/api/additionalInterfaces/{interfaceName}', ['interfaceName']),
+                (r'^/api/fti/v2/changeStep/([^/]+)$', '/api/fti/v2/changeStep/{step}', ['step']),
+                (r'^/api/devices/groupAction/([^/]+)$', '/api/devices/groupAction/{actionName}', ['actionName']),
+                (r'^/api/quickApp/export/(\d+)$', '/api/quickApp/export/{deviceId}', ['deviceId']),
+                (r'^/api/service/slaves/([^/]+)$', '/api/service/slaves/{id}', ['id']),
+                (r'^/api/service/slaves/([^/]+)/password$', '/api/service/slaves/{id}/password', ['id']),
+                (r'^/api/service/slaves/([^/]+)/ip$', '/api/service/slaves/{serialOrId}/ip', ['serialOrId']),
+                (r'^/api/service/discovery/resolve/([^/]+)/([^/]+)$', '/api/service/discovery/resolve/{type}/{value}', ['type', 'value']),
+                (r'^/api/service/resolve/([^/]+)/([^/]+)$', '/api/service/resolve/{type}/{value}', ['type', 'value']),
+            ]
+            
+            for pattern, template, param_names in patterns:
+                match = re.match(pattern, clean_path)
+                if match:
+                    template_path = template
+                    for i, param_name in enumerate(param_names):
+                        if i < len(match.groups()):
+                            path_params[param_name] = match.group(i + 1)
+                    break
+            
+            # Convert data to JSON string if it exists
+            data_json = "nil"
+            if data is not None:
+                import json
+                data_json = json.dumps(data)
+                data_json = f'"{data_json}"'  # Wrap in quotes for Lua string
+            
+            # Convert query params to Lua table format
+            query_lua = "nil"
+            if query_params:
+                query_items = []
+                for key, values in query_params.items():
+                    # Take first value if multiple values for same key
+                    value = values[0] if values else ""
+                    query_items.append(f'["{key}"] = "{value}"')
+                query_lua = "{" + ", ".join(query_items) + "}"
+            
+            # Convert path params to Lua table format
+            path_lua = "nil"
+            if path_params:
+                path_items = []
+                for key, value in path_params.items():
+                    path_items.append(f'["{key}"] = "{value}"')
+                path_lua = "{" + ", ".join(path_items) + "}"
+            
+            # Execute Lua script to call the fibaro_api_hook function
+            lua_script = f"""
+if _PY.fibaro_api_hook then
+    local result, status = _PY.fibaro_api_hook("{method}", "{template_path}", {path_lua}, {query_lua}, {data_json})
+    _PY.temp_internal_call_result = {{
+        success = true,
+        status_code = status or 200,
+        data = result,
+        headers = {{["Content-Type"] = "application/json"}}
+    }}
+else
+    _PY.temp_internal_call_result = {{
+        success = false,
+        error = "fibaro_api_hook not available"
+    }}
+end
+"""
+            
+            # Execute the script
+            interpreter.execute_script(lua_script, "internal_http_call")
+            
+            # Get the result from Lua globals
+            result = interpreter.lua.globals()._PY.temp_internal_call_result
+            
+            # Clean up
+            interpreter.lua.globals()._PY.temp_internal_call_result = None
+            
+            # Convert the Lua table to Python dict
+            if result:
+                python_result = _lua_to_python(result)
+                return python_result
+            else:
+                return {"success": False, "error": "No result from fibaro_api_hook"}
+                
+        else:
+            return {"success": False, "error": f"Unknown internal path: {path}"}
+            
+    except Exception as e:
+        return {"success": False, "error": f"Internal call failed: {str(e)}"}
+
+
+def set_global_fastapi_app(app):
+    """Set the global FastAPI app reference for internal calls"""
+    # Get the interpreter via the runtime reference  
+    from . import network
+    runtime = network._current_runtime
+    if runtime and runtime.interpreter:
+        runtime.interpreter.set_fastapi_app(app)
+
+
+def get_fastapi_app():
+    """Get the FastAPI app reference"""
+    from . import network
+    runtime = network._current_runtime
+    if runtime and runtime.interpreter:
+        return runtime.interpreter._fastapi_app
+    return None
+
+
+@lua_exporter.export(description="Base64 encode a string", category="utility")
+def base64_encode(data):
+    """Encode data as base64"""
+    import base64
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    return base64.b64encode(data).decode('utf-8')
+
+
+@lua_exporter.export(description="Base64 decode a string", category="utility")
+def base64_decode(data):
+    """Decode base64 data"""
+    import base64
+    return base64.b64decode(data).decode('utf-8')
+

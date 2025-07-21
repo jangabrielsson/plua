@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
 
@@ -68,6 +69,11 @@ class PlUA2APIServer:
         self.host = host
         self.port = port
         
+        # Tracking variables for status
+        self.start_time = time.time()
+        self.executed_scripts_count = 0
+        self.fibaro_endpoints_loaded = False
+        
         # Store pending execution requests
         self.pending_requests: Dict[str, asyncio.Future] = {}
         
@@ -91,7 +97,16 @@ class PlUA2APIServer:
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
+            expose_headers=["*"],
+            max_age=3600,
         )
+        
+        # Mount static files directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(os.path.dirname(current_dir))
+        static_dir = os.path.join(project_root, "static")
+        if os.path.exists(static_dir):
+            self.app.mount("/static", StaticFiles(directory=static_dir), name="static")
         
         self._setup_routes()
         
@@ -121,8 +136,10 @@ class PlUA2APIServer:
         @self.app.get("/")
         async def root():
             return {
-                "message": "plua2 REST API",
+                "message": "plua2 REST API Server",
                 "version": "1.0.0",
+                "web_interface": "/web",
+                "api_docs": "/docs", 
                 "endpoints": {
                     "web": "GET /web - Web REPL interface",
                     "execute": "POST /plua/execute - Execute Lua code",
@@ -133,19 +150,26 @@ class PlUA2APIServer:
         
         @self.app.get("/web", response_class=HTMLResponse)
         async def web_repl():
-            """Serve the Web REPL interface"""
+            """Serve the Main Web Interface with tabs"""
             # Find the HTML file relative to this script
             current_dir = os.path.dirname(os.path.abspath(__file__))
             # Go up to src/plua2 -> src -> project root  
             project_root = os.path.dirname(os.path.dirname(current_dir))
-            html_path = os.path.join(project_root, "plua2_web_repl.html")
+            html_path = os.path.join(project_root, "static", "plua2_main_page.html")
             
             try:
                 with open(html_path, 'r', encoding='utf-8') as f:
                     html_content = f.read()
                 return HTMLResponse(content=html_content)
             except FileNotFoundError:
-                raise HTTPException(status_code=404, detail=f"Web REPL interface not found at {html_path}")
+                # Fallback to dev directory
+                html_path = os.path.join(project_root, "dev", "plua2_web_repl.html")
+                try:
+                    with open(html_path, 'r', encoding='utf-8') as f:
+                        html_content = f.read()
+                    return HTMLResponse(content=html_content)
+                except FileNotFoundError:
+                    raise HTTPException(status_code=404, detail=f"Web interface not found")
         
         @self.app.get("/plua/info")
         async def info():
@@ -200,24 +224,6 @@ class PlUA2APIServer:
                 }
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to get state: {e}")
-        
-        @self.app.get("/plua/state")
-        async def runtime_state():
-            """Get detailed runtime state information"""
-            try:
-                state = self.runtime.interpreter.get_runtime_state()
-                return {
-                    "task_info": {
-                        "active_timers": state["active_timers"],
-                        "pending_callbacks": state["pending_callbacks"],
-                        "total_tasks": state["total_tasks"]
-                    },
-                    "active_timers": state["active_timers"],
-                    "runtime_active": True,
-                    "api_requests_pending": len(self.pending_requests)
-                }
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Failed to get runtime state: {e}")
         
         @self.app.post("/plua/execute", response_model=LuaExecuteResponse)
         async def execute_lua(request: LuaExecuteRequest):
@@ -284,7 +290,7 @@ class PlUA2APIServer:
     def register_fibaro_endpoints(self):
         """
         Register Fibaro API endpoints that delegate to Lua fibaro_api_hook
-        This should be called after the Fibaro system is loaded
+        Always registers endpoints - the hook implementation determines functionality
         """
         # Set the interpreter for the auto-generated endpoints
         set_interpreter(self.runtime.interpreter)
@@ -292,26 +298,16 @@ class PlUA2APIServer:
         # Create all auto-generated Fibaro API routes
         create_fibaro_api_routes(self.app)
         
-        print("Auto-generated Fibaro API endpoints registered")
-    
+        # Mark that Fibaro endpoints are loaded
+        self.fibaro_endpoints_loaded = True
+
     def check_and_register_fibaro_api(self):
         """
-        Check if Fibaro API hook is available and register endpoints if so
-        This should be called after Lua initialization is complete
+        Always register Fibaro API endpoints - no conditional checking needed
+        The hook implementation will determine if Fibaro functionality is available
         """
-        try:
-            # Get the Lua runtime to check for fibaro_api_hook
-            lua = self.runtime.interpreter.get_lua_runtime()
-            if lua and lua.globals()._PY and lua.globals()._PY.fibaro_api_hook:
-                print("Fibaro API installed")
-                self.register_fibaro_endpoints()
-                return True
-            else:
-                # Don't print anything when Fibaro API is not available
-                return False
-        except Exception as e:
-            print(f"Error checking for Fibaro API hook: {e}")
-            return False
+        if not self.fibaro_endpoints_loaded:
+            self.register_fibaro_endpoints()
     
     async def _execute_lua_code_async(self, lua_code: str, request_id: str, timeout: float = 30.0) -> ExecutionResponse:
         """Execute Lua code directly in the main event loop and capture output/result"""

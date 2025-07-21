@@ -8,6 +8,7 @@ local tcp_write_sync = _PY.tcp_write_sync
 local tcp_read_sync = _PY.tcp_read_sync
 local tcp_close_sync = _PY.tcp_close_sync
 local tcp_set_timeout_sync = _PY.tcp_set_timeout_sync
+local http_call_sync = _PY.http_call_sync
 
 local function debug(...) 
   if _DEBUG then 
@@ -160,6 +161,31 @@ end
 function socket.tcp()
   debug("Requesting tcp socket")
   return tcp()
+end
+
+-- Synchronous HTTP call function
+function socket.http_call(method, url, headers, payload)
+  debug("Making HTTP call:", method, url)
+  
+  local success, status_code, response_body, error_message = http_call_sync(method, url, headers, payload)
+  
+  if success then
+    debug("HTTP call successful:", status_code)
+    return {
+      success = true,
+      status_code = status_code,
+      body = response_body,
+      error = nil
+    }
+  else
+    debug("HTTP call failed:", error_message)
+    return {
+      success = false,
+      status_code = status_code,
+      body = response_body,
+      error = error_message
+    }
+  end
 end
 
 return socket

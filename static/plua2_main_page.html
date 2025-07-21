@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>plua2 - Python-Lua Async Runtime</title>
+    <link rel="stylesheet" href="/static/plua2_main_page.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>plua2</h1>
+            <div class="subtitle">Python-Lua Async Runtime with Timer Support</div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-indicator"></div>
+                <span>Runtime Active</span>
+            </div>
+            <div class="status-item">
+                <span id="current-time">--:--:--</span>
+            </div>
+            <div class="status-item">
+                <span>Port: <span id="server-port">8888</span></span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('repl')">REPL</div>
+            <div class="tab" onclick="showTab('status')">Status</div>
+            <div class="tab" onclick="showTab('swagger')">API Docs</div>
+        </div>
+
+        <!-- REPL Tab -->
+        <div id="repl" class="tab-content active">
+            <div class="repl-container">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: #ffd700;">Interactive Lua REPL</h3>
+                        <button class="clear-btn" onclick="clearOutput()">Clear Output</button>
+                    </div>
+                    <div id="output" class="output-area">
+                        <div class="output-line info">Welcome to plua2 Web REPL! Type Lua code below and press Execute.</div>
+                        <div class="output-line info">Try: print("Hello from Lua!") or _PY.setTimeout(function() print("Timer!") end, 1000)</div>
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <form class="input-form" onsubmit="executeLua(event)">
+                        <div class="input-group">
+                            <label for="lua-code">Lua Code:</label>
+                            <textarea 
+                                id="lua-code" 
+                                class="lua-input" 
+                                placeholder="-- Enter your Lua code here
+print('Hello, plua2!')
+local timer = _PY.setTimeout(function()
+    print('Timer executed!')
+end, 2000)"
+                                spellcheck="false"
+                            ></textarea>
+                        </div>
+                        <button type="submit" class="execute-btn" id="execute-btn">Execute</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Tab -->
+        <div id="status" class="tab-content">
+            <h3 style="color: #ffd700; margin-bottom: 20px;">Runtime Status</h3>
+            <div class="status-grid">
+                <div class="status-card">
+                    <h3>System Information</h3>
+                    <div class="status-entry">
+                        <span class="status-label">API Version:</span>
+                        <span class="status-value" id="api-version">Loading...</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Lua Version:</span>
+                        <span class="status-value" id="lua-version">Loading...</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Runtime Status:</span>
+                        <span class="status-value" id="runtime-status">Loading...</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Server Uptime:</span>
+                        <span class="status-value" id="uptime">Loading...</span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <h3>Runtime Statistics</h3>
+                    <div class="status-entry">
+                        <span class="status-label">Active Timers:</span>
+                        <span class="status-value" id="active-timers">Loading...</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Executed Scripts:</span>
+                        <span class="status-value" id="executed-scripts">Loading...</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Memory Usage:</span>
+                        <span class="status-value" id="memory-usage">Loading...</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Last Activity:</span>
+                        <span class="status-value" id="last-activity">Loading...</span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <h3>Available Modules</h3>
+                    <div id="modules-list">
+                        <div class="status-entry">
+                            <span class="status-label">json:</span>
+                            <span class="status-value">✓ Built-in</span>
+                        </div>
+                        <div class="status-entry">
+                            <span class="status-label">net:</span>
+                            <span class="status-value">✓ Built-in</span>
+                        </div>
+                        <div class="status-entry">
+                            <span class="status-label">_PY:</span>
+                            <span class="status-value">✓ Bridge</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <h3>API Endpoints</h3>
+                    <div class="status-entry">
+                        <span class="status-label">REST API:</span>
+                        <span class="status-value">✓ Active</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Fibaro API:</span>
+                        <span class="status-value" id="fibaro-status">Loading...</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Web Interface:</span>
+                        <span class="status-value">✓ Active</span>
+                    </div>
+                    <div class="status-entry">
+                        <span class="status-label">Swagger Docs:</span>
+                        <span class="status-value">✓ Available</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Swagger Tab -->
+        <div id="swagger" class="tab-content">
+            <div class="swagger-container">
+                <iframe 
+                    id="swagger-iframe"
+                    class="swagger-iframe" 
+                    src="/docs"
+                    title="Swagger API Documentation">
+                </iframe>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/plua2_main_page.js"></script>
+</body>
+</html>

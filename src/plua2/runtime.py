@@ -407,6 +407,11 @@ end
                             print(f"[{self.curr_time()}] Executing script fragment {i+1}/{len(script_fragments)}...")
                         self.execute_script(fragment, f"fragment_{i+1}", debugging=False, debug=debug_enabled)
                 
+                # Check for and register Fibaro API endpoints if api_server is available
+                # This must happen before executing user scripts so endpoints are available
+                if api_server:
+                    api_server.check_and_register_fibaro_api()
+                
                 # Load and execute the main script/file with debugging
                 if main_file:
                     if debug_enabled:
@@ -432,14 +437,15 @@ end
                     for i, fragment in enumerate(script_fragments):
                         self.execute_script(fragment, f"fragment_{i+1}", debugging=False)
                 
+                # Check for and register Fibaro API endpoints if api_server is available
+                # This must happen before executing user scripts so endpoints are available
+                if api_server:
+                    api_server.check_and_register_fibaro_api()
+                
                 if main_file:
                     self.execute_file(main_file, debugging=False)
                 elif main_script:
                     self.execute_script(main_script, source_name, debugging=False)
-            
-            # Check for and register Fibaro API endpoints if api_server is available
-            if api_server:
-                api_server.check_and_register_fibaro_api()
             
             # Run for specified duration or forever
             if duration:

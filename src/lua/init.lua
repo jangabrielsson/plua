@@ -9,6 +9,8 @@
 -- Add src/lua to the front of package.path for require() statements
 local current_path = package.path
 package.path = "src/lua/?.lua;" .. current_path
+local mobdebug = require('mobdebug')
+mobdebug.coro()
 
 -- Callback system for async operations (global for runtime state access)
 _callback_registry = {}
@@ -27,13 +29,32 @@ function _PY.registerCallback(callback_func, persistent)
     return _callback_counter
 end
 
+local function debugCall(typ,fun,...)
+  xpcall(fun,function(err)
+          local info = nil
+          err = tostring(err)
+          for i=2,5 do 
+            info = debug.getinfo(i)
+            if not info or info.what == 'Lua' then break end
+          end
+          if info then
+            local source = info.source
+            local line, msg = err:match(":(%d+): (.*)")
+            line = line or info.currentline or ""
+            err = source .. ":"..line..": "..(msg or err)
+          end
+          print("Error in "..typ..":", err)
+          print(debug.traceback())
+      end,...) 
+end
+
 function _PY.executeCallback(callback_id, ...)
     local callback = _callback_registry[callback_id]
     if callback then
         if not _persistent_callbacks[callback_id] then
             _callback_registry[callback_id] = nil  -- Clean up non-persistent callbacks
         end
-        callback(...)
+        debugCall("callback",callback,...)
     end
 end
 
@@ -47,7 +68,7 @@ local function _addTimer(callback, delay_ms)
     local timer = _pending_timers[callback_id]
     if timer and not timer.cancelled then
       _pending_timers[callback_id] = nil  -- Cleanup
-      callback()  -- Execute original callback
+      debugCall("timer callback",callback)  -- Execute original callback
     elseif timer and timer.cancelled then
       print("Timer", callback_id, "was cancelled")
       _pending_timers[callback_id] = nil  -- Clean up cancelled timer
@@ -83,23 +104,9 @@ function clearTimeout(callback_id)
   end
 end
 
--- Keep coroutine handling in Lua for specific functions that need it
-local function _timer_with_coroutine(fun,ms,...)
-  local co = coroutine.create(fun)
-  local args = {...}
-  return _addTimer(function()
-    coroutine.resume(co,table.unpack(args))
-  end, ms)
-end
-
 -- Direct timer execution without coroutine (for setTimeout)
 local function _timer_direct(fun, ms)
   return _addTimer(fun, ms)
-end
-
--- Simulate a Python timer function in Lua
-function netWorkIO(callback)
-  return _timer_with_coroutine(callback,1000,"xyz")
 end
 
 function sleep(ms)
@@ -111,6 +118,41 @@ end
 
 function setTimeout(fun,ms)
   return _timer_direct(fun, ms)  -- Return timer ID, execute directly without coroutine
+end
+
+-- Track active intervals for proper cancellation
+_active_intervals = {}
+
+function setInterval(fun, ms)
+  local interval_id = _callback_counter + 1  -- Pre-allocate the next ID
+  
+  local function loop()
+    -- Check if interval was cancelled before executing
+    if not _active_intervals[interval_id] then
+      return  -- Stop the loop
+    end
+    
+    fun()  -- Execute the interval function
+    
+    -- Reschedule only if not cancelled
+    if not _active_intervals[interval_id] then
+      _active_intervals[interval_id] = setTimeout(loop, ms)
+    end
+  end
+  
+  -- Register the interval as active
+  -- Start the first iteration
+  _active_intervals[interval_id] = setTimeout(loop, ms)
+  
+  return interval_id
+end
+
+function clearInterval(interval_id)
+  local interval = _active_intervals[interval_id]
+  if interval then
+    clearTimeout(interval)  -- Cancel the timer
+    _active_intervals[interval_id] = nil
+  end
 end
 
 local _print = print
@@ -128,13 +170,35 @@ json = {}
 json.encode = _PY.json_encode
 json.decode = _PY.json_decode
 
+os.getenv = _PY.getenv_with_dotenv
 net = require("net")
 
 -- Default main_file_hook implementation
 -- This provides the standard behavior for loading and executing Lua files
 -- Libraries can override this hook to provide custom preprocessing
+
+function coroutine.wrapdebug(func,error_handler)
+  local co = coroutine.create(func)
+  return function(...)
+    local res = {coroutine.resume(co, ...)}
+    if res[1] then
+      return table.unpack(res, 2)  -- Return all results except the first (true)
+    else
+      -- Handle error in coroutine
+      local err,traceback = res[2], debug.traceback(co)
+      if error_handler then
+        error_handler(err, traceback)
+      else
+        print(err, traceback)
+      end
+    end
+  end
+end
+
 function _PY.main_file_hook(filename)
-    print("Loading file: " .. filename)
+    require('mobdebug').on()
+    require('mobdebug').coro()
+    --print("Loading file: " .. filename)
     
     -- Read the file content
     local file = io.open(filename, "r")
@@ -148,10 +212,20 @@ function _PY.main_file_hook(filename)
     -- Load and execute the content in a coroutine, explicitly passing the global environment
     local func, err = load(content, "@" .. filename, "t", _G)
     if func then
-        coroutine.wrap(func)()
+        coroutine.wrapdebug(func, function(err,tb)
+            err = err:match(":(%d+: .*)")
+            print("Error in script " .. filename .. ": " .. tostring(err))
+            print(tb)
+        end)()  -- Execute the function in a coroutine
     else
         error("Failed to load script: " .. tostring(err))
     end
 end
 
-print("Lua runtime initialized with default main_file_hook")
+-- Default fibaro_api_hook implementation
+-- This provides a default "service unavailable" response for Fibaro API calls
+-- Libraries like fibaro.lua can override this hook to provide actual implementations
+function _PY.fibaro_api_hook(method, path, data)
+    -- Return service unavailable - Fibaro API not loaded
+    return nil, 503
+end

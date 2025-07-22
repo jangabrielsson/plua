@@ -82,21 +82,29 @@ async def run_script_with_api(script_fragments: list = None, main_script: str = 
         
         # Connect the broadcast UI update hook
         def broadcast_hook(qa_id):
-            """Wrapper to create async task for broadcasting"""
             if api_server:
                 try:
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
                         # Create a task to run the async broadcast function
                         asyncio.create_task(api_server.broadcast_ui_update(qa_id))
-                        print(f"[DEBUG] Broadcast task created for QA {qa_id}")
-                    else:
-                        print(f"[DEBUG] Event loop not running, cannot broadcast for QA {qa_id}")
                 except Exception as e:
-                    print(f"[DEBUG] Error creating broadcast task for QA {qa_id}: {e}")
+                    print(f"Error creating broadcast task for QA {qa_id}: {e}")
+
+        # Connect the granular view update hook
+        def broadcast_view_hook(qa_id, component_name, property_name, data_json):
+            if api_server:
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Create a task to run the async granular broadcast function
+                        asyncio.create_task(api_server.broadcast_view_update(qa_id, component_name, property_name, data_json))
+                except Exception as e:
+                    print(f"Error creating view broadcast task for QA {qa_id}: {e}")
         
-        # Set the broadcast hook in the interpreter
+        # Set the broadcast hooks in the interpreter
         runtime.interpreter.set_broadcast_ui_update_hook(broadcast_hook)
+        runtime.interpreter.set_broadcast_view_update_hook(broadcast_view_hook)
         
         # Start API server in background
         api_task = asyncio.create_task(api_server.start_server(), name="api_server")

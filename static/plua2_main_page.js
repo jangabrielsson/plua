@@ -349,6 +349,10 @@ function createUIRow(row, deviceId, rowIndex) {
             if (element.id) {
                 uiElement.setAttribute('data-element-id', element.id);
             }
+            // Add element type attribute for granular updates
+            if (element.type) {
+                uiElement.setAttribute('data-element-type', element.type);
+            }
             // Add element index attribute for tracking individual elements within a row
             uiElement.setAttribute('data-element-sub-index', elementIndex);
             rowDiv.appendChild(uiElement);
@@ -386,10 +390,14 @@ function createLabel(element) {
 }
 
 function createButton(element, deviceId) {
+    console.log(`Creating button: text="${element.text}", deviceId=${deviceId}, elementId=${element.id}, onReleased=${element.onReleased}`);
     const button = document.createElement('button');
     button.className = 'qa-ui-button qa-button'; // Add qa-button for easy targeting
     button.textContent = element.text || 'Button';
-    button.onclick = () => triggerUIAction(deviceId, element.onReleased, element.id);
+    button.onclick = () => {
+        console.log(`Button clicked: deviceId=${deviceId}, onReleased=${element.onReleased}, elementId=${element.id}`);
+        triggerUIAction(deviceId, element.onReleased, element.id, [], 'onReleased'); // Empty values for buttons
+    };
     return button;
 }
 
@@ -406,9 +414,9 @@ function createSwitch(element, deviceId) {
         button.classList.toggle('qa-ui-switch-btn-on');
         button.classList.toggle('qa-ui-switch-btn-off');
         
-        // Trigger action
+        // Trigger action with true/false value
         const newValue = button.classList.contains('qa-ui-switch-btn-on');
-        triggerUIAction(deviceId, element.onReleased, element.id, [newValue.toString()]);
+        triggerUIAction(deviceId, element.onReleased, element.id, [newValue], 'onReleased');
     };
     
     return button;
@@ -418,7 +426,8 @@ function createSlider(element, deviceId) {
     const container = document.createElement('div');
     container.className = 'qa-ui-slider-container';
     
-    if (element.text) {
+    // Only add label if text exists and is not empty
+    if (element.text && element.text.trim() !== '') {
         const label = document.createElement('span');
         label.textContent = element.text;
         label.style.marginRight = '8px';
@@ -452,7 +461,7 @@ function createSlider(element, deviceId) {
     };
     
     slider.onchange = () => {
-        triggerUIAction(deviceId, element.onChanged, element.id, [slider.value]);
+        triggerUIAction(deviceId, element.onChanged, element.id, [slider.value], 'onChanged');
         setTimeout(() => tooltip.classList.remove('active'), 1000);
     };
     
@@ -475,7 +484,7 @@ function createSelect(element, deviceId) {
     }
     
     select.onchange = () => {
-        triggerUIAction(deviceId, element.onToggled, element.id, [select.value]);
+        triggerUIAction(deviceId, element.onToggled, element.id, [select.value], 'onToggled');
     };
     
     return select;
@@ -544,7 +553,7 @@ function createMultiSelect(element, deviceId) {
                     button.textContent = '1 selected';
                 }
                 
-                triggerUIAction(deviceId, element.onToggled, element.id, [selectedValues]);
+                triggerUIAction(deviceId, element.onToggled, element.id, [selectedValues], 'onToggled');
             };
             
             label.appendChild(checkbox);
@@ -570,23 +579,28 @@ function createMultiSelect(element, deviceId) {
     return container;
 }
 
-async function triggerUIAction(deviceId, actionName, elementId, values = []) {
-    if (!actionName) return;
+async function triggerUIAction(deviceId, actionName, elementId, values = [], eventType) {
+    if (!actionName && !elementId) return;
     
     try {
-        const luaCode = `
-            local qa = fibaro.plua.DIR[${deviceId}]
-            if qa and qa.${actionName} then
-                local ev = { values = ${JSON.stringify(values)} }
-                qa:${actionName}(ev)
-            end
-        `;
+        console.log(`Triggering UI action: deviceId=${deviceId}, elementId=${elementId}, values=${JSON.stringify(values)}, eventType=${eventType}`);
         
-        await fetch('/plua/execute', {
+        const response = await fetch('/api/plugins/callUIEvent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: luaCode })
+            body: JSON.stringify({
+                deviceID: deviceId,
+                elementName: elementId,
+                eventType: eventType,
+                values: values
+            })
         });
+        
+        if (!response.ok) {
+            console.error('Failed to trigger UI action:', response.status, response.statusText);
+        } else {
+            console.log('UI action triggered successfully');
+        }
     } catch (error) {
         console.error('Error triggering UI action:', error);
     }
@@ -614,8 +628,11 @@ function connectWebSocket() {
     ws.onmessage = function(event) {
         try {
             const message = JSON.parse(event.data);
+            console.log('WebSocket message received:', message); // Debug log
             if (message.type === 'ui_update') {
                 handleUIUpdate(message.qa_id, message.data);
+            } else if (message.type === 'view_update') {
+                handleViewUpdate(message.qa_id, message.element_id, message.property, message.value);
             }
         } catch (error) {
             console.error('Error parsing WebSocket message:', error);
@@ -709,6 +726,9 @@ function updateChangedUIElements(qaId, changedElements) {
             // Create new element
             const newElement = createUIElement(element);
             newElement.setAttribute('data-element-id', element.id);
+            if (element.type) {
+                newElement.setAttribute('data-element-type', element.type);
+            }
             
             // Replace the existing element
             existingElement.parentNode.replaceChild(newElement, existingElement);
@@ -737,7 +757,7 @@ function handleUIUpdate(qaId, newData) {
         }
         
         // Get the existing QA data
-        const existingData = currentQuickApps.get(qaId);
+        const existingData = currentQuickAppsData[qaId];
         if (!existingData) {
             // New QuickApp, refresh the entire view
             loadQuickApps();
@@ -745,7 +765,7 @@ function handleUIUpdate(qaId, newData) {
         }
         
         // Store the new data
-        currentQuickApps.set(qaId, parsedData);
+        currentQuickAppsData[qaId] = parsedData;
         
         // Update only the changed elements
         updateQuickAppElements(qaId, existingData, parsedData);
@@ -872,6 +892,149 @@ function updateSingleUIElement(qaContainer, element, index) {
                 });
             }
             break;
+    }
+}
+
+// Handle granular view updates from WebSocket
+function handleViewUpdate(qaId, elementId, property, value) {
+    try {
+        console.log(`Handling view update for QA ${qaId}, element ${elementId}, property ${property}, value:`, value);
+        
+        // Only update if we're on the QuickApps tab
+        console.log('Current tab:', currentTab);
+        // Temporarily bypass tab check for debugging
+        // if (currentTab !== 'quickapps') {
+        //     console.log('Not on quickapps tab, skipping update');
+        //     return;
+        // }
+        
+        // Find the QuickApp container
+        const qaContainer = document.querySelector(`[data-qa-id="${qaId}"]`);
+        if (!qaContainer) {
+            console.log(`QuickApp container not found for ID ${qaId}`);
+            return;
+        }
+        console.log('Found QA container:', qaContainer);
+        
+        // Find the UI element by its data-element-id
+        const elementContainer = qaContainer.querySelector(`[data-element-id="${elementId}"]`);
+        if (!elementContainer) {
+            console.log(`UI element ${elementId} not found in QA ${qaId}`);
+            // Debug: let's see what elements are available
+            const allElements = qaContainer.querySelectorAll('[data-element-id]');
+            console.log('Available elements with data-element-id:', Array.from(allElements).map(el => el.getAttribute('data-element-id')));
+            return;
+        }
+        console.log('Found element container:', elementContainer);
+        
+        // Update the specific property based on element type
+        const elementType = elementContainer.getAttribute('data-element-type');
+        console.log('Element type:', elementType);
+        updateElementProperty(elementContainer, elementType, property, value);
+        
+        // Update the stored data as well
+        if (currentQuickAppsData[qaId] && currentQuickAppsData[qaId].UI) {
+            const uiElements = currentQuickAppsData[qaId].UI;
+            const elementIndex = uiElements.findIndex(el => el.id == elementId);
+            if (elementIndex !== -1) {
+                uiElements[elementIndex][property] = value;
+                console.log('Updated stored data for element', elementId);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error handling view update:', error);
+    }
+}
+
+// Update a specific property of a UI element
+function updateElementProperty(elementContainer, elementType, property, value) {
+    console.log(`Updating element property: type=${elementType}, property=${property}, value=${value}`);
+    switch (elementType) {
+        case 'label':
+            if (property === 'text') {
+                // For labels, the elementContainer IS the label element
+                if (elementContainer.classList.contains('qa-label')) {
+                    elementContainer.textContent = value;
+                    console.log('Updated label text directly');
+                } else {
+                    // Fallback: look for a child with qa-label class
+                    const label = elementContainer.querySelector('.qa-label');
+                    if (label) {
+                        label.textContent = value;
+                        console.log('Updated label text via child element');
+                    } else {
+                        console.log('No qa-label element found');
+                    }
+                }
+            }
+            break;
+            
+        case 'button':
+            if (property === 'text' || property === 'caption') {
+                const button = elementContainer.querySelector('.qa-button');
+                if (button) button.textContent = value;
+            }
+            break;
+            
+        case 'switch':
+            if (property === 'value') {
+                const switchInput = elementContainer.querySelector('.qa-switch');
+                if (switchInput) switchInput.checked = value === true || value === 'true';
+            }
+            break;
+            
+        case 'slider':
+            const slider = elementContainer.querySelector('.qa-slider');
+            const sliderValue = elementContainer.querySelector('.qa-slider-value');
+            
+            if (property === 'value') {
+                if (slider) slider.value = value;
+                if (sliderValue) sliderValue.textContent = value;
+            } else if (property === 'min') {
+                if (slider) slider.min = value;
+            } else if (property === 'max') {
+                if (slider) slider.max = value;
+            }
+            break;
+            
+        case 'select':
+            const select = elementContainer.querySelector('.qa-select');
+            if (property === 'value' && select) {
+                select.value = value;
+            } else if (property === 'options' && select) {
+                // Rebuild options
+                select.innerHTML = '';
+                (value || []).forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    select.appendChild(optionElement);
+                });
+            }
+            break;
+            
+        case 'multi':
+            const multiSelect = elementContainer.querySelector('.qa-multi-select');
+            if (property === 'values' && multiSelect) {
+                // Update selection
+                Array.from(multiSelect.options).forEach(option => {
+                    option.selected = (value || []).includes(option.value);
+                });
+            } else if (property === 'options' && multiSelect) {
+                // Rebuild options
+                multiSelect.innerHTML = '';
+                (value || []).forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    multiSelect.appendChild(optionElement);
+                });
+            }
+            break;
+            
+        default:
+            console.log(`Unsupported element type for granular update: ${elementType}`);
     }
 }
 

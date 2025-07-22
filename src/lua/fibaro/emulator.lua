@@ -380,7 +380,10 @@ function Emulator:updateView(id,data,noUpdate)
     if viewProps[data.propertyName] then
       viewProps[data.propertyName](elm,data)
       --print("broadcast_ui_update",data.componentName)
-      if not noUpdate then _PY.broadcast_ui_update(id) end
+      if not noUpdate then 
+        -- Send granular UI update with specific element data
+        _PY.broadcast_view_update(id, data.componentName, data.propertyName, data.newValue)
+      end
     else
       self:DEBUG("Unknown view property: " .. data.propertyName)
     end
@@ -430,6 +433,10 @@ function Emulator:API_CALL(method, path, data)
   end
   
   return nil, self.router.HTTP.NOT_IMPLEMENTED
+end
+
+function Emulator:refreshEvent(typ,data) 
+  --_PY.addEvent(json.encode({type=typ,data=data}))
 end
 
 local headerKeys = {}

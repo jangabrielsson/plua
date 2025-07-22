@@ -228,9 +228,6 @@ function _PY.fibaro_api_hook(method, path, data)
     return nil, 503
 end
 
-_PY.get_quickapps = function() return {} end
-_PY.get_quickapp = function(_id) return nil end
-_PY.broadcast_ui_update = function(_id) 
-    -- Default implementation - no-op 
-    -- This will be overridden by the Python runtime
-end
+_PY.get_quickapps = _PY.get_quickapps or function() return {} end
+_PY.get_quickapp = _PY.get_quickapp or function(_id) return nil end
+-- _PY.broadcast_ui_update is set up by Python runtime, no default needed

@@ -2021,6 +2021,19 @@ def create_fibaro_api_routes(app: FastAPI):
             None
         )
 
+    @app.post("/api/plugins/callUIEvent", tags=["plugins"])
+    async def callUIEvent_post(request: Request, request_data: Dict[str, Any] = Body(...)):
+        """
+        Call UiEvent Action (POST version for JSON data)
+        
+        
+        """
+        return await handle_request(
+            request, 
+            "POST", 
+            request_data
+        )
+
     @app.post("/api/plugins/createChildDevice", tags=["plugins"])
     async def createChildDevice(request: Request, request_data: CreateChildDeviceDto = Body(...)):
         """

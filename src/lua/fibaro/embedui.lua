@@ -11,16 +11,16 @@ local embedUIs = {
   ["com.fibaro.multilevelSwitch"] = {
     {{label='__multiswitchValue',text='0'}},
     {{button='__turnOn',text='Turn On',onReleased='turnOn'},{button='__turnOff',text='Turn Off',onReleased='turnOff'}},
-    {{slider='__setValue',text='Set Value',onChanged='setValue'}}
+    {{slider='__setValue',text='',onChanged='setValue'}}
   },
   ["com.fibaro.colorController"] = {
     {{label='__colorComponentValue',text='white'}},
     {{button='__turnOn',text='Turn On',onReleased='turnOn'},{button='__turnOff',text='Turn Off',onReleased='turnOff'}},
     {{slider='__setValue',text='',onChanged='setValue'}},
-    {{slider='__setColorComponentR',text='Red:',max='255',onChanged='setValue'}},
-    {{slider='__setColorComponentG',text='Green:',max='255',onChanged='setValue'}},
-    {{slider='__setColorComponentB',text='Blue:',max='255',onChanged='setValue'}},
-    {{slider='__setColorComponentW',text='WW:',max='255',onChanged='setValue'}}
+    {{slider='__setColorComponentR',text='',max='255',onChanged='setValue'}},
+    {{slider='__setColorComponentG',text='',max='255',onChanged='setValue'}},
+    {{slider='__setColorComponentB',text='',max='255',onChanged='setValue'}},
+    {{slider='__setColorComponentW',text='',max='255',onChanged='setValue'}}
 
   },
   ["com.fibaro.multilevelSensor"] = {

@@ -5,7 +5,7 @@ Lua interpreter class for managing Lua runtime and script execution
 import lupa
 from datetime import datetime
 from typing import Any, Callable, Optional
-
+from . import __version__
 from .syncsocket import SynchronousTCPManager
 from .luafuns_lib import lua_exporter
 from . import html_extensions  # Import to register HTML functions
@@ -33,8 +33,19 @@ class LuaInterpreter:
             
     def set_broadcast_ui_update_hook(self, broadcast_func: Callable[[int], None]) -> None:
         """Set the broadcast UI update hook function"""
-        if self.lua and self.PY:
+        if self.lua and hasattr(self, 'PY') and self.PY:
             self.PY.broadcast_ui_update = broadcast_func
+        else:
+            # Store the hook to be set later when PY table is ready
+            self._pending_broadcast_hook = broadcast_func
+
+    def set_broadcast_view_update_hook(self, broadcast_func: Callable[[int, str, str, str], None]) -> None:
+        """Set the granular broadcast view update hook function"""
+        if self.lua and hasattr(self, 'PY') and self.PY:
+            self.PY.broadcast_view_update = broadcast_func
+        else:
+            # Store the hook to be set later when PY table is ready
+            self._pending_view_broadcast_hook = broadcast_func
             
     def set_debug_mode(self, debug: bool) -> None:
         """Update debug mode setting after construction"""
@@ -148,6 +159,20 @@ print("Fallback init script loaded")
         self.PY = py_table  # Store for convenience
         self.lua.globals()._PY = py_table
 
+        # Apply any pending broadcast hook that was set before PY table was ready
+        if hasattr(self, '_pending_broadcast_hook'):
+            py_table.broadcast_ui_update = self._pending_broadcast_hook
+            delattr(self, '_pending_broadcast_hook')
+        else:
+            py_table.broadcast_ui_update = None  # Function to broadcast UI updates: (qa_id) -> None
+
+        # Apply any pending view broadcast hook
+        if hasattr(self, '_pending_view_broadcast_hook'):
+            py_table.broadcast_view_update = self._pending_view_broadcast_hook
+            delattr(self, '_pending_view_broadcast_hook')
+        else:
+            py_table.broadcast_view_update = None  # Function to broadcast granular view updates
+
         # Set up Lua globals
         self.lua.globals().print = self.lua_print
         
@@ -158,7 +183,6 @@ print("Fallback init script loaded")
         # Initialize hook system (hooks will be set by init.lua and can be overridden)
         # py_table.main_file_hook will be set by init.lua with default implementation
         py_table.fibaro_api_hook = None  # Function to handle Fibaro API requests: (method, path, data) -> (data, status_code)
-        py_table.broadcast_ui_update = None  # Function to broadcast UI updates: (qa_id) -> None
         
         # Set up _PY table with synchronous TCP functions for socket.lua
         py_table.tcp_connect_sync = self.tcp_manager.tcp_connect_sync

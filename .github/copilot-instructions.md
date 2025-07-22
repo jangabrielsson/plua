@@ -48,21 +48,30 @@ def my_function(arg1, arg2):
 # Interactive REPL (most common development mode)
 plua2
 
-# Run script with API server (for web debugging)
-plua2 --api 8888 script.lua
+# Run script (API server starts automatically on port 8888)
+plua2 script.lua
 
-# Run with Fibaro API emulation
-plua2 --api 8888 dev/fibaro.lua
+# Run with custom API port
+plua2 --api-port 9000 script.lua
+
+# Run without API server
+plua2 --noapi script.lua
 
 # Development tests (use dev/ directory)
 plua2 dev/test_timers.lua
+
+
+# DRun with fibaro API support
+plua2 --fibaro script.lua
 ```
 
 ### Key Commands & Flags
-- `--api [port]` - Start FastAPI REST server (default port 8888)
+- `--api-port [port]` - Override default API server port (default: 8888)
+- `--noapi` - Disable API server (starts automatically otherwise)
 - `--duration N` - Auto-terminate after N seconds
 - `--debug` - Enable verbose logging
-- `--fibaro` - Load Fibaro HC3 API support
+
+Note: The FastAPI REST server starts automatically on port 8888 unless `--noapi` is specified. Fibaro HC3 API endpoints are always loaded by default.
 
 ### File Organization
 - `src/plua2/` - Core Python runtime
@@ -70,6 +79,7 @@ plua2 dev/test_timers.lua
 - `examples/` - Clean user examples (avoid `_PY` internals)
 - `docs/dev/` - Development documentation
 - `fibaro_api_docs/` - Swagger/OpenAPI specs for auto-generation
+- `static/` - Web interface assets (HTML, CSS, JS files)
 
 ## Integration Points
 
@@ -77,10 +87,13 @@ plua2 dev/test_timers.lua
 The project includes a comprehensive Fibaro Home Center 3 emulator:
 - 194 auto-generated endpoints from Swagger specs
 - Single Lua hook handles all API calls: `_PY.fibaro_api_hook(method, path, data)`
+- Default hook returns 503 "Service Unavailable" unless overridden by `fibaro.lua`
 - Use `generate_fibaro_api.py` to regenerate endpoints from new Swagger files
 
 ### Web REPL Interface
-- FastAPI serves both REST API and web interface at `/web`
+- FastAPI serves both REST API and static web assets
+- Web interface available at `/static/plua2_main_page.html` when API server is running
+- Static assets (HTML, CSS, JS) served from `/static/` directory
 - Supports HTML rendering in output (use `html_extensions.py` functions)
 - Shared interpreter state between web and CLI REPL
 
@@ -103,6 +116,7 @@ The project includes a comprehensive Fibaro Home Center 3 emulator:
 - Development tests go in `dev/` and can use `_PY` internals
 - User examples go in `examples/` and should be production-ready
 - Use `--duration` flag to prevent infinite loops in tests
+- Use `--fibaro` to support Fibaro API endpoints in tests /api/..., and Lua api functions for QuickApps
 
 ### VS Code Tasks
 The project includes HC3-specific VS Code tasks for Fibaro development:

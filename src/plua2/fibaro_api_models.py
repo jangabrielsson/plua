@@ -7,7 +7,7 @@ Contains all data models used by the Fibaro API endpoints.
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime, date
 
 # Generated Pydantic Models
@@ -1498,7 +1498,7 @@ class PluginUpdateDto(BaseModel):
     deviceId: int
     componentName: str
     propertyName: str
-    newValue: Dict[str, Any]
+    newValue: Union[str, int, float, bool, Dict[str, Any], List[Any]]
 
 class PluginsV2Dto(BaseModel):
     pass

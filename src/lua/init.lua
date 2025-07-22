@@ -131,11 +131,9 @@ function setInterval(fun, ms)
     if not _active_intervals[interval_id] then
       return  -- Stop the loop
     end
-    
     fun()  -- Execute the interval function
-    
     -- Reschedule only if not cancelled
-    if not _active_intervals[interval_id] then
+    if _active_intervals[interval_id] then
       _active_intervals[interval_id] = setTimeout(loop, ms)
     end
   end
@@ -228,4 +226,11 @@ end
 function _PY.fibaro_api_hook(method, path, data)
     -- Return service unavailable - Fibaro API not loaded
     return nil, 503
+end
+
+_PY.get_quickapps = function() return {} end
+_PY.get_quickapp = function(_id) return nil end
+_PY.broadcast_ui_update = function(_id) 
+    -- Default implementation - no-op 
+    -- This will be overridden by the Python runtime
 end

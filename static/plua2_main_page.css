@@ -322,3 +322,300 @@ body {
         min-width: 100px;
     }
 }
+
+/* QuickApps Styles */
+.quickapps-container {
+    padding: 20px;
+}
+
+.refresh-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.refresh-btn:hover {
+    background: #5a6fd8;
+}
+
+.qa-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.qa-loading {
+    color: #b0c4de;
+    font-size: 1.1rem;
+    text-align: center;
+    width: 100%;
+    padding: 40px;
+}
+
+.qa-card {
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 18px 14px 14px 14px;
+    width: fit-content;
+    min-width: 220px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.qa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.qa-name {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #24292e;
+}
+
+.qa-id {
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.95em;
+    font-weight: 500;
+}
+
+.qa-type {
+    color: #667eea;
+    font-size: 0.98em;
+    margin-bottom: 10px;
+}
+
+.qa-ui {
+    margin-top: 8px;
+}
+
+.qa-ui-label {
+    font-size: 1em;
+    color: #444;
+    font-family: inherit;
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.qa-ui-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.qa-ui-row .qa-ui-button {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* Button layout rules */
+.qa-ui-row.buttons-1 .qa-ui-button { flex: 1 1 100%; }
+.qa-ui-row.buttons-2 .qa-ui-button { flex: 1 1 calc(50% - 4px); }
+.qa-ui-row.buttons-3 .qa-ui-button { flex: 1 1 calc(33.333% - 5.33px); }
+.qa-ui-row.buttons-4 .qa-ui-button { flex: 1 1 calc(25% - 6px); }
+.qa-ui-row.buttons-5 .qa-ui-button { flex: 1 1 calc(20% - 6.4px); }
+
+/* Full width elements */
+.qa-ui-label,
+.qa-ui-slider-container,
+.qa-ui-select,
+.qa-ui-multidrop {
+    flex: 1 1 100%;
+    width: 100%;
+}
+
+.qa-ui-button {
+    background: #667eea;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 6px 14px;
+    font-size: 0.98em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 3px rgba(102,126,234,0.08);
+}
+
+.qa-ui-button:hover {
+    background: #5a6fd8;
+}
+
+.qa-ui-button:disabled { 
+    background: #ccc; 
+    cursor: not-allowed; 
+}
+
+.qa-ui-switch-btn {
+    min-width: 60px;
+    font-weight: 500;
+}
+
+.qa-ui-switch-btn-on {
+    background: #667eea !important;
+    color: #fff !important;
+}
+
+.qa-ui-switch-btn-off {
+    background: #e0e0e0 !important;
+    color: #222 !important;
+}
+
+.qa-ui-slider-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin: 6px 0;
+}
+
+.qa-ui-slider {
+    flex: 1 1 0%;
+    width: 100%;
+    accent-color: #667eea;
+    margin: 0 6px;
+    position: relative;
+    z-index: 1;
+}
+
+.slider-tooltip {
+    position: absolute;
+    top: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #222;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    pointer-events: none;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+}
+
+.slider-tooltip.active {
+    opacity: 1;
+}
+
+.qa-ui-select {
+    width: 100%;
+    min-width: 140px;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 32px 0 12px;
+    border-radius: 5px;
+    border: 1px solid #d1d5da;
+    background: #f6f8fa;
+    font-size: 1em;
+    font-family: inherit;
+    margin-bottom: 6px;
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+    color: #222;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23667eea" height="16" viewBox="0 0 20 20" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7.293 7.293a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 18px 18px;
+}
+
+.qa-ui-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102,126,234,0.15);
+}
+
+.qa-ui-multidrop {
+    display: block;
+    margin: 6px 0;
+    position: relative;
+}
+
+.qa-ui-multidrop-btn {
+    width: 100%;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 32px 0 12px;
+    border-radius: 5px 5px 0 0;
+    border: 1px solid #d1d5da;
+    background: #f6f8fa;
+    font-size: 1em;
+    font-family: inherit;
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+    color: #222;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.qa-ui-multidrop-btn:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102,126,234,0.15);
+}
+
+.qa-ui-multidrop-list {
+    display: none;
+    background: #fff;
+    border: 1px solid #d1d5da;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.08);
+    padding: 4px 0;
+    width: 100%;
+    box-sizing: border-box;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+}
+
+.qa-ui-multidrop.open .qa-ui-multidrop-list {
+    display: block;
+}
+
+.qa-ui-multidrop-list label {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    line-height: 1.2;
+    padding: 6px 12px;
+    font-size: 1em;
+    cursor: pointer;
+    white-space: normal;
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+.qa-ui-multidrop-list label:hover {
+    background: #f6f8fa;
+}
+
+.qa-ui-multidrop-list input[type="checkbox"] {
+    margin-right: 8px;
+    vertical-align: middle;
+}

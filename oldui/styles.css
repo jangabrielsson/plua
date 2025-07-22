@@ -1,0 +1,472 @@
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f5f5f5;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+.header h1 { margin: 0; font-size: 2.5em; }
+.header p { margin: 10px 0 0 0; opacity: 0.9; }
+.content { padding: 30px; }
+.section {
+    margin: 30px 0;
+    padding: 25px;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    background: #fafbfc;
+}
+.section h2 {
+    margin: 0 0 20px 0;
+    color: #24292e;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 10px;
+}
+.code-input {
+    width: 100%;
+    height: 200px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    padding: 15px;
+    border: 1px solid #d1d5da;
+    border-radius: 6px;
+    resize: vertical;
+    background: #f6f8fa;
+}
+.button {
+    background: #667eea;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+.button:hover { background: #5a6fd8; }
+.button:disabled { background: #ccc; cursor: not-allowed; }
+.output {
+    background: #f6f8fa;
+    padding: 20px;
+    border-radius: 6px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    white-space: pre-wrap;
+    border: 1px solid #e1e5e9;
+    min-height: 100px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+.status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.status.success { background: #d4edda; color: #155724; }
+.status.error { background: #f8d7da; color: #721c24; }
+.status.info { background: #d1ecf1; color: #0c5460; }
+.tabs {
+    display: flex;
+    border-bottom: 1px solid #e1e5e9;
+    margin-bottom: 20px;
+}
+.tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+.tab.active {
+    border-bottom-color: #667eea;
+    color: #667eea;
+    font-weight: 500;
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+.api-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+.api-link {
+    padding: 15px;
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #24292e;
+    transition: all 0.2s;
+}
+.api-link:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+.qa-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+.qa-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.08);
+    padding: 18px 14px 14px 14px;
+    width: fit-content;
+    min-width: 220px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+.qa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.qa-name {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #24292e;
+}
+.qa-id {
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.95em;
+    font-weight: 500;
+}
+.qa-type {
+    color: #667eea;
+    font-size: 0.98em;
+    margin-bottom: 10px;
+}
+.qa-ui {
+    margin-top: 8px;
+}
+.qa-ui-label {
+    font-size: 1em;
+    color: #444;
+    font-family: inherit;
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+}
+.qa-ui-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    width: 100%;
+}
+.qa-ui-row .qa-ui-button {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* Button layout rules - make buttons fill row width based on count */
+.qa-ui-row.buttons-1 .qa-ui-button {
+    flex: 1 1 100%;
+}
+.qa-ui-row.buttons-2 .qa-ui-button {
+    flex: 1 1 calc(50% - 4px);
+}
+.qa-ui-row.buttons-3 .qa-ui-button {
+    flex: 1 1 calc(33.333% - 5.33px);
+}
+.qa-ui-row.buttons-4 .qa-ui-button {
+    flex: 1 1 calc(25% - 6px);
+}
+.qa-ui-row.buttons-5 .qa-ui-button {
+    flex: 1 1 calc(20% - 6.4px);
+}
+
+/* Full width elements */
+.qa-ui-label,
+.qa-ui-slider-container,
+.qa-ui-select,
+.qa-ui-multidrop {
+    flex: 1 1 100%;
+    width: 100%;
+}
+
+.qa-ui-slider-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.qa-ui-button {
+    background: #667eea;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 6px 14px;
+    font-size: 0.98em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 3px rgba(102,126,234,0.08);
+}
+.qa-ui-button:hover {
+    background: #5a6fd8;
+}
+.qa-ui-button:disabled { background: #ccc; cursor: not-allowed; }
+.qa-ui-button-grey {
+    background: #e0e0e0;
+    color: #222;
+}
+.qa-ui-button-grey:hover {
+    background: #d1d5da;
+    color: #222;
+}
+.qa-ui-button-grey:disabled { background: #ccc; cursor: not-allowed; }
+.qa-ui-slider {
+    flex: 1 1 0%;
+    width: 100%;
+    accent-color: #667eea;
+    margin: 0 6px;
+    position: relative;
+    z-index: 1;
+}
+.slider-tooltip {
+    position: absolute;
+    top: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #222;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    pointer-events: none;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+}
+.slider-tooltip.active {
+    opacity: 1;
+}
+.qa-ui-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    height: 24px;
+    margin-right: 8px;
+}
+.qa-ui-switch input { display: none; }
+.qa-ui-switch .slider {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background-color: #ccc;
+    border-radius: 22px;
+    transition: background 0.2s;
+    display: inline-block;
+}
+.qa-ui-switch input:checked + .slider {
+    background-color: #667eea;
+}
+.qa-ui-switch .slider:before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .4s;
+}
+.qa-ui-switch input:checked + .slider:before {
+    transform: translateX(18px);
+}
+.qa-ui-switch-label {
+    margin-left: 10px;
+    font-size: 1em;
+    color: #444;
+}
+.qa-ui-switch-btn {
+    min-width: 60px;
+    font-weight: 500;
+}
+.qa-ui-switch-btn-on {
+    background: #667eea !important;
+    color: #fff !important;
+    border: none;
+}
+.qa-ui-switch-btn-off {
+    background: #e0e0e0 !important;
+    color: #222 !important;
+    border: none;
+}
+.qa-ui-select, .qa-ui-multidrop-btn {
+    flex: none;
+    width: 100%;
+    min-width: 140px;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 32px 0 12px;
+    border-radius: 5px;
+    border: 1px solid #d1d5da;
+    background: #f6f8fa;
+    font-size: 1em;
+    font-family: inherit;
+    margin-bottom: 0;
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+    color: #222;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    position: relative;
+    line-height: 1.5;
+    vertical-align: middle;
+}
+.qa-ui-select:focus, .qa-ui-multidrop-btn:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102,126,234,0.15);
+}
+.qa-ui-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23667eea" height="16" viewBox="0 0 20 20" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7.293 7.293a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 18px 18px;
+}
+.qa-ui-multidrop-btn {
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    background: #f6f8fa;
+    width: 100%;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 32px 0 12px;
+    line-height: 1.5;
+    font-size: 1em;
+    font-family: inherit;
+    margin-bottom: 0;
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+    color: #222;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+.qa-ui-multidrop-list {
+    display: none;
+    background: #fff;
+    border: 1px solid #d1d5da;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.08);
+    padding: 4px 0;
+    min-width: 140px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.qa-ui-multidrop-list label {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    line-height: 1.2;
+    padding: 6px 12px;
+    font-size: 1em;
+    cursor: pointer;
+    white-space: normal;
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+}
+.qa-ui-multidrop-list input[type="checkbox"] {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+.qa-ui-empty {
+    color: #aaa;
+    font-size: 0.95em;
+    padding: 4px 0;
+}
+/* Custom multi-select dropdown */
+.qa-ui-multidrop {
+    display: block;
+    margin-top: 6px;
+    margin-bottom: 8px;
+}
+.qa-ui-multidrop-btn {
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    background: #f6f8fa;
+    width: 100%;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 32px 0 12px;
+    line-height: 1.5;
+    font-size: 1em;
+    font-family: inherit;
+    margin-bottom: 0;
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+    color: #222;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+.qa-ui-multidrop-list {
+    display: none;
+    background: #fff;
+    border: 1px solid #d1d5da;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.08);
+    padding: 4px 0;
+    min-width: 140px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.qa-ui-multidrop.open .qa-ui-multidrop-list {
+    display: block;
+}
+.qa-ui-row.compact {
+    display: flex;
+    align-items: center;
+    min-height: 0;
+    height: 32px;
+    margin-bottom: 2px;
+    gap: 8px;
+}
+.qa-ui-row.compact .qa-ui-select,
+.qa-ui-row.compact .qa-ui-multidrop-btn {
+    height: 28px;
+    line-height: 28px;
+    padding: 0 28px 0 10px;
+    margin: 0;
+    font-size: 0.98em;
+}

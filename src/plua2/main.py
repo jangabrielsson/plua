@@ -80,6 +80,24 @@ async def run_script_with_api(script_fragments: list = None, main_script: str = 
         print(f"API server on {api_config['host']}:{api_config['port']}")
         api_server = PlUA2APIServer(runtime, api_config['host'], api_config['port'])
         
+        # Connect the broadcast UI update hook
+        def broadcast_hook(qa_id):
+            """Wrapper to create async task for broadcasting"""
+            if api_server:
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Create a task to run the async broadcast function
+                        asyncio.create_task(api_server.broadcast_ui_update(qa_id))
+                        print(f"[DEBUG] Broadcast task created for QA {qa_id}")
+                    else:
+                        print(f"[DEBUG] Event loop not running, cannot broadcast for QA {qa_id}")
+                except Exception as e:
+                    print(f"[DEBUG] Error creating broadcast task for QA {qa_id}: {e}")
+        
+        # Set the broadcast hook in the interpreter
+        runtime.interpreter.set_broadcast_ui_update_hook(broadcast_hook)
+        
         # Start API server in background
         api_task = asyncio.create_task(api_server.start_server(), name="api_server")
         

@@ -56,17 +56,6 @@ def create_fibaro_api_routes(app: FastAPI):
     if interpreter is None:
         raise RuntimeError("Interpreter not set. Call set_interpreter() first.")
     
-    # Add plua-specific endpoints
-    @app.get("/api/plua/status", tags=["plua"])
-    async def plua_status(request: Request):
-        """Get plua runtime status"""
-        return await handle_request(request, "GET")
-    
-    @app.post("/api/plua/eval", tags=["plua"])
-    async def plua_eval(request: Request, request_data: Dict[str, Any] = Body(...)):
-        """Evaluate Lua code"""
-        return await handle_request(request, "POST", request_data)
-    
     # Generated Fibaro API endpoints
 
     @app.get("/api/scenes", tags=["scenes"])

@@ -659,3 +659,265 @@ def base64_decode(data):
     import base64
     return base64.b64decode(data).decode('utf-8')
 
+
+@lua_exporter.export(description="Open URL in VS Code Simple Browser", category="vscode")
+def open_in_vscode_browser(url):
+    """Open a URL in VS Code's Simple Browser"""
+    import subprocess
+    import os
+    
+    try:
+        # Method 1: Try the command palette approach
+        cmd1 = ["code", "--command", "simpleBrowser.show", "--args", url]
+        result1 = subprocess.run(cmd1, capture_output=True, text=True, timeout=3)
+        
+        if result1.returncode == 0:
+            return {"success": True, "message": f"Opened {url} in VS Code Simple Browser (method 1)", "method": "command_palette"}
+        
+        # Method 2: Try opening a workspace file that triggers Simple Browser
+        # This is a workaround using VS Code's URI scheme
+        cmd2 = ["code", "--command", "workbench.action.showCommands"]
+        result2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=3)
+        
+        # Method 3: Try using VS Code's built-in command with different syntax
+        cmd3 = ["code", "--command", "simpleBrowser.api.open", "--args", f'["{url}"]']
+        result3 = subprocess.run(cmd3, capture_output=True, text=True, timeout=3)
+        
+        if result3.returncode == 0:
+            return {"success": True, "message": f"Opened {url} in VS Code Simple Browser (method 3)", "method": "api_open"}
+        
+        # Method 4: Create a temporary file with VS Code command
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+            f.write(f"""# Open Simple Browser
+
+Click this link to open in Simple Browser: 
+- [Open Web Interface]({url})
+
+Or use Command Palette:
+1. Press Cmd+Shift+P (macOS) or Ctrl+Shift+P (Windows/Linux)
+2. Type "Simple Browser: Show"
+3. Enter URL: {url}
+""")
+            temp_file = f.name
+        
+        # Open the temp file in VS Code
+        cmd4 = ["code", temp_file]
+        result4 = subprocess.run(cmd4, capture_output=True, text=True, timeout=3)
+        
+        if result4.returncode == 0:
+            return {
+                "success": True, 
+                "message": f"Opened instructions in VS Code. Use Command Palette > 'Simple Browser: Show' > {url}",
+                "method": "instruction_file",
+                "temp_file": temp_file
+            }
+        
+        # If all methods fail, try fallback
+        import webbrowser
+        webbrowser.open(url)
+        return {
+            "success": True, 
+            "message": f"Opened {url} in default browser (VS Code methods failed)",
+            "method": "fallback",
+            "debug": {
+                "cmd1_result": result1.returncode,
+                "cmd1_stderr": result1.stderr,
+                "cmd3_result": result3.returncode,
+                "cmd3_stderr": result3.stderr,
+                "cmd4_result": result4.returncode,
+                "cmd4_stderr": result4.stderr
+            }
+        }
+            
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "VS Code command timed out", "method": "timeout"}
+    except FileNotFoundError:
+        # VS Code not in PATH, try default browser
+        try:
+            import webbrowser
+            webbrowser.open(url)
+            return {"success": True, "message": f"Opened {url} in default browser (VS Code not found)", "method": "browser_fallback"}
+        except Exception as e:
+            return {"success": False, "error": f"Failed to open URL: {str(e)}", "method": "failed"}
+    except Exception as e:
+        return {"success": False, "error": f"Failed to open URL: {str(e)}", "method": "exception"}
+
+
+@lua_exporter.export(description="Open plua2 web interface in VS Code", category="vscode")
+def open_web_interface():
+    """Open the plua2 web interface in VS Code Simple Browser"""
+    # Get the API server port from the current runtime
+    try:
+        from . import network
+        runtime = network._current_runtime
+        if runtime and hasattr(runtime, 'api_server') and runtime.api_server:
+            port = runtime.api_server.port
+            url = f"http://localhost:{port}/web"
+        else:
+            # Default port
+            url = "http://localhost:8888/web"
+            
+        return open_in_vscode_browser(url)
+    except Exception as e:
+        return {"success": False, "error": f"Failed to get API server info: {str(e)}"}
+
+
+@lua_exporter.export(description="Open URL in external browser", category="browser")
+def open_browser(url):
+    """Open a URL in the default external browser (cross-platform)"""
+    import webbrowser
+    import platform
+    
+    try:
+        # Get platform info for better error reporting
+        system = platform.system()
+        
+        # Open URL in default browser
+        success = webbrowser.open(url)
+        
+        if success:
+            return {
+                "success": True, 
+                "message": f"Opened {url} in default browser",
+                "platform": system
+            }
+        else:
+            return {
+                "success": False, 
+                "error": f"Failed to open browser on {system}",
+                "platform": system
+            }
+            
+    except Exception as e:
+        return {
+            "success": False, 
+            "error": f"Browser open failed: {str(e)}",
+            "platform": platform.system()
+        }
+
+
+@lua_exporter.export(description="Open URL in specific browser", category="browser")
+def open_browser_specific(url, browser_name=None):
+    """Open URL in a specific browser if available"""
+    import webbrowser
+    import platform
+    
+    try:
+        system = platform.system()
+        
+        if browser_name:
+            # Try to get specific browser
+            try:
+                browser = webbrowser.get(browser_name)
+                success = browser.open(url)
+                
+                if success:
+                    return {
+                        "success": True,
+                        "message": f"Opened {url} in {browser_name}",
+                        "browser": browser_name,
+                        "platform": system
+                    }
+                else:
+                    # Fallback to default
+                    success = webbrowser.open(url)
+                    return {
+                        "success": success,
+                        "message": f"Opened {url} in default browser ({browser_name} not available)",
+                        "browser": "default",
+                        "platform": system
+                    }
+                    
+            except webbrowser.Error:
+                # Browser not found, use default
+                success = webbrowser.open(url)
+                return {
+                    "success": success,
+                    "message": f"Opened {url} in default browser ({browser_name} not found)",
+                    "browser": "default",
+                    "platform": system
+                }
+        else:
+            # No specific browser requested, use default
+            success = webbrowser.open(url)
+            return {
+                "success": success,
+                "message": f"Opened {url} in default browser",
+                "browser": "default",
+                "platform": system
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Browser open failed: {str(e)}",
+            "platform": platform.system()
+        }
+
+
+@lua_exporter.export(description="Open plua2 web interface in external browser", category="browser")
+def open_web_interface_browser():
+    """Open the plua2 web interface in external browser"""
+    try:
+        from . import network
+        runtime = network._current_runtime
+        if runtime and hasattr(runtime, 'api_server') and runtime.api_server:
+            port = runtime.api_server.port
+            url = f"http://localhost:{port}/web"
+        else:
+            # Default port
+            url = "http://localhost:8888/web"
+            
+        return open_browser(url)
+    except Exception as e:
+        return {"success": False, "error": f"Failed to get API server info: {str(e)}"}
+
+
+@lua_exporter.export(description="List available browsers", category="browser")
+def list_browsers():
+    """List available browsers on the system"""
+    import webbrowser
+    import platform
+    
+    try:
+        system = platform.system()
+        
+        # Common browser names to check
+        browsers_to_check = [
+            'chrome', 'firefox', 'safari', 'edge', 'opera',
+            'chromium', 'brave', 'vivaldi'
+        ]
+        
+        available = []
+        
+        for browser_name in browsers_to_check:
+            try:
+                browser = webbrowser.get(browser_name)
+                available.append(browser_name)
+            except webbrowser.Error:
+                pass  # Browser not available
+        
+        # Platform-specific browsers
+        if system == "Darwin":  # macOS
+            platform_browsers = ['safari', 'chrome', 'firefox']
+        elif system == "Windows":
+            platform_browsers = ['edge', 'chrome', 'firefox']
+        else:  # Linux
+            platform_browsers = ['firefox', 'chrome', 'chromium']
+        
+        return {
+            "success": True,
+            "available_browsers": available,
+            "platform": system,
+            "platform_browsers": platform_browsers,
+            "default_browser": "system default"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to list browsers: {str(e)}",
+            "platform": platform.system()
+        }
+

@@ -31,6 +31,11 @@ class LuaInterpreter:
         if self._debug:
             print(message)
             
+    def set_broadcast_ui_update_hook(self, broadcast_func: Callable[[int], None]) -> None:
+        """Set the broadcast UI update hook function"""
+        if self.lua and self.PY:
+            self.PY.broadcast_ui_update = broadcast_func
+            
     def set_debug_mode(self, debug: bool) -> None:
         """Update debug mode setting after construction"""
         self._debug = debug
@@ -153,6 +158,7 @@ print("Fallback init script loaded")
         # Initialize hook system (hooks will be set by init.lua and can be overridden)
         # py_table.main_file_hook will be set by init.lua with default implementation
         py_table.fibaro_api_hook = None  # Function to handle Fibaro API requests: (method, path, data) -> (data, status_code)
+        py_table.broadcast_ui_update = None  # Function to broadcast UI updates: (qa_id) -> None
         
         # Set up _PY table with synchronous TCP functions for socket.lua
         py_table.tcp_connect_sync = self.tcp_manager.tcp_connect_sync

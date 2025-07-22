@@ -15,11 +15,31 @@ function _PY.main_file_hook(filename)
     Emu:loadMainFile(filename)
 end
 
+_PY.get_quickapps = function()
+    if not Emu then
+        print("Emulator not initialized. Please call _PY.main_file_hook first.")
+        return nil, 503
+    end
+    return Emu:getQuickApps()
+end
+
+_PY.get_quickapp = function(id)
+    if not Emu then
+        print("Emulator not initialized. Please call _PY.main_file_hook first.")
+        return nil, 503
+    end
+    return Emu:getQuickApp(id)
+end
+
 _PY.fibaro_api_hook = function(method, path, data)
     mobdebug.on()
     print("fibaro_api_hook called with:", method, path, data)
     if Emu then 
         path = path:gsub("^/api", "")  -- Remove /api prefix for compatibility
+        if data and type(data) == 'string' then
+            local _,ndata = pcall(json.decode, data)
+            data = ndata or {}      
+        end
         return Emu:API_CALL(method, path, data)
     else
         print("Emulator not initialized. Please call _PY.main_file_hook first.")

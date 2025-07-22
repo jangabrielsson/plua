@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -76,6 +76,9 @@ class PlUA2APIServer:
         
         # Store pending execution requests
         self.pending_requests: Dict[str, asyncio.Future] = {}
+        
+        # WebSocket connections for real-time UI updates
+        self.websocket_connections: set[WebSocket] = set()
         
         # Clean up the port if it's in use
         if not is_port_free(port, host):
@@ -287,6 +290,86 @@ class PlUA2APIServer:
         # Store the handler for use in Fibaro endpoints
         self._fibaro_api_handler = fibaro_api_handler
         
+        # WebSocket endpoint for real-time UI updates
+        @self.app.websocket("/ws")
+        async def websocket_endpoint(websocket: WebSocket):
+            """WebSocket endpoint for real-time UI updates"""
+            await websocket.accept()
+            self.websocket_connections.add(websocket)
+            print(f"[WEBSOCKET DEBUG] Client connected. Total connections: {len(self.websocket_connections)}")
+            
+            try:
+                while True:
+                    # Keep connection alive by receiving messages
+                    await websocket.receive_text()
+            except WebSocketDisconnect:
+                print(f"[WEBSOCKET DEBUG] Client disconnected")
+            except Exception as e:
+                print(f"[WEBSOCKET DEBUG] WebSocket error: {e}")
+            finally:
+                self.websocket_connections.discard(websocket)
+                print(f"[WEBSOCKET DEBUG] Client removed. Total connections: {len(self.websocket_connections)}")
+
+    async def broadcast_ui_update(self, qa_id: int):
+        """
+        Broadcast UI update to all connected WebSocket clients
+        
+        Args:
+            qa_id: QuickApp ID that was updated
+        """
+        print(f"[BROADCAST DEBUG] Starting broadcast for QA {qa_id}")
+        print(f"[BROADCAST DEBUG] WebSocket connections: {len(self.websocket_connections)}")
+        
+        if not self.websocket_connections:
+            print(f"[BROADCAST DEBUG] No WebSocket connections, broadcast aborted")
+            return
+            
+        # Get the updated QuickApp data
+        try:
+            print(f"[BROADCAST DEBUG] Getting QuickApp data for {qa_id}")
+            result = self.runtime.interpreter.lua.eval(f"_PY.get_quickapp({qa_id})")
+            if result:
+                # Convert to JSON string if it's a table
+                if hasattr(result, 'items') or hasattr(result, '__iter__'):
+                    qa_data = self.runtime.interpreter.lua.eval(f'json.encode(_PY.get_quickapp({qa_id}))')
+                else:
+                    qa_data = result
+                    
+                message = {
+                    "type": "ui_update",
+                    "qa_id": qa_id,
+                    "data": qa_data
+                }
+                
+                print(f"[BROADCAST DEBUG] Sending message to {len(self.websocket_connections)} clients")
+                print(f"[BROADCAST DEBUG] Message: {str(message)[:200]}...")
+                
+                # Send to all connected clients
+                disconnected = set()
+                sent_count = 0
+                for websocket in self.websocket_connections:
+                    try:
+                        import json
+                        await websocket.send_text(json.dumps(message))
+                        sent_count += 1
+                        print(f"[BROADCAST DEBUG] Sent to client {sent_count}")
+                    except Exception as e:
+                        print(f"[BROADCAST DEBUG] Failed to send to client: {e}")
+                        # Connection is broken, mark for removal
+                        disconnected.add(websocket)
+                
+                # Clean up disconnected clients
+                self.websocket_connections -= disconnected
+                print(f"[BROADCAST DEBUG] Successfully sent to {sent_count} clients, removed {len(disconnected)} disconnected")
+                
+            else:
+                print(f"[BROADCAST DEBUG] No QuickApp data found for {qa_id}")
+                
+        except Exception as e:
+            print(f"[BROADCAST DEBUG] Error broadcasting UI update for QA {qa_id}: {e}")
+            import traceback
+            traceback.print_exc()
+    
     def register_fibaro_endpoints(self):
         """
         Register Fibaro API endpoints that delegate to Lua fibaro_api_hook

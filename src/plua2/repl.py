@@ -246,6 +246,18 @@ async def run_repl_with_api(debug: bool = False, api_config: dict = None):
         print(f"API server on {api_config['host']}:{api_config['port']}")
         api_server = PlUA2APIServer(repl.runtime, api_config['host'], api_config['port'])
         
+        # Connect the broadcast UI update hook
+        def broadcast_hook(qa_id):
+            """Wrapper to create async task for broadcasting"""
+            if api_server:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Create a task to run the async broadcast function
+                    asyncio.create_task(api_server.broadcast_ui_update(qa_id))
+        
+        # Set the broadcast hook in the interpreter
+        repl.runtime.interpreter.set_broadcast_ui_update_hook(broadcast_hook)
+        
         # Start API server in background
         api_task = asyncio.create_task(api_server.start_server(), name="api_server")
         

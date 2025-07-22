@@ -29,6 +29,7 @@
         <div class="tabs">
             <div class="tab active" onclick="showTab('repl')">REPL</div>
             <div class="tab" onclick="showTab('status')">Status</div>
+            <div class="tab" onclick="showTab('quickapps')">QuickApps</div>
             <div class="tab" onclick="showTab('swagger')">API Docs</div>
         </div>
 
@@ -147,6 +148,19 @@ end, 2000)"
                         <span class="status-label">Swagger Docs:</span>
                         <span class="status-value">✓ Available</span>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QuickApps Tab -->
+        <div id="quickapps" class="tab-content">
+            <div class="quickapps-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="color: #ffd700;">Emulated QuickApps</h3>
+                    <button class="refresh-btn" onclick="refreshQuickApps()">Refresh QuickApps</button>
+                </div>
+                <div class="qa-grid" id="qa-grid">
+                    <div class="qa-loading">Loading QuickApps...</div>
                 </div>
             </div>
         </div>

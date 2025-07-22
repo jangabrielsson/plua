@@ -68,6 +68,21 @@ function Emulator:registerDevice(info)
   }
 end
 
+function Emulator:getQuickApps()
+  local quickApps = {}
+  for id, info in pairs(self.DIR) do
+    if info.UI then
+      quickApps[#quickApps + 1] = { UI = info.UI, device = info.device }
+    end
+  end
+  return quickApps
+end
+
+function Emulator:getQuickApp(id)
+  local info = self.DIR[id or ""]
+  if info then return { UI = info.UI, device = info.device } end
+end
+
 local function loadFile(env,path,name,content)
   if not content then
     local file = io.open(path, "r")
@@ -395,17 +410,6 @@ function Emulator:HC3_CALL(method, path, data)
   end
   return nil, res.status_code, res.error_message
 end
-
-local result = _PY.http_call_internal(
-    "GET", 
-    "/api/devices",  -- Just the path, not the full URL
-    nil,
-    {
-      ["User-Agent"] = "plua2/0.1.0",
-      ["Content-Type"] = "application/json"
-      -- No Authorization needed for internal calls to your own FastAPI server
-    }
-  )
 
 function Emulator:API_CALL(method, path, data)
   self:DEBUG("fibaroapi called:", method, path, data)

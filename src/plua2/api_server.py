@@ -86,11 +86,72 @@ class PlUA2APIServer:
             if not cleanup_port(port, host):
                 raise RuntimeError(f"Failed to free port {port}. Please manually stop any processes using this port.")
 
+        # Define tags metadata to control the order in Swagger docs
+        tags_metadata = [
+            {"name": "default", "description": "Default endpoints"},
+            {"name": "devices", "description": "Device management and control"},
+            {"name": "plugins", "description": "Plugin management"},
+            {"name": "quickApp", "description": "QuickApp management"},
+            {"name": "rooms", "description": "Room configuration and organization"},
+            {"name": "sections", "description": "Building sections and areas"},
+            {"name": "scenes", "description": "Scene automation and execution"},
+            {"name": "humidity panel", "description": "Humidity panel controls"},
+            {"name": "location panel", "description": "Location panel controls"},
+            {"name": "sprinklers panel", "description": "Sprinklers panel controls"},
+            {"name": "family panel", "description": "Family panel controls"},
+            {"name": "notification panel", "description": "Notification panel controls"},
+            {"name": "customEvents panel", "description": "Custom events panel controls"},
+            {"name": "globalVariables panel", "description": "Global variables panel controls"},
+            {"name": "Climate panel", "description": "Climate panel controls"},
+            {"name": "location settings", "description": "Location settings"},
+            {"name": "info settings", "description": "Information settings"},
+            {"name": "alarms", "description": "Alarm management"},
+            {"name": "home", "description": "Home configuration"},
+            {"name": "users", "description": "User management and authentication"},
+            {"name": "profiles", "description": "System profiles and settings"},
+            {"name": "energy", "description": "Energy monitoring and billing"},
+            {"name": "additionalInterfaces", "description": "Additional interfaces"},
+            {"name": "certificates", "description": "Certificate management"},
+            {"name": "consumption", "description": "Consumption monitoring"},
+            {"name": "debugMessages", "description": "Debug messages"},
+            {"name": "deviceNotifications", "description": "Device notifications"},
+            {"name": "diagnostics", "description": "System diagnostics and debugging"},
+            {"name": "icons", "description": "Icon management"},
+            {"name": "iosDevices", "description": "iOS device management"},
+            {"name": "led settings", "description": "LED settings"},
+            {"name": "loginStatus", "description": "Login status"},
+            {"name": "network", "description": "Network configuration"},
+            {"name": "networkDiscovery", "description": "Network discovery"},
+            {"name": "notificationCenter", "description": "Notification center"},
+            {"name": "push", "description": "Push notifications"},
+            {"name": "reboot", "description": "System reboot"},
+            {"name": "remoteAccess", "description": "Remote access"},
+            {"name": "RGBPrograms", "description": "RGB programs"},
+            {"name": "sortOrder", "description": "Sort order configuration"},
+            {"name": "system", "description": "System configuration"},
+            {"name": "systemStatus", "description": "System status"},
+            {"name": "userActivity", "description": "User activity monitoring"},
+            {"name": "weather", "description": "Weather information"},
+        ]
+
         # FastAPI app
         self.app = FastAPI(
             title="plua2 REST API",
-            description="REST API for executing Lua code in plua2 runtime",
-            version="1.0.0"
+            description="Comprehensive REST API for Lua runtime management, Fibaro HC3 emulation, and interactive development",
+            version="1.0.0",
+            openapi_tags=tags_metadata,
+            swagger_ui_parameters={
+                "defaultModelsExpandDepth": 1,
+                "defaultModelExpandDepth": 1,
+                "displayOperationId": False,
+                "displayRequestDuration": True,
+                "docExpansion": "none",  # Start with collapsed sections for better navigation
+                "filter": True,  # Enable search/filter box
+                "showExtensions": True,
+                "showCommonExtensions": True,
+                "tagsSorter": "alpha",  # Sort tags alphabetically (though our order is already set)
+                "operationsSorter": "alpha"  # Sort operations within tags alphabetically
+            }
         )
 
         # Add CORS middleware for browser access
@@ -112,6 +173,19 @@ class PlUA2APIServer:
             self.app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
         self._setup_routes()
+    
+    def is_ready(self) -> bool:
+        """Check if the API server is ready to accept requests by testing the port"""
+        import socket
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.1)  # Very fast timeout
+            # Try to connect to see if server is listening
+            result = sock.connect_ex((self.host if self.host != "0.0.0.0" else "127.0.0.1", self.port))
+            sock.close()
+            return result == 0  # 0 means connection successful (server is listening)
+        except:
+            return False
 
     def _call_fibaro_api_hook(self, method: str, path: str, data: Any = None):
         """Call the Fibaro API hook if available"""
@@ -296,19 +370,17 @@ class PlUA2APIServer:
             """WebSocket endpoint for real-time UI updates"""
             await websocket.accept()
             self.websocket_connections.add(websocket)
-            print(f"[WEBSOCKET DEBUG] Client connected. Total connections: {len(self.websocket_connections)}")
 
             try:
                 while True:
                     # Keep connection alive by receiving messages
                     await websocket.receive_text()
             except WebSocketDisconnect:
-                print("[WEBSOCKET DEBUG] Client disconnected")
+                pass
             except Exception as e:
-                print(f"[WEBSOCKET DEBUG] WebSocket error: {e}")
+                pass
             finally:
                 self.websocket_connections.discard(websocket)
-                print(f"[WEBSOCKET DEBUG] Client removed. Total connections: {len(self.websocket_connections)}")
 
     async def broadcast_ui_update(self, qa_id: int):
         """
@@ -317,16 +389,11 @@ class PlUA2APIServer:
         Args:
             qa_id: QuickApp ID that was updated
         """
-        print(f"[BROADCAST DEBUG] Starting broadcast for QA {qa_id}")
-        print(f"[BROADCAST DEBUG] WebSocket connections: {len(self.websocket_connections)}")
-
         if not self.websocket_connections:
-            print("[BROADCAST DEBUG] No WebSocket connections, broadcast aborted")
             return
 
         # Get the updated QuickApp data
         try:
-            print(f"[BROADCAST DEBUG] Getting QuickApp data for {qa_id}")
             result = self.runtime.interpreter.lua.eval(f"_PY.get_quickapp({qa_id})")
             if result:
                 # Convert to JSON string if it's a table
@@ -341,34 +408,21 @@ class PlUA2APIServer:
                     "data": qa_data
                 }
 
-                print(f"[BROADCAST DEBUG] Sending message to {len(self.websocket_connections)} clients")
-                print(f"[BROADCAST DEBUG] Message: {str(message)[:200]}...")
-
                 # Send to all connected clients
                 disconnected = set()
-                sent_count = 0
                 for websocket in self.websocket_connections:
                     try:
                         import json
                         await websocket.send_text(json.dumps(message))
-                        sent_count += 1
-                        print(f"[BROADCAST DEBUG] Sent to client {sent_count}")
                     except Exception as e:
-                        print(f"[BROADCAST DEBUG] Failed to send to client: {e}")
                         # Connection is broken, mark for removal
                         disconnected.add(websocket)
 
                 # Clean up disconnected clients
                 self.websocket_connections -= disconnected
-                print(f"[BROADCAST DEBUG] Successfully sent to {sent_count} clients, removed {len(disconnected)} disconnected")
-
-            else:
-                print(f"[BROADCAST DEBUG] No QuickApp data found for {qa_id}")
 
         except Exception as e:
-            print(f"[BROADCAST DEBUG] Error broadcasting UI update for QA {qa_id}: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"Error broadcasting UI update for QA {qa_id}: {e}")
 
     async def broadcast_view_update(self, qa_id: int, component_name: str, property_name: str, value):
         """
@@ -586,8 +640,8 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
                                 process = psutil.Process(pid)
                                 process.terminate()
 
-                                # Wait a bit for graceful termination
-                                time.sleep(0.5)
+                                # Wait a bit for graceful termination (reduced from 0.5s)
+                                time.sleep(0.1)
 
                                 if process.is_running():
                                     # Force kill if still running
@@ -615,8 +669,8 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
 
         if killed_processes:
             print(f"Killed processes: {', '.join(killed_processes)}")
-            # Give the OS time to clean up
-            time.sleep(1)
+            # Give the OS time to clean up (reduced from 1s to 0.2s)
+            time.sleep(0.2)
 
         # Verify the port is now free
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -649,7 +703,7 @@ def is_port_free(port: int, host: str = "0.0.0.0") -> bool:
     """
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
+        sock.settimeout(0.1)  # Reduced from 1s to 0.1s for faster check
         result = sock.connect_ex((host if host != "0.0.0.0" else "127.0.0.1", port))
         sock.close()
         return result != 0

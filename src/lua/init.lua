@@ -230,4 +230,4 @@ end
 
 _PY.get_quickapps = _PY.get_quickapps or function() return {} end
 _PY.get_quickapp = _PY.get_quickapp or function(_id) return nil end
--- _PY.broadcast_ui_update is set up by Python runtime, no default needed
+-- _PY.broadcast_view_update is set up by Python runtime, no default needed

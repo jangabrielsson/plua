@@ -20,7 +20,6 @@ class LuaInterpreter:
     def __init__(self, debug: bool = False):
         self.lua: Optional[lupa.LuaRuntime] = None
         self._debug = debug
-        self._init_script = self._get_init_script()
         self.tcp_manager = SynchronousTCPManager(debug_print=self.debug_print)  # Handle TCP socket operations
         self.output_buffer = []  # Buffer for capturing print output
         self.web_mode = False  # Flag to control HTML/ANSI conversion
@@ -31,74 +30,19 @@ class LuaInterpreter:
         if self._debug:
             print(message)
             
-    def set_broadcast_ui_update_hook(self, broadcast_func: Callable[[int], None]) -> None:
-        """Set the broadcast UI update hook function"""
-        if self.lua and hasattr(self, 'PY') and self.PY:
-            self.PY.broadcast_ui_update = broadcast_func
-        else:
-            # Store the hook to be set later when PY table is ready
-            self._pending_broadcast_hook = broadcast_func
-
     def set_broadcast_view_update_hook(self, broadcast_func: Callable[[int, str, str, str], None]) -> None:
         """Set the granular broadcast view update hook function"""
         if self.lua and hasattr(self, 'PY') and self.PY:
-            self.PY.broadcast_view_update = broadcast_func
+            self.PY.broadcast_view_update = broadcast_func  
         else:
-            # Store the hook to be set later when PY table is ready
-            self._pending_view_broadcast_hook = broadcast_func
+            # Store for later if _PY table doesn't exist yet
+            self._pending_view_hook = broadcast_func
             
     def set_debug_mode(self, debug: bool) -> None:
         """Update debug mode setting after construction"""
         self._debug = debug
         # Update the network manager's debug function to use the new setting
         self.tcp_manager._debug_print = self.debug_print
-
-    def _get_init_script(self) -> str:
-        """Get fallback Lua initialization script if file loading fails"""
-        return """
--- Fallback initialization script (embedded)
-_callback_registry = {}
-_persistent_callbacks = {}
-local _callback_counter = 0
-_pending_timers = {}
-
-function _PY.registerCallback(callback_func, persistent)
-    _callback_counter = _callback_counter + 1
-    _callback_registry[_callback_counter] = callback_func
-    if persistent then
-        _persistent_callbacks[_callback_counter] = true
-    end
-    return _callback_counter
-end
-
-function _PY.executeCallback(callback_id, ...)
-    local callback = _callback_registry[callback_id]
-    if callback then
-        if not _persistent_callbacks[callback_id] then
-            _callback_registry[callback_id] = nil
-        end
-        callback(...)
-    end
-end
-
-function setTimeout(fun, ms)
-    local callback_id = _PY.registerCallback(fun, false)
-    _pending_timers[callback_id] = true
-    _PY.pythonTimer(callback_id, ms)
-    return callback_id
-end
-
-function clearTimeout(callback_id)
-    _pending_timers[callback_id] = nil
-    return _PY.pythonCancelTimer(callback_id)
-end
-
-json = {}
-json.encode = _PY.json_encode
-json.decode = _PY.json_decode
-
-print("Fallback init script loaded")
-"""
 
     def curr_time(self) -> str:
         """Get current time formatted as HH:MM:SS.mmm"""
@@ -159,19 +103,12 @@ print("Fallback init script loaded")
         self.PY = py_table  # Store for convenience
         self.lua.globals()._PY = py_table
 
-        # Apply any pending broadcast hook that was set before PY table was ready
-        if hasattr(self, '_pending_broadcast_hook'):
-            py_table.broadcast_ui_update = self._pending_broadcast_hook
-            delattr(self, '_pending_broadcast_hook')
-        else:
-            py_table.broadcast_ui_update = None  # Function to broadcast UI updates: (qa_id) -> None
-
-        # Apply any pending view broadcast hook
-        if hasattr(self, '_pending_view_broadcast_hook'):
-            py_table.broadcast_view_update = self._pending_view_broadcast_hook
-            delattr(self, '_pending_view_broadcast_hook')
-        else:
-            py_table.broadcast_view_update = None  # Function to broadcast granular view updates
+        # Initialize broadcast hooks as nil - FastAPI will set them when ready
+        py_table.broadcast_view_update = getattr(self, '_pending_view_hook', None)
+        
+        # Clean up pending hooks
+        if hasattr(self, '_pending_view_hook'):
+            delattr(self, '_pending_view_hook')
 
         # Set up Lua globals
         self.lua.globals().print = self.lua_print
@@ -215,9 +152,8 @@ print("Fallback init script loaded")
         import os
         init_script_path = os.path.join(os.path.dirname(__file__), '..', 'lua', 'init.lua')
         
-        try:
-            # Use Lua's loadfile for proper source mapping
-            init_load_script = f"""
+        # Use Lua's loadfile for proper source mapping
+        init_load_script = f"""
 local func, err = loadfile({init_script_path!r})
 if func then
     func()
@@ -225,11 +161,7 @@ else
     error("Failed to load init.lua: " .. tostring(err))
 end
 """
-            self.lua.execute(init_load_script)
-        except Exception as e:
-            # Fallback to the embedded script if file loading fails
-            self.debug_print(f"Warning: Could not load {init_script_path}, using embedded fallback: {e}")
-            self.lua.execute(self._init_script)
+        self.lua.execute(init_load_script)
         
         self.debug_print(f"Lua runtime initialized")
 

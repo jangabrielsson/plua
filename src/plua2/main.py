@@ -80,17 +80,6 @@ async def run_script_with_api(script_fragments: list = None, main_script: str = 
         print(f"API server on {api_config['host']}:{api_config['port']}")
         api_server = PlUA2APIServer(runtime, api_config['host'], api_config['port'])
         
-        # Connect the broadcast UI update hook
-        def broadcast_hook(qa_id):
-            if api_server:
-                try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        # Create a task to run the async broadcast function
-                        asyncio.create_task(api_server.broadcast_ui_update(qa_id))
-                except Exception as e:
-                    print(f"Error creating broadcast task for QA {qa_id}: {e}")
-
         # Connect the granular view update hook
         def broadcast_view_hook(qa_id, component_name, property_name, data_json):
             if api_server:
@@ -102,18 +91,16 @@ async def run_script_with_api(script_fragments: list = None, main_script: str = 
                 except Exception as e:
                     print(f"Error creating view broadcast task for QA {qa_id}: {e}")
         
-        # Set the broadcast hooks in the interpreter
-        runtime.interpreter.set_broadcast_ui_update_hook(broadcast_hook)
+        # Set the broadcast hook in the interpreter (will be applied when _PY table is ready)
         runtime.interpreter.set_broadcast_view_update_hook(broadcast_view_hook)
         
-        # Start API server in background
+        # Start API server in background (non-blocking)
         api_task = asyncio.create_task(api_server.start_server(), name="api_server")
         
-        # Give the API server a moment to start
-        await asyncio.sleep(0.5)
+        # Note: We don't wait for API server to be ready - it will start in parallel
+        # Any early broadcast calls will simply be ignored until server is ready
     
     try:
-        # Start the Lua runtime
         await runtime.start(script_fragments=script_fragments, main_script=main_script, main_file=main_file, duration=duration, debugger_config=debugger_config, source_name=source_name, debug=debug, api_server=api_server)
         
     except KeyboardInterrupt:

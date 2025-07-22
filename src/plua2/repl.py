@@ -247,22 +247,13 @@ async def run_repl_with_api(debug: bool = False, api_config: dict = None):
         api_server = PlUA2APIServer(repl.runtime, api_config['host'], api_config['port'])
         
         # Connect the broadcast UI update hook
-        def broadcast_hook(qa_id):
-            """Wrapper to create async task for broadcasting"""
-            if api_server:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # Create a task to run the async broadcast function
-                    asyncio.create_task(api_server.broadcast_ui_update(qa_id))
+        # Note: REPL doesn't currently support view updates since it's mainly for testing
+        # If needed, we could add broadcast_view_update hook here similar to main.py
         
-        # Set the broadcast hook in the interpreter
-        repl.runtime.interpreter.set_broadcast_ui_update_hook(broadcast_hook)
-        
-        # Start API server in background
+        # Start API server in background (non-blocking)
         api_task = asyncio.create_task(api_server.start_server(), name="api_server")
         
-        # Give the API server a moment to start
-        await asyncio.sleep(0.5)
+        # Note: We don't wait for API server - it starts in parallel with REPL
         print()
     
     try:

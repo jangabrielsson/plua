@@ -390,12 +390,10 @@ function createLabel(element) {
 }
 
 function createButton(element, deviceId) {
-    console.log(`Creating button: text="${element.text}", deviceId=${deviceId}, elementId=${element.id}, onReleased=${element.onReleased}`);
     const button = document.createElement('button');
     button.className = 'qa-ui-button qa-button'; // Add qa-button for easy targeting
     button.textContent = element.text || 'Button';
     button.onclick = () => {
-        console.log(`Button clicked: deviceId=${deviceId}, onReleased=${element.onReleased}, elementId=${element.id}`);
         triggerUIAction(deviceId, element.onReleased, element.id, [], 'onReleased'); // Empty values for buttons
     };
     return button;
@@ -583,8 +581,6 @@ async function triggerUIAction(deviceId, actionName, elementId, values = [], eve
     if (!actionName && !elementId) return;
     
     try {
-        console.log(`Triggering UI action: deviceId=${deviceId}, elementId=${elementId}, values=${JSON.stringify(values)}, eventType=${eventType}`);
-        
         const response = await fetch('/api/plugins/callUIEvent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -598,8 +594,6 @@ async function triggerUIAction(deviceId, actionName, elementId, values = [], eve
         
         if (!response.ok) {
             console.error('Failed to trigger UI action:', response.status, response.statusText);
-        } else {
-            console.log('UI action triggered successfully');
         }
     } catch (error) {
         console.error('Error triggering UI action:', error);

@@ -381,8 +381,10 @@ function Emulator:updateView(id,data,noUpdate)
       viewProps[data.propertyName](elm,data)
       --print("broadcast_ui_update",data.componentName)
       if not noUpdate then 
-        -- Send granular UI update with specific element data
-        _PY.broadcast_view_update(id, data.componentName, data.propertyName, data.newValue)
+        -- Send granular UI update with specific element data (if function available)
+        if _PY.broadcast_view_update then
+          _PY.broadcast_view_update(id, data.componentName, data.propertyName, data.newValue)
+        end
       end
     else
       self:DEBUG("Unknown view property: " .. data.propertyName)

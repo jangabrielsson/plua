@@ -366,7 +366,7 @@ end
         await self.callback_queue.put(callback_data)
         self.timer_semaphore.release()  # Wake up the callback loop
 
-    async def start(self, script_fragments: list = None, main_script: str = None, main_file: str = None, 
+    async def start(self, script_fragments: list = None, main_script: str = None, main_file: str = None,
                     duration: Optional[int] = None, debugger_config: Optional[dict] = None,
                     source_name: Optional[str] = None, debug: bool = False, api_server=None) -> None:
         """

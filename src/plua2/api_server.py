@@ -172,7 +172,7 @@ class PlUA2APIServer:
             self.app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
         self._setup_routes()
-    
+
     def is_ready(self) -> bool:
         """Check if the API server is ready to accept requests by testing the port"""
         import socket
@@ -426,10 +426,10 @@ class PlUA2APIServer:
     async def broadcast_view_update(self, qa_id: int, component_name: str, property_name: str, value):
         """
         Broadcast granular view update to all connected WebSocket clients
-        
+
         Args:
             qa_id: QuickApp ID
-            component_name: UI component that was updated (e.g., "lbl1", "button1") 
+            component_name: UI component that was updated (e.g., "lbl1", "button1")
             property_name: Property that changed (e.g., "text", "value")
             value: The new value for the property
         """

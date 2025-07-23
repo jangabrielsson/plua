@@ -35,7 +35,7 @@ end, 2500)
 print("Test 4: Coroutine timer")
 coroutine.wrap(function()
     print("Before sleep...")
-    sleep(3000)
+    PLUA.sleep(3000)
     print("After sleep - coroutine timer works!")
 end)()
 

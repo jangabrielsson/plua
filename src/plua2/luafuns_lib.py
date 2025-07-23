@@ -43,30 +43,30 @@ class LuaExporter:
     """
     Manages Python functions that are exported to Lua's _PY table
     """
-    
+
     def __init__(self):
         self.exported_functions: Dict[str, Callable] = {}
         self.function_metadata: Dict[str, Dict[str, str]] = {}  # Store function metadata
-    
+
     def export(self, name: str = None, description: str = None, category: str = "general", inject_runtime: bool = False):
         """
         Decorator to export a Python function to Lua's _PY table
-        
+
         Args:
             name: Optional name for the function in Lua (defaults to function name)
             description: Description of what the function does
             category: Category for organizing functions (e.g., "html", "file", "network")
             inject_runtime: Whether to inject lua_runtime as first parameter
-        
+
         Usage:
             @lua_exporter.export()
             def my_function():
                 return "hello"
-                
+
             @lua_exporter.export("customName", description="Does something cool", category="utility")
             def another_function():
                 return {"key": "value"}
-                
+
             @lua_exporter.export(inject_runtime=True)
             def runtime_function(lua_runtime):
                 return lua_runtime.table()
@@ -74,41 +74,41 @@ class LuaExporter:
         def decorator(func: Callable) -> Callable:
             # Use provided name or function name
             lua_name = name if name is not None else func.__name__
-            
+
             # Store metadata
             self.function_metadata[lua_name] = {
                 "description": description or func.__doc__ or "No description available",
                 "category": category,
                 "inject_runtime": inject_runtime
             }
-            
+
             @wraps(func)
             def wrapper(*args, **kwargs):
                 # Inject lua_runtime if requested
                 if inject_runtime and hasattr(wrapper, '_lua_runtime'):
                     args = (wrapper._lua_runtime,) + args
-                
+
                 # Call the original function
                 result = func(*args, **kwargs)
-                
+
                 # Convert Python types to Lua-compatible types
                 # We'll set the lua_runtime when we register the function
                 return self._convert_to_lua(result, getattr(wrapper, '_lua_runtime', None))
-            
+
             # Store the wrapped function
             self.exported_functions[lua_name] = wrapper
             return func  # Return original function unchanged
-            
+
         return decorator
-    
+
     def _convert_to_lua(self, value: Any, lua_runtime=None) -> Any:
         """
         Convert Python values to Lua-compatible types
-        
+
         Args:
             value: Python value to convert
             lua_runtime: Optional Lua runtime for creating Lua tables
-            
+
         Returns:
             Lua-compatible value
         """
@@ -141,29 +141,29 @@ class LuaExporter:
         else:
             # For other types, convert to string representation
             return str(value)
-    
+
     def get_exported_functions(self) -> Dict[str, Callable]:
         """
         Get all exported functions
-        
+
         Returns:
             Dictionary of function names to wrapped functions
         """
         return self.exported_functions.copy()
-    
+
     def get_function_metadata(self) -> Dict[str, Dict[str, str]]:
         """
         Get metadata for all exported functions
-        
+
         Returns:
             Dictionary of function names to metadata
         """
         return self.function_metadata.copy()
-    
+
     def list_functions_by_category(self) -> Dict[str, List[str]]:
         """
         Get functions grouped by category
-        
+
         Returns:
             Dictionary of category names to lists of function names
         """
@@ -193,7 +193,7 @@ def millitime() -> float:
 def getcwd() -> str:
     """
     Get the current working directory
-    
+
     Returns:
         Current working directory path
     """
@@ -204,11 +204,11 @@ def getcwd() -> str:
 def getenv(name: str, default: str = None) -> str:
     """
     Get an environment variable
-    
+
     Args:
         name: Environment variable name
         default: Default value if not found
-        
+
     Returns:
         Environment variable value or default
     """
@@ -219,10 +219,10 @@ def getenv(name: str, default: str = None) -> str:
 def listdir(path: str = ".") -> List[str]:
     """
     List directory contents
-    
+
     Args:
         path: Directory path to list (defaults to current directory)
-        
+
     Returns:
         List of filenames in the directory
     """
@@ -237,10 +237,10 @@ def listdir(path: str = ".") -> List[str]:
 def path_info(path: str) -> Dict[str, Any]:
     """
     Get information about a path
-    
+
     Args:
         path: Path to examine
-        
+
     Returns:
         Dictionary with path information
     """
@@ -271,7 +271,7 @@ def path_info(path: str) -> Dict[str, Any]:
 def multiple_values_example() -> Tuple[str, int, Dict[str, str]]:
     """
     Example function that returns multiple values to Lua
-    
+
     Returns:
         Tuple of multiple values (Lua will unpack these)
     """
@@ -282,10 +282,10 @@ def multiple_values_example() -> Tuple[str, int, Dict[str, str]]:
 def json_encode(lua_table) -> str:
     """
     Encode a Lua table to JSON string
-    
+
     Args:
         lua_table: Lua table or Python dict/list to encode
-        
+
     Returns:
         JSON string representation
     """
@@ -302,10 +302,10 @@ def json_encode(lua_table) -> str:
 def json_encode_formated(lua_table) -> str:
     """
     Encode a Lua table to JSON string formated
-    
+
     Args:
         lua_table: Lua table or Python dict/list to encode
-        
+
     Returns:
         JSON string representation formated
     """
@@ -322,10 +322,10 @@ def json_encode_formated(lua_table) -> str:
 def json_decode(json_string: str):
     """
     Decode JSON string to Lua table
-    
+
     Args:
         json_string: JSON string to decode
-        
+
     Returns:
         Lua table representation of the JSON data
     """
@@ -345,28 +345,28 @@ def json_decode(json_string: str):
 def _lua_to_python(lua_value):
     """
     Convert Lua values to Python objects for JSON serialization
-    
+
     Args:
         lua_value: Lua value (table, string, number, etc.)
-        
+
     Returns:
         Python object (dict, list, str, int, float, bool, None)
     """
     # Handle None/nil
     if lua_value is None:
         return None
-    
+
     # Handle basic types
     if isinstance(lua_value, (str, int, float, bool)):
         return lua_value
-    
+
     # Check if it's a Lua table (has table interface)
     if hasattr(lua_value, 'keys') and hasattr(lua_value, 'values'):
         # It's a Lua table - determine if it's array-like or object-like
         try:
             # Get all keys
             keys = list(lua_value.keys())
-            
+
             # Check if it's an array (consecutive integers starting from 1)
             if keys and all(isinstance(k, int) for k in keys):
                 # Sort keys to check for consecutiveness
@@ -374,7 +374,7 @@ def _lua_to_python(lua_value):
                 if sorted_keys[0] == 1 and sorted_keys == list(range(1, len(sorted_keys) + 1)):
                     # It's an array-like table
                     return [_lua_to_python(lua_value[i]) for i in sorted_keys]
-            
+
             # It's an object-like table
             result = {}
             for key in keys:
@@ -382,7 +382,7 @@ def _lua_to_python(lua_value):
                 str_key = str(key) if not isinstance(key, str) else key
                 result[str_key] = _lua_to_python(lua_value[key])
             return result
-            
+
         except Exception:
             # Fallback: treat as object
             result = {}
@@ -394,7 +394,7 @@ def _lua_to_python(lua_value):
             except Exception:
                 # Last resort: convert to string
                 return str(lua_value)
-    
+
     # For other types, convert to string
     return str(lua_value)
 
@@ -403,16 +403,16 @@ def _lua_to_python(lua_value):
 def getenv_with_dotenv(name: str, default: str = None) -> str:
     """
     Get an environment variable, checking .env file first
-    
+
     Args:
         name: Environment variable name
         default: Default value if not found
-        
+
     Returns:
         Environment variable value from .env file, system env, or default
     """
     import os
-    
+
     # First try to read from .env file in current working directory
     env_file_path = os.path.join(os.getcwd(), '.env')
     if os.path.exists(env_file_path):
@@ -423,25 +423,25 @@ def getenv_with_dotenv(name: str, default: str = None) -> str:
                     # Skip empty lines and comments
                     if not line or line.startswith('#'):
                         continue
-                    
+
                     # Parse KEY=VALUE format
                     if '=' in line:
                         key, value = line.split('=', 1)
                         key = key.strip()
                         value = value.strip()
-                        
+
                         # Remove quotes if present
                         if value.startswith('"') and value.endswith('"'):
                             value = value[1:-1]
                         elif value.startswith("'") and value.endswith("'"):
                             value = value[1:-1]
-                        
+
                         if key == name:
                             return value
         except (IOError, OSError):
             # If we can't read the .env file, fall back to system env
             pass
-    
+
     # Fall back to system environment variable
     return os.getenv(name, default)
 
@@ -450,11 +450,11 @@ def getenv_with_dotenv(name: str, default: str = None) -> str:
 def getenv_dotenv(name: str, default: str = None) -> str:
     """
     Alias for getenv_with_dotenv - Get an environment variable, checking .env file first
-    
+
     Args:
         name: Environment variable name
         default: Default value if not found
-        
+
     Returns:
         Environment variable value from .env file, system env, or default
     """
@@ -465,7 +465,7 @@ def getenv_dotenv(name: str, default: str = None) -> str:
 def get_config(lua_runtime) -> Dict[str, Any]:
     """
     Get system configuration and environment information
-    
+
     Returns:
         Dictionary with system configuration information
     """
@@ -516,7 +516,7 @@ def get_config(lua_runtime) -> Dict[str, Any]:
         # HOST IP address
         "host_ip": get_host_ip(),
     }
-    
+
     return config
 
 
@@ -524,7 +524,7 @@ def get_config(lua_runtime) -> Dict[str, Any]:
 def http_call_sync(method, url, data=None, headers=None):
     """Make a synchronous HTTP call from Lua"""
     import requests
-    
+
     try:
         method = method.upper()
         # Ensure data is a UTF-8 encoded string
@@ -532,11 +532,11 @@ def http_call_sync(method, url, data=None, headers=None):
             data = json.dumps(data, ensure_ascii=False).encode('utf-8')
         elif isinstance(data, str):
             data = data.encode('utf-8')
-        
+
         # Default headers
         if headers is None:
             headers = {}
-        
+
         # Make the HTTP request
         if method == "GET":
             response = requests.get(url, headers=headers, timeout=30)
@@ -548,7 +548,7 @@ def http_call_sync(method, url, data=None, headers=None):
             response = requests.delete(url, headers=headers, timeout=30)
         else:
             return {"success": False, "error": f"Unsupported HTTP method: {method}"}
-        
+
         # Return response data
         return {
             "success": True,
@@ -556,14 +556,14 @@ def http_call_sync(method, url, data=None, headers=None):
             "data": response.text,
             "headers": dict(response.headers)
         }
-        
+
     except Exception as e:
         return {"success": False, "error": str(e)}
 
 
 def set_global_fastapi_app(app):
     """Set the global FastAPI app reference for internal calls"""
-    # Get the interpreter via the runtime reference  
+    # Get the interpreter via the runtime reference
     from . import network
     runtime = network._current_runtime
     if runtime and runtime.interpreter:
@@ -600,33 +600,33 @@ def open_in_vscode_browser(url):
     """Open a URL in VS Code's Simple Browser"""
     import subprocess
     # import os
-    
+
     try:
         # Method 1: Try the command palette approach
         cmd1 = ["code", "--command", "simpleBrowser.show", "--args", url]
         result1 = subprocess.run(cmd1, capture_output=True, text=True, timeout=3)
-        
+
         if result1.returncode == 0:
             return {"success": True, "message": f"Opened {url} in VS Code Simple Browser (method 1)", "method": "command_palette"}
-        
+
         # Method 2: Try opening a workspace file that triggers Simple Browser
         # This is a workaround using VS Code's URI scheme
         # cmd2 = ["code", "--command", "workbench.action.showCommands"]
         # result2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=3)
-        
+
         # Method 3: Try using VS Code's built-in command with different syntax
         cmd3 = ["code", "--command", "simpleBrowser.api.open", "--args", f'["{url}"]']
         result3 = subprocess.run(cmd3, capture_output=True, text=True, timeout=3)
-        
+
         if result3.returncode == 0:
             return {"success": True, "message": f"Opened {url} in VS Code Simple Browser (method 3)", "method": "api_open"}
-        
+
         # Method 4: Create a temporary file with VS Code command
         import tempfile
         with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
             f.write(f"""# Open Simple Browser
 
-Click this link to open in Simple Browser: 
+Click this link to open in Simple Browser:
 - [Open Web Interface]({url})
 
 Or use Command Palette:
@@ -635,24 +635,24 @@ Or use Command Palette:
 3. Enter URL: {url}
 """)
             temp_file = f.name
-        
+
         # Open the temp file in VS Code
         cmd4 = ["code", temp_file]
         result4 = subprocess.run(cmd4, capture_output=True, text=True, timeout=3)
-        
+
         if result4.returncode == 0:
             return {
-                "success": True, 
+                "success": True,
                 "message": f"Opened instructions in VS Code. Use Command Palette > 'Simple Browser: Show' > {url}",
                 "method": "instruction_file",
                 "temp_file": temp_file
             }
-        
+
         # If all methods fail, try fallback
         import webbrowser
         webbrowser.open(url)
         return {
-            "success": True, 
+            "success": True,
             "message": f"Opened {url} in default browser (VS Code methods failed)",
             "method": "fallback",
             "debug": {
@@ -664,7 +664,7 @@ Or use Command Palette:
                 "cmd4_stderr": result4.stderr
             }
         }
-            
+
     except subprocess.TimeoutExpired:
         return {"success": False, "error": "VS Code command timed out", "method": "timeout"}
     except FileNotFoundError:
@@ -693,7 +693,7 @@ def open_web_interface():
         else:
             # Default port
             url = "http://localhost:8888/web"
-            
+
         return open_in_vscode_browser(url)
     except Exception as e:
         return {"success": False, "error": f"Failed to get API server info: {str(e)}"}

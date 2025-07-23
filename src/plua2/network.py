@@ -5,6 +5,8 @@ Provides async HTTP, TCP, UDP and other network functions using the timer callba
 
 import asyncio
 import aiohttp
+import uuid
+from aiomqtt import Client as AioMQTTClient, MqttError
 from typing import Dict, Any, Optional
 from .luafuns_lib import lua_exporter
 
@@ -23,12 +25,12 @@ def set_current_runtime(runtime):
 def http_request_async(request_table: Dict[str, Any], callback_id: int) -> None:
     """
     Make an async HTTP request and queue callback for execution
-    
+
     Args:
         request_table: Dict with url, method, headers, body
         callback_id: Callback ID to execute when request completes
     """
-    
+
     async def do_request():
         try:
             # Access Lua table fields directly
@@ -37,10 +39,10 @@ def http_request_async(request_table: Dict[str, Any], callback_id: int) -> None:
             headers = dict(request_table['headers']) if 'headers' in request_table else {}
             body = request_table['body'] if 'body' in request_table else None
             timeout = request_table['timeout'] if 'timeout' in request_table else 30
-            
+
             # Create timeout configuration
             timeout_config = aiohttp.ClientTimeout(total=timeout)
-            
+
             async with aiohttp.ClientSession(timeout=timeout_config) as session:
                 async with session.request(
                     method=method,
@@ -49,7 +51,7 @@ def http_request_async(request_table: Dict[str, Any], callback_id: int) -> None:
                     data=body
                 ) as response:
                     response_body = await response.text()
-                    
+
                     # Create success response
                     result = {
                         'code': response.status,
@@ -57,11 +59,11 @@ def http_request_async(request_table: Dict[str, Any], callback_id: int) -> None:
                         'headers': dict(response.headers),
                         'error': None
                     }
-                    
+
                     # Queue the callback for execution in the main loop
                     if _current_runtime:
                         _current_runtime.queue_lua_callback(callback_id, result)
-                    
+
         except asyncio.TimeoutError:
             # Handle timeout
             error_result = {
@@ -71,7 +73,7 @@ def http_request_async(request_table: Dict[str, Any], callback_id: int) -> None:
             }
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, error_result)
-                
+
         except Exception as e:
             # Handle other errors
             error_result = {
@@ -81,7 +83,7 @@ def http_request_async(request_table: Dict[str, Any], callback_id: int) -> None:
             }
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, error_result)
-    
+
     # Start the async work but don't wait for it
     asyncio.create_task(do_request())
 
@@ -95,33 +97,33 @@ _tcp_connection_counter = 0
 def tcp_connect(host: str, port: int, callback_id: int) -> None:
     """
     Connect to a TCP server asynchronously
-    
+
     Args:
         host: Server hostname or IP
         port: Server port
         callback_id: Callback ID to execute when connection completes
     """
-    
+
     async def do_connect():
         global _tcp_connection_counter
         try:
             reader, writer = await asyncio.open_connection(host, port)
-            
+
             # Store both reader and writer with unique ID
             _tcp_connection_counter += 1
             conn_id = _tcp_connection_counter
             _tcp_connections[conn_id] = (reader, writer)
-            
+
             # Success result
             result = {
                 'success': True,
                 'conn_id': conn_id,
                 'message': f'Connected to {host}:{port}'
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             # Error result
             result = {
@@ -129,10 +131,10 @@ def tcp_connect(host: str, port: int, callback_id: int) -> None:
                 'conn_id': None,
                 'message': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(do_connect())
 
 
@@ -140,13 +142,13 @@ def tcp_connect(host: str, port: int, callback_id: int) -> None:
 def tcp_read(conn_id: int, max_bytes: int, callback_id: int) -> None:
     """
     Read data from TCP connection asynchronously
-    
+
     Args:
         conn_id: Connection ID
         max_bytes: Maximum bytes to read
         callback_id: Callback ID to execute when read completes
     """
-    
+
     async def do_read():
         try:
             if conn_id not in _tcp_connections:
@@ -158,31 +160,31 @@ def tcp_read(conn_id: int, max_bytes: int, callback_id: int) -> None:
                 if _current_runtime:
                     _current_runtime.queue_lua_callback(callback_id, result)
                 return
-            
+
             reader, writer = _tcp_connections[conn_id]
-            
+
             # Read data using the reader
             data = await reader.read(max_bytes)
-            
+
             result = {
                 'success': True,
                 'data': data.decode('utf-8', errors='replace'),
                 'message': None
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'success': False,
                 'data': None,
                 'message': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(do_read())
 
 
@@ -190,14 +192,14 @@ def tcp_read(conn_id: int, max_bytes: int, callback_id: int) -> None:
 def tcp_read_until(conn_id: int, delimiter: str, max_bytes: int, callback_id: int) -> None:
     """
     Read data from TCP connection until delimiter is found
-    
+
     Args:
         conn_id: Connection ID
         delimiter: Delimiter to read until
         max_bytes: Maximum bytes to read
         callback_id: Callback ID to execute when read completes
     """
-    
+
     async def do_read_until():
         try:
             if conn_id not in _tcp_connections:
@@ -209,13 +211,13 @@ def tcp_read_until(conn_id: int, delimiter: str, max_bytes: int, callback_id: in
                 if _current_runtime:
                     _current_runtime.queue_lua_callback(callback_id, result)
                 return
-            
+
             reader, writer = _tcp_connections[conn_id]
-            
+
             # Simple implementation - read until delimiter
             buffer = b''
             delimiter_bytes = delimiter.encode('utf-8')
-            
+
             while len(buffer) < max_bytes:
                 chunk = await reader.read(1)
                 if not chunk:
@@ -223,26 +225,26 @@ def tcp_read_until(conn_id: int, delimiter: str, max_bytes: int, callback_id: in
                 buffer += chunk
                 if delimiter_bytes in buffer:
                     break
-            
+
             result = {
                 'success': True,
                 'data': buffer.decode('utf-8', errors='replace'),
                 'message': None
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'success': False,
                 'data': None,
                 'message': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(do_read_until())
 
 
@@ -250,13 +252,13 @@ def tcp_read_until(conn_id: int, delimiter: str, max_bytes: int, callback_id: in
 def tcp_write(conn_id: int, data: str, callback_id: int) -> None:
     """
     Write data to TCP connection asynchronously
-    
+
     Args:
         conn_id: Connection ID
         data: Data to write
         callback_id: Callback ID to execute when write completes
     """
-    
+
     async def do_write():
         try:
             if conn_id not in _tcp_connections:
@@ -268,31 +270,31 @@ def tcp_write(conn_id: int, data: str, callback_id: int) -> None:
                 if _current_runtime:
                     _current_runtime.queue_lua_callback(callback_id, result)
                 return
-            
+
             reader, writer = _tcp_connections[conn_id]
             data_bytes = data.encode('utf-8')
             writer.write(data_bytes)
             await writer.drain()
-            
+
             result = {
                 'success': True,
                 'bytes_written': len(data_bytes),
                 'message': None
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'success': False,
                 'bytes_written': 0,
                 'message': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(do_write())
 
 
@@ -300,12 +302,12 @@ def tcp_write(conn_id: int, data: str, callback_id: int) -> None:
 def tcp_close(conn_id: int, callback_id: int) -> None:
     """
     Close TCP connection asynchronously
-    
+
     Args:
         conn_id: Connection ID
         callback_id: Callback ID to execute when close completes
     """
-    
+
     async def do_close():
         try:
             if conn_id not in _tcp_connections:
@@ -316,29 +318,29 @@ def tcp_close(conn_id: int, callback_id: int) -> None:
                 if _current_runtime:
                     _current_runtime.queue_lua_callback(callback_id, result)
                 return
-            
+
             reader, writer = _tcp_connections[conn_id]
             writer.close()
             await writer.wait_closed()
             del _tcp_connections[conn_id]
-            
+
             result = {
                 'success': True,
                 'message': 'Connection closed'
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'success': False,
                 'message': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(do_close())
 
 
@@ -351,11 +353,11 @@ _udp_socket_counter = 0
 def udp_create_socket(callback_id: int) -> None:
     """
     Create a UDP socket asynchronously
-    
+
     Args:
         callback_id: Callback ID to execute when socket creation completes
     """
-    
+
     async def do_create():
         global _udp_socket_counter
         try:
@@ -364,30 +366,30 @@ def udp_create_socket(callback_id: int) -> None:
                 lambda: asyncio.DatagramProtocol(),
                 local_addr=('0.0.0.0', 0)
             )
-            
+
             _udp_socket_counter += 1
             socket_id = _udp_socket_counter
             _udp_sockets[socket_id] = transport
-            
+
             result = {
                 'success': True,
                 'socket_id': socket_id,
                 'message': 'UDP socket created'
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'success': False,
                 'socket_id': None,
                 'message': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(do_create())
 
 
@@ -395,7 +397,7 @@ def udp_create_socket(callback_id: int) -> None:
 def udp_send_to(socket_id: int, data: str, host: str, port: int, callback_id: int) -> None:
     """
     Send data via UDP socket asynchronously
-    
+
     Args:
         socket_id: Socket ID
         data: Data to send
@@ -403,7 +405,7 @@ def udp_send_to(socket_id: int, data: str, host: str, port: int, callback_id: in
         port: Target port
         callback_id: Callback ID to execute when send completes
     """
-    
+
     async def do_send():
         try:
             if socket_id not in _udp_sockets:
@@ -413,26 +415,26 @@ def udp_send_to(socket_id: int, data: str, host: str, port: int, callback_id: in
                 if _current_runtime:
                     _current_runtime.queue_lua_callback(callback_id, result)
                 return
-            
+
             transport = _udp_sockets[socket_id]
             data_bytes = data.encode('utf-8')
             transport.sendto(data_bytes, (host, port))
-            
+
             result = {
                 'error': None
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'error': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(do_send())
 
 
@@ -440,7 +442,7 @@ def udp_send_to(socket_id: int, data: str, host: str, port: int, callback_id: in
 def udp_close(socket_id: int) -> None:
     """
     Close UDP socket
-    
+
     Args:
         socket_id: Socket ID
     """
@@ -454,12 +456,12 @@ def udp_close(socket_id: int) -> None:
 def udp_receive(socket_id: int, callback_id: int) -> None:
     """
     Receive data via UDP socket asynchronously
-    
+
     Args:
         socket_id: Socket ID
         callback_id: Callback ID to execute when receive completes
     """
-    
+
     async def do_receive():
         try:
             if socket_id not in _udp_sockets:
@@ -472,7 +474,7 @@ def udp_receive(socket_id: int, callback_id: int) -> None:
                 if _current_runtime:
                     _current_runtime.queue_lua_callback(callback_id, result)
                 return
-            
+
             # Note: This is a simplified implementation
             # A full implementation would need to set up proper protocol handling
             # For now, we'll return an error indicating this needs more work
@@ -482,10 +484,10 @@ def udp_receive(socket_id: int, callback_id: int) -> None:
                 'port': None,
                 'error': 'UDP receive not fully implemented yet'
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'data': None,
@@ -493,10 +495,10 @@ def udp_receive(socket_id: int, callback_id: int) -> None:
                 'port': None,
                 'error': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(do_receive())
 
 
@@ -509,7 +511,7 @@ _tcp_server_counter = 0
 def tcp_server_create() -> int:
     """
     Create a TCP server instance
-    
+
     Returns:
         Server ID for the created server
     """
@@ -524,14 +526,14 @@ def tcp_server_create() -> int:
 def tcp_server_start(server_id: int, host: str, port: int, callback_id: int) -> None:
     """
     Start TCP server listening on host:port
-    
+
     Args:
         server_id: Server ID
         host: Host to bind to
         port: Port to bind to
         callback_id: Callback ID to execute when clients connect
     """
-    
+
     async def handle_client(reader, writer):
         """Handle individual client connections"""
         try:
@@ -539,13 +541,13 @@ def tcp_server_start(server_id: int, host: str, port: int, callback_id: int) -> 
             peername = writer.get_extra_info('peername')
             client_ip = peername[0] if peername else 'unknown'
             client_port = peername[1] if peername else 0
-            
+
             # Store the client connection like a regular TCP connection
             global _tcp_connection_counter
             _tcp_connection_counter += 1
             conn_id = _tcp_connection_counter
             _tcp_connections[conn_id] = (reader, writer)
-            
+
             # Create result for the callback
             result = {
                 'success': True,
@@ -553,10 +555,10 @@ def tcp_server_start(server_id: int, host: str, port: int, callback_id: int) -> 
                 'client_ip': client_ip,
                 'client_port': client_port
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             # Handle client connection errors
             result = {
@@ -566,39 +568,39 @@ def tcp_server_start(server_id: int, host: str, port: int, callback_id: int) -> 
                 'client_port': None,
                 'error': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     async def start_server():
         try:
             # Create and start the server
             server = await asyncio.start_server(handle_client, host, port)
             _tcp_servers[server_id] = server
-            
+
             # Notify that server started successfully
-            result = {
-                'success': True,
-                'message': f'TCP server started on {host}:{port}',
-                'host': host,
-                'port': port
-            }
-            
+            # result = {
+            #     'success': True,
+            #     'message': f'TCP server started on {host}:{port}',
+            #     'host': host,
+            #     'port': port
+            # }
+
             if _current_runtime:
                 # Use a different callback for server start notifications
                 # For now, we'll just print this
                 print(f"[TCP] Server {server_id} started on {host}:{port}")
-                
+
         except Exception as e:
-            result = {
-                'success': False,
-                'message': str(e),
-                'host': host,
-                'port': port
-            }
-            
+            # result = {
+            #     'success': False,
+            #     'message': str(e),
+            #     'host': host,
+            #     'port': port
+            # }
+
             print(f"[TCP] Server {server_id} failed to start: {e}")
-    
+
     asyncio.create_task(start_server())
 
 
@@ -606,12 +608,12 @@ def tcp_server_start(server_id: int, host: str, port: int, callback_id: int) -> 
 def tcp_server_stop(server_id: int, callback_id: int) -> None:
     """
     Stop TCP server
-    
+
     Args:
         server_id: Server ID
         callback_id: Callback ID to execute when server stops
     """
-    
+
     async def stop_server():
         try:
             if server_id in _tcp_servers:
@@ -619,7 +621,7 @@ def tcp_server_stop(server_id: int, callback_id: int) -> None:
                 server.close()
                 await server.wait_closed()
                 del _tcp_servers[server_id]
-                
+
                 result = {
                     'success': True,
                     'message': 'TCP server stopped'
@@ -629,19 +631,19 @@ def tcp_server_stop(server_id: int, callback_id: int) -> None:
                     'success': False,
                     'message': 'Server not found'
                 }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'success': False,
                 'message': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(stop_server())
 
 
@@ -656,7 +658,7 @@ async def send_http_response(writer, status_code: int, data: str, content_type: 
     try:
         # HTTP status line
         status_line = f"HTTP/1.1 {status_code} {get_status_text(status_code)}\r\n"
-        
+
         # Headers
         headers = [
             f"Content-Type: {content_type}",
@@ -664,15 +666,15 @@ async def send_http_response(writer, status_code: int, data: str, content_type: 
             "Connection: close",
             "Server: plua2-http/1.0"
         ]
-        
+
         # Complete response
         response = status_line + '\r\n'.join(headers) + '\r\n\r\n' + data
-        
+
         writer.write(response.encode('utf-8'))
         await writer.drain()
         writer.close()
         await writer.wait_closed()
-        
+
     except Exception as e:
         print(f"[HTTP] Error sending response: {e}")
         import traceback
@@ -684,7 +686,7 @@ def get_status_text(status_code: int) -> str:
     status_texts = {
         200: "OK",
         201: "Created",
-        400: "Bad Request", 
+        400: "Bad Request",
         401: "Unauthorized",
         403: "Forbidden",
         404: "Not Found",
@@ -701,7 +703,7 @@ def get_status_text(status_code: int) -> str:
 def http_server_create() -> int:
     """
     Create an HTTP server instance
-    
+
     Returns:
         Server ID for the created server
     """
@@ -712,18 +714,18 @@ def http_server_create() -> int:
     return server_id
 
 
-@lua_exporter.export(description="Start HTTP server", category="http") 
+@lua_exporter.export(description="Start HTTP server", category="http")
 def http_server_start(server_id: int, host: str, port: int, callback_id: int) -> None:
     """
     Start HTTP server listening on host:port
-    
+
     Args:
         server_id: Server ID
         host: Host to bind to
         port: Port to bind to
         callback_id: Callback ID to execute when HTTP requests arrive
     """
-    
+
     async def handle_request(reader, writer):
         """Handle individual HTTP requests"""
         try:
@@ -736,22 +738,22 @@ def http_server_start(server_id: int, host: str, port: int, callback_id: int) ->
                     break
                 if not line:  # Connection closed
                     break
-            
+
             # Parse the request line and headers
             request_lines = request_data.decode('utf-8', errors='replace').split('\r\n')
             if not request_lines:
                 writer.close()
                 return
-                
+
             # Parse request line (e.g., "GET /path HTTP/1.1")
             request_line = request_lines[0].split()
             if len(request_line) < 3:
                 writer.close()
                 return
-                
+
             method = request_line[0]
             path = request_line[1]
-            
+
             # Parse headers
             headers = {}
             content_length = 0
@@ -761,18 +763,18 @@ def http_server_start(server_id: int, host: str, port: int, callback_id: int) ->
                     headers[key.strip().lower()] = value.strip()
                     if key.strip().lower() == 'content-length':
                         content_length = int(value.strip())
-            
+
             # Read body if present
             body = ""
             if content_length > 0:
                 body_data = await reader.read(content_length)
                 body = body_data.decode('utf-8', errors='replace')
-            
+
             # Get client information
             peername = writer.get_extra_info('peername')
             client_ip = peername[0] if peername else 'unknown'
             client_port = peername[1] if peername else 0
-            
+
             # Create request object for the callback
             request_obj = {
                 'method': method,
@@ -783,30 +785,30 @@ def http_server_start(server_id: int, host: str, port: int, callback_id: int) ->
                 'client_port': client_port,
                 'writer': writer  # We'll store the writer to respond later
             }
-            
+
             # Store the writer for this request (simple approach for now)
             request_id = id(writer)  # Use writer object id as unique request id
             _http_response_writers[request_id] = writer
             request_obj['request_id'] = request_id
-            
+
             # Queue the callback for Lua execution
             if _current_runtime:
                 print(f"[HTTP] Queueing callback for {method} {path} with callback_id {callback_id}")
                 print(f"[HTTP] Request object keys: {list(request_obj.keys())}")
                 _current_runtime.queue_lua_callback(callback_id, request_obj)
-                print(f"[HTTP] Callback queued successfully")
+                print("[HTTP] Callback queued successfully")
             else:
-                print(f"[HTTP] No runtime available, sending fallback error")
+                print("[HTTP] No runtime available, sending fallback error")
                 # Fallback if no runtime
                 asyncio.create_task(send_http_response(writer, 500, "Internal Server Error", "text/plain"))
-                
+
         except Exception as e:
             print(f"[HTTP] Error handling request: {e}")
             try:
                 asyncio.create_task(send_http_response(writer, 500, f"Internal Server Error: {e}", "text/plain"))
-            except:
+            except Exception:
                 pass
-    
+
     async def start_server():
         try:
             # Create and start the HTTP server
@@ -814,9 +816,9 @@ def http_server_start(server_id: int, host: str, port: int, callback_id: int) ->
             bind_host = "127.0.0.1" if host == "localhost" else host
             server = await asyncio.start_server(handle_request, bind_host, port)
             _http_servers[server_id] = server
-            
+
             print(f"[HTTP] Server {server_id} started on {bind_host}:{port} (requested: {host}:{port})")
-                
+
         except Exception as e:
             print(f"[HTTP] Server {server_id} failed to start: {e}")
             # Try binding to all interfaces as fallback
@@ -827,7 +829,7 @@ def http_server_start(server_id: int, host: str, port: int, callback_id: int) ->
                 print(f"[HTTP] Server {server_id} started on 0.0.0.0:{port} (fallback)")
             except Exception as e2:
                 print(f"[HTTP] Server {server_id} fallback also failed: {e2}")
-    
+
     asyncio.create_task(start_server())
 
 
@@ -835,12 +837,12 @@ def http_server_start(server_id: int, host: str, port: int, callback_id: int) ->
 def http_server_stop(server_id: int, callback_id: int) -> None:
     """
     Stop HTTP server
-    
+
     Args:
         server_id: Server ID
         callback_id: Callback ID to execute when server stops
     """
-    
+
     async def stop_server():
         try:
             if server_id in _http_servers:
@@ -848,7 +850,7 @@ def http_server_stop(server_id: int, callback_id: int) -> None:
                 server.close()
                 await server.wait_closed()
                 del _http_servers[server_id]
-                
+
                 result = {
                     'success': True,
                     'message': 'HTTP server stopped'
@@ -858,19 +860,19 @@ def http_server_stop(server_id: int, callback_id: int) -> None:
                     'success': False,
                     'message': 'Server not found'
                 }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-                
+
         except Exception as e:
             result = {
                 'success': False,
                 'message': str(e)
             }
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, result)
-    
+
     asyncio.create_task(stop_server())
 
 
@@ -878,23 +880,23 @@ def http_server_stop(server_id: int, callback_id: int) -> None:
 def http_server_respond(request_id: int, data: str, status_code: int = 200, content_type: str = "application/json") -> None:
     """
     Send HTTP response back to client
-    
+
     Args:
         request_id: The request ID from the request object
         data: Response data to send
         status_code: HTTP status code (default 200)
         content_type: Content type header (default application/json)
     """
-    
+
     if request_id in _http_response_writers:
         writer = _http_response_writers[request_id]
-        
+
         async def send_response():
             await send_http_response(writer, status_code, data, content_type)
             # Clean up
             if request_id in _http_response_writers:
                 del _http_response_writers[request_id]
-        
+
         asyncio.create_task(send_response())
     else:
         print(f"[HTTP] Warning: Request ID {request_id} not found for response")
@@ -913,26 +915,26 @@ _websocket_server_counter = 0
 def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, str]] = None) -> int:
     """
     Connect to a WebSocket server asynchronously
-    
+
     Args:
         url: WebSocket URL (ws:// or wss://)
         callback_id: Callback ID for all WebSocket events
         headers: Optional headers for connection
-        
+
     Returns:
         Connection ID for this WebSocket
     """
     import aiohttp
     import ssl
-    
+
     global _websocket_connection_counter, _websocket_connections
     _websocket_connection_counter += 1
     conn_id = _websocket_connection_counter
-    
+
     async def do_connect():
         try:
             headers_dict = headers or {}
-            
+
             # Handle SSL context for wss:// URLs
             ssl_context = None
             if url.startswith('wss://'):
@@ -940,10 +942,10 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
                 # For development, you might want to disable certificate verification
                 # ssl_context.check_hostname = False
                 # ssl_context.verify_mode = ssl.CERT_NONE
-            
+
             session = aiohttp.ClientSession()
             ws = await session.ws_connect(url, headers=headers_dict, ssl=ssl_context)
-            
+
             # Store the connection
             _websocket_connections[conn_id] = {
                 'ws': ws,
@@ -952,11 +954,11 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
                 'connected': True,
                 'callback_id': callback_id
             }
-            
+
             # Only log in debug mode
             if _current_runtime and hasattr(_current_runtime.interpreter, '_debug') and _current_runtime.interpreter._debug:
                 print(f"[WebSocket {conn_id}] Connected successfully")
-            
+
             # Notify connection success
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, {
@@ -964,7 +966,7 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
                     'conn_id': conn_id,
                     'success': True
                 })
-            
+
             # Start listening for messages
             async def listen_messages():
                 try:
@@ -993,7 +995,7 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
                             break
                         elif msg.type == aiohttp.WSMsgType.CLOSE:
                             break
-                            
+
                 except Exception as e:
                     print(f"[WebSocket {conn_id}] Exception in message loop: {e}")
                     if _current_runtime:
@@ -1008,7 +1010,7 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
                         try:
                             _websocket_connections[conn_id]['connected'] = False
                             await session.close()
-                            
+
                             # Send disconnected event before cleanup
                             if _current_runtime:
                                 _current_runtime.queue_lua_callback(callback_id, {
@@ -1021,10 +1023,10 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
                             # Always remove from connections dict
                             if conn_id in _websocket_connections:
                                 del _websocket_connections[conn_id]
-            
+
             # Start the message listener
             asyncio.create_task(listen_messages())
-            
+
         except Exception as e:
             # Handle connection errors
             if _current_runtime:
@@ -1034,7 +1036,7 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
                     'error': f"Connection error: {str(e)}",
                     'success': False
                 })
-    
+
     # Start the async connection
     asyncio.create_task(do_connect())
     return conn_id
@@ -1044,13 +1046,13 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
 def websocket_send(conn_id: int, data: str, callback_id: Optional[int] = None) -> None:
     """
     Send data through a WebSocket connection
-    
+
     Args:
         conn_id: WebSocket connection ID
         data: Data to send (string)
         callback_id: Optional callback for send completion
     """
-    
+
     async def do_send():
         try:
             if conn_id not in _websocket_connections:
@@ -1061,7 +1063,7 @@ def websocket_send(conn_id: int, data: str, callback_id: Optional[int] = None) -
                         'error': error_msg
                     })
                 return
-            
+
             conn_info = _websocket_connections[conn_id]
             if not conn_info['connected']:
                 error_msg = f"WebSocket connection {conn_id} is not connected"
@@ -1071,16 +1073,16 @@ def websocket_send(conn_id: int, data: str, callback_id: Optional[int] = None) -
                         'error': error_msg
                     })
                 return
-            
+
             ws = conn_info['ws']
             await ws.send_str(data)
-            
+
             # Notify send success
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, {
                     'success': True
                 })
-                
+
         except Exception as e:
             error_msg = f"WebSocket send error: {str(e)}"
             if callback_id and _current_runtime:
@@ -1088,7 +1090,7 @@ def websocket_send(conn_id: int, data: str, callback_id: Optional[int] = None) -
                     'success': False,
                     'error': error_msg
                 })
-    
+
     asyncio.create_task(do_send())
 
 
@@ -1096,12 +1098,12 @@ def websocket_send(conn_id: int, data: str, callback_id: Optional[int] = None) -
 def websocket_close(conn_id: int, callback_id: Optional[int] = None) -> None:
     """
     Close a WebSocket connection
-    
+
     Args:
         conn_id: WebSocket connection ID
         callback_id: Optional callback for close completion
     """
-    
+
     async def do_close():
         try:
             if conn_id not in _websocket_connections:
@@ -1112,26 +1114,26 @@ def websocket_close(conn_id: int, callback_id: Optional[int] = None) -> None:
                         'error': error_msg
                     })
                 return
-            
+
             conn_info = _websocket_connections[conn_id]
             ws = conn_info['ws']
             session = conn_info['session']
-            
+
             # Close the WebSocket
             await ws.close()
             await session.close()
-            
+
             # Mark as disconnected and remove from connections
             conn_info['connected'] = False
             if conn_id in _websocket_connections:
                 del _websocket_connections[conn_id]
-            
+
             # Notify close success
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, {
                     'success': True
                 })
-                
+
         except Exception as e:
             error_msg = f"WebSocket close error: {str(e)}"
             if callback_id and _current_runtime:
@@ -1139,7 +1141,7 @@ def websocket_close(conn_id: int, callback_id: Optional[int] = None) -> None:
                     'success': False,
                     'error': error_msg
                 })
-    
+
     asyncio.create_task(do_close())
 
 
@@ -1147,16 +1149,16 @@ def websocket_close(conn_id: int, callback_id: Optional[int] = None) -> None:
 def websocket_is_open(conn_id: int) -> bool:
     """
     Check if a WebSocket connection is open
-    
+
     Args:
         conn_id: WebSocket connection ID
-        
+
     Returns:
         True if connection is open, False otherwise
     """
     if conn_id not in _websocket_connections:
         return False
-    
+
     conn_info = _websocket_connections[conn_id]
     return conn_info['connected'] and not conn_info['ws'].closed
 
@@ -1167,14 +1169,14 @@ def websocket_is_open(conn_id: int) -> bool:
 def websocket_server_create() -> int:
     """
     Create a new WebSocket server
-    
+
     Returns:
         Server ID for this WebSocket server
     """
     global _websocket_server_counter
     _websocket_server_counter += 1
     server_id = _websocket_server_counter
-    
+
     _websocket_servers[server_id] = {
         'server': None,
         'clients': {},  # client_id -> client_info
@@ -1183,7 +1185,7 @@ def websocket_server_create() -> int:
         'host': None,
         'port': None
     }
-    
+
     return server_id
 
 
@@ -1191,7 +1193,7 @@ def websocket_server_create() -> int:
 def websocket_server_start(server_id: int, host: str, port: int, callback_id: int) -> None:
     """
     Start a WebSocket server
-    
+
     Args:
         server_id: WebSocket server ID
         host: Host to bind to
@@ -1200,7 +1202,7 @@ def websocket_server_start(server_id: int, host: str, port: int, callback_id: in
     """
     import aiohttp
     from aiohttp import web
-    
+
     if server_id not in _websocket_servers:
         if _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, {
@@ -1208,26 +1210,26 @@ def websocket_server_start(server_id: int, host: str, port: int, callback_id: in
                 'error': f'Server {server_id} not found'
             })
         return
-    
+
     server_info = _websocket_servers[server_id]
-    
+
     async def websocket_handler(request):
         ws = web.WebSocketResponse()
         await ws.prepare(request)
-        
+
         # Create client ID and info
         server_info['client_counter'] += 1
         client_id = server_info['client_counter']
-        
+
         client_info = {
             'id': client_id,
             'ws': ws,
             'request': request,
             'connected': True
         }
-        
+
         server_info['clients'][client_id] = client_info
-        
+
         # Notify client connected
         if _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, {
@@ -1235,7 +1237,7 @@ def websocket_server_start(server_id: int, host: str, port: int, callback_id: in
                 'server_id': server_id,
                 'client_id': client_id
             })
-        
+
         try:
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.TEXT:
@@ -1272,32 +1274,32 @@ def websocket_server_start(server_id: int, host: str, port: int, callback_id: in
             if client_id in server_info['clients']:
                 server_info['clients'][client_id]['connected'] = False
                 del server_info['clients'][client_id]
-            
+
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, {
                     'event': 'disconnected',
                     'server_id': server_id,
                     'client_id': client_id
                 })
-        
+
         return ws
-    
+
     async def start_server():
         try:
             app = web.Application()
             app.router.add_get('/', websocket_handler)
-            
+
             runner = web.AppRunner(app)
             await runner.setup()
-            
+
             site = web.TCPSite(runner, host, port)
             await site.start()
-            
+
             server_info['server'] = runner
             server_info['running'] = True
             server_info['host'] = host
             server_info['port'] = port
-            
+
             # Notify server started
             if _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, {
@@ -1306,7 +1308,7 @@ def websocket_server_start(server_id: int, host: str, port: int, callback_id: in
                     'host': host,
                     'port': port
                 })
-            
+
         except Exception as e:
             # Notify start error
             if _current_runtime:
@@ -1315,7 +1317,7 @@ def websocket_server_start(server_id: int, host: str, port: int, callback_id: in
                     'server_id': server_id,
                     'error': f'Failed to start server: {str(e)}'
                 })
-    
+
     asyncio.create_task(start_server())
 
 
@@ -1323,14 +1325,14 @@ def websocket_server_start(server_id: int, host: str, port: int, callback_id: in
 def websocket_server_send(server_id: int, client_id: int, data: str, callback_id: Optional[int] = None) -> None:
     """
     Send data to a specific WebSocket client
-    
+
     Args:
         server_id: WebSocket server ID
         client_id: Client ID to send to
         data: Data to send
         callback_id: Optional callback for send completion
     """
-    
+
     async def do_send():
         try:
             if server_id not in _websocket_servers:
@@ -1341,9 +1343,9 @@ def websocket_server_send(server_id: int, client_id: int, data: str, callback_id
                         'error': error_msg
                     })
                 return
-            
+
             server_info = _websocket_servers[server_id]
-            
+
             if client_id not in server_info['clients']:
                 error_msg = f"Client {client_id} not found"
                 if callback_id and _current_runtime:
@@ -1352,7 +1354,7 @@ def websocket_server_send(server_id: int, client_id: int, data: str, callback_id
                         'error': error_msg
                     })
                 return
-            
+
             client_info = server_info['clients'][client_id]
             if not client_info['connected']:
                 error_msg = f"Client {client_id} not connected"
@@ -1362,16 +1364,16 @@ def websocket_server_send(server_id: int, client_id: int, data: str, callback_id
                         'error': error_msg
                     })
                 return
-            
+
             ws = client_info['ws']
             await ws.send_str(data)
-            
+
             # Notify send success
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, {
                     'success': True
                 })
-                
+
         except Exception as e:
             error_msg = f"Send error: {str(e)}"
             if callback_id and _current_runtime:
@@ -1379,7 +1381,7 @@ def websocket_server_send(server_id: int, client_id: int, data: str, callback_id
                     'success': False,
                     'error': error_msg
                 })
-    
+
     asyncio.create_task(do_send())
 
 
@@ -1387,12 +1389,12 @@ def websocket_server_send(server_id: int, client_id: int, data: str, callback_id
 def websocket_server_stop(server_id: int, callback_id: Optional[int] = None) -> None:
     """
     Stop a WebSocket server
-    
+
     Args:
         server_id: WebSocket server ID
         callback_id: Optional callback for stop completion
     """
-    
+
     async def do_stop():
         try:
             if server_id not in _websocket_servers:
@@ -1403,27 +1405,27 @@ def websocket_server_stop(server_id: int, callback_id: Optional[int] = None) -> 
                         'error': error_msg
                     })
                 return
-            
+
             server_info = _websocket_servers[server_id]
-            
+
             if server_info['server']:
                 await server_info['server'].cleanup()
                 server_info['server'] = None
-            
+
             # Close all client connections
             for client_info in server_info['clients'].values():
                 if client_info['connected']:
                     await client_info['ws'].close()
-            
+
             server_info['clients'].clear()
             server_info['running'] = False
-            
+
             # Notify stop success
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, {
                     'success': True
                 })
-                
+
         except Exception as e:
             error_msg = f"Stop error: {str(e)}"
             if callback_id and _current_runtime:
@@ -1431,7 +1433,7 @@ def websocket_server_stop(server_id: int, callback_id: Optional[int] = None) -> 
                     'success': False,
                     'error': error_msg
                 })
-    
+
     asyncio.create_task(do_stop())
 
 
@@ -1439,27 +1441,22 @@ def websocket_server_stop(server_id: int, callback_id: Optional[int] = None) -> 
 def websocket_server_is_running(server_id: int) -> bool:
     """
     Check if a WebSocket server is running
-    
+
     Args:
         server_id: WebSocket server ID
-        
+
     Returns:
         True if server is running, False otherwise
     """
     if server_id not in _websocket_servers:
         return False
-    
+
     return _websocket_servers[server_id]['running']
 
 
 # ============================================================================
 # MQTT Client Implementation
 # ============================================================================
-
-import paho.mqtt.client as mqtt_client
-import uuid
-import aiomqtt
-from aiomqtt import Client as AioMQTTClient, MqttError
 
 
 # Global storage for MQTT clients
@@ -1478,12 +1475,12 @@ def _generate_mqtt_client_id() -> int:
 def mqtt_client_connect(uri: str, options: Optional[Dict[str, Any]] = None, callback_id: Optional[int] = None) -> int:
     """
     Connect to MQTT broker following Fibaro HC3 specification
-    
+
     Args:
         uri: Broker URI (mqtt://host:port or mqtts://host:port or just host)
         options: Connection options dict
         callback_id: Optional callback for connection result
-        
+
     Returns:
         MQTT client ID
     """
@@ -1598,7 +1595,7 @@ def mqtt_client_connect(uri: str, options: Optional[Dict[str, Any]] = None, call
 def mqtt_client_disconnect(client_id: int, options: Optional[Dict[str, Any]] = None, callback_id: Optional[int] = None) -> None:
     """
     Disconnect MQTT client
-    
+
     Args:
         client_id: MQTT client ID
         options: Disconnect options
@@ -1608,24 +1605,24 @@ def mqtt_client_disconnect(client_id: int, options: Optional[Dict[str, Any]] = N
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return
-    
+
     async def do_disconnect():
         try:
             client_info = _mqtt_clients[client_id]
             client = client_info['client']
-            
+
             if client_info['connected']:
                 client.disconnect()
                 client.loop_stop()
                 client_info['connected'] = False
-            
+
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 0)  # Success
-                
-        except Exception as e:
+
+        except Exception:
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 1)  # Error
-    
+
     asyncio.create_task(do_disconnect())
 
 
@@ -1633,13 +1630,13 @@ def mqtt_client_disconnect(client_id: int, options: Optional[Dict[str, Any]] = N
 def mqtt_client_subscribe(client_id: int, topics, options: Optional[Dict[str, Any]] = None, callback_id: Optional[int] = None) -> Optional[int]:
     """
     Subscribe to MQTT topic(s)
-    
+
     Args:
         client_id: MQTT client ID
         topics: Topic string or list of topics
         options: Subscribe options
         callback_id: Optional callback
-        
+
     Returns:
         Packet ID
     """
@@ -1647,20 +1644,20 @@ def mqtt_client_subscribe(client_id: int, topics, options: Optional[Dict[str, An
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
-    
+
     client_info = _mqtt_clients[client_id]
     client = client_info['client']
-    
+
     if not client_info['connected']:
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
-    
+
     if options is None:
         options = {}
-    
+
     default_qos = options.get('qos', 0)
-    
+
     try:
         # Handle single topic or multiple topics
         if isinstance(topics, str):
@@ -1681,15 +1678,15 @@ def mqtt_client_subscribe(client_id: int, topics, options: Optional[Dict[str, An
                 else:
                     # Fallback: treat as string
                     topic_list.append((str(topic), default_qos))
-            
+
             result, mid = client.subscribe(topic_list)
         else:
             # Invalid topic format
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 1)  # Error
             return None
-        
-        if result == mqtt_client.MQTT_ERR_SUCCESS:
+
+        if result == MqttError.MQTT_ERR_SUCCESS:
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 0)  # Success
             return mid
@@ -1697,8 +1694,8 @@ def mqtt_client_subscribe(client_id: int, topics, options: Optional[Dict[str, An
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 1)  # Error
             return None
-            
-    except Exception as e:
+
+    except Exception:
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
@@ -1708,13 +1705,13 @@ def mqtt_client_subscribe(client_id: int, topics, options: Optional[Dict[str, An
 def mqtt_client_unsubscribe(client_id: int, topics, options: Optional[Dict[str, Any]] = None, callback_id: Optional[int] = None) -> Optional[int]:
     """
     Unsubscribe from MQTT topic(s)
-    
+
     Args:
         client_id: MQTT client ID
         topics: Topic string or list of topics
         options: Unsubscribe options
         callback_id: Optional callback
-        
+
     Returns:
         Packet ID
     """
@@ -1722,15 +1719,15 @@ def mqtt_client_unsubscribe(client_id: int, topics, options: Optional[Dict[str, 
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
-    
+
     client_info = _mqtt_clients[client_id]
     client = client_info['client']
-    
+
     if not client_info['connected']:
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
-    
+
     try:
         # Handle single topic or multiple topics
         if isinstance(topics, str):
@@ -1747,14 +1744,14 @@ def mqtt_client_unsubscribe(client_id: int, topics, options: Optional[Dict[str, 
                     topic_list.append(topic[0])
                 else:
                     topic_list.append(str(topic))
-            
+
             result, mid = client.unsubscribe(topic_list)
         else:
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 1)  # Error
             return None
-        
-        if result == mqtt_client.MQTT_ERR_SUCCESS:
+
+        if result == MqttError.MQTT_ERR_SUCCESS:
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 0)  # Success
             return mid
@@ -1762,8 +1759,8 @@ def mqtt_client_unsubscribe(client_id: int, topics, options: Optional[Dict[str, 
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 1)  # Error
             return None
-            
-    except Exception as e:
+
+    except Exception:
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
@@ -1773,14 +1770,14 @@ def mqtt_client_unsubscribe(client_id: int, topics, options: Optional[Dict[str, 
 def mqtt_client_publish(client_id: int, topic: str, payload: str, options: Optional[Dict[str, Any]] = None, callback_id: Optional[int] = None) -> Optional[int]:
     """
     Publish MQTT message
-    
+
     Args:
         client_id: MQTT client ID
         topic: Topic to publish to
         payload: Message payload
         options: Publish options
         callback_id: Optional callback
-        
+
     Returns:
         Packet ID
     """
@@ -1788,25 +1785,25 @@ def mqtt_client_publish(client_id: int, topic: str, payload: str, options: Optio
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
-    
+
     client_info = _mqtt_clients[client_id]
     client = client_info['client']
-    
+
     if not client_info['connected']:
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
-    
+
     if options is None:
         options = {}
-    
+
     qos = options.get('qos', 0)
     retain = options.get('retain', False)
-    
+
     try:
         result = client.publish(topic, payload, qos=qos, retain=retain)
-        
-        if result.rc == mqtt_client.MQTT_ERR_SUCCESS:
+
+        if result.rc == MqttError.MQTT_ERR_SUCCESS:
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 0)  # Success
             return result.mid
@@ -1814,8 +1811,8 @@ def mqtt_client_publish(client_id: int, topic: str, payload: str, options: Optio
             if callback_id and _current_runtime:
                 _current_runtime.queue_lua_callback(callback_id, 1)  # Error
             return None
-            
-    except Exception as e:
+
+    except Exception:
         if callback_id and _current_runtime:
             _current_runtime.queue_lua_callback(callback_id, 1)  # Error
         return None
@@ -1825,7 +1822,7 @@ def mqtt_client_publish(client_id: int, topic: str, payload: str, options: Optio
 def mqtt_client_add_event_listener(client_id: int, event_name: str, callback_id: int) -> None:
     """
     Add event listener to MQTT client
-    
+
     Args:
         client_id: MQTT client ID
         event_name: Event name (connected, closed, message, subscribed, unsubscribed, published, error)
@@ -1833,7 +1830,7 @@ def mqtt_client_add_event_listener(client_id: int, event_name: str, callback_id:
     """
     if client_id not in _mqtt_clients:
         return
-    
+
     client_info = _mqtt_clients[client_id]
     client_info['events'][event_name] = callback_id
 
@@ -1842,14 +1839,14 @@ def mqtt_client_add_event_listener(client_id: int, event_name: str, callback_id:
 def mqtt_client_remove_event_listener(client_id: int, event_name: str) -> None:
     """
     Remove event listener from MQTT client
-    
+
     Args:
         client_id: MQTT client ID
         event_name: Event name
     """
     if client_id not in _mqtt_clients:
         return
-    
+
     client_info = _mqtt_clients[client_id]
     if event_name in client_info['events']:
         del client_info['events'][event_name]
@@ -1859,16 +1856,16 @@ def mqtt_client_remove_event_listener(client_id: int, event_name: str) -> None:
 def mqtt_client_is_connected(client_id: int) -> bool:
     """
     Check if MQTT client is connected
-    
+
     Args:
         client_id: MQTT client ID
-        
+
     Returns:
         True if connected, False otherwise
     """
     if client_id not in _mqtt_clients:
         return False
-    
+
     return _mqtt_clients[client_id]['connected']
 
 
@@ -1876,16 +1873,16 @@ def mqtt_client_is_connected(client_id: int) -> bool:
 def mqtt_client_get_info(client_id: int) -> Optional[Dict[str, Any]]:
     """
     Get MQTT client information
-    
+
     Args:
         client_id: MQTT client ID
-        
+
     Returns:
         Client info dict or None
     """
     if client_id not in _mqtt_clients:
         return None
-    
+
     client_info = _mqtt_clients[client_id]
     return {
         'connected': client_info['connected'],

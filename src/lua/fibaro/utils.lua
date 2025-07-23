@@ -106,6 +106,7 @@ local typeColor = {
 -- @param msg - The message string.
 -- @param typ - The type of message (e.g., "DEBUG", "ERROR").
 local function __fibaro_add_debug_message(tag, msg, typ, nohtml)
+  tag = tag or "PLUA"
   local time = ""
   if Emu.shortTime then
     time = tostring(Emu.lib.userDate("[%H:%M:%S]"))

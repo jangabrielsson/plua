@@ -426,10 +426,11 @@ end
 function Emulator:HC3_CALL(method, path, data)
   assert(self.config.hc3_creds, "HC3 credentials are not set")
   local url = self.config.hc3_url.."/api"..path
+  if type(data) == 'table' then data = json.encode(data) end
   local res = _PY.http_call_sync(
   method, 
   url,
-  data and json.encodeFast(data) or nil,
+  data,
   {
     ["User-Agent"] = "plua2/0.1.0",
     ["Content-Type"] = "application/json",

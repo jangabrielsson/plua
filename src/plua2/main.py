@@ -6,7 +6,6 @@ import asyncio
 import argparse
 import sys
 import os
-import time
 from typing import Optional
 import lupa
 
@@ -27,97 +26,66 @@ def show_greeting() -> None:
     print(f"Plua2 v{__version__} with {lua_version}")
 
 
-async def run_script(script_fragments: list = None, main_script: str = None, main_file: str = None, duration: Optional[int] = None, debugger_config: Optional[dict] = None, source_name: Optional[str] = None, debug: bool = False) -> None:
+async def run_script(
+    script_fragments: list = None,
+    main_script: str = None,
+    main_file: str = None,
+    duration: Optional[int] = None,
+    debugger_config: Optional[dict] = None,
+    source_name: Optional[str] = None,
+    debug: bool = False,
+    api_config: Optional[dict] = None
+) -> None:
     """
-    Run Lua script fragments and main script with the async runtime
-    
-    Args:
-        script_fragments: List of -e script fragments to execute first
-        main_script: The main Lua script to execute (or None)
-        main_file: The main Lua file path to execute (or None) - takes precedence over main_script
-        duration: Duration in seconds to run (None for forever)
-        debugger_config: Optional debugger configuration dict with host/port
-        source_name: Optional source file name for debugging
-        debug: Enable debug logging
-    """
-    # Name the main task
-    current_task = asyncio.current_task()
-    if current_task:
-        current_task.set_name("main_runtime")
-    
-    runtime = LuaAsyncRuntime()
-    await runtime.start(script_fragments=script_fragments, main_script=main_script, main_file=main_file, duration=duration, debugger_config=debugger_config, source_name=source_name, debug=debug)
-
-
-async def run_script_with_api(script_fragments: list = None, main_script: str = None, main_file: str = None, duration: Optional[int] = None, debugger_config: Optional[dict] = None, source_name: Optional[str] = None, debug: bool = False, api_config: Optional[dict] = None) -> None:
-    """
-    Run Lua script with optional REST API server
-    
-    Args:
-        script_fragments: List of -e script fragments to execute first
-        main_script: The main Lua script to execute (or None)
-        main_file: The main Lua file path to execute (or None) - takes precedence over main_script
-        duration: Duration in seconds to run (None for forever)
-        debugger_config: Optional debugger configuration dict with host/port
-        source_name: Optional source file name for debugging
-        debug: Enable debug logging
-        api_config: Optional API server configuration dict with host/port
+    Run Lua script fragments and main script with the async runtime, optionally with REST API server
     """
     # Name the main task
     current_task = asyncio.current_task()
     if current_task:
         current_task.set_name("main_runtime")
-    
+
     runtime = LuaAsyncRuntime()
-    
-    # Start API server if requested
     api_task = None
     api_server = None
-    
+
     if api_config:
         from .api_server import PlUA2APIServer
-        
         print(f"API server on {api_config['host']}:{api_config['port']}")
         api_server = PlUA2APIServer(runtime, api_config['host'], api_config['port'])
-        
-        # Connect the granular view update hook
+
         def broadcast_view_hook(qa_id, component_name, property_name, data_json):
             if api_server:
                 try:
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
-                        # Create a task to run the async granular broadcast function
                         asyncio.create_task(api_server.broadcast_view_update(qa_id, component_name, property_name, data_json))
                 except Exception as e:
                     print(f"Error creating view broadcast task for QA {qa_id}: {e}")
-        
-        # Set the broadcast hook in the interpreter (will be applied when _PY table is ready)
+
         runtime.interpreter.set_broadcast_view_update_hook(broadcast_view_hook)
-        
-        # Start API server in background (non-blocking)
         api_task = asyncio.create_task(api_server.start_server(), name="api_server")
-        
-        # Note: We don't wait for API server to be ready - it will start in parallel
-        # Any early broadcast calls will simply be ignored until server is ready
-    
+
     try:
-        await runtime.start(script_fragments=script_fragments, main_script=main_script, main_file=main_file, duration=duration, debugger_config=debugger_config, source_name=source_name, debug=debug, api_server=api_server)
-        
+        await runtime.start(
+            script_fragments=script_fragments,
+            main_script=main_script,
+            main_file=main_file,
+            duration=duration,
+            debugger_config=debugger_config,
+            source_name=source_name,
+            debug=debug,
+            api_server=api_server
+        )
     except KeyboardInterrupt:
         print("\nReceived interrupt signal, shutting down...")
     except Exception as e:
         print(f"Runtime error: {e}")
     finally:
-        # Clean up API server gracefully
         if api_task and not api_task.done():
-            # Cancel the API server task
             api_task.cancel()
-            
-            # Wait for it to finish cancelling
             try:
                 await asyncio.gather(api_task, return_exceptions=True)
             except Exception:
-                # Any remaining exceptions are suppressed
                 pass
 
 
@@ -276,10 +244,10 @@ def main() -> None:
                 'host': args.api_host,
                 'port': args.api_port
             }
-            from .repl import run_repl_with_api
+            from .repl import run_repl
             try:
                 print("Starting interactive REPL with REST API server...")
-                asyncio.run(run_repl_with_api(debug=args.debug, api_config=api_config))
+                asyncio.run(run_repl(debug=args.debug, api_config=api_config))
             except KeyboardInterrupt:
                 print("\nGoodbye!")
             sys.exit(0)
@@ -329,7 +297,7 @@ def main() -> None:
                 'host': args.api_host,
                 'port': args.api_port
             }
-            asyncio.run(run_script_with_api(script_fragments, main_script, main_file, args.duration, debugger_config, source_file_name, args.debug, api_config))
+            asyncio.run(run_script(script_fragments, main_script, main_file, args.duration, debugger_config, source_file_name, args.debug, api_config))
         else:
             # API server disabled
             asyncio.run(run_script(script_fragments, main_script, main_file, args.duration, debugger_config, source_file_name, args.debug))

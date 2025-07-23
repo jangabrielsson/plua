@@ -1,6 +1,3 @@
-import time
-# ...existing code...
-
 """
 Python functions library for Lua integration
 Decorators and utilities for exporting Python functions to Lua's _PY table
@@ -10,12 +7,13 @@ import os
 import sys
 import time
 import json
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple
 from functools import wraps
 import requests
 from datetime import datetime
 from collections import deque
 from threading import Thread, Lock
+import socket
 
 
 def _python_to_lua_table(lua_runtime, python_obj):
@@ -180,6 +178,7 @@ class LuaExporter:
 
 # Global exporter instance
 lua_exporter = LuaExporter()
+
 
 # Exported Python functions for Lua
 @lua_exporter.export(description="Get current epoch time with milliseconds as float", category="time")
@@ -462,8 +461,8 @@ def getenv_dotenv(name: str, default: str = None) -> str:
     return getenv_with_dotenv(name, default)
 
 
-@lua_exporter.export(description="Get system configuration and environment information", category="system")
-def get_config() -> Dict[str, Any]:
+@lua_exporter.export(description="Get system configuration and environment information", category="system", inject_runtime=True)
+def get_config(lua_runtime) -> Dict[str, Any]:
     """
     Get system configuration and environment information
     
@@ -473,7 +472,24 @@ def get_config() -> Dict[str, Any]:
     import os
     import platform
     import sys
-    
+
+    def get_host_ip():
+        try:
+            # This method works even if not connected to the internet
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(0)
+            try:
+                # Doesn't have to be reachable
+                s.connect(('10.255.255.255', 1))
+                ip = s.getsockname()[0]
+            except Exception:
+                ip = '127.0.0.1'
+            finally:
+                s.close()
+            return ip
+        except Exception:
+            return '127.0.0.1'
+
     config = {
         # Directories
         "homedir": os.path.expanduser("~"),
@@ -502,7 +518,13 @@ def get_config() -> Dict[str, Any]:
         
         # Plua2 specific
         "plua2_version": "0.1.0",
-        "lua_version": "5.4"
+        "lua_version": "5.4",
+
+        # HOST IP address
+        "host_ip": get_host_ip(),
+
+        # API server port
+        # "api_port": lua_runtime.api_port if lua_runtime and hasattr(lua_runtime, 'api_port') else 8080
     }
     
     return config
@@ -515,6 +537,11 @@ def http_call_sync(method, url, data=None, headers=None):
     
     try:
         method = method.upper()
+        # Ensure data is a UTF-8 encoded string
+        if isinstance(data, dict):
+            data = json.dumps(data, ensure_ascii=False).encode('utf-8')
+        elif isinstance(data, str):
+            data = data.encode('utf-8')
         
         # Default headers
         if headers is None:
@@ -524,9 +551,9 @@ def http_call_sync(method, url, data=None, headers=None):
         if method == "GET":
             response = requests.get(url, headers=headers, timeout=30)
         elif method == "POST":
-            response = requests.post(url, json=data, headers=headers, timeout=30)
+            response = requests.post(url, data=data, headers=headers, timeout=30)
         elif method == "PUT":
-            response = requests.put(url, json=data, headers=headers, timeout=30)
+            response = requests.put(url, data=data, headers=headers, timeout=30)
         elif method == "DELETE":
             response = requests.delete(url, headers=headers, timeout=30)
         else:
@@ -582,7 +609,7 @@ def base64_decode(data):
 def open_in_vscode_browser(url):
     """Open a URL in VS Code's Simple Browser"""
     import subprocess
-    import os
+    # import os
     
     try:
         # Method 1: Try the command palette approach
@@ -594,8 +621,8 @@ def open_in_vscode_browser(url):
         
         # Method 2: Try opening a workspace file that triggers Simple Browser
         # This is a workaround using VS Code's URI scheme
-        cmd2 = ["code", "--command", "workbench.action.showCommands"]
-        result2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=3)
+        # cmd2 = ["code", "--command", "workbench.action.showCommands"]
+        # result2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=3)
         
         # Method 3: Try using VS Code's built-in command with different syntax
         cmd3 = ["code", "--command", "simpleBrowser.api.open", "--args", f'["{url}"]']
@@ -668,6 +695,7 @@ def open_web_interface():
     # Get the API server port from the current runtime
     try:
         from . import network
+
         runtime = network._current_runtime
         if runtime and hasattr(runtime, 'api_server') and runtime.api_server:
             port = runtime.api_server.port

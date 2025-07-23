@@ -273,5 +273,5 @@ PLUA.listBrowsers = _PY.list_browsers -- () -> table of browser names
 PLUA.html2Console = _PY.html2console -- (string) -> string
 PLUA.getAvailableColors = _PY.get_available_colors -- () -> table of color names
 PLUA.isRunning = _PY.isRunning -- () -> boolean
-
+PLUA.sleep = _PY.sleep
 PLUA.config = _PY.config

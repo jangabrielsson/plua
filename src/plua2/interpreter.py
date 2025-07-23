@@ -9,8 +9,8 @@ from typing import Any, Callable, Optional
 from .syncsocket import SynchronousTCPManager
 from .luafuns_lib import lua_exporter
 from .luafuns_lib import _python_to_lua_table
-# from . import html_extensions  # Import to register HTML functions
-# from . import network  # Import to register network functions
+from . import html_extensions  # Import to register HTML functions  # noqa: F401
+from . import network  # Import to register network functions  # noqa: F401
 
 
 class LuaInterpreter:

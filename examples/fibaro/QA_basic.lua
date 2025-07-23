@@ -6,8 +6,9 @@
 function QuickApp:onInit()
   self:debug(self.name,self.id)
 
-  -- self:internalStorageSet("test","X")
-  -- print("ISS",self:internalStorageGet("test"))
+  print(coroutine.running())
+  self:internalStorageSet("test","X")
+  print("ISS",self:internalStorageGet("test"))
 
   setInterval(function() end,1000)
 end

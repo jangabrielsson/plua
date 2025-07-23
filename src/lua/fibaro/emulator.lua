@@ -52,6 +52,28 @@ function Emulator:__init()
   function hc3api.delete(path) return self:HC3_CALL("DELETE", path) end
   self.api.hc3 = hc3api
   
+  local restricted = {}
+  local function cr(method,path,data)
+    if self.offline then
+      self:WARNING("api.hc3.restricted: Offline mode")
+      return nil,408
+    end
+    path = path:gsub("^/api/","/")
+    local res = self.lib.sendSyncHc3(json.encode({method=method,path=path,data=data}))
+    if res == nil then return nil,408 end
+    local stat,data = pcall(json.decode,res)
+    if stat then
+      if data[1] then return data[2],data[3]
+      else return nil,501 end
+    end
+    return nil,501
+  end
+  function restricted.get(path) return cr('get',path) end
+  function restricted.post(path, data) return cr('post',path,data) end
+  function restricted.put(path, data) return cr('put',path,data) end
+  function restricted.delete(path) return cr('delete',path) end
+  self.api.hc3.restricted = restricted
+
   local orgTime,orgDate,timeOffset = os.time,os.date,0
   
   local function round(x) return math.floor(x+0.5) end
@@ -184,8 +206,8 @@ function Emulator:createInfoFromContent(filename,content)
     self:WARNING("Offline mode, proxy disabled")
   end
   if not headers.offline then
-    --loadLib("helper",self)
-    --self.lib.startHelper()
+    loadLib("helper",self)
+    self.lib.startHelper()
   end
   if headers.proxy then
     local proxylib = loadLib("proxy",self)
@@ -385,17 +407,18 @@ function Emulator:startQA(id)
   if info.headers.save then self:saveQA(info.headers.save ,id) end
   if info.headers.project then self.lib.saveProject(id,info,nil) end
   local env = info.env
-  env.setTimeout(function()
-    local ok, err = pcall(function()
-      if env.QuickApp and env.QuickApp.onInit then
-        env.quickApp = env.QuickApp(info.device)
-      else
-        -- No quickApp object, no onInit function
-      end
-    end)
-    if not ok then
-      print("ERROR in setTimeout callback:", err)
+  local function func()
+    if env.QuickApp and env.QuickApp.onInit then
+      env.quickApp = env.QuickApp(info.device)
     end
+  end
+
+  env.setTimeout(function()
+    coroutine.wrapdebug(func, function(err,tb)
+      err = err:match(":(%d+: .*)")
+      print("Error in QA " .. id .. ": " .. tostring(err))
+      print(tb)
+    end)() 
   end, 200)
 end
 

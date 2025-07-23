@@ -10,9 +10,13 @@ local Emu
 -- Override the default hook with Fibaro preprocessing
 function _PY.main_file_hook(filename)
     require('mobdebug').on()
-    
-    Emu = Emulator()
-    Emu:loadMainFile(filename)
+    xpcall(function()
+        Emu = Emulator()
+        Emu:loadMainFile(filename)
+    end,function(err)
+        print(err)
+        print(debug.traceback())
+    end)
 end
 
 _PY.get_quickapps = function()
@@ -33,7 +37,7 @@ end
 
 _PY.fibaro_api_hook = function(method, path, data)
     mobdebug.on()
-    print("fibaro_api_hook called with:", method, path, data)
+    --print("fibaro_api_hook called with:", method, path, data)
     if Emu then 
         path = path:gsub("^/api", "")  -- Remove /api prefix for compatibility
         if data and type(data) == 'string' then
@@ -46,4 +50,3 @@ _PY.fibaro_api_hook = function(method, path, data)
         return {error = "Emulator not initialized"}, 500
     end
 end
-    

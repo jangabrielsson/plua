@@ -824,7 +824,8 @@ function updateSingleUIElement(qaContainer, element, index) {
     switch (element.type) {
         case 'label':
             const label = elementContainer.querySelector('.qa-label');
-            if (label) label.textContent = element.text || '';
+            // if (label) label.textContent = element.text || '';
+            if (label) label.innerHTML = element.text || '';
             break;
             
         case 'button':
@@ -949,13 +950,15 @@ function updateElementProperty(elementContainer, elementType, property, value) {
             if (property === 'text') {
                 // For labels, the elementContainer IS the label element
                 if (elementContainer.classList.contains('qa-label')) {
-                    elementContainer.textContent = value;
+                    // elementContainer.textContent = value;
+                    elementContainer.innerHTML = value;
                     console.log('Updated label text directly');
                 } else {
                     // Fallback: look for a child with qa-label class
                     const label = elementContainer.querySelector('.qa-label');
                     if (label) {
-                        label.textContent = value;
+                        // label.textContent = value;
+                        label.innerHTML = value;
                         console.log('Updated label text via child element');
                     } else {
                         console.log('No qa-label element found');

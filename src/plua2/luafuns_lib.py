@@ -1,12 +1,44 @@
+import time
+# ...existing code...
+
 """
 Python functions library for Lua integration
 Decorators and utilities for exporting Python functions to Lua's _PY table
 """
 
 import os
+import sys
+import time
 import json
 from typing import Any, Callable, Dict, List, Tuple, Union
 from functools import wraps
+import requests
+from datetime import datetime
+from collections import deque
+from threading import Thread, Lock
+
+
+def _python_to_lua_table(lua_runtime, python_obj):
+    """Recursively convert Python object to Lua table"""
+    if python_obj is None:
+        return None
+    elif isinstance(python_obj, (str, int, float, bool)):
+        return python_obj
+    elif isinstance(python_obj, list):
+        # Convert list to Lua table with 1-based indexing
+        lua_table = lua_runtime.table()
+        for i, item in enumerate(python_obj, 1):
+            lua_table[i] = _python_to_lua_table(lua_runtime, item)
+        return lua_table
+    elif isinstance(python_obj, dict):
+        # Convert dict to Lua table
+        lua_table = lua_runtime.table()
+        for key, value in python_obj.items():
+            lua_table[key] = _python_to_lua_table(lua_runtime, value)
+        return lua_table
+    else:
+        # For any other type, try to convert to string
+        return str(python_obj)
 
 
 class LuaExporter:
@@ -149,8 +181,15 @@ class LuaExporter:
 # Global exporter instance
 lua_exporter = LuaExporter()
 
-
 # Exported Python functions for Lua
+@lua_exporter.export(description="Get current epoch time with milliseconds as float", category="time")
+def millitime() -> float:
+    """
+    Return the current epoch time as a float with milliseconds in the decimal part.
+    """
+    return time.time()
+
+
 @lua_exporter.export(description="Get the current working directory", category="file")
 def getcwd() -> str:
     """
@@ -255,6 +294,26 @@ def json_encode(lua_table) -> str:
         # Convert Lua table to Python object first
         python_obj = _lua_to_python(lua_table)
         return json.dumps(python_obj, ensure_ascii=False, separators=(',', ':'))
+    except Exception as e:
+        # Return JSON error object instead of raising
+        return json.dumps({"error": f"JSON encoding failed: {str(e)}"})
+
+
+@lua_exporter.export(description="Encode a Lua table to JSON string", category="json")
+def json_encode_formated(lua_table) -> str:
+    """
+    Encode a Lua table to JSON string formated
+    
+    Args:
+        lua_table: Lua table or Python dict/list to encode
+        
+    Returns:
+        JSON string representation formated
+    """
+    try:
+        # Convert Lua table to Python object first
+        python_obj = _lua_to_python(lua_table)
+        return json.dumps(python_obj, ensure_ascii=False, indent=4, separators=(',', ': '))
     except Exception as e:
         # Return JSON error object instead of raising
         return json.dumps({"error": f"JSON encoding failed: {str(e)}"})
@@ -485,147 +544,6 @@ def http_call_sync(method, url, data=None, headers=None):
         return {"success": False, "error": str(e)}
 
 
-@lua_exporter.export(description="Make internal HTTP call to our own FastAPI server", category="network")
-def http_call_internal(method, path, data=None, headers=None):
-    """Make internal HTTP call to our own FastAPI server by calling function directly"""
-    
-    # Get the interpreter via the runtime reference (same pattern as network module)
-    from . import network
-    runtime = network._current_runtime
-    if not runtime:
-        return {"success": False, "error": "Runtime not available"}
-    
-    interpreter = runtime.interpreter
-    if not interpreter:
-        return {"success": False, "error": "Interpreter not available"}
-    
-    try:
-        # Extract the endpoint and parameters from the path
-        if path.startswith("/api/"):
-            # Parse query parameters from the path if present
-            import urllib.parse
-            import re
-            parsed_url = urllib.parse.urlparse(path)
-            clean_path = parsed_url.path
-            query_params = urllib.parse.parse_qs(parsed_url.query) if parsed_url.query else {}
-            
-            # Extract path parameters by matching against common FastAPI patterns
-            path_params = {}
-            template_path = clean_path  # Default to original path if no template matches
-            
-            # Common Fibaro API path patterns with their templates
-            patterns = [
-                (r'^/api/devices/(\d+)$', '/api/devices/{deviceID}', ['deviceID']),
-                (r'^/api/devices/(\d+)/action/(.+)$', '/api/devices/{deviceID}/action/{actionName}', ['deviceID', 'actionName']),
-                (r'^/api/devices/(\d+)/properties/(.+)$', '/api/devices/{deviceID}/properties/{propertyName}', ['deviceID', 'propertyName']),
-                (r'^/api/rooms/(\d+)$', '/api/rooms/{roomID}', ['roomID']),
-                (r'^/api/scenes/(\d+)$', '/api/scenes/{sceneID}', ['sceneID']),
-                (r'^/api/users/(\d+)$', '/api/users/{userID}', ['userID']),
-                (r'^/api/sections/(\d+)$', '/api/sections/{sectionID}', ['sectionID']),
-                (r'^/api/profiles/(\d+)$', '/api/profiles/{profileId}', ['profileId']),
-                (r'^/api/quickApp/(\d+)/files/(.+)$', '/api/quickApp/{deviceId}/files/{fileName}', ['deviceId', 'fileName']),
-                (r'^/api/quickApp/(\d+)/files$', '/api/quickApp/{deviceId}/files', ['deviceId']),
-                (r'^/api/RGBPrograms/(\d+)$', '/api/RGBPrograms/{programID}', ['programID']),
-                (r'^/api/notificationCenter/(\d+)$', '/api/notificationCenter/{notificationId}', ['notificationId']),
-                (r'^/api/energy/(\d+)/(\d+)/([^/]+)/([^/]+)/([^/]+)/(\d+)$', '/api/energy/{timestampFrom}/{timestampTo}/{dataSet}/{type}/{unit}/{id}', ['timestampFrom', 'timestampTo', 'dataSet', 'type', 'unit', 'id']),
-                (r'^/api/temperature/(\d+)/(\d+)/([^/]+)/([^/]+)/temperature/(\d+)$', '/api/temperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/temperature/{id}', ['timestampFrom', 'timestampTo', 'dataSet', 'type', 'id']),
-                (r'^/api/smokeTemperature/(\d+)/(\d+)/([^/]+)/([^/]+)/smoke/(\d+)$', '/api/smokeTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/smoke/{id}', ['timestampFrom', 'timestampTo', 'dataSet', 'type', 'id']),
-                (r'^/api/thermostatTemperature/(\d+)/(\d+)/([^/]+)/([^/]+)/thermostat/(\d+)$', '/api/thermostatTemperature/{timestampFrom}/{timestampTo}/{dataSet}/{type}/thermostat/{id}', ['timestampFrom', 'timestampTo', 'dataSet', 'type', 'id']),
-                (r'^/api/deviceNotifications/v1/(\d+)$', '/api/deviceNotifications/v1/{deviceID}', ['deviceID']),
-                (r'^/api/panels/favoriteColors/v2/(\d+)$', '/api/panels/favoriteColors/v2/{favoriteColorID}', ['favoriteColorID']),
-                (r'^/api/devices/action/(\d+)/(\d+)$', '/api/devices/action/{timestamp}/{id}', ['timestamp', 'id']),
-                (r'^/api/slave/([^/]+)/api/devices/(\d+)$', '/api/slave/{uuid}/api/devices/{deviceID}', ['uuid', 'deviceID']),
-                (r'^/api/slave/([^/]+)/api/devices/(\d+)/action/(.+)$', '/api/slave/{uuid}/api/devices/{deviceID}/action/{actionName}', ['uuid', 'deviceID', 'actionName']),
-                (r'^/api/energy/installationCost/(\d+)$', '/api/energy/installationCost/{id}', ['id']),
-                (r'^/api/energy/consumption/room/(\d+)/detail$', '/api/energy/consumption/room/{roomId}/detail', ['roomId']),
-                (r'^/api/energy/consumption/device/(\d+)/detail$', '/api/energy/consumption/device/{deviceId}/detail', ['deviceId']),
-                (r'^/api/linkedDevices/v1/devices/(\d+)$', '/api/linkedDevices/v1/devices/{deviceID}', ['deviceID']),
-                (r'^/api/additionalInterfaces/([^/]+)$', '/api/additionalInterfaces/{interfaceName}', ['interfaceName']),
-                (r'^/api/fti/v2/changeStep/([^/]+)$', '/api/fti/v2/changeStep/{step}', ['step']),
-                (r'^/api/devices/groupAction/([^/]+)$', '/api/devices/groupAction/{actionName}', ['actionName']),
-                (r'^/api/quickApp/export/(\d+)$', '/api/quickApp/export/{deviceId}', ['deviceId']),
-                (r'^/api/service/slaves/([^/]+)$', '/api/service/slaves/{id}', ['id']),
-                (r'^/api/service/slaves/([^/]+)/password$', '/api/service/slaves/{id}/password', ['id']),
-                (r'^/api/service/slaves/([^/]+)/ip$', '/api/service/slaves/{serialOrId}/ip', ['serialOrId']),
-                (r'^/api/service/discovery/resolve/([^/]+)/([^/]+)$', '/api/service/discovery/resolve/{type}/{value}', ['type', 'value']),
-                (r'^/api/service/resolve/([^/]+)/([^/]+)$', '/api/service/resolve/{type}/{value}', ['type', 'value']),
-            ]
-            
-            for pattern, template, param_names in patterns:
-                match = re.match(pattern, clean_path)
-                if match:
-                    template_path = template
-                    for i, param_name in enumerate(param_names):
-                        if i < len(match.groups()):
-                            path_params[param_name] = match.group(i + 1)
-                    break
-            
-            # Convert data to JSON string if it exists
-            data_json = "nil"
-            if data is not None:
-                import json
-                data_json = json.dumps(data)
-                data_json = f'"{data_json}"'  # Wrap in quotes for Lua string
-            
-            # Convert query params to Lua table format
-            query_lua = "nil"
-            if query_params:
-                query_items = []
-                for key, values in query_params.items():
-                    # Take first value if multiple values for same key
-                    value = values[0] if values else ""
-                    query_items.append(f'["{key}"] = "{value}"')
-                query_lua = "{" + ", ".join(query_items) + "}"
-            
-            # Convert path params to Lua table format
-            path_lua = "nil"
-            if path_params:
-                path_items = []
-                for key, value in path_params.items():
-                    path_items.append(f'["{key}"] = "{value}"')
-                path_lua = "{" + ", ".join(path_items) + "}"
-            
-            # Execute Lua script to call the fibaro_api_hook function
-            lua_script = f"""
-if _PY.fibaro_api_hook then
-    local result, status = _PY.fibaro_api_hook("{method}", "{template_path}", {path_lua}, {query_lua}, {data_json})
-    _PY.temp_internal_call_result = {{
-        success = true,
-        status_code = status or 200,
-        data = result,
-        headers = {{["Content-Type"] = "application/json"}}
-    }}
-else
-    _PY.temp_internal_call_result = {{
-        success = false,
-        error = "fibaro_api_hook not available"
-    }}
-end
-"""
-            
-            # Execute the script
-            interpreter.execute_script(lua_script, "internal_http_call")
-            
-            # Get the result from Lua globals
-            result = interpreter.lua.globals()._PY.temp_internal_call_result
-            
-            # Clean up
-            interpreter.lua.globals()._PY.temp_internal_call_result = None
-            
-            # Convert the Lua table to Python dict
-            if result:
-                python_result = _lua_to_python(result)
-                return python_result
-            else:
-                return {"success": False, "error": "No result from fibaro_api_hook"}
-                
-        else:
-            return {"success": False, "error": f"Unknown internal path: {path}"}
-            
-    except Exception as e:
-        return {"success": False, "error": f"Internal call failed: {str(e)}"}
-
-
 def set_global_fastapi_app(app):
     """Set the global FastAPI app reference for internal calls"""
     # Get the interpreter via the runtime reference  
@@ -763,161 +681,176 @@ def open_web_interface():
         return {"success": False, "error": f"Failed to get API server info: {str(e)}"}
 
 
-@lua_exporter.export(description="Open URL in external browser", category="browser")
-def open_browser(url):
-    """Open a URL in the default external browser (cross-platform)"""
-    import webbrowser
-    import platform
-    
-    try:
-        # Get platform info for better error reporting
-        system = platform.system()
-        
-        # Open URL in default browser
-        success = webbrowser.open(url)
-        
-        if success:
-            return {
-                "success": True, 
-                "message": f"Opened {url} in default browser",
-                "platform": system
-            }
-        else:
-            return {
-                "success": False, 
-                "error": f"Failed to open browser on {system}",
-                "platform": system
-            }
-            
-    except Exception as e:
-        return {
-            "success": False, 
-            "error": f"Browser open failed: {str(e)}",
-            "platform": platform.system()
-        }
+# Global state for refresh states polling
+_refresh_thread = None
+_refresh_running = False
+_events = deque(maxlen=1000)  # MAX_EVENTS = 1000
+_event_count = 0
+_events_lock = Lock()
 
 
-@lua_exporter.export(description="Open URL in specific browser", category="browser")
-def open_browser_specific(url, browser_name=None):
-    """Open URL in a specific browser if available"""
-    import webbrowser
-    import platform
-    
-    try:
-        system = platform.system()
-        
-        if browser_name:
-            # Try to get specific browser
+def _convert_lua_table(lua_table):
+    """Convert Lua table to Python dict"""
+    if isinstance(lua_table, dict):
+        return lua_table
+    elif hasattr(lua_table, 'items'):
+        return dict(lua_table.items())
+    else:
+        return {}
+
+
+@lua_exporter.export(description="Start polling refresh states", category="refresh", inject_runtime=True)
+def pollRefreshStates(lua_runtime, start: int, url: str, options: dict):
+    """Start polling refresh states in a background thread"""
+    global _refresh_thread, _refresh_running
+
+    # Stop existing thread if running
+    if _refresh_running and _refresh_thread:
+        _refresh_running = False
+        _refresh_thread.join(timeout=1)
+
+    # Convert Lua options to Python dict
+    options = _convert_lua_table(options)
+
+    def refresh_runner():
+        global _refresh_running, _events, _event_count
+        last, retries = start, 0
+        _refresh_running = True
+
+        while _refresh_running:
             try:
-                browser = webbrowser.get(browser_name)
-                success = browser.open(url)
-                
-                if success:
-                    return {
-                        "success": True,
-                        "message": f"Opened {url} in {browser_name}",
-                        "browser": browser_name,
-                        "platform": system
-                    }
+                nurl = url + str(last) + "&lang=en&rand=7784634785"
+                resp = requests.get(nurl, headers=options.get('headers', {}), timeout=30)
+                if resp.status_code == 200:
+                    retries = 0
+                    data = resp.json()
+                    last = data.get('last', last)
+
+                    if data.get('events'):
+                        for event in data['events']:
+                            # Use addEvent function directly with dict for efficiency
+                            addEvent(lua_runtime, event)
+
+                elif resp.status_code == 401:
+                    print("HC3 credentials error", file=sys.stderr)
+                    print("Exiting refreshStates loop", file=sys.stderr)
+                    break
+
+            except requests.exceptions.Timeout:
+                pass
+            except requests.exceptions.ConnectionError:
+                retries += 1
+                if retries > 5:
+                    print(f"Connection error: {nurl}", file=sys.stderr)
+                    print("Exiting refreshStates loop", file=sys.stderr)
+                    break
+            except Exception as e:
+                print(f"Error: {e} {nurl}", file=sys.stderr)
+
+            # Sleep between requests
+            time.sleep(1)
+
+        _refresh_running = False
+
+    # Start the thread
+    _refresh_thread = Thread(target=refresh_runner, daemon=True)
+    _refresh_thread.start()
+
+    return {"status": "started", "thread_id": _refresh_thread.ident}
+
+
+@lua_exporter.export(description="Add event to the event queue", category="refresh", inject_runtime=True)
+def addEvent(lua_runtime, event):
+    """Add an event to the event queue - accepts dict only"""
+    global _events, _event_count
+
+    try:
+        with _events_lock:
+            _event_count += 1
+            event_with_counter = {'last': _event_count, 'event': event}
+            _events.append(event_with_counter)
+
+        # Call _PY.newRefreshStatesEvent if it exists (for Lua event hooks)
+        try:
+            if hasattr(lua_runtime.globals(), '_PY') and hasattr(lua_runtime.globals()['_PY'], 'newRefreshStatesEvent'):
+                if isinstance(event, str):
+                    lua_runtime.globals()['_PY']['newRefreshStatesEvent'](event)
                 else:
-                    # Fallback to default
-                    success = webbrowser.open(url)
-                    return {
-                        "success": success,
-                        "message": f"Opened {url} in default browser ({browser_name} not available)",
-                        "browser": "default",
-                        "platform": system
-                    }
-                    
-            except webbrowser.Error:
-                # Browser not found, use default
-                success = webbrowser.open(url)
-                return {
-                    "success": success,
-                    "message": f"Opened {url} in default browser ({browser_name} not found)",
-                    "browser": "default",
-                    "platform": system
-                }
-        else:
-            # No specific browser requested, use default
-            success = webbrowser.open(url)
+                    lua_runtime.globals()['_PY']['newRefreshStatesEvent'](json.dumps(event))
+        except Exception:
+            # Silently ignore errors in event hook - don't break the queue
+            pass
+
+        return {"status": "added", "event_count": _event_count}
+    except Exception as e:
+        print(f"Error adding event: {e}", file=sys.stderr)
+        return {"status": "error", "error": str(e)}
+
+
+@lua_exporter.export(description="Add event to the event queue from Lua", category="refresh", inject_runtime=True)
+def addEventFromLua(lua_runtime, event_json: str):
+    """Add an event to the event queue from Lua (JSON string input)"""
+    try:
+        event = json.loads(event_json)
+        return addEvent(lua_runtime, event)
+    except Exception as e:
+        print(f"Error parsing event JSON: {e}", file=sys.stderr)
+        return {"status": "error", "error": str(e)}
+
+
+@lua_exporter.export(description="Get events since counter", category="refresh", inject_runtime=True)
+def getEvents(lua_runtime, counter: int = 0):
+    """Get events since the given counter"""
+    global _events, _event_count
+
+    with _events_lock:
+        events = list(_events)  # Copy to avoid race conditions
+        count = events[-1]['last'] if events else 0
+        evs = [e['event'] for e in events if e['last'] > counter]
+
+    ts = datetime.now().timestamp()
+    tsm = time.time()
+
+    res = {
+        'status': 'IDLE',
+        'events': evs,
+        'changes': [],
+        'timestamp': ts,
+        'timestampMillis': tsm,
+        'date': datetime.fromtimestamp(ts).strftime('%H:%M | %d.%m.%Y'),
+        'last': count
+    }
+
+    # Return as Lua table directly
+    return _python_to_lua_table(lua_runtime, res)
+
+
+@lua_exporter.export(description="Stop refresh states polling", category="refresh", inject_runtime=True)
+def stopRefreshStates(lua_runtime):
+    """Stop refresh states polling"""
+    try:
+        if hasattr(lua_runtime, '_refresh_thread') and lua_runtime._refresh_thread:
+            lua_runtime._refresh_thread.stop()
+            lua_runtime._refresh_thread = None
+            return True
+        return False
+    except Exception as e:
+        print(f"Error stopping refresh states: {e}", file=sys.stderr)
+        return False
+
+
+@lua_exporter.export(description="Get refresh states status", category="refresh", inject_runtime=True)
+def getRefreshStatesStatus(lua_runtime):
+    """Get refresh states polling status"""
+    try:
+        if hasattr(lua_runtime, '_refresh_thread') and lua_runtime._refresh_thread:
             return {
-                "success": success,
-                "message": f"Opened {url} in default browser",
-                "browser": "default",
-                "platform": system
+                'running': lua_runtime._refresh_thread.is_alive(),
+                'url': lua_runtime._refresh_thread.url,
+                'start': lua_runtime._refresh_thread.start,
+                'options': lua_runtime._refresh_thread.options
             }
-            
+        return {'running': False}
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"Browser open failed: {str(e)}",
-            "platform": platform.system()
-        }
-
-
-@lua_exporter.export(description="Open plua2 web interface in external browser", category="browser")
-def open_web_interface_browser():
-    """Open the plua2 web interface in external browser"""
-    try:
-        from . import network
-        runtime = network._current_runtime
-        if runtime and hasattr(runtime, 'api_server') and runtime.api_server:
-            port = runtime.api_server.port
-            url = f"http://localhost:{port}/web"
-        else:
-            # Default port
-            url = "http://localhost:8888/web"
-            
-        return open_browser(url)
-    except Exception as e:
-        return {"success": False, "error": f"Failed to get API server info: {str(e)}"}
-
-
-@lua_exporter.export(description="List available browsers", category="browser")
-def list_browsers():
-    """List available browsers on the system"""
-    import webbrowser
-    import platform
-    
-    try:
-        system = platform.system()
-        
-        # Common browser names to check
-        browsers_to_check = [
-            'chrome', 'firefox', 'safari', 'edge', 'opera',
-            'chromium', 'brave', 'vivaldi'
-        ]
-        
-        available = []
-        
-        for browser_name in browsers_to_check:
-            try:
-                browser = webbrowser.get(browser_name)
-                available.append(browser_name)
-            except webbrowser.Error:
-                pass  # Browser not available
-        
-        # Platform-specific browsers
-        if system == "Darwin":  # macOS
-            platform_browsers = ['safari', 'chrome', 'firefox']
-        elif system == "Windows":
-            platform_browsers = ['edge', 'chrome', 'firefox']
-        else:  # Linux
-            platform_browsers = ['firefox', 'chrome', 'chromium']
-        
-        return {
-            "success": True,
-            "available_browsers": available,
-            "platform": system,
-            "platform_browsers": platform_browsers,
-            "default_browser": "system default"
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "error": f"Failed to list browsers: {str(e)}",
-            "platform": platform.system()
-        }
-
+        print(f"Error getting refresh states status: {e}", file=sys.stderr)
+        return {'running': False, 'error': str(e)}

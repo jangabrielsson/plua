@@ -96,11 +96,9 @@ function clearTimeout(callback_id)
   if timer then
     timer.cancelled = true
     _PY.pythonCancelTimer(callback_id)  -- Notify Python to cancel the task
-    print("Timer", callback_id, "cancelled")
-    return true
+    --print("Timer", callback_id, "cancelled")
   else
-    print("Timer", callback_id, "not found for cancellation")
-    return false
+    --print("Timer", callback_id, "not found for cancellation")
   end
 end
 
@@ -109,7 +107,7 @@ local function _timer_direct(fun, ms)
   return _addTimer(fun, ms)
 end
 
-function sleep(ms)
+function _PY.sleep(ms)
   local co = coroutine.running()
   return _addTimer(function()
      coroutine.resume(co)
@@ -156,17 +154,17 @@ end
 local _print = print
 
 function print(...)
-  local res = {"<font color='white'>",os.date("[%H:%M:%S]")}
+  local res = {}
   for _,v in ipairs({...}) do
     res[#res+1] = tostring(v)
   end
-  res[#res+1] = "</font>"
-  _print(table.concat(res, " "))
+  _print("<font color='white'>"..table.concat(res, " ").."</font>")
 end
 
 json = {}
 json.encode = _PY.json_encode
 json.decode = _PY.json_decode
+json.encodeFormated = _PY.json_encode_formated
 
 os.getenv = _PY.getenv_with_dotenv
 net = require("net")
@@ -231,3 +229,49 @@ end
 _PY.get_quickapps = _PY.get_quickapps or function() return {} end
 _PY.get_quickapp = _PY.get_quickapp or function(_id) return nil end
 -- _PY.broadcast_view_update is set up by Python runtime, no default needed
+
+------- PLUA functions ------------
+
+PLUA = {}
+function PLUA.getRuntimeState()
+  local state = _PY.getRuntimeState()
+  return { active_timers = state.active_timers, pending_timers = state.pending_timers }
+end
+
+function PLUA.readFile(path)
+  local f = io.open(path, "r")
+  if not f then
+    error("Error: Could not open file:"..path)
+  end
+  local content = f:read("*a")
+  f:close()
+  return content
+end
+
+function PLUA.writeFile(path, content)
+  local f = io.open(path, "w")
+  if not f then
+    error("Error: Could not open file for writing:"..path)
+  end
+  f:write(content)
+  f:close()
+end
+
+PLUA.millisec = _PY.millitime
+PLUA.getcwd = _PY.getcwd -- () -> string
+PLUA.listdir = _PY.listdir -- (path) -> table of filenames
+PLUA.pathInfo = _PY.path_info -- (path) -- (path) -> table with path information
+PLUA.fileExist = function(path) if path==nil then return false else return _PY.path_info(path).exists end end -- (path) -> boolean
+PLUA.base64Encode = _PY.base64_encode -- (string) -> string
+PLUA.base64Decode = _PY.base64_decode -- (string) -> string
+PLUA.openInVSCodeBrowser = _PY.open_in_vscode_browser -- (url) -> boolean
+PLUA.openWebInterface = _PY.open_web_interface -- () -> boolean
+PLUA.openBrowser = _PY.open_browser -- (url) -> boolean
+PLUA.openBrowserSpecific = _PY.open_browser_specific -- (url, name) -> boolean
+PLUA.openWebInterfaceBrowser = _PY.open_web_interface_browser -- () -> boolean
+PLUA.listBrowsers = _PY.list_browsers -- () -> table of browser names
+PLUA.html2Console = _PY.html2console -- (string) -> string
+PLUA.getAvailableColors = _PY.get_available_colors -- () -> table of color names
+PLUA.isRunning = _PY.isRunning -- () -> boolean
+
+PLUA.getConfig = _PY.get_config

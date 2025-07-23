@@ -53,6 +53,8 @@ function string.split(inputstr, sep)
   return t
 end
 
+getmetatable("").__idiv = function(str,len) return (#str < len or #str < 4) and str or str:sub(1,len-2)..".." end -- truncate strings
+
 local function readFile(fname,silent)
   local f = io.open(fname, "r")
   if not f and silent then return end
@@ -106,9 +108,9 @@ local typeColor = {
 local function __fibaro_add_debug_message(tag, msg, typ, nohtml)
   local time = ""
   if Emu.shortTime then
-    time = tostring(os.date("[%H:%M:%S]"))
+    time = tostring(Emu.lib.userDate("[%H:%M:%S]"))
   else
-    time = tostring(os.date("[%d.%m.%Y][%H:%M:%S]"))
+    time = tostring(Emu.lib.userDate("[%d.%m.%Y][%H:%M:%S]"))
   end
   local typStr = fmt("<font color='%s'>%-7s</font>", typeColor[typ], typ)
   msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
@@ -208,6 +210,19 @@ do
   end
 end 
 
+local function parseTime(str)
+  local D,h = str:match("^(.*) ([%d:]*)$")
+  if D == nil and str:match("^[%d/]+$") then D,h = str,os.date("%H:%M:%S")
+  elseif D == nil and str:match("^[%d:]+$") then D,h = os.date("%Y/%m/%d"),str
+  elseif D == nil then error("Bad time value: "..str) end
+  local y,m,d = D:match("(%d+)/(%d+)/?(%d*)")
+  if d == "" then y,m,d = os.date("%Y"),y,m end
+  local H,M,S = h:match("(%d+):(%d+):?(%d*)")
+  if S == "" then H,M,S = H,M,0 end
+  assert(y and m and d and H and M and S,"Bad time value: "..str)
+  return os.time({year=y,month=m,day=d,hour=H,min=M,sec=S})
+end
+
 ---------------------------
 Emu.lib.readFile = readFile
 Emu.lib.writeFile = writeFile
@@ -215,3 +230,4 @@ Emu.lib.sunCalc = sunCalc
 Emu.lib.logStr = logStr
 Emu.lib.__fibaro_add_debug_message = __fibaro_add_debug_message
 Emu.lib.prettyCall = prettyCall
+Emu.lib.parseTime = parseTime

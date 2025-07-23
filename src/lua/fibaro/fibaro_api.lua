@@ -1,5 +1,4 @@
 local Emu = ...
-local json = require("fibaro.json")
 local fmt = string.format
 
 function string.split(inputstr, sep)

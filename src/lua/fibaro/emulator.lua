@@ -1,5 +1,6 @@
 
 local mobdebug = require("mobdebug")
+mobdebug.on()
 local class = require("class")
 require("fibaro.json")
 local fpath = package.searchpath("fibaro", package.path) or ""
@@ -34,7 +35,7 @@ function Emulator:__init()
   
   self.EVENT = {}
   self.debugFlag = false
-
+  
   local api = {}
   function api.get(path) return self:API_CALL("GET", path) end
   function api.post(path, data) return self:API_CALL("POST", path, data) end
@@ -48,10 +49,26 @@ function Emulator:__init()
   function hc3api.put(path, data) return self:HC3_CALL("PUT", path, data) end
   function hc3api.delete(path) return self:HC3_CALL("DELETE", path) end
   self.api.hc3 = hc3api
+  
+  local orgTime,orgDate,timeOffset = os.time,os.date,0
+  
+  local function round(x) return math.floor(x+0.5) end
+  local function userTime(a) 
+    return a == nil and round(PLUA.millisec() + timeOffset) or orgTime(a) 
+  end
+  local function userDate(a, b) 
+    return b == nil and orgDate(a, userTime()) or orgDate(a, round(b)) 
+  end
+
+  local function getTimeOffset() return timeOffset end
+  local function setTimeOffset(offs) timeOffset = offs end
+  self.lib.userTime = userTime
+  self.lib.userDate = userDate
+  function self:setTimeOffset(offs) setTimeOffset(offs) end
 
   loadLib("utils",self)
   loadLib("fibaro_api",self)
-  --loadLib("tools",self)
+  loadLib("tools",self)
   self.lib.ui = loadLib("ui",self)
 end
 
@@ -82,6 +99,9 @@ function Emulator:getQuickApp(id)
   local info = self.DIR[id or ""]
   if info then return { UI = info.UI, device = info.device } end
 end
+
+function Emulator:saveState() end
+function Emulator:loadState() end
 
 local function loadFile(env,path,name,content)
   if not content then
@@ -147,7 +167,7 @@ function Emulator:createUI(UI) -- Move to ui.lua ?
     uiView = json.initArray({})
     uiCallbacks = json.initArray({})
   end
-
+  
   return uiCallbacks,viewLayout,uiView,UImap
 end
 
@@ -187,7 +207,7 @@ function Emulator:createInfoFromContent(filename,content)
       end
     end
   end
-
+  
   if not info.device then
     if deviceTypes == nil then deviceTypes = self:loadResource("devices.json",true) end
     headers.type = headers.type or 'com.fibaro.binarySwitch'
@@ -202,7 +222,7 @@ function Emulator:createInfoFromContent(filename,content)
     info.device = dev
     dev.interfaces = headers.interfaces or {}
   end
-
+  
   local dev = info.device
   info.files = headers.files or {}
   local props = dev.properties or {}
@@ -288,7 +308,7 @@ function Emulator:loadMainFile(filename)
   local info = self:createInfoFromFile(filename)
   if info.headers.debug then self.debugFlag = true end
   if _PY.config.debug == true then self.debugFlag = true end
-
+  
   if info.headers.offline then
     self.offline = true
     self:DEBUG("Offline mode")
@@ -300,8 +320,17 @@ function Emulator:loadMainFile(filename)
     self.lib.setupOfflineRoutes()
   end
   
-  self:loadQA(info)
+  if info.headers.time then 
+    local timeOffset = info.headers.time
+    if type(timeOffset) == "string" then
+      timeOffset = self.lib.parseTime(timeOffset)
+      self:setTimeOffset(timeOffset-os.time())
+      self:DEBUG("Time offset set to", self.lib.userDate("%c"))
+    end
+  end
 
+  self:loadQA(info)
+  
   self:registerDevice(info)
   
   self:startQA(info.device.id)
@@ -320,9 +349,11 @@ local stdLua = {
 function Emulator:loadQA(info)
   -- Load and execute included files + main file
   local env = { 
-    fibaro = { plua = self }, net = net, json = json, api = self.api,
-    __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
-  }
+    fibaro = { 
+      plua = self }, net = net, json = json, api = self.api,
+      os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
+      __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
+    }
   for _,name in ipairs(stdLua) do env[name] = _G[name] end
   
   info.env = env
@@ -396,28 +427,28 @@ function Emulator:HC3_CALL(method, path, data)
   assert(self.config.hc3_creds, "HC3 credentials are not set")
   local url = self.config.hc3_url.."/api"..path
   local res = _PY.http_call_sync(
-    method, 
-    url,
-    data and json.encodeFast(data) or nil,
-    {
-      ["User-Agent"] = "plua2/0.1.0",
-      ["Content-Type"] = "application/json",
-      ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
-    }
-  )
+  method, 
+  url,
+  data and json.encodeFast(data) or nil,
+  {
+    ["User-Agent"] = "plua2/0.1.0",
+    ["Content-Type"] = "application/json",
+    ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
+  }
+)
 
-  if res.success then
-    if tonumber(res.status_code) and res.status_code >= 200 and res.status_code < 300 then
-      local data = nil
-      _,data = pcall(json.decode, res.data)
-      return data, res.status_code
-    end
+if res.success then
+  if tonumber(res.status_code) and res.status_code >= 200 and res.status_code < 300 then
+    local data = nil
+    _,data = pcall(json.decode, res.data)
+    return data, res.status_code
   end
-  return nil, res.status_code, res.error_message
+end
+return nil, res.status_code, res.error_message
 end
 
 function Emulator:API_CALL(method, path, data)
-  self:DEBUG("fibaroapi called:", method, path, data)
+  self:DEBUG("fibaroapi called:", method, path, data and json.encodeFast(data) // 100)
   
   -- Try to get route from router
   local handler, vars, query = self.lib.router:getRoute(method, path)
@@ -434,12 +465,22 @@ function Emulator:API_CALL(method, path, data)
     return self:HC3_CALL(method, path, data)
   end
   
-  return nil, self.router.HTTP.NOT_IMPLEMENTED
+  return nil, self.lib.router.HTTP.NOT_IMPLEMENTED
 end
 
-function Emulator:refreshEvent(typ,data) 
-  --_PY.addEvent(json.encode({type=typ,data=data}))
+local pollStarted = false
+function Emulator:startRefreshStatesPolling()
+  if not (self.offline or pollStarted) then
+    pollStarted = true
+    local result = _PY.pollRefreshStates(0,self.config.hc3_url.."/api/refreshStates?last=", {
+      headers = {Authorization = "Basic " .. self.config.hc3_creds}
+    })
+  end
 end
+
+function Emulator:getRefreshStates(last) return _PY.getEvents(last) end
+
+function Emulator:refreshEvent(typ,data) _PY.addEvent(json.encode({type=typ,data=data})) end
 
 local headerKeys = {}
 function headerKeys.name(str,info) info.name = str end
@@ -473,10 +514,10 @@ function headerKeys.file(str,info)
   assert(path,"Invalid file header: "..str)
   if path:sub(1,1) == '$' then
     local lpath = package.searchpath(path:sub(2),package.path)
-    if _PY.file_exists(lpath) then path = lpath
+    if PLUA.fileExist(lpath) then path = lpath
     else error(fmt("Library not found: '%s'",path)) end
   end
-  if _PY.file_exists(path) then
+  if PLUA.fileExist(path) then
     info.files[name] = {path = path, content = nil }
   else
     error(fmt("File not found: '%s'",path))

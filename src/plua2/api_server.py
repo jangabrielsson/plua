@@ -82,7 +82,6 @@ class PlUA2APIServer:
 
         # Clean up the port if it's in use
         if not is_port_free(port, host):
-            print(f"Port {port} is in use, attempting cleanup...")
             if not cleanup_port(port, host):
                 raise RuntimeError(f"Failed to free port {port}. Please manually stop any processes using this port.")
 
@@ -619,8 +618,6 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
             # Port is not in use
             return True
 
-        print(f"Port {port} is in use, attempting to free it...")
-
         # Find processes using the port
         killed_processes = []
         for proc in psutil.process_iter(['pid', 'name']):
@@ -633,8 +630,6 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
                             pid = proc.info['pid']
                             name = proc.info['name']
 
-                            print(f"Found process using port {port}: {name} (PID: {pid})")
-
                             # Try to terminate gracefully first
                             try:
                                 process = psutil.Process(pid)
@@ -645,19 +640,16 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
 
                                 if process.is_running():
                                     # Force kill if still running
-                                    print(f"Force killing process {pid}")
                                     process.kill()
 
                                 killed_processes.append(f"{name} (PID: {pid})")
 
                             except psutil.AccessDenied:
-                                print(f"Access denied when trying to kill process {pid}")
                                 return False
                             except psutil.NoSuchProcess:
                                 # Process already gone
                                 pass
                             except Exception as e:
-                                print(f"Error killing process {pid}: {e}")
                                 return False
 
             except (psutil.AccessDenied, psutil.NoSuchProcess):
@@ -668,7 +660,6 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
                 continue
 
         if killed_processes:
-            print(f"Killed processes: {', '.join(killed_processes)}")
             # Give the OS time to clean up (reduced from 1s to 0.2s)
             time.sleep(0.2)
 
@@ -679,14 +670,13 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
         sock.close()
 
         if result == 0:
-            print(f"Warning: Port {port} is still in use after cleanup attempt")
             return False
         else:
-            print(f"Port {port} is now free")
+            if killed_processes:  # Only show message if we actually freed something
+                print(f"Port {port} freed")
             return True
 
     except Exception as e:
-        print(f"Error during port cleanup: {e}")
         return False
 
 

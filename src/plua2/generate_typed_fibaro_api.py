@@ -26,7 +26,6 @@ Important: Keep this file in src/plua2/ - it's critical for maintaining the API!
 """
 
 import json
-import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Set
 import argparse
@@ -98,46 +97,68 @@ class TypedAPIGenerator:
         """Generate a Pydantic model from a JSON schema."""
         if model_name in self.generated_models:
             return ""
-        
         self.generated_models.add(model_name)
-        
         properties = schema.get('properties', {})
         required_fields = schema.get('required', [])
-        
         # Clean model name for Python class
         clean_name = re.sub(r'[^a-zA-Z0-9_]', '_', model_name)
         if clean_name[0].isdigit():
             clean_name = f"Model_{clean_name}"
-        
-        code = f"\nclass {clean_name}(BaseModel):\n"
-        
+        # Always two newlines before each class
+        code = f"\n\nclass {clean_name}(BaseModel):\n"
         if not properties:
             code += "    pass\n"
             return code
-        
         # Add description if available
         if 'description' in schema:
             code += f'    """{schema["description"]}"""\n'
-        
-        # Generate fields
+        # Special case for DeviceActionArgumentsDto
+        if model_name == 'DeviceActionArgumentsDto':
+            # Always generate delay and integrationPin as optional
+            for field_name, field_schema in properties.items():
+                if field_name == 'delay':
+                    code += '    delay: Optional[float] = None  # Now truly optional\n'
+                elif field_name == 'integrationPin':
+                    code += '    integrationPin: Optional[str] = None  # Now truly optional\n'
+                else:
+                    is_required = field_name in required_fields
+                    field_type = self.python_type_from_schema(field_schema, is_required)
+                    safe_field_name = field_name
+                    if field_name in ['from', 'to', 'type', 'filter', 'import', 'class', 'def', 'if', 'else', 'for', 'while', 'in', 'is', 'not', 'and', 'or']:
+                        safe_field_name = f"{field_name}_"
+                    elif not field_name.replace('_', '').isalnum() or field_name[0].isdigit() or field_name.startswith('$'):
+                        safe_field_name = re.sub(r'[^a-zA-Z0-9_]', '_', field_name)
+                        if safe_field_name[0].isdigit() or safe_field_name.startswith('_'):
+                            safe_field_name = f"field_{safe_field_name}"
+                    needs_alias = safe_field_name != field_name
+                    description = field_schema.get('description', '')
+                    if needs_alias:
+                        if description:
+                            code += f'    {safe_field_name}: {field_type} = Field(..., alias="{field_name}", description="{description}")\n'
+                        elif is_required:
+                            code += f'    {safe_field_name}: {field_type} = Field(..., alias="{field_name}")\n'
+                        else:
+                            code += f'    {safe_field_name}: {field_type} = Field(None, alias="{field_name}")\n'
+                    else:
+                        if description:
+                            code += f'    {safe_field_name}: {field_type} = Field(..., description="{description}")\n'
+                        elif is_required:
+                            code += f'    {safe_field_name}: {field_type}\n'
+                        else:
+                            code += f'    {safe_field_name}: {field_type} = None\n'
+            return code
+        # Normal model generation for all other models
         for field_name, field_schema in properties.items():
             is_required = field_name in required_fields
             field_type = self.python_type_from_schema(field_schema, is_required)
-            
-            # Handle Python keywords and special characters
             safe_field_name = field_name
             if field_name in ['from', 'to', 'type', 'filter', 'import', 'class', 'def', 'if', 'else', 'for', 'while', 'in', 'is', 'not', 'and', 'or']:
                 safe_field_name = f"{field_name}_"
             elif not field_name.replace('_', '').isalnum() or field_name[0].isdigit() or field_name.startswith('$'):
-                # Handle special characters and field names that start with $ or digits
                 safe_field_name = re.sub(r'[^a-zA-Z0-9_]', '_', field_name)
                 if safe_field_name[0].isdigit() or safe_field_name.startswith('_'):
                     safe_field_name = f"field_{safe_field_name}"
-            
-            # Use Field with alias for renamed fields
             needs_alias = safe_field_name != field_name
-            
-            # Add field with description if available
             description = field_schema.get('description', '')
             if needs_alias:
                 if description:
@@ -153,7 +174,6 @@ class TypedAPIGenerator:
                     code += f'    {safe_field_name}: {field_type}\n'
                 else:
                     code += f'    {safe_field_name}: {field_type} = None\n'
-        
         return code
 
     def clean_operation_id(self, operation_id: str) -> str:
@@ -437,6 +457,7 @@ from datetime import datetime, date
 import logging
 import json
 
+# flake8: noqa
 # Import all models from the separate models file
 from .fibaro_api_models import *
 
@@ -476,7 +497,7 @@ async def handle_request(request: Request, method: str, body_data: Any = None):
 
 '''
         
-        endpoints_footer = f'''
+        endpoints_footer = '''
 
 def create_fibaro_api_routes(app: FastAPI):
     """Create all typed Fibaro API routes."""
@@ -486,18 +507,20 @@ def create_fibaro_api_routes(app: FastAPI):
         raise RuntimeError("Interpreter not set. Call set_interpreter() first.")
     
     # Generated Fibaro API endpoints
-{endpoints_code}
-    
-    logger.info(f"Created {len(all_endpoints) + 2} API endpoints with full type safety")
 '''
-        
+
+        endpoints_footer += endpoints_code
+        endpoints_footer += """
+    logger.info(f"Created {len(all_endpoints) + 2} API endpoints with full type safety")
+"""
+
         # Write the endpoints file
         endpoints_file = output_dir / "fibaro_api_endpoints.py"
         complete_endpoints_code = endpoints_header + endpoints_footer
-        
+
         with open(endpoints_file, 'w') as f:
             f.write(complete_endpoints_code)
-        
+
         print(f"Generated {endpoints_file} with {len(all_endpoints)} endpoints")
         return len(all_endpoints)
 

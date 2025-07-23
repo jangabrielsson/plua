@@ -183,7 +183,7 @@ class PlUA2APIServer:
             result = sock.connect_ex((self.host if self.host != "0.0.0.0" else "127.0.0.1", self.port))
             sock.close()
             return result == 0  # 0 means connection successful (server is listening)
-        except:
+        except Exception:
             return False
 
     def _call_fibaro_api_hook(self, method: str, path: str, data: Any = None):
@@ -376,7 +376,7 @@ class PlUA2APIServer:
                     await websocket.receive_text()
             except WebSocketDisconnect:
                 pass
-            except Exception as e:
+            except Exception:
                 pass
             finally:
                 self.websocket_connections.discard(websocket)
@@ -413,7 +413,7 @@ class PlUA2APIServer:
                     try:
                         import json
                         await websocket.send_text(json.dumps(message))
-                    except Exception as e:
+                    except Exception:
                         # Connection is broken, mark for removal
                         disconnected.add(websocket)
 
@@ -451,7 +451,7 @@ class PlUA2APIServer:
             for websocket in self.websocket_connections:
                 try:
                     await websocket.send_text(json.dumps(message))
-                except Exception as e:
+                except Exception:
                     disconnected.add(websocket)
 
             # Clean up disconnected clients
@@ -649,7 +649,7 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
                             except psutil.NoSuchProcess:
                                 # Process already gone
                                 pass
-                            except Exception as e:
+                            except Exception:
                                 return False
 
             except (psutil.AccessDenied, psutil.NoSuchProcess):
@@ -676,7 +676,7 @@ def cleanup_port(port: int, host: str = "0.0.0.0") -> bool:
                 print(f"Port {port} freed")
             return True
 
-    except Exception as e:
+    except Exception:
         return False
 
 

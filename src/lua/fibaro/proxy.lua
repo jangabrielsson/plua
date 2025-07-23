@@ -180,7 +180,7 @@ local function existingProxy(name,headers)
     end
     Emu:saveState()
     Emu.proxyId = device.id -- Just save the last proxy to be used for restricted API calls
-    Emu.api.hc3.post("/devices/"..device.id.."/action/CONNECT",{args={{ip=Emu.lib.IPAddress,port=Emu.lib.webport}}})
+    Emu.api.hc3.post("/devices/"..device.id.."/action/CONNECT",{args={{ip=Emu.config.IPAddress,port=Emu.config.webport}}})
     return info
   end
 end

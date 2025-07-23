@@ -27,6 +27,8 @@ function Emulator:__init()
   if self.config.hc3_user and self.config.hc3_password then
     self.config.hc3_creds = _PY.base64_encode(self.config.hc3_user..":"..self.config.hc3_password)
   end
+  self.config.IPAddress = PLUA.config.host_ip
+  self.config.webport = PLUA.config.runtime_config.api_config.port
   self.DIR = {}
   self.lib = { loadLib = loadLib }
   self.lib.userTime = os.time

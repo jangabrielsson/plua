@@ -1,5 +1,5 @@
 -- fibaro.lua
-
+_PY = _PY or {}
 local mobdebug = require('mobdebug')
 -- Global table with fibaro functions.
 fibaro = {}

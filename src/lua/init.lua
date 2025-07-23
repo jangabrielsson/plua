@@ -274,4 +274,4 @@ PLUA.html2Console = _PY.html2console -- (string) -> string
 PLUA.getAvailableColors = _PY.get_available_colors -- () -> table of color names
 PLUA.isRunning = _PY.isRunning -- () -> boolean
 
-PLUA.getConfig = _PY.get_config
+PLUA.config = _PY.config

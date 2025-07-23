@@ -37,4 +37,13 @@ local dotenv_db_url = _PY.getenv_with_dotenv("DATABASE_URL", "not found")
 print("Regular getenv DATABASE_URL:", env_db_url)
 print("Dotenv getenv DATABASE_URL:", dotenv_db_url)
 
+print("\n5. Config:")
+for k,v in pairs(_PY.config) do
+    if type(v) == "table" then
+      print(k,"=",_PY.json_encode(v))
+    else
+        print(k,"=",v)
+    end
+end
+
 print("\n=== Example complete ===")

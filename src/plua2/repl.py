@@ -13,9 +13,9 @@ class Plua2REPL:
     """Interactive        # Give the API server a moment to start
         await asyncio.sleep(0.5)L for plua2 with async support"""
 
-    def __init__(self, debug: bool = False):
-        self.runtime = LuaAsyncRuntime()
-        self.debug = debug
+    def __init__(self, runtime):
+        self.runtime = runtime
+        self.debug = runtime.config.get('debug', False)
         self.running = True
         self.repl_task = None
 
@@ -217,15 +217,20 @@ class Plua2REPL:
             self.runtime.stop()
 
 
-async def run_repl(debug: bool = False, api_config: dict = None):
+async def run_repl(runtime=None):
     """Main function to run the REPL, optionally with API server"""
     # Name the main task
     current_task = asyncio.current_task()
     if current_task:
+        api_config = runtime.config.get('api_config')
         current_task.set_name("repl_api_main" if api_config else "repl_main")
 
-    repl = Plua2REPL(debug)
+    if runtime is None:
+        # from .runtime import LuaAsyncRuntime
+        runtime = LuaAsyncRuntime()
+    repl = Plua2REPL(runtime)
     api_task = None
+    api_config = runtime.config.get('api_config')
     if api_config:
         from .api_server import PlUA2APIServer
         print(f"API server on {api_config['host']}:{api_config['port']}")

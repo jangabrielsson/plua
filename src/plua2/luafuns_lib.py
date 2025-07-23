@@ -495,36 +495,26 @@ def get_config(lua_runtime) -> Dict[str, Any]:
         "homedir": os.path.expanduser("~"),
         "cwd": os.getcwd(),
         "tempdir": os.path.join(os.path.expanduser("~"), "tmp") if platform.system() != "Windows" else os.environ.get("TEMP", "C:\\temp"),
-        
         # Path separators
         "fileseparator": os.sep,
         "pathseparator": os.pathsep,
-        
         # Platform information
         "platform": platform.system().lower(),
         "architecture": platform.machine(),
         "python_version": sys.version.split()[0],
-        
         # Environment flags
         "debug": getenv_dotenv("DEBUG", "false").lower() in ("true", "1", "yes", "on"),
         "production": getenv_dotenv("PRODUCTION", "false").lower() in ("true", "1", "yes", "on"),
-        
         # User information
         "username": os.getenv("USER") or os.getenv("USERNAME") or "unknown",
-        
         # Common environment variables
         "path": os.getenv("PATH", ""),
         "lang": os.getenv("LANG", "en_US.UTF-8"),
-        
         # Plua2 specific
         "plua2_version": "0.1.0",
         "lua_version": "5.4",
-
         # HOST IP address
         "host_ip": get_host_ip(),
-
-        # API server port
-        # "api_port": lua_runtime.api_port if lua_runtime and hasattr(lua_runtime, 'api_port') else 8080
     }
     
     return config

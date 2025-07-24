@@ -1,2 +1,0 @@
-This is a test file created at Thu Jul 24 12:46:02 2025
-Second line with UTF-8: 🚀

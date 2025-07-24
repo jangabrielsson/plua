@@ -193,6 +193,39 @@
       "label": "GitHub: Create Release (Interactive)",
       "type": "shell",
       "command": "./scripts/create-release.sh",
+      "args": ["${input:versionBumpType}", "${input:releaseNotes}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "GitHub: Create Patch Release (Quick)",
+      "type": "shell",
+      "command": "./scripts/create-release.sh",
+      "args": ["patch", "Patch release - bug fixes and minor improvements"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "GitHub: Create Minor Release (Quick)",
+      "type": "shell",
+      "command": "./scripts/create-release.sh",
+      "args": ["minor", "Minor release - new features and enhancements"],
       "group": "build",
       "presentation": {
         "echo": true,

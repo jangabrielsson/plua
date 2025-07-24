@@ -19,6 +19,10 @@ Welcome to the plua Lua API documentation! plua provides a rich set of built-in 
 ### 🔧 Utility Functions
 - **[PLUA Module](Plua.md)** - Built-in utility functions for file operations, browser integration, and runtime access
 
+### 🔧 Fibaro and QuickApp Support
+- **[Fibaro functions](Fibaro.md)** - fibaro.* functions supported
+- **[QuickApp functions](QuickApp.md)** - QuickApp classes
+
 ## 🚀 Quick Start Examples
 
 ### Simple HTTP Request

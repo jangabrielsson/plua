@@ -47,7 +47,10 @@ jobs:
       id: check_version
       run: |
         VERSION="${{ steps.get_version.outputs.version }}"
-        if pip index versions plua | grep -q "$VERSION"; then
+        echo "Checking if version $VERSION exists on PyPI..."
+        
+        # Use PyPI JSON API to check if version exists
+        if curl -s "https://pypi.org/pypi/plua/$VERSION/json" | grep -q '"version"'; then
           echo "Version $VERSION already exists on PyPI"
           echo "skip_upload=true" >> $GITHUB_OUTPUT
         else

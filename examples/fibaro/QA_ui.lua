@@ -12,6 +12,8 @@
 --%%u:{select="select1",text="Select",visible=true,onToggled="mySelect",value='2',options={{type='option',text='Option 1',value='11'},{type='option',text='Option 2',value='21'},{type='option',text='Option 3',value='31'}}}
 --%%u:{multi="multi1",text="Multi",visible=true,values={"1","3"},onToggled="myMulti",options={{type='option',text='Option 1',value='11'},{type='option',text='Option 2',value='21'},{type='option',text='Option 3',value='31'}}}
 
+--%%var:textenv=env.HC3_URL
+
 function QuickApp:turnOn()
   self:updateProperty('value',99)
 end
@@ -59,6 +61,7 @@ end
 
 function QuickApp:onInit()
   self:debug("onInit")
+  local a = self:getVariable("textenv")
   -- Only open browser on first initialization
   if not self.browser_opened then
     local result = _PY.open_web_interface_browser()

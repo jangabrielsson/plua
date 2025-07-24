@@ -10,7 +10,20 @@ local rsrcpath = fpath.."rsrc".._PY.config.fileseparator
 local fmt = string.format
 local function loadLib(name,...) return loadfile(libpath..name..".lua","t",_G)(...) end
 _print = print
+local pluaConf = {}
 local DEVICEID = 5555-1
+
+local function loadLuaFile(filename)
+  if not _PY.fileExist(filename) then return {} end
+  local f, err = loadfile(filename, "t", _G)
+  if not f then error(fmt("Failed to load %s: %s",filename,err)) end
+  local stat,res = pcall(f)
+  if not stat then  error(fmt("Error in %s: %s",filename,res)) end
+  if type(res) ~= "table" then
+    error(fmt("Invalid config file %s: expected table, got %s",filename,type(res)))
+  end
+  return res
+end
 
 --@class 'Emulator'
 Emulator = {}
@@ -108,6 +121,10 @@ function Emulator:__init()
   loadLib("fibaro_api",self)
   loadLib("tools",self)
   self.lib.ui = loadLib("ui",self)
+
+  local localPluaConf = loadLuaFile(_PY.config.cwd.._PY.config.fileseparator..".plua")
+  local homePluaConf =loadLuaFile(_PY.config.homedir.._PY.config.fileseparator..".plua")
+  pluaConf = table.merge(homePluaConf,localPluaConf)
 end
 
 function Emulator:DEBUG(...) if self.debugFlag then print(...) end end
@@ -422,8 +439,9 @@ function Emulator:loadQA(info)
   loadFile(env,info.files.main.path,'main',info.files.main.content)
 end
 
+local venv = setmetatable({}, { __index = function(t,k) return os.getenv(k) end })
 local function validate(str,typ,key)
-  local stat,val = pcall(function() return load("return "..str)() end)
+  local stat,val = pcall(function() return load("return "..str, nil, "t", {env = venv, plua = pluaConf})() end)
   if not stat then error(fmt("Invalid header %s: %s",key,str)) end
   if typ and type(val) ~= typ then 
     error(fmt("Invalid header %s: expected %s, got %s",key,typ,type(val)))

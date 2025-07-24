@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Python-Lua async runtime with timer support"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Jan Gabrielsson", email = "jan@gabrielsson.com"},
 ]
@@ -16,7 +16,6 @@ keywords = ["lua", "async", "timer", "coroutine"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -57,9 +56,14 @@ Issues = "https://github.com/jangabrielsson/plua/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["plua*", "lua*"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.setuptools.package-data]
+"lua" = ["*.lua", "**/*.lua"]
+"plua" = ["*.lua", "**/*.lua"]
 
 [tool.setuptools.dynamic]
 version = {attr = "plua.__version__"}

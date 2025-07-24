@@ -127,6 +127,17 @@ This was a bug in versions 1.0.57-1.0.59. Update to the latest version:
 pip install --upgrade plua
 ```
 
+#### Missing init.lua Error
+If you get `FileNotFoundError: init.lua not found at: ...`:
+
+This was a packaging issue in versions 1.0.57-1.0.68 where Lua files weren't included or couldn't be found properly. Update to the latest version:
+
+```bash
+pip install --upgrade plua
+```
+
+If you still get this error after updating to v1.0.69+, please run the command again to see detailed debug output and report the issue on GitHub.
+
 #### Command Not Found (macOS/Linux)
 ```bash
 # Check installation location
@@ -514,6 +525,79 @@ plua --api-port 8888 --fibaro
 curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
 ```
 
+### HC3 Configuration with .env File
+
+To connect plua to a real Fibaro Home Center 3 device, create a `.env` file with your HC3 credentials. plua searches for `.env` files in the following order:
+
+1. **Current directory** (project-specific): `./.env`
+2. **Home directory** (user-global): `~/.env` 
+3. **Config directory** (platform-specific):
+   - Linux/macOS: `~/.config/plua/.env`
+   - Windows: `%APPDATA%\plua\.env`
+
+```bash
+# Option 1: Project-specific .env (recommended for development)
+cd /path/to/your/fibaro/project
+cat > .env << EOF
+HC3_URL=https://192.168.1.100
+HC3_USER=admin
+HC3_PASSWORD=your_password_here
+EOF
+
+# Option 2: User-global .env (works from any directory)
+cat > ~/.env << EOF
+HC3_URL=https://192.168.1.100
+HC3_USER=admin
+HC3_PASSWORD=your_password_here
+EOF
+```
+
+The `.env` file should contain:
+- **`HC3_URL`**: Your Home Center 3 IP address or hostname (without trailing slash)
+- **`HC3_USER`**: HC3 username (usually 'admin')  
+- **`HC3_PASSWORD`**: HC3 password
+
+Example `.env` file:
+```env
+# Fibaro HC3 Connection Settings
+HC3_URL=https://192.168.1.100
+HC3_USER=admin
+HC3_PASSWORD=mySecretPassword123
+
+# Optional: Add other environment variables your scripts might need
+DEBUG=true
+LOG_LEVEL=info
+```
+
+**Security Notes:**
+- Project-specific `.env` files: Add `.env` to your `.gitignore` file to prevent committing credentials
+- User-global `~/.env` file: Set appropriate file permissions (`chmod 600 ~/.env` on Unix systems)
+- Use HTTPS URLs when possible
+- Consider using environment variables directly in production environments
+
+**Usage Examples:**
+```bash
+# Works from any directory if you have ~/.env configured
+cd /any/directory
+plua --fibaro my_script.lua
+
+# Works from project directory with local .env
+cd /my/fibaro/project
+plua --fibaro script.lua   # Uses ./env (takes precedence over ~/.env)
+```
+
+**Usage in Lua Scripts:**
+```lua
+-- Access environment variables in your Lua code
+local hc3_url = os.getenv("HC3_URL")
+local debug_mode = os.getenv("DEBUG") == "true"
+
+-- Environment variables are automatically loaded by the Fibaro emulator
+-- when you use --fibaro flag
+```
+
+When you run plua with the `--fibaro` flag, it automatically reads these environment variables and configures the HC3 connection for API calls.
+
 ## Development
 
 ### Setup Development Environment
@@ -523,6 +607,10 @@ curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
 git clone https://github.com/jangabrielsson/plua
 cd plua
 pip install -e ".[dev]"
+
+# Setup HC3 credentials (optional, for Fibaro integration)
+cp .env.example .env
+# Edit .env with your HC3 credentials
 
 # Install GitHub CLI for releases
 brew install gh

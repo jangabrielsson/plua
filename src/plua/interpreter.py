@@ -158,21 +158,6 @@ class LuaInterpreter:
         import os
         import sys
         
-        # ALWAYS show basic debug info to help with Windows troubleshooting
-        import sys
-        print("\n" + "="*60, file=sys.stderr)
-        print("PLUA DEBUG OUTPUT - PLEASE SHARE THIS WITH DEVELOPER", file=sys.stderr)
-        print("="*60, file=sys.stderr)
-        print(f"[DEBUG] Starting path resolution...", file=sys.stderr)
-        print(f"[DEBUG] sys.executable: {sys.executable}", file=sys.stderr)
-        print(f"[DEBUG] sys.frozen: {getattr(sys, 'frozen', False)}", file=sys.stderr)
-        print(f"[DEBUG] Platform: {sys.platform}", file=sys.stderr)
-        print(f"[DEBUG] Python version: {sys.version}", file=sys.stderr)
-        print(f"[DEBUG] Package file location: {__file__}", file=sys.stderr)
-        print(f"[DEBUG] Current working directory: {os.getcwd()}", file=sys.stderr)
-        print("="*60, file=sys.stderr)
-        sys.stderr.flush()
-        
         if getattr(sys, 'frozen', False):
             # Nuitka onefile/onedir: look for lua/init.lua next to the executable or in cwd
             executable_dir = os.path.dirname(sys.executable)
@@ -201,11 +186,6 @@ class LuaInterpreter:
             import site
             user_site = getattr(site, 'USER_SITE', None)
             system_sites = getattr(site, 'getsitepackages', lambda: [])()
-            
-            print(f"[DEBUG] User site-packages: {user_site}", file=sys.stderr)
-            print(f"[DEBUG] System site-packages: {system_sites}", file=sys.stderr)
-            print(f"[DEBUG] Current package location: {package_dir}", file=sys.stderr)
-            print(f"[DEBUG] Inferred site-packages: {site_packages}", file=sys.stderr)
             
             possible_paths = [
                 # Standard pip install: lua as top-level package in same site-packages as plua
@@ -237,66 +217,51 @@ class LuaInterpreter:
             if init_script_path is None:
                 # Not found, use the first and let it fail with better error message
                 init_script_path = possible_paths[0]
-                
-            # Always show debug info if we had to fall back OR file doesn't exist
-            fallback_used = init_script_path == possible_paths[0]
-            file_missing = not os.path.exists(init_script_path)
-            
-            print(f"[DEBUG] Path resolution results:", file=sys.stderr)
-            print(f"[DEBUG] - Fallback used: {fallback_used}", file=sys.stderr)
-            print(f"[DEBUG] - File missing: {file_missing}", file=sys.stderr)
-            print(f"[DEBUG] - Selected path: {init_script_path}", file=sys.stderr)
-            print(f"[DEBUG] All attempted paths:", file=sys.stderr)
-            for i, path in enumerate(possible_paths):
-                normalized_path = os.path.normpath(path)
-                exists = os.path.exists(normalized_path)
-                selected = "← SELECTED" if normalized_path == init_script_path else ""
-                print(f"  {i+1}. {normalized_path} {'✓' if exists else '✗'} {selected}", file=sys.stderr)
-            print(f"[DEBUG] Package directory: {package_dir}", file=sys.stderr)
-            print(f"[DEBUG] Site-packages directory: {site_packages}", file=sys.stderr)
-            
-            # Also check what files are actually in the directories
-            try:
-                package_contents = os.listdir(package_dir)
-                print(f"[DEBUG] Package directory contents: {package_contents}", file=sys.stderr)
-                site_contents = os.listdir(site_packages)
-                lua_related = [d for d in site_contents if 'lua' in d.lower()]
-                print(f"[DEBUG] Site-packages lua-related contents: {lua_related}", file=sys.stderr)
-                if not lua_related:
-                    print(f"[DEBUG] No lua directories found in site-packages!", file=sys.stderr)
-                    print(f"[DEBUG] Total site-packages items: {len(site_contents)}", file=sys.stderr)
-                    print(f"[DEBUG] First 10 site-packages items: {sorted(site_contents)[:10]}", file=sys.stderr)
-            except Exception as e:
-                print(f"[DEBUG] Could not list directory contents: {e}", file=sys.stderr)
 
         # Verify the file exists
         if not os.path.exists(init_script_path):
-            # Enable debug output to help troubleshoot the issue
-            print(f"[ERROR] init.lua not found at: {init_script_path}")
-            print(f"[DEBUG] Package directory: {os.path.dirname(__file__)}")
-            print(f"[DEBUG] Site-packages directory: {os.path.dirname(os.path.dirname(__file__))}")
-            print(f"[DEBUG] sys.executable: {sys.executable}")
-            print(f"[DEBUG] sys.frozen: {getattr(sys, 'frozen', False)}")
-            print(f"[DEBUG] Platform: {sys.platform}")
-            print(f"[DEBUG] Python version: {sys.version}")
-            if 'possible_paths' in locals():
-                print(f"[DEBUG] All attempted paths:")
+            # Show debug output when init.lua is not found to help troubleshoot
+            print("\n" + "="*60, file=sys.stderr)
+            print("PLUA ERROR - init.lua NOT FOUND", file=sys.stderr)
+            print("="*60, file=sys.stderr)
+            print(f"[ERROR] init.lua not found at: {init_script_path}", file=sys.stderr)
+            print(f"[DEBUG] sys.executable: {sys.executable}", file=sys.stderr)
+            print(f"[DEBUG] sys.frozen: {getattr(sys, 'frozen', False)}", file=sys.stderr)
+            print(f"[DEBUG] Platform: {sys.platform}", file=sys.stderr)
+            print(f"[DEBUG] Python version: {sys.version}", file=sys.stderr)
+            print(f"[DEBUG] Package file location: {__file__}", file=sys.stderr)
+            print(f"[DEBUG] Current working directory: {os.getcwd()}", file=sys.stderr)
+            
+            if not getattr(sys, 'frozen', False):
+                # Show detailed path information for pip installs
+                package_dir = os.path.dirname(__file__)
+                site_packages = os.path.dirname(package_dir)
+                import site
+                user_site = getattr(site, 'USER_SITE', None)
+                system_sites = getattr(site, 'getsitepackages', lambda: [])()
+                
+                print(f"[DEBUG] User site-packages: {user_site}", file=sys.stderr)
+                print(f"[DEBUG] System site-packages: {system_sites}", file=sys.stderr)
+                print(f"[DEBUG] Current package location: {package_dir}", file=sys.stderr)
+                print(f"[DEBUG] Inferred site-packages: {site_packages}", file=sys.stderr)
+                print(f"[DEBUG] All attempted paths:", file=sys.stderr)
                 for i, path in enumerate(possible_paths):
                     normalized_path = os.path.normpath(path)
                     exists = os.path.exists(normalized_path)
-                    print(f"  {i+1}. {normalized_path} {'✓' if exists else '✗'}")
+                    selected = "← SELECTED" if normalized_path == init_script_path else ""
+                    print(f"  {i+1}. {normalized_path} {'✓' if exists else '✗'} {selected}", file=sys.stderr)
             
             # Try to list contents of key directories
             try:
                 package_dir = os.path.dirname(__file__)
                 site_packages = os.path.dirname(package_dir)
-                print(f"[DEBUG] Package directory ({package_dir}) contents:")
+                print(f"[DEBUG] Package directory ({package_dir}) contents:", file=sys.stderr)
                 package_contents = os.listdir(package_dir)
                 for item in sorted(package_contents):
                     item_path = os.path.join(package_dir, item)
                     item_type = "DIR" if os.path.isdir(item_path) else "FILE"
-                    print(f"  - {item} ({item_type})")
-                print(f"[DEBUG] Site-packages directory ({site_packages}) contents:")
+                    print(f"  - {item} ({item_type})", file=sys.stderr)
+                print(f"[DEBUG] Site-packages directory ({site_packages}) contents:", file=sys.stderr)
                 site_contents = os.listdir(site_packages)
                 lua_related = [d for d in site_contents if 'lua' in d.lower() or d.startswith('plua')]
                 for item in sorted(lua_related):
@@ -311,6 +276,7 @@ class LuaInterpreter:
             except Exception as e:
                 print(f"[DEBUG] Could not list directories: {e}", file=sys.stderr)
                 
+            print("="*60, file=sys.stderr)
             # Flush stderr to ensure debug output is visible before exception
             sys.stderr.flush()
             raise FileNotFoundError(f"init.lua not found at: {init_script_path}")

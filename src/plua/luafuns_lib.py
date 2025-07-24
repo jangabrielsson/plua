@@ -7,6 +7,7 @@ import os
 import sys
 import time
 import json
+import platform
 from typing import Any, Callable, Dict, List, Tuple
 from functools import wraps
 import requests
@@ -539,6 +540,11 @@ def getenv_with_dotenv(name: str, default: str = None) -> str:
     """
     Get an environment variable, checking .env file first
 
+    Searches for .env files in this order:
+    1. Current directory (./.env) - project-specific
+    2. Home directory (~/.env) - user-global  
+    3. Config directory (~/.config/plua/.env or %APPDATA%\\plua\\.env) - platform-specific
+
     Args:
         name: Environment variable name
         default: Default value if not found
@@ -548,34 +554,44 @@ def getenv_with_dotenv(name: str, default: str = None) -> str:
     """
     import os
 
-    # First try to read from .env file in current working directory
-    env_file_path = os.path.join(os.getcwd(), '.env')
-    if os.path.exists(env_file_path):
-        try:
-            with open(env_file_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    # Skip empty lines and comments
-                    if not line or line.startswith('#'):
-                        continue
+    # Try to find .env file in multiple locations (in order of preference)
+    possible_env_paths = [
+        # 1. Current working directory (project-specific)
+        os.path.join(os.getcwd(), '.env'),
+        # 2. User's home directory (global config)
+        os.path.join(os.path.expanduser('~'), '.env'),
+        # 3. User's config directory (platform-specific)
+        os.path.join(os.path.expanduser('~'), '.config', 'plua', '.env') if platform.system() != "Windows" else 
+        os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), 'plua', '.env'),
+    ]
+    
+    for env_file_path in possible_env_paths:
+        if os.path.exists(env_file_path):
+            try:
+                with open(env_file_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        # Skip empty lines and comments
+                        if not line or line.startswith('#'):
+                            continue
 
-                    # Parse KEY=VALUE format
-                    if '=' in line:
-                        key, value = line.split('=', 1)
-                        key = key.strip()
-                        value = value.strip()
+                        # Parse KEY=VALUE format
+                        if '=' in line:
+                            key, value = line.split('=', 1)
+                            key = key.strip()
+                            value = value.strip()
 
-                        # Remove quotes if present
-                        if value.startswith('"') and value.endswith('"'):
-                            value = value[1:-1]
-                        elif value.startswith("'") and value.endswith("'"):
-                            value = value[1:-1]
+                            # Remove quotes if present
+                            if value.startswith('"') and value.endswith('"'):
+                                value = value[1:-1]
+                            elif value.startswith("'") and value.endswith("'"):
+                                value = value[1:-1]
 
-                        if key == name:
-                            return value
-        except (IOError, OSError):
-            # If we can't read the .env file, fall back to system env
-            pass
+                            if key == name:
+                                return value
+            except (IOError, OSError):
+                # If we can't read this .env file, try the next one
+                continue
 
     # Fall back to system environment variable
     return os.getenv(name, default)
@@ -585,6 +601,11 @@ def getenv_with_dotenv(name: str, default: str = None) -> str:
 def getenv_dotenv(name: str, default: str = None) -> str:
     """
     Alias for getenv_with_dotenv - Get an environment variable, checking .env file first
+
+    Searches for .env files in this order:
+    1. Current directory (./.env) - project-specific
+    2. Home directory (~/.env) - user-global  
+    3. Config directory (~/.config/plua/.env or %APPDATA%\\plua\\.env) - platform-specific
 
     Args:
         name: Environment variable name

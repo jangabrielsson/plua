@@ -40,19 +40,6 @@ jobs:
         echo "Updated version to: $VERSION"
         grep "__version__" src/plua/__init__.py
     
-    - name: Debug source tree
-      run: |
-        echo "=== Source tree structure ==="
-        find . -name "*.lua" | head -10
-        echo "=== Contents of src/ directory ==="
-        ls -la src/
-        echo "=== Contents of src/lua/ directory ==="
-        ls -la src/lua/ || echo "src/lua/ not found!"
-        echo "=== Git status ==="
-        git status --porcelain
-        echo "=== Git ls-files lua ==="
-        git ls-files | grep lua | head -10
-    
     - name: Build package
       run: python -m build
     

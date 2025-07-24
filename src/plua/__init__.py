@@ -2,7 +2,7 @@
 plua - Python-Lua async runtime with timer support
 """
 
-__version__ = "Fix Windows debug output with stderr and comprehensive diagnostics"
+__version__ = "1.0.81"
 __author__ = "Jan Gabrielsson"
 __email__ = "jan@gabrielsson.com"
 

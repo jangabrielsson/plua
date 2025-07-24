@@ -122,3 +122,27 @@ The project includes a comprehensive Fibaro Home Center 3 emulator:
 The project includes HC3-specific VS Code tasks for Fibaro development:
 - "QA, upload current file as QA to HC3" - Upload Lua scripts to HC3
 - Use these for Fibaro QuickApp development workflow
+
+## Packaging & Distribution
+
+### Critical Packaging Requirements
+- **Lua Files Are Essential**: The `src/lua/` directory contains runtime files that MUST be included in PyPI packages
+- **Package Data Configuration**: `pyproject.toml` must include `plua = ["lua/**/*.lua"]` in package-data
+- **Size Verification**: Correct wheels are ~160KB; smaller sizes (87KB) indicate missing lua files
+
+### Windows Compatibility Issues
+- **Path Resolution**: Windows installations may use user site-packages (`pip install --user`) if no admin privileges
+- **Multi-location Search**: Code checks both user and system site-packages for lua files
+- **Debug Output**: Enhanced error messages help diagnose package location issues
+
+### CI/CD and Release Process
+- **GitHub Actions Workflow**: Automates PyPI publishing from git tags (v1.x.x format)
+- **Version Conflicts**: Workflow includes version existence check to prevent upload conflicts
+- **Release Script**: Use `./scripts/create-release.sh` for consistent version bumping and tagging
+- **Package Validation**: Always verify wheel contents and size after building
+
+### Troubleshooting Common Issues
+- **"init.lua not found"**: Usually indicates missing lua files in package or path resolution failure
+- **Clean Install**: Use `pip uninstall plua && pip cache purge && pip install --no-cache-dir plua` for debugging
+- **Package Size Check**: `curl -s https://pypi.org/pypi/plua/VERSION/json | jq -r '.urls[0].size'` to verify correct package
+- **Development vs Production**: Local builds may work while PyPI packages fail due to packaging differences

@@ -10,6 +10,8 @@ plua is a Python-Lua async runtime that bridges Python's asyncio with Lua's coro
 - [Data Flow](#data-flow)
 - [Fibaro Integration](#fibaro-integration)
 - [Development Patterns](#development-patterns)
+- [Packaging and Distribution](#packaging-and-distribution)
+- [Troubleshooting](#troubleshooting)
 
 ## 🏗️ Overview
 
@@ -515,5 +517,130 @@ config = {
 2. **Hook Overrides**: Customize file loading and API handling
 3. **Module System**: Add new Lua modules via `require()`
 4. **API Endpoints**: Extend FastAPI server with custom endpoints
+
+## 📦 Packaging and Distribution
+
+### PyPI Publishing Pipeline
+
+plua uses GitHub Actions for automated publishing to PyPI:
+
+```mermaid
+graph LR
+    A[Git Tag v1.x.x] --> B[GitHub Release]
+    B --> C[GitHub Actions]
+    C --> D[Build Wheel]
+    D --> E[Validate Package]
+    E --> F[Publish to PyPI]
+    
+    subgraph "Package Contents"
+        G[Python Source Code]
+        H[Lua Runtime Files]
+        I[Static Web Assets]
+        J[API Documentation]
+    end
+    
+    D --> G
+    D --> H
+    D --> I
+    D --> J
+    
+    style D fill:#99ccff
+    style H fill:#ff9999
+```
+
+#### Critical Packaging Requirements
+
+1. **Lua Files Inclusion**: The `src/lua/` directory contains essential runtime files:
+   - `init.lua` - Core runtime bootstrap
+   - `net.lua` - Network module
+   - `fibaro/` - HC3 compatibility layer
+   - `mobdebug.lua` - Debugging support
+
+2. **Package Data Configuration** (`pyproject.toml`):
+   ```toml
+   [tool.setuptools.package-data]
+   plua = ["lua/**/*.lua"]
+   ```
+
+3. **Cross-Platform Path Resolution**: Handles both system and user site-packages installations on Windows.
+
+### Windows Compatibility
+
+Special considerations for Windows installations:
+
+#### Path Resolution Strategy
+```python
+# Multi-location search for lua files
+search_paths = [
+    # User site-packages (pip install --user)
+    site.getusersitepackages(),
+    # System site-packages  
+    *site.getsitepackages(),
+    # Development/editable installs
+    os.path.dirname(__file__)
+]
+```
+
+#### Common Windows Issues
+- **User vs System Install**: pip may default to user site-packages if no admin privileges
+- **Path Separators**: Automatic handling of Windows vs Unix path separators
+- **Debug Output**: Enhanced error messages for package location debugging
+
+## 🔧 Troubleshooting
+
+### Installation Issues
+
+#### "init.lua not found" Error
+**Symptoms**: `FileNotFoundError: init.lua not found in package`
+
+**Solutions**:
+1. **Clean Install**:
+   ```bash
+   pip uninstall plua
+   pip cache purge
+   pip install --no-cache-dir plua
+   ```
+
+2. **Force Latest Version**:
+   ```bash
+   pip install --upgrade --force-reinstall plua
+   ```
+
+3. **Check Package Contents**:
+   ```python
+   import plua
+   print(plua.__file__)  # Check installation location
+   ```
+
+#### Package Size Verification
+Correct plua wheel should be ~160KB. Smaller sizes (87KB) indicate missing lua files:
+```bash
+# Check PyPI package size
+curl -s https://pypi.org/pypi/plua/1.0.85/json | jq -r '.urls[0].size'
+```
+
+### Runtime Issues
+
+#### Timer Callbacks Not Executing
+- **Cause**: Lua execution happening in wrong thread
+- **Solution**: Ensure all Lua calls happen in main thread via callback queue
+
+#### Network Requests Hanging
+- **Cause**: Missing asyncio event loop or blocking operations
+- **Solution**: Use `net.HTTPClient` with proper callback patterns
+
+#### API Server Not Starting
+- **Cause**: Port already in use or permissions issue
+- **Solution**: Use `--api-port` flag or `--noapi` to disable
+
+### Development Issues
+
+#### VS Code Tasks Not Working
+- **Requirement**: Lua with hc3emu2 module installed
+- **Solution**: Install required HC3 development tools separately
+
+#### Fibaro API Not Responding
+- **Cause**: `_PY.fibaro_api_hook` not implemented
+- **Solution**: Load `fibaro.lua` or implement custom hook handler
 
 This architecture provides a robust, extensible foundation for async Lua development with comprehensive HC3 compatibility and modern web-based development tools.

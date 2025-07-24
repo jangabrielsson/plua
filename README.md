@@ -321,6 +321,61 @@ The API server and local REPL share the same Lua interpreter instance, so:
 - Timers set via API continue running in the background
 - State is shared seamlessly between web and terminal interfaces
 
+## VSCode launch
+Setup launch tasks in .vscode/launch.json
+The executable is either `plua` if installed and accesible globally,
+or if running from the plua repo, `${workspaceFolder}/run.sh`
+
+Running current lua file, with or without Fibaro support loaded.
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "plua: Run Current Lua file with Debugger", 
+            "type": "luaMobDebug",
+            "request": "launch",
+            "workingDirectory": "${workspaceFolder}",
+            "sourceBasePath": "${workspaceFolder}",
+            "listenPort": 8172,
+            "listenPublicly": false,
+            "stopOnEntry": false,
+            "sourceEncoding": "UTF-8",
+            "executable": "plua",
+            "arguments": [
+                "--debugger",
+                "--debugger-host",
+                "localhost",
+                "--debugger-port",
+                "8172",
+                "${file}"
+            ]
+        },
+        {
+            "name": "plua: Run Current Fibaro file with Debugger", 
+            "type": "luaMobDebug",
+            "request": "launch",
+            "workingDirectory": "${workspaceFolder}",
+            "sourceBasePath": "${workspaceFolder}",
+            "listenPort": 8172,
+            "listenPublicly": false,
+            "stopOnEntry": false,
+            "sourceEncoding": "UTF-8",
+            "executable": "plua",
+            "arguments": [
+                "--debugger",
+                "--debugger-host",
+                "localhost",
+                "--debugger-port",
+                "8172",
+                "--fibaro",
+                "${file}"
+            ]
+        }
+    ]
+}
+```
+
 ## Lua API
 
 ### Timer Functions

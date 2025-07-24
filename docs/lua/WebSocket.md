@@ -49,7 +49,7 @@ secure_client:connect("wss://echo.websocket.org", {
         -- Send JSON data
         local message = json.encode({
             type = "greeting",
-            message = "Hello from plua2!",
+            message = "Hello from plua!",
             timestamp = os.time()
         })
         
@@ -431,7 +431,7 @@ local function test_public_echo()
     client:connect("ws://echo.websocket.org", {
         connected = function()
             print("✓ Connected to public echo server")
-            client:send("Test message from plua2")
+            client:send("Test message from plua")
         end,
         
         message = function(data)

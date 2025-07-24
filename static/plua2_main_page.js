@@ -1,4 +1,4 @@
-// plua2 Main Page JavaScript
+// plua Main Page JavaScript
 
 let currentTab = 'repl';
 let ws = null;

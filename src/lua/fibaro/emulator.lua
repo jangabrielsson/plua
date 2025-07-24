@@ -376,7 +376,7 @@ function Emulator:loadQA(info)
     fibaro = { 
       plua = self }, net = net, json = json, api = self.api,
       os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
-      __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
+      __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY, PLUA = PLUA,
     }
   for _,name in ipairs(stdLua) do env[name] = _G[name] end
   
@@ -457,7 +457,7 @@ function Emulator:HC3_CALL(method, path, data)
   url,
   data,
   {
-    ["User-Agent"] = "plua2/0.1.0",
+    ["User-Agent"] = "plua/0.1.0",
     ["Content-Type"] = "application/json",
     ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
   }

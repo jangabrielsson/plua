@@ -5,7 +5,7 @@ Tests for the getenv_with_dotenv function
 import pytest
 import os
 import tempfile
-from plua2.runtime import LuaAsyncRuntime
+from plua.runtime import LuaAsyncRuntime
 
 
 class TestGetenvWithDotenv:

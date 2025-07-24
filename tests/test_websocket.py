@@ -7,7 +7,7 @@ import asyncio
 import json
 import websockets
 from aiohttp import web, WSMsgType
-from plua2.runtime import LuaAsyncRuntime
+from plua.runtime import LuaAsyncRuntime
 
 
 class TestWebSocketFunctionality:

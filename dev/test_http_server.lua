@@ -20,7 +20,7 @@ local function handle_request(method, path, payload)
     -- Route the request
     if path == "/" then
         local response_data = {
-            message = "Welcome to plua2 HTTP Server!",
+            message = "Welcome to plua HTTP Server!",
             method = method,
             timestamp = os.time()
         }
@@ -46,10 +46,10 @@ local function handle_request(method, path, payload)
 <!DOCTYPE html>
 <html>
 <head>
-    <title>plua2 HTTP Server</title>
+    <title>plua HTTP Server</title>
 </head>
 <body>
-    <h1>Hello from plua2!</h1>
+    <h1>Hello from plua!</h1>
     <p>This is served by a Lua HTTP server.</p>
     <p>Current time: ]] .. os.date() .. [[</p>
 </body>

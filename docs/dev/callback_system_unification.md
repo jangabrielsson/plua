@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully unified the timer and callback systems in plua2, eliminating code duplication and creating a more maintainable architecture.
+Successfully unified the timer and callback systems in plua, eliminating code duplication and creating a more maintainable architecture.
 
 ## Changes Made
 
@@ -143,4 +143,4 @@ The unified system makes it trivial to add new async operation types:
 3. Use the existing Python→Lua callback mechanism
 4. No changes needed to runtime loop or execution paths
 
-This unification creates a cleaner, more maintainable foundation for future async features in plua2.
+This unification creates a cleaner, more maintainable foundation for future async features in plua.

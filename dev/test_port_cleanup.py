@@ -56,13 +56,13 @@ def test_port_cleanup():
                 print(f"   ✗ Port {port} appears to be free (unexpected)")
                 return
             
-            print(f"3. Starting plua2 with API on port {port} (should trigger cleanup)...")
+            print(f"3. Starting plua with API on port {port} (should trigger cleanup)...")
             
-            # Try to start plua2 with the same port
-            cmd = [sys.executable, "-m", "plua2", "--api", str(port), "-e", "print('Port cleanup test')"]
+            # Try to start plua with the same port
+            cmd = [sys.executable, "-m", "plua", "--api", str(port), "-e", "print('Port cleanup test')"]
             
             try:
-                # Start plua2 - it should clean up the port and start successfully
+                # Start plua - it should clean up the port and start successfully
                 process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
@@ -74,9 +74,9 @@ def test_port_cleanup():
                 # Give it time to start and potentially clean up the port
                 time.sleep(3)
                 
-                # Check if plua2 is running
+                # Check if plua is running
                 if process.poll() is None:
-                    print(f"   ✓ plua2 successfully started on port {port} (port cleanup worked!)")
+                    print(f"   ✓ plua successfully started on port {port} (port cleanup worked!)")
                     
                     # Test that the API is working
                     test_api_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -94,12 +94,12 @@ def test_port_cleanup():
                     process.wait(timeout=5)
                 else:
                     stdout, stderr = process.communicate()
-                    print(f"   ✗ plua2 failed to start:")
+                    print(f"   ✗ plua failed to start:")
                     print(f"      stdout: {stdout}")
                     print(f"      stderr: {stderr}")
                     
             except Exception as e:
-                print(f"   ✗ Error starting plua2: {e}")
+                print(f"   ✗ Error starting plua: {e}")
     
     except Exception as e:
         print(f"Error in test: {e}")

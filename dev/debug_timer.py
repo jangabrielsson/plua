@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
-from src.plua2.runtime import LuaAsyncRuntime
+from src.plua.runtime import LuaAsyncRuntime
 
 async def test_timer_debug():
     runtime = LuaAsyncRuntime()

@@ -18,12 +18,12 @@ ws:addEventListener("connected", function()
     
     -- Send a test message
     print("Sending test message...")
-    ws:send("Hello from plua2 WebSocket client!")
+    ws:send("Hello from plua WebSocket client!")
     
     -- Send JSON message
     local json_msg = json.encode({
         type = "test",
-        message = "JSON test from plua2",
+        message = "JSON test from plua",
         timestamp = os.time()
     })
     ws:send(json_msg)

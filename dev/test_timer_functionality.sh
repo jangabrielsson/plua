@@ -1,13 +1,13 @@
 #!/bin/bash
-# Test script for plua2 Web API Timer Functionality - FIXED!
+# Test script for plua Web API Timer Functionality - FIXED!
 
-echo "=== Testing plua2 Web API Timer Functionality ==="
+echo "=== Testing plua Web API Timer Functionality ==="
 
 # Ensure server is running
 if ! lsof -i :8888 >/dev/null 2>&1; then
-    echo "Starting plua2 API server..."
-    cd /Users/jangabrielsson/Documents/dev/plua2
-    python -m plua2 --api 8888 &
+    echo "Starting plua API server..."
+    cd /Users/jangabrielsson/Documents/dev/plua
+    python -m plua --api 8888 &
     SERVER_PID=$!
     sleep 3
     echo "Server started with PID: $SERVER_PID"

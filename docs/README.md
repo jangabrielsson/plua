@@ -1,6 +1,6 @@
-# plua2 Documentation
+# plua Documentation
 
-Welcome to the plua2 documentation! This directory contains comprehensive guides for both users and developers.
+Welcome to the plua documentation! This directory contains comprehensive guides for both users and developers.
 
 ## 📚 User Documentation
 
@@ -49,13 +49,13 @@ docs/
 
 ## 📖 Documentation Conventions
 
-- **User Documentation**: Files intended for plua2 end-users (Lua developers, scripters)
+- **User Documentation**: Files intended for plua end-users (Lua developers, scripters)
 - **API Documentation**: REST API reference, endpoints, examples
 - **Developer Documentation**: Internal implementation details, progress tracking, development notes
 
 ## 🔄 Documentation Updates
 
-This documentation is maintained alongside the plua2 codebase. When adding new features or making changes:
+This documentation is maintained alongside the plua codebase. When adding new features or making changes:
 
 1. Update user-facing docs for new features
 2. Add API documentation for new endpoints

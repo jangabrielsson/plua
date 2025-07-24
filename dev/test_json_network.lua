@@ -55,7 +55,7 @@ http_client:request("http://httpbin.org/post", {
         method = "POST",
         headers = {
             ["Content-Type"] = "application/json",
-            ["User-Agent"] = "plua2-json-test/1.0"
+            ["User-Agent"] = "plua-json-test/1.0"
         },
         data = json_payload
     },

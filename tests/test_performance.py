@@ -1,5 +1,5 @@
 """
-Performance and stress tests for plua2
+Performance and stress tests for plua
 Tests system limits, memory usage, and performance characteristics
 """
 
@@ -7,7 +7,7 @@ import pytest
 import asyncio
 import time
 import gc
-from plua2.runtime import LuaAsyncRuntime
+from plua.runtime import LuaAsyncRuntime
 
 
 class TestPerformanceAndStress:

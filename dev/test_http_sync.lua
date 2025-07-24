@@ -6,7 +6,7 @@ print("\n1. Testing GET request to httpbin.org/get")
 local success, status_code, response_body, error_message = _PY.http_call_sync(
     "GET", 
     "https://httpbin.org/get",
-    {["User-Agent"] = "plua2-test/0.1.0"},
+    {["User-Agent"] = "plua-test/0.1.0"},
     nil
 )
 
@@ -30,7 +30,7 @@ end
 -- Test 2: POST request with JSON payload
 print("\n2. Testing POST request with JSON payload")
 local test_data = {
-    name = "plua2 test",
+    name = "plua test",
     timestamp = os.time(),
     data = {1, 2, 3, "hello"}
 }
@@ -40,7 +40,7 @@ local success2, status_code2, response_body2, error_message2 = _PY.http_call_syn
     "https://httpbin.org/post",
     {
         ["Content-Type"] = "application/json",
-        ["User-Agent"] = "plua2-test/0.1.0"
+        ["User-Agent"] = "plua-test/0.1.0"
     },
     json.encode(test_data)
 )
@@ -75,7 +75,7 @@ local success3, status_code3, response_body3, error_message3 = _PY.http_call_syn
     "https://httpbin.org/basic-auth/" .. username .. "/" .. password,
     {
         ["Authorization"] = "Basic " .. encoded_creds,
-        ["User-Agent"] = "plua2-test/0.1.0"
+        ["User-Agent"] = "plua-test/0.1.0"
     },
     nil
 )

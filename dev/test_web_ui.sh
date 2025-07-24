@@ -1,12 +1,12 @@
 #!/bin/bash
-# Test script for plua2 Web UI functionality
+# Test script for plua Web UI functionality
 
-echo "=== Testing plua2 Web UI ==="
+echo "=== Testing plua Web UI ==="
 
 # Start the server in background  
-echo "Starting plua2 API server..."
-cd /Users/jangabrielsson/Documents/dev/plua2
-python -m plua2 --api 8888 &
+echo "Starting plua API server..."
+cd /Users/jangabrielsson/Documents/dev/plua
+python -m plua --api 8888 &
 SERVER_PID=$!
 
 # Wait for server to start

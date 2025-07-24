@@ -8,7 +8,7 @@ echo
 # Check if server is running
 if ! curl -s http://localhost:8888 > /dev/null; then
     echo "❌ Server not running. Start with:"
-    echo "   python -m src.plua2.main --api 8888 fibaro.lua"
+    echo "   python -m src.plua.main --api 8888 fibaro.lua"
     exit 1
 fi
 

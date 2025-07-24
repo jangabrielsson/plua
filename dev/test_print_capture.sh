@@ -1,13 +1,13 @@
 #!/bin/bash
-# Test script for plua2 Web UI with print capture
+# Test script for plua Web UI with print capture
 
-echo "=== Testing plua2 Web UI with Print Capture ==="
+echo "=== Testing plua Web UI with Print Capture ==="
 
 # Start the server if not already running
 if ! lsof -i :8888 >/dev/null 2>&1; then
-    echo "Starting plua2 API server..."
-    cd /Users/jangabrielsson/Documents/dev/plua2
-    python -m plua2 --api 8888 &
+    echo "Starting plua API server..."
+    cd /Users/jangabrielsson/Documents/dev/plua
+    python -m plua --api 8888 &
     SERVER_PID=$!
     sleep 3
     echo "Server started with PID: $SERVER_PID"

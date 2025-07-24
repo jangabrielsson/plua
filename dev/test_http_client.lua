@@ -9,7 +9,7 @@ local options = {
     options = {
         method = "GET",
         headers = {
-            ["User-Agent"] = "plua2-http-client/1.0"
+            ["User-Agent"] = "plua-http-client/1.0"
         }
     },
     success = function(response)

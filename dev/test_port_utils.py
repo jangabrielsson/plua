@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from plua2.api_server import cleanup_port, is_port_free
+from plua.api_server import cleanup_port, is_port_free
 import socket
 import time
 

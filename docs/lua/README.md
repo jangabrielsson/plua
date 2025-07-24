@@ -1,6 +1,6 @@
-# plua2 Lua API Documentation
+# plua Lua API Documentation
 
-Welcome to the plua2 Lua API documentation! plua2 provides a rich set of built-in modules and capabilities that extend standard Lua with async networking, timers, JSON handling, and more.
+Welcome to the plua Lua API documentation! plua provides a rich set of built-in modules and capabilities that extend standard Lua with async networking, timers, JSON handling, and more.
 
 ## 📚 Core Modules
 
@@ -116,19 +116,19 @@ end
 
 To run the examples in this documentation:
 
-1. **Start plua2:**
+1. **Start plua:**
    ```bash
-   plua2 your_script.lua
+   plua your_script.lua
    ```
 
 2. **With API server:**
    ```bash
-   plua2 --api-port 8888 your_script.lua
+   plua --api-port 8888 your_script.lua
    ```
 
 3. **Interactive REPL:**
    ```bash
-   plua2
+   plua
    ```
 
 ## 📚 Additional Resources
@@ -139,4 +139,4 @@ To run the examples in this documentation:
 
 ## 🤝 Contributing
 
-Found an issue with the documentation? Want to add examples? Please contribute to the [plua2 repository](https://github.com/jangabrielsson/plua2).
+Found an issue with the documentation? Want to add examples? Please contribute to the [plua repository](https://github.com/jangabrielsson/plua).

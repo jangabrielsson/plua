@@ -1,8 +1,8 @@
-# plua2 Web UI with Print Capture - COMPLETE! 🎉
+# plua Web UI with Print Capture - COMPLETE! 🎉
 
 ## Major Improvement Implemented
 
-Successfully implemented **print output capture** for the plua2 Web REPL, making it a fully functional browser-based Lua development environment!
+Successfully implemented **print output capture** for the plua Web REPL, making it a fully functional browser-based Lua development environment!
 
 ## What Was Fixed
 
@@ -114,13 +114,13 @@ return user
 
 ## Impact
 
-This completes the plua2 Web REPL as a **production-ready development environment**:
+This completes the plua Web REPL as a **production-ready development environment**:
 
 1. **Learning Tool**: Perfect for Lua beginners to see immediate output
 2. **Debugging Interface**: Full visibility into code execution flow  
 3. **Remote Development**: Execute Lua code from any web browser
 4. **Documentation**: Live examples with visible output in docs
-5. **API Testing**: Easy way to test plua2 functionality remotely
+5. **API Testing**: Easy way to test plua functionality remotely
 
 The Web REPL now provides the **same functionality as the terminal REPL** but with a beautiful, modern web interface that's accessible from anywhere!
 
@@ -132,4 +132,4 @@ The Web REPL now provides the **same functionality as the terminal REPL** but wi
 - ✅ Error handling: **COMPLETE**
 - ✅ State sharing: **COMPLETE**
 
-The plua2 project is now **feature-complete** for its core objectives! 🚀
+The plua project is now **feature-complete** for its core objectives! 🚀

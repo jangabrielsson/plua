@@ -3,7 +3,7 @@
 
 echo "Fixing paths in dev scripts..."
 
-cd /Users/jangabrielsson/Documents/dev/plua2/dev
+cd /Users/jangabrielsson/Documents/dev/plua/dev
 
 for script in *.sh; do
     if [ -f "$script" ]; then
@@ -12,7 +12,7 @@ for script in *.sh; do
         # Add cd to parent directory before python commands
         if ! grep -q "cd.*\.\." "$script"; then
             # Insert cd command after the first few lines but before python commands
-            sed -i.bak '/python -m src\.plua2/i\
+            sed -i.bak '/python -m src\.plua/i\
 # Change to parent directory to run from project root\
 cd "$(dirname "$0")/.."' "$script"
             

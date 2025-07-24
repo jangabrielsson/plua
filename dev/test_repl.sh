@@ -1,13 +1,13 @@
 #!/bin/bash
 # Test script to verify REPL functionality with input
 
-echo "Testing plua2 REPL with sample commands..."
+echo "Testing plua REPL with sample commands..."
 
 # Change to parent directory to run from project root
 cd "$(dirname "$0")/.."
 
 # Use here-doc to send commands to the REPL
-python -m src.plua2 << 'EOF'
+python -m src.plua << 'EOF'
 print("Hello from REPL!")
 x = 42
 x + 10

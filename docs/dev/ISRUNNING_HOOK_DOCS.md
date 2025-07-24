@@ -123,10 +123,10 @@ Use the provided test scripts:
 
 ```bash
 # Simple timer-based test
-python -m src.plua2 dev/test_simple_isrunning.lua --debug
+python -m src.plua dev/test_simple_isrunning.lua --debug
 
 # HTTP server test  
-python -m src.plua2 dev/test_isrunning_hook.lua --debug
+python -m src.plua dev/test_isrunning_hook.lua --debug
 # Then make requests: curl http://localhost:8099/test
 ```
 

@@ -1,6 +1,6 @@
 # Timers & Async Operations
 
-The timer system in plua2 provides JavaScript-like asynchronous operations, enabling time-based delays, intervals, and precise scheduling of Lua functions.
+The timer system in plua provides JavaScript-like asynchronous operations, enabling time-based delays, intervals, and precise scheduling of Lua functions.
 
 ## ⏰ Basic Timer Functions
 
@@ -20,7 +20,7 @@ local function greet(name, message)
 end
 
 setTimeout(function()
-    greet("Alice", "Welcome to plua2!")
+    greet("Alice", "Welcome to plua!")
 end, 1000)
 ```
 

@@ -4,7 +4,7 @@ Tests for the LuaAsyncRuntime class
 
 import pytest
 import asyncio
-from plua2.runtime import LuaAsyncRuntime
+from plua.runtime import LuaAsyncRuntime
 
 
 class TestLuaAsyncRuntime:

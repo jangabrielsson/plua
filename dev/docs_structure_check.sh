@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Documentation Structure Verification Script
-echo "📚 plua2 Documentation Structure"
+echo "📚 plua Documentation Structure"
 echo "================================"
 echo
 

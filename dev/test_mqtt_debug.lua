@@ -6,7 +6,7 @@ print("=== MQTT Debug Test ===")
 
 -- Create client with debug
 local client = mqtt.Client.connect("mqtt://test.mosquitto.org", {
-    clientId = "plua2_debug_test",
+    clientId = "plua_debug_test",
     keepAlivePeriod = 60,
     cleanSession = true,
     callback = function(returnCode)

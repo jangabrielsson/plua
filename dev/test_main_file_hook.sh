@@ -6,20 +6,20 @@ echo
 
 # Test 1: Default hook behavior
 echo "🔧 Test 1: Default main_file_hook (no preprocessing)"
-echo "Running: python -m src.plua2.main test_hook.lua --duration 2"
-python -m src.plua2.main test_hook.lua --duration 2
+echo "Running: python -m src.plua.main test_hook.lua --duration 2"
+python -m src.plua.main test_hook.lua --duration 2
 echo
 
 # Test 2: Fibaro hook override
 echo "🔧 Test 2: Fibaro main_file_hook override (with preprocessing)"
-echo "Running: python -m src.plua2.main -e 'dofile(\"fibaro.lua\")' test_hook.lua --duration 2"
-python -m src.plua2.main -e 'dofile("fibaro.lua")' test_hook.lua --duration 2
+echo "Running: python -m src.plua.main -e 'dofile(\"fibaro.lua\")' test_hook.lua --duration 2"
+python -m src.plua.main -e 'dofile("fibaro.lua")' test_hook.lua --duration 2
 echo
 
 # Test 3: Direct fibaro.lua loading
 echo "🔧 Test 3: Direct Fibaro loading"
-echo "Running: python -m src.plua2.main fibaro.lua --duration 2"
-python -m src.plua2.main fibaro.lua --duration 2
+echo "Running: python -m src.plua.main fibaro.lua --duration 2"
+python -m src.plua.main fibaro.lua --duration 2
 echo
 
 echo "✅ All hook tests completed!"

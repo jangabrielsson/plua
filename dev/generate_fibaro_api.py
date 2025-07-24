@@ -275,7 +275,7 @@ def main():
     parser = argparse.ArgumentParser(description='Generate Fibaro API endpoints from Swagger files')
     parser.add_argument('--docs-dir', default='fibaro_api_docs', 
                        help='Directory containing Swagger JSON files')
-    parser.add_argument('--output', default='src/plua2/fibaro_api_endpoints.py',
+    parser.add_argument('--output', default='src/plua/fibaro_api_endpoints.py',
                        help='Output file for generated API module')
     parser.add_argument('--list-only', action='store_true',
                        help='Only list endpoints, do not generate code')

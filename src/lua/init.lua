@@ -1,4 +1,4 @@
--- Initialize Lua environment for plua2
+-- Initialize Lua environment for plua
 -- This file contains the core runtime initialization code
 -- 
 -- This script is loaded by the Python LuaInterpreter class during initialization.
@@ -7,10 +7,22 @@
 -- by the Python runtime before this script is executed.
 
 -- Add src/lua to the front of package.path for require() statements
+local initpath = _PY.config.init_script_path:sub(1,-9).."?.lua;"
+initpath = initpath:gsub("[\\/][%w_%s]+[\\/]%.%.","")
 local current_path = package.path
-package.path = "src/lua/?.lua;" .. current_path
-local mobdebug = require('mobdebug')
-mobdebug.coro()
+package.path = initpath .. current_path
+
+local debugger_config = _PY.config.runtime_config.debugger_config
+if debugger_config then 
+  local mobdebug = require('mobdebug')
+  if debugger_config.debug then mobdebug.logging(true) end
+  mobdebug.start(debugger_config.host,debugger_config.port)
+  mobdebug.on()
+  mobdebug.coro()
+  _PY.mobdebug = mobdebug
+else 
+  _PY.mobdebug = { on = function() end, coro = function() end, logging = function() end, start = function() end }
+end
 
 -- Callback system for async operations (global for runtime state access)
 _callback_registry = {}

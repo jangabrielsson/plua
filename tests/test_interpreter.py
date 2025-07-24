@@ -3,7 +3,7 @@ Tests for the LuaInterpreter class
 """
 
 import pytest
-from plua2.interpreter import LuaInterpreter
+from plua.interpreter import LuaInterpreter
 
 
 class TestLuaInterpreter:

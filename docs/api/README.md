@@ -1,6 +1,6 @@
-# plua2 API Documentation
+# plua API Documentation
 
-This directory contains comprehensive documentation for the plua2 REST API and web interfaces.
+This directory contains comprehensive documentation for the plua REST API and web interfaces.
 
 ## 📡 REST API Reference
 
@@ -9,7 +9,7 @@ This directory contains comprehensive documentation for the plua2 REST API and w
 ## 🌐 Web Interface
 
 ### Web REPL
-The plua2 web REPL provides a modern browser-based interface for interactive Lua development:
+The plua web REPL provides a modern browser-based interface for interactive Lua development:
 
 - **URL**: `http://localhost:8888/web` (default) or custom port
 - **Features**: HTML rendering, real-time execution, state sharing with terminal REPL
@@ -17,8 +17,8 @@ The plua2 web REPL provides a modern browser-based interface for interactive Lua
 
 ### Quick Start
 ```bash
-# Start plua2 with API server
-plua2 --api
+# Start plua with API server
+plua --api
 
 # Open browser to web REPL
 open http://localhost:8888/web
@@ -108,13 +108,13 @@ Get API version and runtime information.
 ### Command Line Options
 ```bash
 # Default API server (port 8888, all interfaces)
-plua2 --api
+plua --api
 
 # Custom port
-plua2 --api 9000
+plua --api 9000
 
 # Custom host and port (localhost only)
-plua2 --api 8877 --api-host 127.0.0.1
+plua --api 8877 --api-host 127.0.0.1
 ```
 
 ### Environment Integration

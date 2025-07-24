@@ -1,6 +1,6 @@
 # HTTP Debug Tools
 
-This directory contains various debug tools and test scripts for the plua2 HTTP server implementation.
+This directory contains various debug tools and test scripts for the plua HTTP server implementation.
 
 ## Debug Files
 
@@ -58,7 +58,7 @@ This directory contains various debug tools and test scripts for the plua2 HTTP 
 
 ### Start a debug server:
 ```bash
-cd /Users/jangabrielsson/Documents/dev/plua2
+cd /Users/jangabrielsson/Documents/dev/plua
 lua dev/debug_http_response_format.lua
 ```
 

@@ -96,7 +96,7 @@ The fix restores the original design intention:
 1. **Single Event Loop**: Both terminal REPL and Web API use the same asyncio event loop
 2. **Consistent Runtime**: Lua timers work identically in both interfaces
 3. **State Sharing**: Variables and functions persist across all interfaces
-4. **Feature Parity**: Web users get full plua2 functionality, not a subset
+4. **Feature Parity**: Web users get full plua functionality, not a subset
 
 ## Web UI Enhancement Opportunity
 
@@ -114,6 +114,6 @@ But the core issue is **completely resolved** - timers now work perfectly throug
 - ✅ **Verified**: All timer functionality fully operational  
 - ✅ **Consistent**: Web and terminal interfaces now have feature parity
 - ✅ **Architecture**: Single event loop design properly implemented
-- ✅ **User Experience**: Web users can use full plua2 capabilities
+- ✅ **User Experience**: Web users can use full plua capabilities
 
-The plua2 Web API now provides **complete Lua runtime functionality** including asynchronous timers, making it a true web-based development environment! 🚀
+The plua Web API now provides **complete Lua runtime functionality** including asynchronous timers, making it a true web-based development environment! 🚀

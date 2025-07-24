@@ -195,7 +195,7 @@ PLUA.openInVSCodeBrowser("http://localhost:8888")
 ```
 
 ### PLUA.openWebInterface()
-Opens the plua2 web interface.
+Opens the plua web interface.
 
 **Returns:**
 - `boolean`: True if successful, false otherwise
@@ -222,7 +222,7 @@ Opens a URL in the system's default browser.
 **Example:**
 ```lua
 -- Open external website
-PLUA.openBrowser("https://github.com/jangabrielsson/plua2")
+PLUA.openBrowser("https://github.com/jangabrielsson/plua")
 
 -- Open local file
 PLUA.openBrowser("file://" .. PLUA.getcwd() .. "/docs/README.md")
@@ -248,7 +248,7 @@ PLUA.openBrowserSpecific("https://example.com", "firefox")
 ```
 
 ### PLUA.openWebInterfaceBrowser()
-Opens the plua2 web interface in the system browser.
+Opens the plua web interface in the system browser.
 
 **Returns:**
 - `boolean`: True if successful, false otherwise
@@ -362,7 +362,7 @@ end, 5000)
 ```
 
 ### PLUA.getConfig()
-Gets the current plua2 configuration.
+Gets the current plua configuration.
 
 **Returns:**
 - `table`: Configuration table

@@ -9,7 +9,7 @@ import aiohttp
 import socket
 import threading
 from aiohttp import web
-from plua2.runtime import LuaAsyncRuntime
+from plua.runtime import LuaAsyncRuntime
 
 
 class TestAdvancedNetworkFunctionality:

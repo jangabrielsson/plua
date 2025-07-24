@@ -73,7 +73,7 @@ These messages remain as regular `print()` because they are important user feedb
 
 ### Without Debug Flag (Normal Operation)
 ```bash
-# plua2 --api 8888
+# plua --api 8888
 setTimeout(function() print('Hello!') end, 1000)
 
 Output:
@@ -83,7 +83,7 @@ INFO:     127.0.0.1:53339 - "POST /plua/execute HTTP/1.1" 200 OK
 
 ### With Debug Flag (Verbose Operation)  
 ```bash
-# plua2 --api 8888 --debug
+# plua --api 8888 --debug
 setTimeout(function() print('Hello!') end, 1000)
 
 Output:
@@ -111,9 +111,9 @@ Callback loop suspended...
 
 ## Summary
 
-The debug flag now properly controls the verbosity of plua2 output:
+The debug flag now properly controls the verbosity of plua output:
 
 - **Normal mode**: Only user `print()` statements and important messages
 - **Debug mode (`--debug`)**: Full execution trace with timer lifecycle details
 
-This makes plua2 much more suitable for both development (with debug) and production (without debug) use cases! 🎯
+This makes plua much more suitable for both development (with debug) and production (without debug) use cases! 🎯

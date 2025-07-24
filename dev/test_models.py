@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import sys
-sys.path.insert(0, "/Users/jangabrielsson/Documents/dev/plua2/src")
+sys.path.insert(0, "/Users/jangabrielsson/Documents/dev/plua/src")
 
 try:
-    from plua2.fibaro_api_models import *
+    from plua.fibaro_api_models import *
     print("✓ Models imported successfully")
     
     # Try to create a simple model instance
@@ -43,7 +43,7 @@ try:
     # Try to test what FastAPI does - get schemas for all models
     print("\nTesting all model schemas...")
     import inspect
-    import plua2.fibaro_api_models as models_module
+    import plua.fibaro_api_models as models_module
     
     failed_models = []
     for name, obj in inspect.getmembers(models_module):

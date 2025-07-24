@@ -5,8 +5,8 @@ Tests for the API server functionality
 import pytest
 import asyncio
 import aiohttp
-from plua2.runtime import LuaAsyncRuntime
-from plua2.api_server import PlUA2APIServer
+from plua.runtime import LuaAsyncRuntime
+from plua.api_server import PlUA2APIServer
 
 
 class TestAPIServer:

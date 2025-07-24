@@ -1,8 +1,8 @@
-# plua2 REST API Implementation - Complete
+# plua REST API Implementation - Complete
 
 ## Summary
 
-Successfully implemented a FastAPI REST API server for plua2 that provides HTTP endpoints to interact with running Lua scripts. The API runs in the same event loop as the Lua runtime, ensuring responsive communication even when the Lua VM is paused (e.g., by a debugger).
+Successfully implemented a FastAPI REST API server for plua that provides HTTP endpoints to interact with running Lua scripts. The API runs in the same event loop as the Lua runtime, ensuring responsive communication even when the Lua VM is paused (e.g., by a debugger).
 
 ## Implementation Highlights
 
@@ -70,7 +70,7 @@ Successfully implemented a FastAPI REST API server for plua2 that provides HTTP 
 
 ### Path Reservations
 
-- `/plua/*` - plua2 specific functions (implemented)
+- `/plua/*` - plua specific functions (implemented)
 - `/api/*` - Reserved for future Fibaro API integration
 
 ### Dependencies Added
@@ -88,13 +88,13 @@ New command line options:
 Examples:
 ```bash
 # Start with API only
-python -m plua2 --api 8888
+python -m plua --api 8888
 
 # Start with script and API
-python -m plua2 --api 8888 script.lua
+python -m plua --api 8888 script.lua
 
 # Custom host and port
-python -m plua2 --api 9000 --api-host 127.0.0.1 script.lua
+python -m plua --api 9000 --api-host 127.0.0.1 script.lua
 ```
 
 ## Testing
@@ -112,7 +112,7 @@ All tests pass successfully, demonstrating robust functionality.
 ## Future Enhancements
 
 🔄 **Print Output Capture**: Implementation planned for capturing print statements
-🔄 **Additional Endpoints**: More plua2-specific functionality
+🔄 **Additional Endpoints**: More plua-specific functionality
 🔄 **Fibaro APIs**: Implementation under `/api/*` path
 🔄 **Authentication**: Security features for production use
 🔄 **WebSocket Support**: Real-time bidirectional communication
@@ -121,8 +121,8 @@ All tests pass successfully, demonstrating robust functionality.
 ## Files Modified/Created
 
 ### Core Implementation
-- `src/plua2/api_server.py` - FastAPI server implementation
-- `src/plua2/main.py` - CLI integration for API server
+- `src/plua/api_server.py` - FastAPI server implementation
+- `src/plua/main.py` - CLI integration for API server
 - `pyproject.toml` - Added FastAPI dependencies
 
 ### Documentation & Examples
@@ -136,13 +136,13 @@ All tests pass successfully, demonstrating robust functionality.
 
 ## Conclusion
 
-The plua2 REST API implementation is **complete and fully functional**. It provides a robust foundation for remote Lua script interaction, with clean architecture that maintains the performance and capabilities of the underlying plua2 runtime while adding powerful HTTP-based remote control capabilities.
+The plua REST API implementation is **complete and fully functional**. It provides a robust foundation for remote Lua script interaction, with clean architecture that maintains the performance and capabilities of the underlying plua runtime while adding powerful HTTP-based remote control capabilities.
 
 The implementation successfully addresses all the original requirements:
 - ✅ FastAPI REST API server with uvicorn
 - ✅ Separate thread/process architecture (event loop based)
 - ✅ Message passing between API and interpreter (direct calls)
-- ✅ `/plua/*` path for plua2 functions
+- ✅ `/plua/*` path for plua functions
 - ✅ Reserved `/api/*` path for future Fibaro APIs
 - ✅ POST /plua/execute endpoint with full functionality
 - ✅ Responsive API even during Lua debugger pauses

@@ -1,18 +1,18 @@
-# plua2 REST API Example
+# plua REST API Example
 
-This example demonstrates the REST API functionality of plua2.
+This example demonstrates the REST API functionality of plua.
 
 ## Starting the API Server
 
 ```bash
-# Start plua2 with REPL and REST API server (shared interpreter)
-python -m plua2 --api 8888
+# Start plua with REPL and REST API server (shared interpreter)
+python -m plua --api 8888
 
 # Start with a Lua script and API
-python -m plua2 --api 8888 my_script.lua
+python -m plua --api 8888 my_script.lua
 
 # Custom host and port
-python -m plua2 --api 9000 --api-host 127.0.0.1 my_script.lua
+python -m plua --api 9000 --api-host 127.0.0.1 my_script.lua
 ```
 
 ## Shared Interpreter State
@@ -27,11 +27,11 @@ python -m plua2 --api 9000 --api-host 127.0.0.1 my_script.lua
 ### Example Workflow
 
 ```bash
-# Start plua2 with both REPL and API
-python -m plua2 --api 8888
+# Start plua with both REPL and API
+python -m plua --api 8888
 
 # In the REPL, set a variable:
-plua2> a = 42
+plua> a = 42
 
 # From another terminal, access it via API:
 curl -X POST http://localhost:8888/plua/execute \
@@ -42,11 +42,11 @@ curl -X POST http://localhost:8888/plua/execute \
 # Set a variable via API:
 curl -X POST http://localhost:8888/plua/execute \
   -H 'Content-Type: application/json' \
-  -d '{"code":"name = \"plua2\"; return name"}'
+  -d '{"code":"name = \"plua\"; return name"}'
 
 # Access it in the REPL:
-plua2> return name
-# Outputs: plua2
+plua> return name
+# Outputs: plua
 ```
 
 ## API Endpoints
@@ -147,8 +147,8 @@ curl -X POST http://localhost:8888/plua/execute \
 ## Quick Demo
 
 ```bash
-# Start plua2 with API and background script
-python -m plua2 --api 8888 -e "counter = 0; message = 'Hello World'"
+# Start plua with API and background script
+python -m plua --api 8888 -e "counter = 0; message = 'Hello World'"
 
 # Test basic calculation
 curl -X POST http://localhost:8888/plua/execute \
@@ -168,7 +168,7 @@ curl -X POST http://localhost:8888/plua/execute \
 
 ## Reserved Paths
 
-- `/plua/*` - plua2 specific functions
+- `/plua/*` - plua specific functions
 - `/api/*` - Reserved for future Fibaro API integration
 
 ## Architecture
@@ -183,6 +183,6 @@ The API server runs in the same event loop as the Lua runtime, ensuring:
 ## Next Steps
 
 - Complete print output capture implementation
-- Add more plua2-specific endpoints
+- Add more plua-specific endpoints
 - Implement Fibaro API endpoints under `/api/*`
 - Add authentication and security features

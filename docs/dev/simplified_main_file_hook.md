@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `main_file_hook` system has been simplified to provide a cleaner, more flexible architecture for file loading and preprocessing in plua2.
+The `main_file_hook` system has been simplified to provide a cleaner, more flexible architecture for file loading and preprocessing in plua.
 
 ## Architecture
 
@@ -116,19 +116,19 @@ def execute_file(self, filepath: str, debugging: bool = False, debug: bool = Fal
 ### Basic File Loading
 ```bash
 # Uses default hook (simple loading)
-python -m src.plua2.main script.lua
+python -m src.plua.main script.lua
 ```
 
 ### With Fibaro Preprocessing
 ```bash
 # Load fibaro.lua first to override the hook, then load main script
-python -m src.plua2.main -e 'dofile("fibaro.lua")' main_script.lua
+python -m src.plua.main -e 'dofile("fibaro.lua")' main_script.lua
 ```
 
 ### Direct Library Loading
 ```bash
 # fibaro.lua overrides the hook when it's loaded
-python -m src.plua2.main fibaro.lua
+python -m src.plua.main fibaro.lua
 ```
 
 ## Testing
@@ -145,8 +145,8 @@ python -m src.plua2.main fibaro.lua
 ./test_main_file_hook.sh
 
 # Individual tests
-python -m src.plua2.main test_hook.lua --duration 2
-python -m src.plua2.main -e 'dofile("fibaro.lua")' test_hook.lua --duration 2
+python -m src.plua.main test_hook.lua --duration 2
+python -m src.plua.main -e 'dofile("fibaro.lua")' test_hook.lua --duration 2
 ```
 
 ## Future Enhancements
@@ -165,4 +165,4 @@ python -m src.plua2.main -e 'dofile("fibaro.lua")' test_hook.lua --duration 2
 
 ## Conclusion
 
-The simplified `main_file_hook` system provides a much cleaner and more flexible foundation for file loading in plua2. The default implementation handles standard use cases, while libraries like Fibaro can easily override the hook to provide custom preprocessing without complicating the core interpreter logic.
+The simplified `main_file_hook` system provides a much cleaner and more flexible foundation for file loading in plua. The default implementation handles standard use cases, while libraries like Fibaro can easily override the hook to provide custom preprocessing without complicating the core interpreter logic.

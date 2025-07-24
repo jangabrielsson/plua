@@ -26,9 +26,9 @@ setTimeout(function()
             method = "POST",
             headers = {
                 ["Content-Type"] = "application/json",
-                ["User-Agent"] = "plua2-http-client/1.0"
+                ["User-Agent"] = "plua-http-client/1.0"
             },
-            data = '{"message": "Hello from plua2!", "timestamp": "' .. os.date("%Y-%m-%d %H:%M:%S") .. '"}'
+            data = '{"message": "Hello from plua!", "timestamp": "' .. os.date("%Y-%m-%d %H:%M:%S") .. '"}'
         },
         success = function(response)
             print("✓ POST request successful!")
@@ -47,7 +47,7 @@ setTimeout(function()
     client:request("http://httpbin.org/headers", {
         options = {
             headers = {
-                ["X-Custom-Header"] = "plua2-test",
+                ["X-Custom-Header"] = "plua-test",
                 ["Authorization"] = "Bearer test-token"
             }
         },

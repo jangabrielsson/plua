@@ -1,50 +1,50 @@
-# plua2 Interactive REPL
+# plua Interactive REPL
 
-The plua2 REPL provides an interactive Lua environment with all plua2 features available.
+The plua REPL provides an interactive Lua environment with all plua features available.
 
 ## Starting the REPL
 
 ```bash
 # Start the REPL (no Lua file provided)
-python -m src.plua2
+python -m src.plua
 
 # Or with debug mode
-python -m src.plua2 --debug
+python -m src.plua --debug
 ```
 
 ## REPL Features
 
 ### Basic Lua
 ```lua
-plua2> x = 42
-plua2> print("Hello, world!")
+plua> x = 42
+plua> print("Hello, world!")
 Hello, world!
-plua2> x + 10
+plua> x + 10
 52
 ```
 
 ### JSON Support (built-in)
 ```lua
-plua2> data = {name = "John", age = 30}
-plua2> json_str = json.encode(data)
-plua2> print(json_str)
+plua> data = {name = "John", age = 30}
+plua> json_str = json.encode(data)
+plua> print(json_str)
 {"age":30,"name":"John"}
-plua2> parsed = json.decode(json_str)
-plua2> print(parsed.name)
+plua> parsed = json.decode(json_str)
+plua> print(parsed.name)
 John
 ```
 
 ### Async Timers
 ```lua
-plua2> setTimeout(function() print("Timer fired!") end, 2000)
-plua2> -- Wait 2 seconds...
+plua> setTimeout(function() print("Timer fired!") end, 2000)
+plua> -- Wait 2 seconds...
 Timer fired!
 ```
 
 ### Network Operations (built-in)
 ```lua
-plua2> client = net.HTTPClient()
-plua2> client:request("https://httpbin.org/json", {
+plua> client = net.HTTPClient()
+plua> client:request("https://httpbin.org/json", {
   success = function(resp) 
     print("Status:", resp.status)
     local data = json.decode(resp.data)
@@ -56,11 +56,11 @@ plua2> client:request("https://httpbin.org/json", {
 
 ### HTTP Server
 ```lua
-plua2> server = net.HTTPServer()
-plua2> server:start("localhost", 8080, function(method, path, payload)
+plua> server = net.HTTPServer()
+plua> server:start("localhost", 8080, function(method, path, payload)
   return json.encode({message = "Hello from REPL!", path = path}), 200
 end)
-plua2> -- Server now running on port 8080
+plua> -- Server now running on port 8080
 ```
 
 ## REPL Commands
@@ -76,17 +76,17 @@ plua2> -- Server now running on port 8080
 
 ### Simple Calculation
 ```lua
-plua2> function factorial(n)
+plua> function factorial(n)
   if n <= 1 then return 1 end
   return n * factorial(n - 1)
 end
-plua2> factorial(5)
+plua> factorial(5)
 120
 ```
 
 ### Async Chain
 ```lua
-plua2> setTimeout(function()
+plua> setTimeout(function()
   print("Step 1")
   setTimeout(function()
     print("Step 2")
@@ -99,8 +99,8 @@ end, 1000)
 
 ### HTTP Client Example
 ```lua
-plua2> client = net.HTTPClient()
-plua2> client:request("https://api.github.com/users/octocat", {
+plua> client = net.HTTPClient()
+plua> client:request("https://api.github.com/users/octocat", {
   success = function(resp)
     local user = json.decode(resp.data)
     print("GitHub user:", user.login)
@@ -117,8 +117,8 @@ plua2> client:request("https://api.github.com/users/octocat", {
 Use `state()` to see what's happening:
 
 ```lua
-plua2> setTimeout(function() print("Later!") end, 5000)
-plua2> state()
+plua> setTimeout(function() print("Later!") end, 5000)
+plua> state()
 Runtime state:
   Active timers: 1
   Pending callbacks: 0
@@ -138,7 +138,7 @@ Runtime state:
 5. **Debug mode**: Use `--debug` flag or `debug(true)` for verbose logging
 
 The REPL is perfect for:
-- Learning plua2 features
+- Learning plua features
 - Testing API calls
 - Prototyping async code
 - Debugging network operations

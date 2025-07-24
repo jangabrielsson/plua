@@ -1,3 +1,3 @@
 """
-Tests for plua2 package
+Tests for plua package
 """

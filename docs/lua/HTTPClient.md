@@ -69,7 +69,7 @@ http:request("https://api.github.com/user", {
         method = "GET",
         headers = {
             ["Authorization"] = "token your-github-token",
-            ["User-Agent"] = "plua2-app/1.0"
+            ["User-Agent"] = "plua-app/1.0"
         },
         timeout = 15
     },
@@ -110,7 +110,7 @@ server:start("localhost", 8080, {
         print(string.format("[%s] %s %s", request_id, method, path))
         
         if path == "/" then
-            server:response(request_id, 200, "Hello from plua2 HTTP server!")
+            server:response(request_id, 200, "Hello from plua HTTP server!")
         elseif path == "/api/time" then
             local response = json.encode({
                 time = os.date(),
@@ -200,9 +200,9 @@ server:start("localhost", 8082, {
             local html = [[
 <!DOCTYPE html>
 <html>
-<head><title>plua2 File Server</title></head>
+<head><title>plua File Server</title></head>
 <body>
-    <h1>Welcome to plua2!</h1>
+    <h1>Welcome to plua!</h1>
     <p>This is a simple HTTP server written in Lua.</p>
     <ul>
         <li><a href="/api/time">Current Time</a></li>
@@ -216,7 +216,7 @@ server:start("localhost", 8082, {
             local time_data = {
                 current_time = os.date("%Y-%m-%d %H:%M:%S"),
                 unix_timestamp = os.time(),
-                server = "plua2"
+                server = "plua"
             }
             server:response(request_id, 200, json.encode(time_data), "application/json")
             
@@ -274,7 +274,7 @@ server:start("localhost", 8083, {
             method = method,
             path = path,
             timestamp = os.time(),
-            message = "Hello from plua2!"
+            message = "Hello from plua!"
         }
         
         server:response(request_id, 200, json.encode(response), "application/json")

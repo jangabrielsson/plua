@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>plua2 Web REPL</title>
+    <title>plua Web REPL</title>
     <style>
         * {
             margin: 0;
@@ -110,7 +110,7 @@
         }
 
         .output-line.input::before {
-            content: "plua2> ";
+            content: "plua> ";
             color: #ffd700;
             font-weight: bold;
         }
@@ -282,7 +282,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>plua2 Web REPL</h1>
+            <h1>plua Web REPL</h1>
             <p class="subtitle">Interactive Lua execution with async runtime support</p>
         </div>
 
@@ -296,7 +296,7 @@
 
         <div class="repl-container">
             <div class="output-area" id="output">
-                <div class="output-line info">Welcome to plua2 Web REPL!</div>
+                <div class="output-line info">Welcome to plua Web REPL!</div>
                 <div class="output-line info">Enter Lua code below and click Execute to run it.</div>
                 <div class="output-line info">Built-in modules: net, json</div>
             </div>
@@ -310,7 +310,7 @@
                             class="code-input" 
                             placeholder="Enter Lua code here...
 Examples:
-  print('Hello, plua2!')
+  print('Hello, plua!')
   return 2 + 2
   json.encode({name='test'})
   setTimeout(function() print('Timer!') end, 2000)"
@@ -333,7 +333,7 @@ Examples:
                 <div class="examples">
                     <h3>Quick Examples:</h3>
                     <div class="example-buttons">
-                        <button class="example-btn" data-code="print('Hello, plua2!')">Hello World</button>
+                        <button class="example-btn" data-code="print('Hello, plua!')">Hello World</button>
                         <button class="example-btn" data-code="return 2 + 2">Math</button>
                         <button class="example-btn" data-code="return json.encode({name='test', time=os.time()})">JSON</button>
                         <button class="example-btn" data-code="local client = net.HTTPClient(); return 'Client created: ' .. tostring(client ~= nil)">Network</button>
@@ -399,7 +399,7 @@ Examples:
                 
                 if (!code) return;
                 if (!this.isConnected) {
-                    this.addOutput('error', 'Not connected to plua2 server');
+                    this.addOutput('error', 'Not connected to plua server');
                     return;
                 }
 
@@ -484,11 +484,11 @@ Examples:
                 if (connected) {
                     this.statusText.textContent = 'Connected';
                     if (info) {
-                        this.serverInfo.textContent = `plua2 API v${info.api_version} | Lua ${info.lua_version}`;
+                        this.serverInfo.textContent = `plua API v${info.api_version} | Lua ${info.lua_version}`;
                     }
                 } else {
                     this.statusText.textContent = 'Disconnected';
-                    this.serverInfo.textContent = 'Check if plua2 server is running with --api flag';
+                    this.serverInfo.textContent = 'Check if plua server is running with --api flag';
                 }
             }
 

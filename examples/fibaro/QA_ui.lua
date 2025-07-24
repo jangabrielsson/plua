@@ -61,7 +61,7 @@ function QuickApp:onInit()
   self:debug("onInit")
   -- Only open browser on first initialization
   if not self.browser_opened then
-    local result = _PY.open_web_interface_browser()
+    local result = PLUA.openWebInterfaceBrowser()
     print("Web interface opened:", json.encode(result))
     self.browser_opened = true
   end

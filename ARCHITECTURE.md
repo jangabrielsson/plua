@@ -1,6 +1,6 @@
-# plua2 Architecture
+# plua Architecture
 
-plua2 is a Python-Lua async runtime that bridges Python's asyncio with Lua's coroutines, providing JavaScript-like timers and async operations. This document outlines the core architecture, components, and subsystems.
+plua is a Python-Lua async runtime that bridges Python's asyncio with Lua's coroutines, providing JavaScript-like timers and async operations. This document outlines the core architecture, components, and subsystems.
 
 ## 📋 Table of Contents
 
@@ -13,7 +13,7 @@ plua2 is a Python-Lua async runtime that bridges Python's asyncio with Lua's cor
 
 ## 🏗️ Overview
 
-plua2 can be thought of as "Node.js for Lua" with Python as the runtime. It provides:
+plua can be thought of as "Node.js for Lua" with Python as the runtime. It provides:
 
 - **Async Lua Runtime**: Coroutine-based async operations
 - **JavaScript-style Timers**: `setTimeout`, `clearTimeout`, `setInterval`
@@ -84,7 +84,7 @@ graph TB
 
 ### 1. Python Runtime Core
 
-#### LuaAsyncRuntime (`src/plua2/runtime.py`)
+#### LuaAsyncRuntime (`src/plua/runtime.py`)
 - **Role**: Main async event loop coordinator
 - **Responsibilities**:
   - Manages asyncio event loop
@@ -92,7 +92,7 @@ graph TB
   - Handles async callback processing
   - Provides runtime state management
 
-#### LuaInterpreter (`src/plua2/interpreter.py`)
+#### LuaInterpreter (`src/plua/interpreter.py`)
 - **Role**: Lua runtime wrapper with Python bridge
 - **Responsibilities**:
   - Wraps lupa Lua state
@@ -149,7 +149,7 @@ def my_function(arg1, arg2):
 
 ### 3. Async Timer Architecture
 
-plua2 implements a producer-consumer pattern for timer management:
+plua implements a producer-consumer pattern for timer management:
 
 ```mermaid
 graph LR
@@ -220,7 +220,7 @@ graph TB
 
 ### 5. Web Interface and REST API
 
-plua2 provides multiple interfaces for interaction:
+plua provides multiple interfaces for interaction:
 
 ```mermaid
 graph TB
@@ -395,16 +395,16 @@ graph TB
 
 ### QuickApp Development Workflow
 
-1. **Development**: Write QuickApp in VS Code with plua2
+1. **Development**: Write QuickApp in VS Code with plua
 2. **Testing**: Use `--fibaro` flag for HC3 API emulation
 3. **Upload**: VS Code tasks upload to real HC3 system
-4. **Debugging**: plua2 provides debugging capabilities
+4. **Debugging**: plua provides debugging capabilities
 
 ## 🛠️ Development Patterns
 
 ### Module Registration Pattern
 ```python
-from plua2.luafuns_lib import lua_exporter
+from plua.luafuns_lib import lua_exporter
 
 @lua_exporter
 def my_utility_function(param1, param2):
@@ -452,7 +452,7 @@ client:request("https://api.example.com/data", {
 
 ```mermaid
 sequenceDiagram
-    participant CLI as plua2 CLI
+    participant CLI as plua CLI
     participant Runtime as LuaAsyncRuntime
     participant API as FastAPI Server
     participant Lua as Lua Environment

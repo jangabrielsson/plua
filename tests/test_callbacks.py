@@ -4,7 +4,7 @@ Tests for the unified callback system
 
 import pytest
 import asyncio
-from plua2.runtime import LuaAsyncRuntime
+from plua.runtime import LuaAsyncRuntime
 
 
 class TestCallbackSystem:

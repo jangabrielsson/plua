@@ -1,4 +1,4 @@
-/* plua2 Main Page Styles */
+/* plua Main Page Styles */
 
 * {
     margin: 0;
@@ -136,7 +136,7 @@ body {
 }
 
 .output-line.input::before {
-    content: "plua2> ";
+    content: "plua> ";
     color: #ffd700;
     font-weight: bold;
 }

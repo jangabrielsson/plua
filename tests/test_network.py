@@ -6,7 +6,7 @@ import pytest
 import asyncio
 import aiohttp
 from aiohttp import web
-from plua2.runtime import LuaAsyncRuntime
+from plua.runtime import LuaAsyncRuntime
 
 
 class TestNetworkFunctionality:

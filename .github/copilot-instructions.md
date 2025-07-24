@@ -1,13 +1,13 @@
-# plua2 AI Agent Instructions
+# plua AI Agent Instructions
 
 ## Project Overview
-plua2 is a Python-Lua async runtime that bridges Python's asyncio with Lua's coroutines, providing JavaScript-like timers and async operations. Think of it as "Node.js for Lua" with Python as the runtime.
+plua is a Python-Lua async runtime that bridges Python's asyncio with Lua's coroutines, providing JavaScript-like timers and async operations. Think of it as "Node.js for Lua" with Python as the runtime.
 
 ## Architecture
 
 ### Core Components
-- **`LuaAsyncRuntime`** (`src/plua2/runtime.py`) - Main async event loop coordinator
-- **`LuaInterpreter`** (`src/plua2/interpreter.py`) - Lua runtime wrapper with `_PY` bridge
+- **`LuaAsyncRuntime`** (`src/plua/runtime.py`) - Main async event loop coordinator
+- **`LuaInterpreter`** (`src/plua/interpreter.py`) - Lua runtime wrapper with `_PY` bridge
 - **`api_server.py`** - FastAPI REST server with Web REPL interface  
 - **`fibaro_api_endpoints.py`** - Auto-generated 194 Fibaro HC3 API endpoints
 
@@ -46,23 +46,23 @@ def my_function(arg1, arg2):
 ### Running & Testing
 ```bash
 # Interactive REPL (most common development mode)
-plua2
+plua
 
 # Run script (API server starts automatically on port 8888)
-plua2 script.lua
+plua script.lua
 
 # Run with custom API port
-plua2 --api-port 9000 script.lua
+plua --api-port 9000 script.lua
 
 # Run without API server
-plua2 --noapi script.lua
+plua --noapi script.lua
 
 # Development tests (use dev/ directory)
-plua2 dev/test_timers.lua
+plua dev/test_timers.lua
 
 
 # DRun with fibaro API support
-plua2 --fibaro script.lua
+plua --fibaro script.lua
 ```
 
 ### Key Commands & Flags
@@ -74,7 +74,7 @@ plua2 --fibaro script.lua
 Note: The FastAPI REST server starts automatically on port 8888 unless `--noapi` is specified. Fibaro HC3 API endpoints are always loaded by default.
 
 ### File Organization
-- `src/plua2/` - Core Python runtime
+- `src/plua/` - Core Python runtime
 - `dev/` - Development tests and internal examples (use `_PY` functions)
 - `examples/` - Clean user examples (avoid `_PY` internals)
 - `docs/dev/` - Development documentation
@@ -92,7 +92,7 @@ The project includes a comprehensive Fibaro Home Center 3 emulator:
 
 ### Web REPL Interface
 - FastAPI serves both REST API and static web assets
-- Web interface available at `/static/plua2_main_page.html` when API server is running
+- Web interface available at `/static/plua_main_page.html` when API server is running
 - Static assets (HTML, CSS, JS) served from `/static/` directory
 - Supports HTML rendering in output (use `html_extensions.py` functions)
 - Shared interpreter state between web and CLI REPL

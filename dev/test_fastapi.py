@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-sys.path.insert(0, "/Users/jangabrielsson/Documents/dev/plua2/src")
+sys.path.insert(0, "/Users/jangabrielsson/Documents/dev/plua/src")
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
@@ -9,7 +9,7 @@ from typing import Dict, Any
 import traceback
 
 try:
-    from plua2.fibaro_api_models import CreateSceneRequest
+    from plua.fibaro_api_models import CreateSceneRequest
     print("✓ Imported CreateSceneRequest")
     
     app = FastAPI()

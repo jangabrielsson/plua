@@ -1,14 +1,14 @@
-# plua2
+# plua
 
 Python-Lua async runtime with timer support
 
 ## Overview
 
-plua2 is a Python package that provides an async runtime environment for executing Lua scripts with JavaScript-like timer functionality. It bridges Python's asyncio with Lua's coroutines, allowing for sophisticated async programming patterns.
+plua is a Python package that provides an async runtime environment for executing Lua scripts with JavaScript-like timer functionality. It bridges Python's asyncio with Lua's coroutines, allowing for sophisticated async programming patterns.
 
 ## Features
 
-- **Interactive REPL**: Lua-like interactive prompt with plua2 features
+- **Interactive REPL**: Lua-like interactive prompt with plua features
 - **JavaScript-like timers**: `setTimeout()` and `clearTimeout()` in Lua
 - **Async/await bridge**: Python asyncio integrated with Lua coroutines  
 - **Context safety**: All Lua execution happens in the same Python context
@@ -32,62 +32,62 @@ pip install -e ".[dev]"
 
 ```bash
 # Interactive REPL (no file specified)
-plua2
+plua
 
 # Run a Lua file directly
-plua2 script.lua
+plua script.lua
 
 # Run with time limit
-plua2 --duration 10 script.lua
+plua --duration 10 script.lua
 
 # Start with REST API server
-plua2 --api                    # Default port 8888
-plua2 --api 8877              # Custom port
-plua2 --api 8877 --api-host 127.0.0.1  # Custom host and port
+plua --api                    # Default port 8888
+plua --api 8877              # Custom port
+plua --api 8877 --api-host 127.0.0.1  # Custom host and port
 
 # Run built-in examples
-plua2 --example 2 --duration 10
-plua2 --example cancel --duration 5
+plua --example 2 --duration 10
+plua --example cancel --duration 5
 
 # Run inline Lua code
-plua2 --script 'print("Hello from Lua"); setTimeout(function() print("Timer fired!") end, 1000)' --duration 5
+plua --script 'print("Hello from Lua"); setTimeout(function() print("Timer fired!") end, 1000)' --duration 5
 
 # Run forever (until Ctrl+C)
-plua2 script.lua
+plua script.lua
 ```
 
 ### Interactive REPL
 
-plua2 provides an interactive REPL (Read-Eval-Print Loop) when no Lua file is specified:
+plua provides an interactive REPL (Read-Eval-Print Loop) when no Lua file is specified:
 
 ```bash
-$ plua2
-Plua2 v0.1.0 Interactive REPL
+$ plua
+Plua v0.1.0 Interactive REPL
 Running Lua 5.4 with async runtime support
 
 Quick start:
   help()                           - Show available commands
-  print('Hello, plua2!')           - Basic Lua
+  print('Hello, plua!')           - Basic Lua
   json.encode({name='test'})       - JSON encoding
   setTimeout(function() print('Hi!') end, 2000) - Async timer
 
 Type 'exit()' or press Ctrl+D to quit
 
-plua2> print("Hello, world!")
+plua> print("Hello, world!")
 Hello, world!
-plua2> x = 42
-plua2> x + 10
+plua> x = 42
+plua> x + 10
 52
-plua2> client = net.HTTPClient()
-plua2> setTimeout(function() print("Timer fired!") end, 2000)
-plua2> -- Timer fires after 2 seconds
+plua> client = net.HTTPClient()
+plua> setTimeout(function() print("Timer fired!") end, 2000)
+plua> -- Timer fires after 2 seconds
 Timer fired!
-plua2> exit()
+plua> exit()
 Goodbye!
 ```
 
 The REPL supports:
-- All plua2 features (timers, JSON, networking)
+- All plua features (timers, JSON, networking)
 - Built-in `json` and `net` modules (no require needed)
 - Persistent variables and functions
 - Background async operations
@@ -98,7 +98,7 @@ The REPL supports:
 
 ```python
 import asyncio
-from plua2 import LuaAsyncRuntime
+from plua import LuaAsyncRuntime
 
 async def main():
     runtime = LuaAsyncRuntime()
@@ -118,14 +118,14 @@ asyncio.run(main())
 
 ### REST API Server
 
-plua2 includes a built-in REST API server that allows remote execution of Lua code:
+plua includes a built-in REST API server that allows remote execution of Lua code:
 
 ```bash
-# Start plua2 with REST API on default port 8888
-plua2 --api
+# Start plua with REST API on default port 8888
+plua --api
 
 # Start on specific port with custom host
-plua2 --api 8877 --api-host 127.0.0.1
+plua --api 8877 --api-host 127.0.0.1
 
 # Access the web REPL interface
 # Open browser to: http://localhost:8888/web
@@ -141,7 +141,7 @@ plua2 --api 8877 --api-host 127.0.0.1
 
 #### Web REPL
 
-The web REPL provides a modern browser-based interface for plua2:
+The web REPL provides a modern browser-based interface for plua:
 
 - **HTML Rendering**: Supports HTML tags in output for colored and formatted text
 - **Real-time Execution**: Share interpreter state with local REPL
@@ -308,7 +308,7 @@ Comprehensive documentation is available in the `docs/` directory:
 
 ## Fibaro HC3 API Integration
 
-plua2 includes a comprehensive Fibaro Home Center 3 API emulator with full type safety and documentation:
+plua includes a comprehensive Fibaro Home Center 3 API emulator with full type safety and documentation:
 
 ### Generated API Endpoints
 
@@ -316,10 +316,10 @@ The Fibaro API endpoints are auto-generated from official Swagger/OpenAPI specif
 
 ```bash
 # Regenerate Fibaro API endpoints and models
-python src/plua2/generate_typed_fibaro_api.py
+python src/plua/generate_typed_fibaro_api.py
 
 # Generate with custom paths
-python src/plua2/generate_typed_fibaro_api.py --docs-dir fibaro_api_docs --output-dir src/plua2
+python src/plua/generate_typed_fibaro_api.py --docs-dir fibaro_api_docs --output-dir src/plua
 ```
 
 This generates:
@@ -336,7 +336,7 @@ This generates:
 
 ```bash
 # Start server with Fibaro API
-plua2 --api-port 8888 --fibaro
+plua --api-port 8888 --fibaro
 
 # Test an endpoint
 curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
@@ -349,7 +349,7 @@ curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
 ```bash
 # Clone and setup
 git clone <repository>
-cd plua2
+cd plua
 pip install -e ".[dev]"
 ```
 

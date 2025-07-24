@@ -3,7 +3,7 @@
 
 echo "Testing REPL with built-in net module..."
 
-python -m src.plua2 << 'EOF'
+python -m src.plua << 'EOF'
 print("Testing built-in modules:")
 print("JSON available:", json ~= nil)
 print("Net available:", net ~= nil)

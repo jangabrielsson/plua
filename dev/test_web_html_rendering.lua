@@ -1,7 +1,7 @@
--- Test script for HTML rendering in plua2 web REPL
+-- Test script for HTML rendering in plua web REPL
 -- This demonstrates various HTML tags that should render properly
 
-print("<h2 style='color: #4fc3f7;'>plua2 HTML Rendering Test</h2>")
+print("<h2 style='color: #4fc3f7;'>plua HTML Rendering Test</h2>")
 
 print("<p><font color='red'>Red text</font> | <font color='green'>Green text</font> | <font color='blue'>Blue text</font></p>")
 

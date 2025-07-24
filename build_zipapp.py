@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build script for creating a portable plua2 using zipapp with embedded Python
+Build script for creating a portable plua using zipapp with embedded Python
 
 This creates the fastest-starting solution by avoiding the overhead of 
 bundled executables.
@@ -24,7 +24,7 @@ from pathlib import Path
 import tempfile
 
 def create_zipapp():
-    """Create a zipapp version of plua2"""
+    """Create a zipapp version of plua"""
     
     project_root = Path(__file__).parent
     src_path = project_root / "src"
@@ -37,14 +37,14 @@ def create_zipapp():
     
     # Create temporary build directory
     with tempfile.TemporaryDirectory() as temp_dir:
-        build_path = Path(temp_dir) / "plua2_build"
+        build_path = Path(temp_dir) / "plua_build"
         build_path.mkdir()
         
         print("📦 Copying source files...")
         
-        # Copy plua2 source
-        plua2_build = build_path / "plua2"
-        shutil.copytree(src_path / "plua2", plua2_build)
+        # Copy plua source
+        plua_build = build_path / "plua"
+        shutil.copytree(src_path / "plua", plua_build)
         
         # Copy Lua files
         lua_build = build_path / "lua"
@@ -56,10 +56,10 @@ def create_zipapp():
         
         # Create __main__.py for zipapp entry point
         main_content = '''#!/usr/bin/env python3
-"""Entry point for plua2 zipapp"""
+"""Entry point for plua zipapp"""
 
 if __name__ == "__main__":
-    from plua2.main import main
+    from plua.main import main
     main()
 '''
         
@@ -93,7 +93,7 @@ if __name__ == "__main__":
                 print(f"  ⚠️ Failed to install {req}: {e}")
         
         # Create the zipapp
-        zipapp_path = dist_dir / "plua2.pyz"
+        zipapp_path = dist_dir / "plua.pyz"
         print(f"🔨 Creating zipapp: {zipapp_path}")
         
         zipapp.create_archive(
@@ -119,7 +119,7 @@ def create_portable_bundle():
     
     print("🔧 Creating portable bundle with embedded Python...")
     print("   Download Python embeddable from: https://www.python.org/downloads/windows/")
-    print("   Extract and place python.exe in the same directory as plua2.pyz")
+    print("   Extract and place python.exe in the same directory as plua.pyz")
     
     project_root = Path(__file__).parent
     dist_dir = project_root / "dist_zipapp"
@@ -127,12 +127,12 @@ def create_portable_bundle():
     # Create a simple launcher script
     launcher_content = '''#!/usr/bin/env python3
 """
-Portable launcher for plua2
+Portable launcher for plua
 
 For fully portable deployment:
 1. Download Python embeddable package
 2. Extract python.exe to same directory as this script
-3. Run: ./python plua2.pyz
+3. Run: ./python plua.pyz
 """
 
 import sys
@@ -141,7 +141,7 @@ from pathlib import Path
 
 def main():
     script_dir = Path(__file__).parent
-    pyz_file = script_dir / "plua2.pyz"
+    pyz_file = script_dir / "plua.pyz"
     
     if not pyz_file.exists():
         print(f"Error: {pyz_file} not found")
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     main()
 '''
     
-    launcher_path = dist_dir / "plua2_launcher.py"
+    launcher_path = dist_dir / "plua_launcher.py"
     launcher_path.write_text(launcher_content)
     launcher_path.chmod(0o755)
     

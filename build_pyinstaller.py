@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build script for creating a single-file plua2 executable using PyInstaller
+Build script for creating a single-file plua executable using PyInstaller
 
 Prerequisites:
     pip install pyinstaller
@@ -36,7 +36,7 @@ static_path = project_root / "static"
 lua_path = src_path / "lua"
 
 a = Analysis(
-    [str(src_path / "plua2" / "__main__.py")],
+    [str(src_path / "plua" / "__main__.py")],
     pathex=[str(src_path)],
     binaries=[],
     datas=[
@@ -78,7 +78,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='plua2',
+    name='plua',
     debug=False,
     bootloader_ignore_signals=False,
     strip=True,       # Strip debug symbols
@@ -95,12 +95,12 @@ exe = EXE(
 )
 '''
     
-    spec_path = project_root / "plua2.spec"
+    spec_path = project_root / "plua.spec"
     spec_path.write_text(spec_content)
     return spec_path
 
 def build_pyinstaller():
-    """Build plua2 using PyInstaller"""
+    """Build plua using PyInstaller"""
     
     project_root = Path(__file__).parent
     
@@ -124,7 +124,7 @@ def build_pyinstaller():
         str(spec_path)
     ]
     
-    print("🔨 Building plua2 with PyInstaller...")
+    print("🔨 Building plua with PyInstaller...")
     print(f"Command: {' '.join(cmd)}")
     
     try:
@@ -132,7 +132,7 @@ def build_pyinstaller():
         
         # Find the created executable
         dist_dir = project_root / "dist"
-        executable_name = "plua2.exe" if sys.platform == "win32" else "plua2"
+        executable_name = "plua.exe" if sys.platform == "win32" else "plua"
         executable_path = dist_dir / executable_name
         
         if executable_path.exists():

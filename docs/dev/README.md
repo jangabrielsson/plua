@@ -1,6 +1,6 @@
-# plua2 Developer Documentation
+# plua Developer Documentation
 
-This directory contains internal development documentation, implementation notes, and progress tracking for plua2 developers and contributors.
+This directory contains internal development documentation, implementation notes, and progress tracking for plua developers and contributors.
 
 ## 📋 Implementation Progress
 
@@ -20,7 +20,7 @@ These documents track the development progress and implementation details:
 
 ## 🏗️ Architecture Overview
 
-plua2 consists of several key components:
+plua consists of several key components:
 
 ### Core Components
 - **LuaInterpreter**: Manages Lua runtime and script execution
@@ -55,7 +55,7 @@ plua2 consists of several key components:
 ## 🔄 Development Workflow
 
 ### Adding New Features
-1. Update core implementation in `src/plua2/`
+1. Update core implementation in `src/plua/`
 2. Add or update tests
 3. Update user documentation in `docs/`
 4. Create progress tracking doc in `docs/dev/`
@@ -106,4 +106,4 @@ plua2 consists of several key components:
 
 ---
 
-This directory serves as the central hub for all plua2 development documentation. Keep it updated as the project evolves!
+This directory serves as the central hub for all plua development documentation. Keep it updated as the project evolves!

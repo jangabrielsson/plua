@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🧪 Testing plua2 Fibaro API Hooks"
+echo "🧪 Testing plua Fibaro API Hooks"
 echo "================================"
 echo
 
@@ -8,11 +8,11 @@ echo "📋 Test 1: Loading Fibaro API support and testing main_file_hook"
 echo
 
 # First, test loading fibaro.lua which sets up the hooks
-echo "Starting plua2 with fibaro.lua to set up hooks, then test main_file_hook..."
-python -m plua2 -e 'dofile("fibaro.lua")' test_fibaro_main.lua --duration 3 &
+echo "Starting plua with fibaro.lua to set up hooks, then test main_file_hook..."
+python -m plua -e 'dofile("fibaro.lua")' test_fibaro_main.lua --duration 3 &
 PLUA_PID=$!
 
-# Wait a moment for plua2 to set up
+# Wait a moment for plua to set up
 sleep 2
 
 echo
@@ -24,8 +24,8 @@ kill $PLUA_PID 2>/dev/null
 wait $PLUA_PID 2>/dev/null
 
 # Start with API server
-echo "Starting plua2 with API server and Fibaro hooks..."
-python -m plua2 -e 'dofile("fibaro.lua")' --api 8878 --duration 10 &
+echo "Starting plua with API server and Fibaro hooks..."
+python -m plua -e 'dofile("fibaro.lua")' --api 8878 --duration 10 &
 API_PID=$!
 
 # Wait for server to start
@@ -57,10 +57,10 @@ echo "5. Testing non-existent endpoint"
 curl -s http://localhost:8878/api/unknown | python -m json.tool
 echo
 
-echo "6. Testing plua2 execute endpoint still works"
+echo "6. Testing plua execute endpoint still works"
 curl -s -X POST http://localhost:8878/plua/execute \
   -H 'Content-Type: application/json' \
-  -d '{"code":"return \"Both plua2 and Fibaro APIs work!\""}' | python -m json.tool
+  -d '{"code":"return \"Both plua and Fibaro APIs work!\""}' | python -m json.tool
 echo
 
 echo "🧹 Cleaning up..."

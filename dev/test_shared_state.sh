@@ -23,7 +23,7 @@ echo
 echo "3. Setting variable 'name' via API..."
 result=$(curl -s -X POST "$API_URL/plua/execute" \
   -H 'Content-Type: application/json' \
-  -d '{"code":"name = \"plua2\"; return name"}')
+  -d '{"code":"name = \"plua\"; return name"}')
 echo "API Response: $result"
 echo
 

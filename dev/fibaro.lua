@@ -1,4 +1,4 @@
--- fibaro.lua - Test implementation of Fibaro API support using plua2 hooks
+-- fibaro.lua - Test implementation of Fibaro API support using plua hooks
 
 print("Loading Fibaro API support...")
 

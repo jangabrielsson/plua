@@ -1,4 +1,4 @@
-# plua2 Development Tests
+# plua Development Tests
 
 This directory contains internal development tests and examples that may use `_PY` functions or other internal APIs. These are not intended for end users but are useful for:
 
@@ -31,19 +31,19 @@ The test files in this directory may:
 
 ## Usage
 
-These tests are primarily for plua2 developers and contributors. If you're looking for examples of how to use plua2 in your own projects, see the `examples/` directory instead.
+These tests are primarily for plua developers and contributors. If you're looking for examples of how to use plua in your own projects, see the `examples/` directory instead.
 
 For development documentation and implementation guides, see the [`docs/dev/`](../docs/dev/README.md) directory.
 
 To run development tests:
 
 ```bash
-plua2 dev/test_filename.lua
+plua dev/test_filename.lua
 ```
 
 ## Contributing
 
-When adding new features to plua2:
+When adding new features to plua:
 1. Add comprehensive tests in this directory
 2. Create clean, end-user examples in the `examples/` directory
 3. Ensure tests cover both success and error cases

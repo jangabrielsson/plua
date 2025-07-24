@@ -4,7 +4,7 @@ Tests for the _PY.config table functionality
 
 import pytest
 import os
-from plua2.runtime import LuaAsyncRuntime
+from plua.runtime import LuaAsyncRuntime
 
 
 class TestPyConfig:
@@ -90,18 +90,18 @@ class TestPyConfig:
         runtime.initialize_lua()
         
         script = """
-        plua2_version = _PY.config.plua2_version
+        plua_version = _PY.config.plua_version
         lua_version = _PY.config.lua_version
         python_version = _PY.config.python_version
         """
         
         runtime.interpreter.lua.execute(script)
         
-        plua2_version = runtime.interpreter.lua.eval("plua2_version")
+        plua_version = runtime.interpreter.lua.eval("plua_version")
         lua_version = runtime.interpreter.lua.eval("lua_version")
         python_version = runtime.interpreter.lua.eval("python_version")
         
-        assert isinstance(plua2_version, str) and len(plua2_version) > 0
+        assert isinstance(plua_version, str) and len(plua_version) > 0
         assert isinstance(lua_version, str) and len(lua_version) > 0
         assert isinstance(python_version, str) and len(python_version) > 0
         

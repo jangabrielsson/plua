@@ -2,12 +2,12 @@
 
 ## ✅ Completed Organization
 
-The plua2 documentation has been reorganized into a proper structure for better maintainability and user experience.
+The plua documentation has been reorganized into a proper structure for better maintainability and user experience.
 
 ### 📁 New Structure
 
 ```
-plua2/
+plua/
 ├── README.md                           # Main project overview
 ├── docs/                              # 📚 All documentation
 │   ├── README.md                      # Documentation index
@@ -52,17 +52,17 @@ plua2/
 ### 📚 Documentation Types
 
 #### User Documentation (`docs/`)
-- **Target Audience**: plua2 end users (Lua developers, scripters)
+- **Target Audience**: plua end users (Lua developers, scripters)
 - **Content**: Getting started guides, features, examples
 - **Files**: Web REPL examples, user guides
 
 #### API Documentation (`docs/api/`)
-- **Target Audience**: Developers integrating with plua2 via REST API
+- **Target Audience**: Developers integrating with plua via REST API
 - **Content**: Endpoint reference, examples, integration patterns
 - **Files**: API usage examples, endpoint documentation
 
 #### Developer Documentation (`docs/dev/`)
-- **Target Audience**: plua2 contributors and maintainers
+- **Target Audience**: plua contributors and maintainers
 - **Content**: Implementation details, progress tracking, architecture
 - **Files**: Progress tracking, technical deep-dives, implementation notes
 
@@ -114,4 +114,4 @@ plua2/
 - Integration with GitHub Pages or similar
 - Documentation testing and validation
 
-This reorganization provides a solid foundation for scaling the documentation as plua2 grows!
+This reorganization provides a solid foundation for scaling the documentation as plua grows!

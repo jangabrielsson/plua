@@ -22,7 +22,7 @@ end
 -- Try to connect
 print("\nTrying to connect to test broker...")
 local client = mqtt.Client.connect("mqtt://test.mosquitto.org", {
-    clientId = "plua2_simple_test",
+    clientId = "plua_simple_test",
     callback = function(returnCode)
         print("Connection callback received, return code:", returnCode)
     end

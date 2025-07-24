@@ -2,7 +2,7 @@
 
 ## Overview
 
-The plua2 project now includes comprehensive Fibaro Home Center 3 (HC3) API emulation with 194 auto-generated endpoints based on the official Swagger/OpenAPI specifications.
+The plua project now includes comprehensive Fibaro Home Center 3 (HC3) API emulation with 194 auto-generated endpoints based on the official Swagger/OpenAPI specifications.
 
 ## Features
 
@@ -32,7 +32,7 @@ The plua2 project now includes comprehensive Fibaro Home Center 3 (HC3) API emul
 4. **Automatic Registration** - Endpoints are registered when Fibaro support is loaded
 
 ### Key Components
-- `src/plua2/fibaro_api_endpoints.py` - Auto-generated FastAPI endpoints (5046 lines)
+- `src/plua/fibaro_api_endpoints.py` - Auto-generated FastAPI endpoints (5046 lines)
 - `generate_fibaro_api.py` - Endpoint generator script
 - `fibaro.lua` - Example Fibaro API implementation in Lua
 - `fibaro_api_docs/` - Original Swagger/OpenAPI JSON files
@@ -41,8 +41,8 @@ The plua2 project now includes comprehensive Fibaro Home Center 3 (HC3) API emul
 
 ### Starting the Server
 ```bash
-# Start plua2 with Fibaro API support
-python -m plua2 --api 8888 fibaro.lua
+# Start plua with Fibaro API support
+python -m plua --api 8888 fibaro.lua
 ```
 
 ### Example API Calls
@@ -81,8 +81,8 @@ end
 ## File Structure
 
 ```
-/Users/jangabrielsson/Documents/dev/plua2/
-├── src/plua2/
+/Users/jangabrielsson/Documents/dev/plua/
+├── src/plua/
 │   ├── fibaro_api_endpoints.py     # Auto-generated FastAPI endpoints
 │   ├── api_server.py               # Main API server with Fibaro integration
 │   ├── runtime.py                  # Lua runtime with hook support
@@ -155,7 +155,7 @@ Modify `fibaro.lua` or create your own implementation to:
 ### Basic Functionality Test
 ```bash
 # Start server
-python -m plua2 --api 8888 fibaro.lua
+python -m plua --api 8888 fibaro.lua
 
 # Test major endpoints
 curl http://localhost:8888/api/devices
@@ -205,4 +205,4 @@ curl http://localhost:8888/api/devices/1
 
 ## Conclusion
 
-The Fibaro API integration in plua2 provides a complete, production-ready foundation for Fibaro HC3 emulation and integration. With 194 auto-generated endpoints and flexible Lua scripting, it supports both development and production use cases while maintaining the simplicity and power of the plua2 platform.
+The Fibaro API integration in plua provides a complete, production-ready foundation for Fibaro HC3 emulation and integration. With 194 auto-generated endpoints and flexible Lua scripting, it supports both development and production use cases while maintaining the simplicity and power of the plua platform.

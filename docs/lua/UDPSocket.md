@@ -214,7 +214,7 @@ local function send_broadcast()
             -- Send broadcast message
             local message = json.encode({
                 type = "announcement",
-                sender = "plua2-client",
+                sender = "plua-client",
                 timestamp = os.time(),
                 data = "Hello, network!"
             })

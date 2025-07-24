@@ -5,7 +5,7 @@ Tests for file operations and main_file_hook functionality
 import pytest
 import tempfile
 import os
-from plua2.interpreter import LuaInterpreter
+from plua.interpreter import LuaInterpreter
 
 
 class TestFileOperations:

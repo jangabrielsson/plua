@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Test script for plua2 REST API
+# Test script for plua REST API
 API_URL="http://localhost:8888"
 
-echo "=== Testing plua2 REST API ==="
+echo "=== Testing plua REST API ==="
 echo
 
 echo "1. Testing basic API info..."

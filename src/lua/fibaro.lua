@@ -36,7 +36,7 @@ _PY.get_quickapp = function(id)
 end
 
 _PY.fibaro_api_hook = function(method, path, data)
-    mobdebug.on()
+    _PY.mobdebug.on()
     --print("fibaro_api_hook called with:", method, path, data)
     if Emu then 
         path = path:gsub("^/api", "")  -- Remove /api prefix for compatibility

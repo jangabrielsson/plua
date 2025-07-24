@@ -48,7 +48,7 @@ class LuaExporter:
         self.exported_functions: Dict[str, Callable] = {}
         self.function_metadata: Dict[str, Dict[str, str]] = {}  # Store function metadata
 
-    def export(self, name: str = None, description: str = None, category: str = "general", inject_runtime: bool = False):
+    def export(self, name: str = None, description: str = None, category: str = "general", inject_runtime: bool = False, user_facing: bool = False):
         """
         Decorator to export a Python function to Lua's _PY table
 
@@ -57,17 +57,18 @@ class LuaExporter:
             description: Description of what the function does
             category: Category for organizing functions (e.g., "html", "file", "network")
             inject_runtime: Whether to inject lua_runtime as first parameter
+            user_facing: Whether this function is intended for end-user Lua scripts (vs internal plua use)
 
         Usage:
             @lua_exporter.export()
             def my_function():
                 return "hello"
 
-            @lua_exporter.export("customName", description="Does something cool", category="utility")
+            @lua_exporter.export("customName", description="Does something cool", category="utility", user_facing=True)
             def another_function():
                 return {"key": "value"}
 
-            @lua_exporter.export(inject_runtime=True)
+            @lua_exporter.export(inject_runtime=True, user_facing=False)
             def runtime_function(lua_runtime):
                 return lua_runtime.table()
         """
@@ -79,7 +80,8 @@ class LuaExporter:
             self.function_metadata[lua_name] = {
                 "description": description or func.__doc__ or "No description available",
                 "category": category,
-                "inject_runtime": inject_runtime
+                "inject_runtime": inject_runtime,
+                "user_facing": user_facing
             }
 
             @wraps(func)
@@ -175,13 +177,90 @@ class LuaExporter:
             categories[category].append(func_name)
         return categories
 
+    def list_user_facing_functions(self) -> List[str]:
+        """
+        Get list of functions marked as user-facing
+
+        Returns:
+            List of function names that are intended for end users
+        """
+        return [
+            func_name for func_name, metadata in self.function_metadata.items()
+            if metadata.get("user_facing", False)
+        ]
+
+    def list_internal_functions(self) -> List[str]:
+        """
+        Get list of functions marked as internal
+
+        Returns:
+            List of function names that are for internal plua use
+        """
+        return [
+            func_name for func_name, metadata in self.function_metadata.items()
+            if not metadata.get("user_facing", False)
+        ]
+
+    def list_functions_by_user_facing(self) -> Dict[str, List[str]]:
+        """
+        Get functions grouped by user_facing status
+
+        Returns:
+            Dictionary with 'user_facing' and 'internal' keys mapping to lists of function names
+        """
+        return {
+            "user_facing": self.list_user_facing_functions(),
+            "internal": self.list_internal_functions()
+        }
+
+    def list_user_facing_by_category(self) -> Dict[str, List[str]]:
+        """
+        Get user-facing functions grouped by category
+
+        Returns:
+            Dictionary of category names to lists of user-facing function names
+        """
+        categories = {}
+        for func_name, metadata in self.function_metadata.items():
+            if metadata.get("user_facing", False):
+                category = metadata["category"]
+                if category not in categories:
+                    categories[category] = []
+                categories[category].append(func_name)
+        return categories
+
 
 # Global exporter instance
 lua_exporter = LuaExporter()
 
 
+# Function introspection exports - for Lua scripts to explore available functions
+@lua_exporter.export(description="List all user-facing functions in _PY table", category="introspection", user_facing=True)
+def list_user_functions() -> List[str]:
+    """Get list of functions intended for end-user Lua scripts"""
+    return lua_exporter.list_user_facing_functions()
+
+
+@lua_exporter.export(description="List user-facing functions grouped by category", category="introspection", user_facing=True)
+def list_user_functions_by_category() -> Dict[str, List[str]]:
+    """Get user-facing functions organized by category"""
+    return lua_exporter.list_user_facing_by_category()
+
+
+@lua_exporter.export(description="Get metadata for all _PY functions", category="introspection", user_facing=True)
+def get_function_info() -> Dict[str, Dict[str, Any]]:
+    """Get complete metadata for all exported functions"""
+    return lua_exporter.get_function_metadata()
+
+
+@lua_exporter.export(description="Get functions grouped by user_facing status", category="introspection")
+def list_functions_by_user_facing() -> Dict[str, List[str]]:
+    """Get functions split into user_facing and internal categories"""
+    return lua_exporter.list_functions_by_user_facing()
+
+
 # Exported Python functions for Lua
-@lua_exporter.export(description="Get current epoch time with milliseconds as float", category="time")
+@lua_exporter.export(description="Get current epoch time with milliseconds as float", category="time", user_facing=True)
 def millitime() -> float:
     """
     Return the current epoch time as a float with milliseconds in the decimal part.
@@ -189,7 +268,7 @@ def millitime() -> float:
     return time.time()
 
 
-@lua_exporter.export(description="Get the current working directory", category="file")
+@lua_exporter.export(description="Get the current working directory", category="file", user_facing=True)
 def getcwd() -> str:
     """
     Get the current working directory
@@ -200,7 +279,7 @@ def getcwd() -> str:
     return os.getcwd()
 
 
-@lua_exporter.export(description="Get an environment variable value", category="system")
+@lua_exporter.export(description="Get an environment variable value", category="system", user_facing=True)
 def getenv(name: str, default: str = None) -> str:
     """
     Get an environment variable
@@ -215,7 +294,7 @@ def getenv(name: str, default: str = None) -> str:
     return os.getenv(name, default)
 
 
-@lua_exporter.export(description="List directory contents", category="file")
+@lua_exporter.export(description="List directory contents", category="file", user_facing=True)
 def listdir(path: str = ".") -> List[str]:
     """
     List directory contents
@@ -267,6 +346,62 @@ def path_info(path: str) -> Dict[str, Any]:
         }
 
 
+@lua_exporter.export(description="Read the entire contents of a file", category="file", user_facing=True)
+def readFile(path: str) -> str:
+    """
+    Read the entire contents of a file
+
+    Args:
+        path: File path to read
+
+    Returns:
+        File contents as string
+
+    Raises:
+        Exception if file cannot be read
+    """
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        raise Exception(f"Error reading file '{path}': {str(e)}")
+
+
+@lua_exporter.export(description="Write content to a file", category="file", user_facing=True)
+def writeFile(path: str, content: str) -> None:
+    """
+    Write content to a file, creating or overwriting it
+
+    Args:
+        path: File path to write to
+        content: Content to write
+
+    Raises:
+        Exception if file cannot be written
+    """
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+    except Exception as e:
+        raise Exception(f"Error writing file '{path}': {str(e)}")
+
+
+@lua_exporter.export(description="Check if a file or directory exists", category="file", user_facing=True)
+def fileExist(path: str) -> bool:
+    """
+    Check if a file or directory exists
+
+    Args:
+        path: Path to check
+
+    Returns:
+        True if the path exists, False otherwise
+    """
+    if path is None:
+        return False
+    return os.path.exists(path)
+
+
 @lua_exporter.export(description="Example function demonstrating multiple return values", category="example")
 def multiple_values_example() -> Tuple[str, int, Dict[str, str]]:
     """
@@ -278,7 +413,7 @@ def multiple_values_example() -> Tuple[str, int, Dict[str, str]]:
     return "hello", 42, {"status": "ok", "message": "multiple values work"}
 
 
-@lua_exporter.export(description="Encode a Lua table to JSON string", category="json")
+@lua_exporter.export(description="Encode a Lua table to JSON string", category="json", user_facing=True)
 def json_encode(lua_table) -> str:
     """
     Encode a Lua table to JSON string
@@ -298,7 +433,7 @@ def json_encode(lua_table) -> str:
         return json.dumps({"error": f"JSON encoding failed: {str(e)}"})
 
 
-@lua_exporter.export(description="Encode a Lua table to JSON string", category="json")
+@lua_exporter.export(description="Encode a Lua table to JSON string formated", category="json", user_facing=True)
 def json_encode_formated(lua_table) -> str:
     """
     Encode a Lua table to JSON string formated
@@ -318,7 +453,7 @@ def json_encode_formated(lua_table) -> str:
         return json.dumps({"error": f"JSON encoding failed: {str(e)}"})
 
 
-@lua_exporter.export(description="Decode JSON string to Lua table", category="json")
+@lua_exporter.export(description="Decode JSON string to Lua table", category="json", user_facing=True)
 def json_decode(json_string: str):
     """
     Decode JSON string to Lua table
@@ -472,6 +607,7 @@ def get_config(lua_runtime) -> Dict[str, Any]:
     import os
     import platform
     import sys
+    from . import __version__
 
     def get_host_ip():
         try:
@@ -511,7 +647,7 @@ def get_config(lua_runtime) -> Dict[str, Any]:
         "path": os.getenv("PATH", ""),
         "lang": os.getenv("LANG", "en_US.UTF-8"),
         # Plua specific
-        "plua_version": "0.1.0",
+        "plua_version": __version__,
         "lua_version": "5.4",
         # HOST IP address
         "host_ip": get_host_ip(),
@@ -520,7 +656,7 @@ def get_config(lua_runtime) -> Dict[str, Any]:
     return config
 
 
-@lua_exporter.export(description="Make a synchronous HTTP call from Lua", category="network")
+@lua_exporter.export(description="Make a synchronous HTTP call from Lua", category="network", user_facing=True)
 def http_call_sync(method, url, data=None, headers=None):
     """Make a synchronous HTTP call from Lua"""
     import requests
@@ -579,7 +715,7 @@ def get_fastapi_app():
     return None
 
 
-@lua_exporter.export(description="Base64 encode a string", category="utility")
+@lua_exporter.export(description="Base64 encode a string", category="utility", user_facing=True)
 def base64_encode(data):
     """Encode data as base64"""
     import base64
@@ -588,14 +724,14 @@ def base64_encode(data):
     return base64.b64encode(data).decode('utf-8')
 
 
-@lua_exporter.export(description="Base64 decode a string", category="utility")
+@lua_exporter.export(description="Base64 decode a string", category="utility", user_facing=True)
 def base64_decode(data):
     """Decode base64 data"""
     import base64
     return base64.b64decode(data).decode('utf-8')
 
 
-@lua_exporter.export(description="Open URL in VS Code Simple Browser", category="vscode")
+@lua_exporter.export(description="Open URL in VS Code Simple Browser", category="vscode", user_facing=True)
 def open_in_vscode_browser(url):
     """Open a URL in VS Code's Simple Browser"""
     import subprocess
@@ -679,7 +815,7 @@ Or use Command Palette:
         return {"success": False, "error": f"Failed to open URL: {str(e)}", "method": "exception"}
 
 
-@lua_exporter.export(description="Open plua web interface in VS Code", category="vscode")
+@lua_exporter.export(description="Open plua web interface in VS Code", category="vscode", user_facing=True)
 def open_web_interface():
     """Open the plua web interface in VS Code Simple Browser"""
     # Get the API server port from the current runtime
@@ -699,7 +835,7 @@ def open_web_interface():
         return {"success": False, "error": f"Failed to get API server info: {str(e)}"}
 
 
-@lua_exporter.export(description="Open plua web interface in default browser", category="browser")
+@lua_exporter.export(description="Open plua web interface in default browser", category="browser", user_facing=True)
 def open_web_interface_browser():
     """Open the plua web interface in the system's default browser"""
     import webbrowser
@@ -722,7 +858,7 @@ def open_web_interface_browser():
         return {"success": False, "error": f"Failed to open web interface: {str(e)}"}
 
 
-@lua_exporter.export(description="Open URL in default browser", category="browser")
+@lua_exporter.export(description="Open URL in default browser", category="browser", user_facing=True)
 def open_browser(url):
     """Open a URL in the system's default browser"""
     import webbrowser
@@ -733,7 +869,7 @@ def open_browser(url):
         return {"success": False, "error": f"Failed to open URL: {str(e)}"}
 
 
-@lua_exporter.export(description="List available browsers on the system", category="browser")
+@lua_exporter.export(description="List available browsers on the system", category="browser", user_facing=True)
 def list_browsers():
     """List available browsers on the system"""
     import webbrowser
@@ -770,7 +906,7 @@ def list_browsers():
     return browsers
 
 
-@lua_exporter.export(description="Open URL in specific browser", category="browser")
+@lua_exporter.export(description="Open URL in specific browser", category="browser", user_facing=True)
 def open_browser_specific(url, browser_name):
     """Open a URL in a specific browser"""
     import webbrowser

@@ -242,48 +242,7 @@ _PY.get_quickapps = _PY.get_quickapps or function() return {} end
 _PY.get_quickapp = _PY.get_quickapp or function(_id) return nil end
 -- _PY.broadcast_view_update is set up by Python runtime, no default needed
 
-------- PLUA functions ------------
+------- Extra functions ------------
 
-PLUA = {}
-function PLUA.getRuntimeState()
-  local state = _PY.getRuntimeState()
-  return { active_timers = state.active_timers, pending_timers = state.pending_timers }
-end
-
-function PLUA.readFile(path)
-  local f = io.open(path, "r")
-  if not f then
-    error("Error: Could not open file:"..path)
-  end
-  local content = f:read("*a")
-  f:close()
-  return content
-end
-
-function PLUA.writeFile(path, content)
-  local f = io.open(path, "w")
-  if not f then
-    error("Error: Could not open file for writing:"..path)
-  end
-  f:write(content)
-  f:close()
-end
-
-PLUA.millisec = _PY.millitime
-PLUA.getcwd = _PY.getcwd -- () -> string
-PLUA.listdir = _PY.listdir -- (path) -> table of filenames
-PLUA.pathInfo = _PY.path_info -- (path) -- (path) -> table with path information
-PLUA.fileExist = function(path) if path==nil then return false else return _PY.path_info(path).exists end end -- (path) -> boolean
-PLUA.base64Encode = _PY.base64_encode -- (string) -> string
-PLUA.base64Decode = _PY.base64_decode -- (string) -> string
-PLUA.openInVSCodeBrowser = _PY.open_in_vscode_browser -- (url) -> boolean
-PLUA.openWebInterface = _PY.open_web_interface -- () -> boolean
-PLUA.openBrowser = _PY.open_browser -- (url) -> boolean
-PLUA.openBrowserSpecific = _PY.open_browser_specific -- (url, name) -> boolean
-PLUA.openWebInterfaceBrowser = _PY.open_web_interface_browser -- () -> boolean
-PLUA.listBrowsers = _PY.list_browsers -- () -> table of browser names
-PLUA.html2Console = _PY.html2console -- (string) -> string
-PLUA.getAvailableColors = _PY.get_available_colors -- () -> table of color names
-PLUA.isRunning = _PY.isRunning -- () -> boolean
-PLUA.sleep = _PY.sleep
-PLUA.config = _PY.config
+-- File functions (readFile, writeFile, fileExist) are now implemented in Python
+-- They are available via the @lua_exporter.export decorator as user_facing functions 

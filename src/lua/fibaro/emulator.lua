@@ -1,6 +1,6 @@
 
 local mobdebug = require("mobdebug")
-mobdebug.on()
+_PY.mobdebug.on()
 local class = require("class")
 require("fibaro.json")
 local fpath = package.searchpath("fibaro", package.path) or ""
@@ -27,8 +27,8 @@ function Emulator:__init()
   if self.config.hc3_user and self.config.hc3_password then
     self.config.hc3_creds = _PY.base64_encode(self.config.hc3_user..":"..self.config.hc3_password)
   end
-  self.config.IPAddress = PLUA.config.host_ip
-  self.config.webport = PLUA.config.runtime_config.api_config.port
+  self.config.IPAddress = _PY.config.host_ip
+  self.config.webport = _PY.config.runtime_config.api_config.port
   self.DIR = {}
   self.lib = { loadLib = loadLib }
   self.lib.userTime = os.time
@@ -78,7 +78,7 @@ function Emulator:__init()
   
   local function round(x) return math.floor(x+0.5) end
   local function userTime(a) 
-    return a == nil and round(PLUA.millisec() + timeOffset) or orgTime(a) 
+    return a == nil and round(_PY.millitime() + timeOffset) or orgTime(a) 
   end
   local function userDate(a, b) 
     return b == nil and orgDate(a, userTime()) or orgDate(a, round(b)) 
@@ -376,7 +376,7 @@ function Emulator:loadQA(info)
     fibaro = { 
       plua = self }, net = net, json = json, api = self.api,
       os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
-      __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY, PLUA = PLUA,
+      __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
     }
   for _,name in ipairs(stdLua) do env[name] = _G[name] end
   
@@ -540,10 +540,10 @@ function headerKeys.file(str,info)
   assert(path,"Invalid file header: "..str)
   if path:sub(1,1) == '$' then
     local lpath = package.searchpath(path:sub(2),package.path)
-    if PLUA.fileExist(lpath) then path = lpath
+    if _PY.fileExist(lpath) then path = lpath
     else error(fmt("Library not found: '%s'",path)) end
   end
-  if PLUA.fileExist(path) then
+  if _PY.fileExist(path) then
     info.files[name] = {path = path, content = nil }
   else
     error(fmt("File not found: '%s'",path))

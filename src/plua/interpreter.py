@@ -316,11 +316,15 @@ return count
         except Exception:
             pending_callbacks = 0
 
-        return {
+        res = {
             'active_timers': active_timers,
             'pending_callbacks': pending_callbacks,
             'total_tasks': active_timers + pending_callbacks
         }
+
+        res = _python_to_lua_table(self.lua, res)  # Convert to Lua table format
+        return res
+
 
     def check_is_running_hook(self) -> bool:
         """Check if user-defined _PY.isRunning hook says we should continue running"""

@@ -114,6 +114,9 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
+    # log command line given to plua
+    #  print(f"Command line: {' '.join(sys.argv)}")
+
     parser.add_argument(
         "-e",
         help="Execute inline Lua code (like lua -e). Can be used multiple times.",
@@ -153,6 +156,19 @@ def main() -> None:
         "--debug",
         help="Enable debug logging for MobDebug and plua internals",
         action="store_true"
+    )
+
+    parser.add_argument(
+        "--ignore-lua",
+        help="Enable debug logging for MobDebug and plua internals",
+        action="store_true"
+    )
+
+    parser.add_argument(
+        "--lua",
+        help="Enable debug logging for MobDebug and plua internals",
+        type=str,
+        default="lua"  # Default to 'lua' if not specified
     )
 
     parser.add_argument(

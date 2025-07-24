@@ -39,7 +39,7 @@ local oldSetTimeout = setTimeout
 function setTimeout(func,ms)
   local ref
   ref = oldSetTimeout(function() 
-    mobdebug.on()
+    _PY.mobdebug.on()
     qaTimers[ref]= nil 
     fibaro.plua.lib.prettyCall(func,timerErr(ref)) 
   end,ms)
@@ -51,7 +51,7 @@ local oldSetInterval = setInterval
 function setInterval(func,ms)
   local ref
   ref =oldSetInterval(function()
-    mobdebug.on()
+    _PY.mobdebug.on()
     local ok = fibaro.plua.lib.prettyCall(func,timerErr(ref))
     if not ok then clearInterval(ref) end
   end,ms)

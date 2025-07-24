@@ -9,20 +9,30 @@ plua is a Python package that provides an async runtime environment for executin
 ## Features
 
 - **Interactive REPL**: Lua-like interactive prompt with plua features
-- **JavaScript-like timers**: `setTimeout()` and `clearTimeout()` in Lua
+- **JavaScript-like timers**: `setTimeout()`, `setInterval()`, `clearTimeout()`, `clearInterval()` in Lua
 - **Async/await bridge**: Python asyncio integrated with Lua coroutines  
 - **Context safety**: All Lua execution happens in the same Python context
 - **Timer management**: Named asyncio tasks with cancellation support
-- **Network simulation**: Built-in `netWorkIO()` function for async operations
+- **Built-in REST API**: Automatic web server with REPL interface on port 8888
+- **Network support**: HTTP client/server, WebSocket, TCP/UDP socket support
+- **JSON support**: Built-in JSON encoding/decoding in Lua
+- **Fibaro HC3 API**: Complete Home Center 3 API emulation with 267+ endpoints
+- **MobDebug support**: Remote debugging with IDE integration
 - **Coroutine support**: Full Lua coroutine functionality with yielding
+- **Multi-platform executables**: Standalone binaries for Linux, Windows, macOS
 
 ## Installation
 
 ```bash
-# Install in development mode
+# Install from PyPI
+pip install plua
+
+# Or install in development mode from source
+git clone https://github.com/jangabrielsson/plua
+cd plua
 pip install -e .
 
-# Or install with development dependencies
+# Install with development dependencies
 pip install -e ".[dev]"
 ```
 
@@ -34,26 +44,36 @@ pip install -e ".[dev]"
 # Interactive REPL (no file specified)
 plua
 
-# Run a Lua file directly
+# Run a Lua file directly (API server starts automatically on port 8888)
 plua script.lua
+
+# Run without API server
+plua --noapi script.lua
 
 # Run with time limit
 plua --duration 10 script.lua
 
-# Start with REST API server
-plua --api                    # Default port 8888
-plua --api 8877              # Custom port
-plua --api 8877 --api-host 127.0.0.1  # Custom host and port
-
-# Run built-in examples
-plua --example 2 --duration 10
-plua --example cancel --duration 5
+# Custom API server settings
+plua --api-port 9000 script.lua              # Custom port
+plua --api-host 127.0.0.1 script.lua         # Custom host
+plua --api-port 9000 --api-host 0.0.0.0 script.lua  # Custom host and port
 
 # Run inline Lua code
-plua --script 'print("Hello from Lua"); setTimeout(function() print("Timer fired!") end, 1000)' --duration 5
+plua -e 'print("Hello from Lua")'
+plua -e 'print("start")' -e 'x=42' -e 'print(x)'     # Multiple -e fragments
+plua -e 'print("setup")' script.lua                  # Combine -e and file
 
-# Run forever (until Ctrl+C)
-plua script.lua
+# Fibaro HC3 API support
+plua --fibaro script.lua
+
+# Debugging support
+plua --debugger script.lua                           # Enable MobDebug
+plua --debugger --debug script.lua                   # Verbose debug logging
+plua --debugger --debugger-host 192.168.1.100 script.lua  # Remote debugger
+
+# Utility commands
+plua --cleanup-port                                   # Clean up stuck API port
+plua --version                                        # Show version
 ```
 
 ### Interactive REPL
@@ -62,7 +82,7 @@ plua provides an interactive REPL (Read-Eval-Print Loop) when no Lua file is spe
 
 ```bash
 $ plua
-Plua v0.1.0 Interactive REPL
+Plua v1.0.54 Interactive REPL
 Running Lua 5.4 with async runtime support
 
 Quick start:
@@ -118,26 +138,31 @@ asyncio.run(main())
 
 ### REST API Server
 
-plua includes a built-in REST API server that allows remote execution of Lua code:
+plua includes a built-in REST API server that **starts automatically by default** on port 8888:
 
 ```bash
-# Start plua with REST API on default port 8888
-plua --api
+# API server starts automatically
+plua script.lua
 
-# Start on specific port with custom host
-plua --api 8877 --api-host 127.0.0.1
+# Disable API server  
+plua --noapi script.lua
+
+# Custom API server settings
+plua --api-port 9000 script.lua
+plua --api-host 127.0.0.1 --api-port 8877 script.lua
 
 # Access the web REPL interface
-# Open browser to: http://localhost:8888/web
+# Open browser to: http://localhost:8888/static/plua_main_page.html
 ```
 
 #### API Endpoints
 
 - `GET /` - API information and available endpoints
-- `GET /web` - Web-based REPL interface
+- `GET /static/plua_main_page.html` - Web-based REPL interface  
 - `POST /plua/execute` - Execute Lua code remotely
 - `GET /plua/status` - Get runtime status
 - `GET /plua/info` - Get API and runtime information
+- `GET /docs` - Swagger/OpenAPI documentation (if Fibaro API enabled)
 
 #### Web REPL
 
@@ -180,32 +205,70 @@ The API server and local REPL share the same Lua interpreter instance, so:
 - Variables persist between API calls and REPL commands
 - Timers set via API continue running in the background
 - State is shared seamlessly between web and terminal interfaces
-```
 
 ## Lua API
 
 ### Timer Functions
 
 ```lua
--- Set a timer
+-- Set a timer (JavaScript-like)
 local timer_id = setTimeout(function() 
     print("This runs after 1 second") 
 end, 1000)
 
--- Cancel a timer
+-- Set an interval timer
+local interval_id = setInterval(function()
+    print("This repeats every 2 seconds")
+end, 2000)
+
+-- Cancel timers
 clearTimeout(timer_id)
+clearInterval(interval_id)
 
 -- Sleep (yields current coroutine)
 sleep(500)  -- Sleep for 500ms
 ```
 
-### Network Simulation
+### Built-in Modules
 
 ```lua
--- Simulate async network operation
-netWorkIO(function(data) 
-    print("Received data:", data)  -- "xyz" after 1 second
+-- JSON support (no require needed)
+local data = {name = "test", value = 42}
+local json_str = json.encode(data)
+local parsed = json.decode(json_str)
+
+-- HTTP client
+local client = net.HTTPClient()
+client:get("https://api.github.com/users/octocat", function(response)
+    print("Status:", response.status)
+    print("Body:", response.body)
 end)
+
+-- WebSocket client
+local ws = net.WebSocketClient()
+ws:connect("wss://echo.websocket.org/", {
+    on_message = function(message)
+        print("Received:", message)
+    end
+})
+```
+
+### Fibaro HC3 API Integration
+
+```lua
+-- Enable Fibaro API support
+-- Run with: plua --fibaro script.lua
+
+-- Use standard Fibaro API functions
+fibaro.call(123, "turnOn")
+local value = fibaro.getValue(456, "value") 
+fibaro.sleep(1000)
+
+-- QuickApp development
+function QuickApp:onInit()
+    self:debug("QuickApp started")
+    self:updateProperty("value", 42)
+end
 ```
 
 ### Coroutines
@@ -228,50 +291,55 @@ coroutine.wrap(asyncFunction)()
 
 ## Examples
 
-### Example 1: Repeating Timer
+### Example 1: HTTP Client with Timers
 
 ```lua
-local function loop()
-    print("PING")
-    netWorkIO(function(data) 
-        print("Network callback", data) 
-    end)
-    setTimeout(loop, 5000)  -- Repeat every 5 seconds
-end
-setTimeout(loop, 100)  -- Start after 100ms
+local client = net.HTTPClient()
+
+-- Make HTTP request with timer fallback
+local timer_id = setTimeout(function()
+    print("Request timeout!")
+end, 5000)
+
+client:get("https://httpbin.org/delay/2", function(response)
+    clearTimeout(timer_id)
+    print("Response status:", response.status)
+    print("Response time was acceptable")
+end)
 ```
 
-### Example 2: Coroutine Yielding
+### Example 2: Interval Timer with Cancellation
 
 ```lua
-local function foo()
-    print("A")
+local count = 0
+local interval_id = setInterval(function()
+    count = count + 1
+    print("Ping", count)
+    
+    if count >= 5 then
+        print("Stopping interval")
+        clearInterval(interval_id)
+    end
+end, 1000)
+```
+
+### Example 3: Coroutine with Async Operations
+
+```lua
+local function asyncTask()
+    print("Task starting...")
+    
+    -- Simulate async work
     local co = coroutine.running()
     setTimeout(function() 
-        coroutine.resume(co) 
-        print("D") 
-    end, 1000)
-    print("B")
-    coroutine.yield()
-    print("C")
+        coroutine.resume(co, "async result") 
+    end, 2000)
+    
+    local result = coroutine.yield()
+    print("Task completed with:", result)
 end
-coroutine.wrap(foo)()
--- Output: A, B, (1 second delay), D, C
-```
 
-### Example 3: Timer Cancellation
-
-```lua
--- Set a timer
-local timer_id = setTimeout(function() 
-    print("This should be cancelled!") 
-end, 2000)
-
--- Cancel it after 500ms
-setTimeout(function()
-    print("Cancelling timer")
-    clearTimeout(timer_id)
-end, 500)
+coroutine.wrap(asyncTask)()
 ```
 
 ## Architecture
@@ -348,9 +416,13 @@ curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
 
 ```bash
 # Clone and setup
-git clone <repository>
+git clone https://github.com/jangabrielsson/plua
 cd plua
 pip install -e ".[dev]"
+
+# Install GitHub CLI for releases
+brew install gh
+gh auth login
 ```
 
 ### Run Tests
@@ -370,6 +442,27 @@ black src/ tests/
 ```bash
 mypy src/
 ```
+
+### Creating Releases
+
+The project uses automated GitHub Releases with PyPI publishing and executable building:
+
+```bash
+# Quick patch release (1.0.54 → 1.0.55)
+./scripts/create-release.sh patch
+
+# Interactive release (choose patch/minor/major)  
+./scripts/create-release.sh
+
+# Custom version
+./scripts/create-release.sh "2.0.0" "Major release with breaking changes"
+```
+
+Each release automatically:
+- Publishes to PyPI
+- Builds executables for Linux, Windows, macOS (Intel + ARM)
+- Attaches binaries to GitHub release
+- Updates documentation
 
 ## License
 

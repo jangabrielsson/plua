@@ -53,12 +53,12 @@ if #files > 3 then
     print("  ... and " .. (#files - 3) .. " more")
 end
 
-print("\n=== Python-defined functions ===")
+print("\n=== Lua-defined functions ===")
 print("readFile function: " .. type(_PY.readFile))
 print("writeFile function: " .. type(_PY.writeFile))
 print("fileExist function: " .. type(_PY.fileExist))
 
--- Test Python file functions
+-- Test Lua file functions
 local test_file = "test_output.txt"
 local test_content = "This is a test file created at " .. os.date() .. "\nSecond line with UTF-8: 🚀"
 _PY.writeFile(test_file, test_content)

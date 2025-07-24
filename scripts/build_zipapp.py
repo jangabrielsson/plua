@@ -23,6 +23,8 @@ import subprocess
 from pathlib import Path
 import tempfile
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
 def create_zipapp():
     """Create a zipapp version of plua"""
     

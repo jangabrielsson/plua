@@ -49,6 +49,176 @@
         "${input:path_id}"
       ],
       "group": "build"
+    },
+    {
+      "label": "PyPI: Clean Build Artifacts",
+      "type": "shell",
+      "command": "rm",
+      "args": [
+        "-rf",
+        "dist/",
+        "build/",
+        "src/*.egg-info"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "PyPI: Build Package",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "-m",
+        "build"
+      ],
+      "group": "build",
+      "dependsOn": "PyPI: Clean Build Artifacts",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "PyPI: Upload to PyPI",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "-m",
+        "twine",
+        "upload",
+        "dist/*"
+      ],
+      "group": "build",
+      "dependsOn": "PyPI: Build Package",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "PyPI: Bump Patch Version & Upload",
+      "type": "shell",
+      "command": "/bin/bash",
+      "args": [
+        "-c",
+        "python -c \"import re; content = open('src/plua/__init__.py').read(); match = re.search(r'__version__ = \\\"(\\d+)\\.(\\d+)\\.(\\d+)\\\"', content); new_patch = int(match.group(3)) + 1; new_version = f'{match.group(1)}.{match.group(2)}.{new_patch}'; new_content = re.sub(r'__version__ = \\\"\\d+\\.\\d+\\.\\d+\\\"', f'__version__ = \\\"{new_version}\\\"', content); open('src/plua/__init__.py', 'w').write(new_content); print(f'Version bumped to {new_version}')\""
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "PyPI: Bump Version (Interactive)",
+      "type": "shell",
+      "command": "/bin/bash",
+      "args": [
+        "-c",
+        "python -c \"import re; import sys; bump_type='${input:versionBumpType}'; custom='${input:customVersion}'; content = open('src/plua/__init__.py').read(); match = re.search(r'__version__ = \\\"(\\d+)\\.(\\d+)\\.(\\d+)\\\"', content); major, minor, patch = int(match.group(1)), int(match.group(2)), int(match.group(3)); new_version = custom if custom else (f'{major}.{minor}.{patch+1}' if bump_type=='patch' else f'{major}.{minor+1}.0' if bump_type=='minor' else f'{major+1}.0.0'); new_content = re.sub(r'__version__ = \\\"\\d+\\.\\d+\\.\\d+\\\"', f'__version__ = \\\"{new_version}\\\"', content); open('src/plua/__init__.py', 'w').write(new_content); print(f'Version updated to {new_version}')\""
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "PyPI: Full Release (Bump + Build + Upload)",
+      "type": "shell",
+      "command": "echo",
+      "args": ["Starting full PyPI release..."],
+      "group": "build",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "PyPI: Bump Version (Interactive)",
+        "PyPI: Upload to PyPI"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "PyPI: Quick Patch Release",
+      "type": "shell",
+      "command": "echo",
+      "args": ["Starting quick patch release..."],
+      "group": "build",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "PyPI: Bump Patch Version & Upload",
+        "PyPI: Upload to PyPI"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "GitHub: Create Patch Release",
+      "type": "shell",
+      "command": "./scripts/create-release.sh",
+      "args": ["patch"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "GitHub: Create Release (Interactive)",
+      "type": "shell",
+      "command": "./scripts/create-release.sh",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "GitHub: Create Custom Release",
+      "type": "shell",
+      "command": "./scripts/create-release.sh",
+      "args": ["${input:customVersion}", "${input:releaseNotes}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
     }
   ],
   "inputs": [
@@ -84,6 +254,27 @@
           "defaultPath": "client/env/dev.env"
         }
       }
+    },
+    {
+      "type": "pickString",
+      "id": "versionBumpType",
+      "description": "Select version bump type",
+      "options": [
+        "patch",
+        "minor",
+        "major"
+      ],
+      "default": "patch"
+    },
+    {
+      "type": "promptString",
+      "id": "customVersion",
+      "description": "Enter custom version (e.g., 1.2.3) or leave empty for auto-bump"
+    },
+    {
+      "type": "promptString",
+      "id": "releaseNotes",
+      "description": "Enter release notes for this version"
     }
   ]
 }

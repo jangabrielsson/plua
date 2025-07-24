@@ -15,6 +15,9 @@ import sys
 import subprocess
 import shutil
 from pathlib import Path
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 
 def build_nuitka():
@@ -22,7 +25,7 @@ def build_nuitka():
     
     project_root = Path(__file__).parent
     src_path = project_root / "src"
-    static_path = project_root / "static"
+    static_path = project_root.parent / "static"
     lua_path = src_path / "lua"
     
     # Ensure Nuitka is installed

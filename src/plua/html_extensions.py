@@ -234,7 +234,7 @@ def _find_matching_closing_tag(html_text, start_pos):
     return -1  # No matching closing tag found
 
 
-@lua_exporter.export(description="Convert HTML tags to console-friendly text with ANSI colors", category="html")
+@lua_exporter.export(description="Convert HTML tags to console-friendly text with ANSI colors", category="html", user_facing=True)
 def html2console(html_text):
     """
     Convert HTML text to console-friendly text with ANSI color codes.
@@ -258,7 +258,7 @@ def html2console(html_text):
     return _parse_html_tags(html_text)
 
 
-@lua_exporter.export(description="Get available color names for HTML conversion", category="html")
+@lua_exporter.export(description="Get available color names for HTML conversion", category="html", user_facing=True)
 def get_available_colors():
     """
     Get a list of available color names that can be used in font tags.

@@ -6,7 +6,7 @@ import sys
 import os
 
 # Add src directory to path so we can import plua modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from plua.main import main
 

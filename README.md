@@ -23,17 +23,112 @@ plua is a Python package that provides an async runtime environment for executin
 
 ## Installation
 
+### For End Users (Recommended)
+
 ```bash
-# Install from PyPI
+# Install plua globally (includes the 'plua' command)
 pip install plua
 
-# Or install in development mode from source
+# Verify installation
+plua --version
+
+# Start the interactive REPL
+plua
+
+# Run a Lua script
+plua myscript.lua
+```
+
+After installation, the `plua` command will be available system-wide in your terminal/command prompt.
+
+### Alternative: Standalone Executables
+
+For users who prefer not to install Python dependencies, standalone executables are available:
+
+```bash
+# Download from GitHub Releases
+# https://github.com/jangabrielsson/plua/releases
+
+# Windows: plua-windows.exe
+# macOS Intel: plua-macos-intel  
+# macOS ARM: plua-macos-arm
+# Linux: plua-linux
+
+# Make executable and run (macOS/Linux)
+chmod +x plua-linux
+./plua-linux --version
+
+# Windows: just run the .exe
+plua-windows.exe --version
+```
+
+These executables include everything needed and don't require Python installation.
+
+### For Developers
+
+```bash
+# Clone and install in development mode
 git clone https://github.com/jangabrielsson/plua
 cd plua
 pip install -e .
 
-# Install with development dependencies
+# Install with development dependencies for testing/building
 pip install -e ".[dev]"
+```
+
+### Troubleshooting Installation
+
+#### Command Not Found (Windows)
+If `plua` command is not recognized after installation on Windows:
+
+1. **Check if pip installed to user directory:**
+   ```cmd
+   # Find where pip installed plua
+   pip show -f plua
+   
+   # Check if Python Scripts directory is in PATH
+   python -m site --user-base
+   ```
+
+2. **Add Python Scripts to PATH:**
+   - Add `%APPDATA%\Python\Python3X\Scripts` to your PATH environment variable
+   - Or use the full path: `python -m plua` instead of just `plua`
+
+3. **Alternative installation methods:**
+   ```cmd
+   # Install system-wide (may require admin privileges)
+   pip install --system plua
+   
+   # Force reinstall to ensure all dependencies are installed
+   pip install --force-reinstall plua
+   
+   # Or use python -m to run without PATH issues
+   python -m plua --version
+   python -m plua script.lua
+   ```
+
+#### Missing Dependencies Error
+If you get `ModuleNotFoundError` (e.g., "No module named 'aiomqtt'"):
+
+```bash
+# Force reinstall with all dependencies
+pip install --force-reinstall plua
+
+# Or install dependencies manually if needed
+pip install aiomqtt>=2.0.0
+```
+
+#### Command Not Found (macOS/Linux)
+```bash
+# Check installation location
+pip show plua
+
+# Add pip's bin directory to PATH if needed
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Or use python -m
+python -m plua --version
 ```
 
 ## Quick Start

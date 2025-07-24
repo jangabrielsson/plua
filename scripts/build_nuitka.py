@@ -34,12 +34,12 @@ def build_nuitka():
         cmd = [sys.executable, "-m", "nuitka", "--version"]
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         version = result.stdout.strip().split('\n')[0]
-        print(f"✓ Using Nuitka version: {version}")
+        print(f"[OK] Using Nuitka version: {version}")
     except ImportError:
-        print("✗ Nuitka not found. Install with: pip install nuitka")
+        print("[ERROR] Nuitka not found. Install with: pip install nuitka")
         sys.exit(1)
     except subprocess.CalledProcessError:
-        print("✗ Nuitka installation appears corrupted")
+        print("[ERROR] Nuitka installation appears corrupted")
         sys.exit(1)
     
     # Dynamically include all Lua files
@@ -71,12 +71,12 @@ def build_nuitka():
         "build_main_standalone.py"
     ]
     
-    print("🔨 Building plua with Nuitka...")
+    print("[BUILD] Building plua with Nuitka...")
     print(f"Command: {' '.join(cmd)}")
     
     # Remove UPX plugin if UPX is not available
     if not shutil.which("upx"):
-        print("⚠️  UPX not found, removing compression (install UPX for smaller binaries)")
+        print("[WARN] UPX not found, removing compression (install UPX for smaller binaries)")
         cmd = [arg for arg in cmd if not arg.startswith("--enable-plugin=upx")]
     
     try:
@@ -89,15 +89,15 @@ def build_nuitka():
         
         if executable_path.exists():
             size_mb = executable_path.stat().st_size / (1024 * 1024)
-            print("✓ Build successful!")
+            print("[OK] Build successful!")
             print(f"  Executable: {executable_path}")
             print(f"  Size: {size_mb:.1f} MB")
             print(f"  Test with: {executable_path} --help")
         else:
-            print("✗ Executable not found in expected location")
+            print("[ERROR] Executable not found in expected location")
             
     except subprocess.CalledProcessError as e:
-        print(f"✗ Build failed with exit code {e.returncode}")
+        print(f"[ERROR] Build failed with exit code {e.returncode}")
         sys.exit(1)
 
 

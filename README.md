@@ -118,6 +118,15 @@ pip install --force-reinstall plua
 pip install aiomqtt>=2.0.0
 ```
 
+#### FileNotFoundError on Windows
+If you get `FileNotFoundError: [Errno 2] No such file or directory: 'src/plua/fibaro_api_models.py'`:
+
+This was a bug in versions 1.0.57-1.0.59. Update to the latest version:
+
+```bash
+pip install --upgrade plua
+```
+
 #### Command Not Found (macOS/Linux)
 ```bash
 # Check installation location

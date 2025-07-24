@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List, Union
-import re
 
 
 # Generated Pydantic Models
@@ -41144,16 +41143,5 @@ class EventDto(BaseModel):
     objects: Optional[List[Dict[str, Any]]] = None
 
 
-# Add an extra blank line between class definitions if only one exists
-def add_extra_blank_lines_between_classes(text):
-    # Replace single blank line between classes with two blank lines
-    return re.sub(r"(\nclass [A-Za-z_][\w]*)", r"\n\n\1", text)
-
-
-with open("src/plua/fibaro_api_models.py", "r") as f:
-    content = f.read()
-
-new_content = add_extra_blank_lines_between_classes(content)
-
-with open("src/plua/fibaro_api_models.py", "w") as f:
-    f.write(new_content)
+# Note: The add_extra_blank_lines_between_classes function was moved to the generator script
+# to avoid self-modification at import time which breaks installed packages.

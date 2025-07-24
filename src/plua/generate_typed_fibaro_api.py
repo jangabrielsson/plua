@@ -385,6 +385,13 @@ class TypedAPIGenerator:
         for model_name, schema in self.all_schemas.items():
             models_code += self.generate_pydantic_model(model_name, schema)
         
+        # Format the models code (add extra blank lines between classes)
+        def add_extra_blank_lines_between_classes(text):
+            """Add an extra blank line between class definitions if only one exists"""
+            return re.sub(r"(\nclass [A-Za-z_][\w]*)", r"\n\n\1", text)
+        
+        models_code = add_extra_blank_lines_between_classes(models_code)
+        
         # Create models file
         models_header = '''"""
 Fibaro HC3 API Pydantic Models
@@ -395,7 +402,7 @@ Contains all data models used by the Fibaro API endpoints.
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime, date
 
 # Generated Pydantic Models

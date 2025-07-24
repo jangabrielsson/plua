@@ -1,17 +1,19 @@
 -- fibaro.lua
 _PY = _PY or {}
-local mobdebug = require('mobdebug')
+_PY.mobdebug.on()
 -- Global table with fibaro functions.
-fibaro = {}
 
 local Emulator = require('fibaro.emulator')
-local Emu
+local Emu = Emulator()
+
+fibaro = require("fibaro.fibaro_funs")
+fibaro.plua = Emu
+api = Emu.api
 
 -- Override the default hook with Fibaro preprocessing
 function _PY.main_file_hook(filename)
     require('mobdebug').on()
     xpcall(function()
-        Emu = Emulator()
         Emu:loadMainFile(filename)
     end,function(err)
         print(err)
@@ -49,4 +51,14 @@ _PY.fibaro_api_hook = function(method, path, data)
         print("Emulator not initialized. Please call _PY.main_file_hook first.")
         return {error = "Emulator not initialized"}, 500
     end
+end
+
+_PY.fibaro_info = function()
+    if not Emu then return {} end
+    local info = {
+       HelperId = Emu.config.helperConnected,
+       HC3 = Emu.config.hc3_url,
+       User = Emu.config.hc3_user
+    }
+    return info
 end

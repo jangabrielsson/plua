@@ -27,6 +27,8 @@ local function installHelper()
   return helper
 end
 
+local helperId = nil
+
 local connection = nil
 local function startHelper()
   if helperStarted then return connection end
@@ -47,7 +49,7 @@ local function startHelper()
   if not helper then
     return Emu:ERROR("Failed to install helper")
   end
-  local helperId = helper.id
+  helperId = helper.id
   local wsurl = fmt("ws://%s:%d",Emu.config.IPAddress,PORT)
   if helperId then startServer(helperId,wsurl) end
   helperStarted = true
@@ -65,6 +67,7 @@ function startServer(helperId,wsurl)
     connected = function(client_id)
       if Emu.debugFlag then Emu:INFO("Helper connected") end
       client = client_id
+      Emu.config.helperConnected = helperId
     end,
     disconnected = function(client_id) client = nil end
   })

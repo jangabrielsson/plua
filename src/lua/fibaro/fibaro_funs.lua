@@ -76,14 +76,20 @@ function __assert_type(param, typ)
   end
 end
 
-local logStr = fibaro.plua.lib.logStr
+local logStr = function(...) 
+  local b = {} 
+  for _,e in ipairs({...}) do 
+    b[#b+1]=tostring(e) 
+  end 
+  return table.concat(b," ")
+end
 
 -- Adds a debug message to the emulator's debug output.
 -- @param tag - The tag for the debug message.
 -- @param ... - The message string.
 function fibaro.debug(tag,...) 
   __assert_type(tag, "string")
-  __fibaro_add_debug_message(tag, logStr(...), "DEBUG") 
+  fibaro.plua.lib.__fibaro_add_debug_message(tag, logStr(...), "DEBUG") 
 end
 
 -- Adds a trace message to the emulator's debug output.
@@ -91,7 +97,7 @@ end
 -- @param ... - The message string.
 function fibaro.trace(tag,...) 
   __assert_type(tag, "string")
-  __fibaro_add_debug_message(tag, logStr(...), "TRACE") 
+  fibaro.plua.lib.__fibaro_add_debug_message(tag, logStr(...), "TRACE") 
 end
 
 -- Adds a warning message to the emulator's debug output.
@@ -99,7 +105,7 @@ end
 -- @param ... - The message string.
 function fibaro.warning(tag,...) 
   __assert_type(tag, "string")
-  __fibaro_add_debug_message(tag, logStr(...), "WARNING") 
+  fibaro.plua.lib.__fibaro_add_debug_message(tag, logStr(...), "WARNING") 
 end
 
 -- Adds an error message to the emulator's debug output.
@@ -107,11 +113,11 @@ end
 -- @param ... - The message string.
 function fibaro.error(tag,...) 
   __assert_type(tag, "string")
-  __fibaro_add_debug_message(tag, logStr(...), "ERROR") 
+  fibaro.plua.lib.__fibaro_add_debug_message(tag, logStr(...), "ERROR") 
 end
 
 function print(...) fibaro.debug(__TAG, ...) end
-function __print(...) __fibaro_add_debug_message(__TAG, logStr(...), "DEBUG") end
+function __print(...) fibaro.plua.lib.__fibaro_add_debug_message(__TAG, logStr(...), "DEBUG") end
 
 -- Retrieves all alarm partitions.
 -- @return A table of alarm partition objects.
@@ -500,3 +506,5 @@ function fibaro.setSceneVariable(name,value)
 end
 
 hub = fibaro
+
+return fibaro

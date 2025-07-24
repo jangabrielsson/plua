@@ -22,7 +22,7 @@ if debugger_config then
   mobdebug.coro()
   _PY.mobdebug = mobdebug
 else 
-  _PY.mobdebug = { on = function() end, coro = function() end, logging = function() end, start = function() end }
+  _PY.mobdebug = { on = function() end, coro = function() end, logging = function(_) end, start = function() end, setbreakpoint = function(_,_) end }
 end
 
 -- Callback system for async operations (organized under _PY namespace)

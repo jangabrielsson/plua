@@ -342,6 +342,18 @@ function Emulator:saveQA(fname,id)
   self:INFO("Saved QA to",fname)
 end
 
+function Emulator:installQuickAppFile(path)
+  local file = io.open(path, "r")
+  assert(file, "Failed to open file: " .. path)
+  local content = file:read("*all")
+  file:close()
+  local info = self:createInfoFromContent(path,content)
+  self:loadQA(info)
+  self:registerDevice(info)
+  self:startQA(info.device.id)
+  return info
+end
+
 function Emulator:loadMainFile(filename)
   local info = self:createInfoFromFile(filename)
   if info.headers.debug then self.debugFlag = true end
@@ -402,6 +414,10 @@ function Emulator:loadQA(info)
   env.plugin.mainDeviceId = info.device.id
   for name,f in pairs(info.files) do
     if name ~= 'main' then loadFile(env,f.path,name,f.content) end
+  end
+  if info.headers.breakOnLoad then
+    local firstLine,onInitLine = self.lib.findFirstLine(info.files.main.content)
+    if firstLine then self.lib.mobdebug.setbreakpoint(info.files.main.path,firstLine) end
   end
   loadFile(env,info.files.main.path,'main',info.files.main.content)
 end
@@ -542,6 +558,7 @@ function headerKeys.proxyupdate(str,info) info.proxyupdate = str end
 function headerKeys.project(str,info,k) info.project = validate(str,"number",k) end
 function headerKeys.nop(str,info,k) validate(str,"boolean",k) end
 function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
+function headerKeys.breakonload(str,info,k) info.breakOnLoad = validate(str,"boolean",k) end
 function headerKeys.var(str,info,k) 
   local name,value = str:match("^([%w_]+)%s*=%s*(.+)$")
   assert(name,"Invalid var header: "..str)
@@ -590,6 +607,9 @@ function Emulator:processHeaders(filename,content)
     _UI={},
   }
   local code = "\n"..content
+  local eod = code:find("\n%-[%-]+ENDOFHEADERS") -- Embedded headers
+  if eod then code = code:sub(1,eod-1) end
+
   if code:match("%-%-%%%%name=") then code = compatHeaders(code) end
   code:gsub("\n%-%-%%%%([%w_]-):([^\n]*)",function(key,str) 
     str = str:match("^%s*(.-)%s*$") or str

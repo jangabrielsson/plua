@@ -37,7 +37,7 @@ local function findFirstLine(src)
 end
 
 local function loadQAString(src,optionalDirectives) -- Load QA from string and run it
-  local path = Emu.config.tempDir..createTempName(".lua")
+  local path = Emu.config.tempdir..createTempName(".lua")
   local f = io.open(path,"w")
   assert(f,"Can't open file "..path)
   f:write(src)

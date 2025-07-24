@@ -255,11 +255,13 @@ async function loadQuickApps() {
             
             renderQuickApps(quickApps);
         } else {
-            qaGrid.innerHTML = '<div class="qa-loading">No QuickApps found or feature not available</div>';
+            // No QuickApps found or feature not available - show empty tab
+            qaGrid.innerHTML = '';
         }
     } catch (error) {
-        console.error('Error loading QuickApps:', error);
-        qaGrid.innerHTML = '<div class="qa-loading">Error loading QuickApps</div>';
+        // Suppress error messages and show empty tab
+        console.log('QuickApps not available:', error.message || error);
+        qaGrid.innerHTML = '';
     }
 }
 
@@ -267,7 +269,8 @@ function renderQuickApps(quickApps) {
     const qaGrid = document.getElementById('qa-grid');
     
     if (!quickApps || quickApps.length === 0) {
-        qaGrid.innerHTML = '<div class="qa-loading">No QuickApps running</div>';
+        // Show empty tab instead of "No QuickApps running" message
+        qaGrid.innerHTML = '';
         return;
     }
     
@@ -634,9 +637,17 @@ function connectWebSocket() {
     };
     
     ws.onclose = function(event) {
-        console.log('WebSocket disconnected');
-        // Attempt to reconnect after 3 seconds
-        setTimeout(connectWebSocket, 3000);
+        console.log('WebSocket disconnected', event.code, event.reason);
+        
+        // If the server is shutting down (code 1000 with specific reason), don't try to reconnect immediately
+        if (event.code === 1000 && event.reason === "Server shutting down") {
+            console.log('Server is shutting down, will retry connection after longer delay');
+            // Try to reconnect after 10 seconds in case server restarts
+            setTimeout(connectWebSocket, 10000);
+        } else {
+            // Normal disconnection, try to reconnect after 3 seconds
+            setTimeout(connectWebSocket, 3000);
+        }
     };
     
     ws.onerror = function(error) {

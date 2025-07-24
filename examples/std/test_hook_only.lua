@@ -1,23 +1,24 @@
--- Test just the Fibaro API hook directly
-print("Testing direct Fibaro API hook...")
+print("=== Testing _PY.isRunning Hook ===")
 
-if _PY.fibaro_api_hook then
-    print("fibaro_api_hook is available")
+local request_count = 0
+local max_requests = 5
+
+net.TCPServer():start("localhost", 9765, function() end)
+-- Define a custom isRunning hook
+function _PY.isRunning(state)
+    print(string.format("isRunning hook called - Timers: %d, Callbacks: %d, Total: %d, Requests: %d", 
+        state.active_timers, state.pending_callbacks, state.total_tasks, request_count))
     
-    local result = _PY.fibaro_api_hook("GET", "/api/devices", nil)
-    print("Direct hook result type:", type(result))
-    
-    if type(result) == "table" then
-        print("Hook returned a table (success)")
-        -- Try to examine the table content
-        for k, v in pairs(result) do
-            print("  result[" .. tostring(k) .. "] = " .. tostring(v))
-        end
-    else
-        print("Hook returned:", result)
+    -- Stop when we've processed enough requests and have no pending work
+    if request_count >= max_requests and state.total_tasks == 0 then
+        print("✅ Script completed successfully - terminating")
+        return false  -- Stop running
     end
-else
-    print("fibaro_api_hook is not available")
+    
+    -- Continue running
+    return true
 end
 
-print("Script completed successfully")
+setTimeout(function()
+    print("⏰ Timer 1 executed after 2 seconds")
+end, 20*1000)

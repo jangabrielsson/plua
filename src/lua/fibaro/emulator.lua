@@ -30,7 +30,21 @@ function Emulator:__init()
   self.config.IPAddress = _PY.config.host_ip
   self.config.webport = _PY.config.runtime_config.api_config.port
   self.DIR = {}
-  self.lib = { loadLib = loadLib }
+  self.lib = { 
+    loadLib = loadLib,
+    openWebBrowser = _PY.open_web_interface_browser,
+    fileExist = _PY.fileExist,
+    getCwd = _PY.getcwd,
+    listDir = _PY.listdir,
+    getAvailableColors = _PY.get_available_colors,
+    listUserFunctions = _PY.list_user_functions,
+    readFile = _PY.readFile,
+    writeFile = _PY.writeFile,
+    millitime = _PY.millitime,
+    base64Encode = _PY.base64_encode,
+    base64Decode = _PY.base64_decode,
+    mobdebug = _PY.mobdebug,
+  }
   self.lib.userTime = os.time
   self.lib.userDate = os.date
   self.offline = false
@@ -373,8 +387,7 @@ local stdLua = {
 function Emulator:loadQA(info)
   -- Load and execute included files + main file
   local env = { 
-    fibaro = { 
-      plua = self }, net = net, json = json, api = self.api,
+    fibaro = { plua = self }, net = net, json = json, api = self.api,
       os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
       __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
     }

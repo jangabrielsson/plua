@@ -85,6 +85,11 @@ async def run_script(
     except Exception as e:
         print(f"Runtime error: {e}")
     finally:
+        if api_server:
+            try:
+                await api_server.stop()
+            except Exception:
+                pass
         if api_task and not api_task.done():
             api_task.cancel()
             try:

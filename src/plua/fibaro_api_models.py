@@ -18,6 +18,34 @@ import re
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CreateSceneRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -42,11 +70,67 @@ class CreateSceneRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ExecuteSceneRequest(BaseModel):
     alexaProhibited: Optional[bool] = Field(
         ..., description="Execute scene by alexaProhibited"
     )
     args: Optional[Dict[str, Any]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -61,8 +145,64 @@ class FilterSceneRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CreateSceneResponse(BaseModel):
     id: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -106,6 +246,34 @@ class SceneDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class UpdateSceneRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -129,6 +297,34 @@ class UpdateSceneRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ScenarioContent(BaseModel):
     type_: Optional[str] = Field(None, alias="type")
     version: Optional[int] = None
@@ -140,6 +336,34 @@ class ScenarioContent(BaseModel):
     actions: Optional[List[Dict[str, Any]]] = None
     triggers: Optional[triggers] = None
     conditions: Optional[conditions] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -159,11 +383,67 @@ class ScenarioContentWhen(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ScenarioContentWhere(BaseModel):
     wholeHouse: Optional[bool] = None
     sections: Optional[List[int]] = None
     rooms: Optional[List[int]] = None
     devices: Optional[List[int]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -178,8 +458,64 @@ class ScenarioContentWhat(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class triggers(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -194,11 +530,67 @@ class conditions(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class complexConditions(BaseModel):
     group: Optional[str] = None
     type_: Optional[str] = Field(None, alias="type")
     conditions: conditions
     operator: str
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -219,6 +611,34 @@ class deviceTriggerOrCondition(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class profileTriggerOrCondition(BaseModel):
     group: str
     type_: str = Field(..., alias="type")
@@ -226,6 +646,34 @@ class profileTriggerOrCondition(BaseModel):
     property: str
     operator: str
     duration: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -244,8 +692,64 @@ class cronTriggerOrCondition(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class cron(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -255,6 +759,34 @@ class cron(BaseModel):
 class interval(BaseModel):
     date: cron
     interval: float
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -274,6 +806,34 @@ class weatherBasicCondition(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class weatherConditionsCondition(BaseModel):
     group: str
     type_: str = Field(..., alias="type")
@@ -281,6 +841,34 @@ class weatherConditionsCondition(BaseModel):
     property: str
     operator: str
     duration: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -299,12 +887,68 @@ class isDayOrNightCondition(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class sunEventTrigger(BaseModel):
     group: str
     type_: str = Field(..., alias="type")
     property: str
     value: float
     operator: str
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -323,11 +967,67 @@ class deviceAction(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class profileAction(BaseModel):
     group: str
     id: float
     action: str
     delay: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -347,11 +1047,67 @@ class remoteControllerTrigger(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceIconDto(BaseModel):
     deviceType: Optional[str] = None
     iconSetName: Optional[str] = None
     id: Optional[int] = None
     fileExtension: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -368,10 +1124,66 @@ class RoomIconDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SceneIconDto(BaseModel):
     iconName: Optional[str] = None
     id: Optional[int] = None
     fileExtension: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -387,10 +1199,66 @@ class CreatedIconDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class IconListDto(BaseModel):
     device: Optional[List[DeviceIconDto]] = None
     room: Optional[List[RoomIconDto]] = None
     scene: Optional[List[SceneIconDto]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -413,6 +1281,34 @@ class SortOrderRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class FavoriteColor(BaseModel):
     id: Optional[int] = None
     r: Optional[int] = None
@@ -428,12 +1324,68 @@ class FavoriteColor(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NewFavoriteColor(BaseModel):
     r: Optional[int] = None
     g: Optional[int] = None
     b: Optional[int] = None
     w: Optional[int] = None
     brightness: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -455,6 +1407,34 @@ class RefreshStateDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ProfileCreateDto(BaseModel):
     name: Optional[str] = None
     iconId: Optional[int] = None
@@ -465,9 +1445,65 @@ class ProfileCreateDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ProfileServiceDto(BaseModel):
     activeProfile: Optional[int] = None
     profiles: Optional[List[ProfileDto]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -488,9 +1524,65 @@ class ProfileDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceActorDto(BaseModel):
     id: Optional[int] = None
     action: Optional[DeviceActionDto] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -506,9 +1598,65 @@ class SceneActorDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PartitionActionDto(BaseModel):
     partitionId: Optional[int] = None
     action: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -525,8 +1673,64 @@ class ClimateZonesActionDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ClimateZonesActionMode(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -547,6 +1751,34 @@ class ClimateZonesActionProperties(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ClimateZonesActionHandMode(BaseModel):
     pass
 
@@ -555,8 +1787,64 @@ class ClimateZonesActionHandMode(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PartitionActionUpdateDto(BaseModel):
     action: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -572,8 +1860,64 @@ class ClimateZoneActionUpdateDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SceneActorUpdateDto(BaseModel):
     actions: Optional[List[action]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -588,10 +1932,66 @@ class action(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceActionDto(BaseModel):
     name: str
     isUIAction: Optional[bool] = None
     args: List[Dict[str, Any]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -610,6 +2010,34 @@ class CpuLoad(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Memory(BaseModel):
     buffers: Optional[int] = None
     cache: Optional[int] = None
@@ -621,9 +2049,65 @@ class Memory(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Storage(BaseModel):
     name: Optional[str] = None
     used: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -640,8 +2124,64 @@ class Diagnostic(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Diagnostic_storage(BaseModel):
     internal: Optional[List[Storage]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -652,6 +2192,34 @@ class DiagnosticTransmissions(BaseModel):
     items: Optional[List[DiagnosticTransmissionsItem]] = None
     since: Optional[float] = None
     until: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -675,10 +2243,66 @@ class DiagnosticTransmissionsItem(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class UserCreateRequest(BaseModel):
     email: Optional[str] = None
     name: Optional[str] = None
     type_: Optional[str] = Field(None, alias="type")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -720,6 +2344,34 @@ class UserDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class UserDtoRights(BaseModel):
     advanced: Optional[Dict[str, Any]] = None
     devices: Optional[Dict[str, Any]] = None
@@ -733,9 +2385,65 @@ class UserDtoRights(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DebugMessagesDto(BaseModel):
     nextLast: Optional[float] = None
     messages: Optional[List[DebugMessageDto]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -754,6 +2462,34 @@ class DebugMessageDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DefaultSensors(BaseModel):
     temperature: Optional[int] = None
     humidity: Optional[int] = None
@@ -764,8 +2500,64 @@ class DefaultSensors(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class IconColor(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -786,6 +2578,34 @@ class RoomCreateRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class RoomUpdateRequest(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
@@ -798,6 +2618,34 @@ class RoomUpdateRequest(BaseModel):
     sortOrder: Optional[int] = None
     category: Optional[str] = None
     visible: Optional[bool] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -823,8 +2671,64 @@ class RoomDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class RoomGroupAssignment(BaseModel):
     deviceIds: Optional[List[int]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -839,8 +2743,64 @@ class TimeIntervalEnum(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ConsumptionMeasurementEnum(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -858,8 +2818,64 @@ class EnergyDeviceInfo(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class EnergyValueDto(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -874,8 +2890,64 @@ class PowerValueDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class EnergyCostDto(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -890,8 +2962,64 @@ class DateTimeUnitDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class BillingDurationEnum(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -911,6 +3039,34 @@ class EnergyBillingPeriodDto(BaseModel):
         description="Day at which billing period ended: YYYY-MM-DD. This value is empty for current period.",
     )
     fixedCost: Optional[float] = Field(..., description="Fixed cost per billing period")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -937,12 +3093,68 @@ class EnergyDeviceEntryDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class EnergyRoomEntryDto(BaseModel):
     id: Optional[int] = Field(..., description="id of room")
     production: Optional[EnergyValueDto] = None
     consumption: Optional[EnergyValueDto] = None
     productionCost: Optional[EnergyCostDto] = None
     consumptionCost: Optional[EnergyCostDto] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -961,12 +3173,68 @@ class EnergyCategoryEntryDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class EnergySummaryDto(BaseModel):
     production: Optional[EnergyValueDto] = None
     consumption: Optional[EnergyValueDto] = None
     productionCost: Optional[EnergyCostDto] = None
     consumptionCost: Optional[EnergyCostDto] = None
     topConsumingDevices: Optional[List[EnergyDeviceEntryDto]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -982,8 +3250,64 @@ class EnergyMetricsDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class EnergyDetailDto(BaseModel):
     energy: Optional[List[Dict[str, Any]]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -998,8 +3322,64 @@ class EnergyRoomDetailDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class EnergyDeviceDetailDto(BaseModel):
     energy: Optional[List[Dict[str, Any]]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1009,6 +3389,34 @@ class EnergyDeviceDetailDto(BaseModel):
 class EnergyBillingSummaryTypesDto(BaseModel):
     currentBillingPeriod: Optional[EnergyBillingSummaryDto] = None
     previousBillingPeriod: Optional[EnergyBillingSummaryDto] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1032,6 +3440,34 @@ class EnergyBillingSummaryDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class InstallationCostDto(BaseModel):
     id: Optional[int] = Field(..., description="Id of installation cost")
     date: Optional[str] = Field(..., description="YYYY-MM-DD")
@@ -1043,8 +3479,64 @@ class InstallationCostDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DayEnum(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1068,6 +3560,34 @@ class EnergyAdditionalTariffDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class EnergyTariffDto(BaseModel):
     rate: Optional[float] = Field(..., description="how much 1kWh costs")
     name: Optional[str] = Field(..., description="name of main tariff")
@@ -1082,6 +3602,34 @@ class EnergyTariffDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SavingsDetailsDto(BaseModel):
     periodStart: Optional[DateTimeUnitDto] = None
     periodEnd: Optional[DateTimeUnitDto] = None
@@ -1090,6 +3638,34 @@ class SavingsDetailsDto(BaseModel):
     productionCost: Optional[EnergyCostDto] = None
     consumptionCost: Optional[EnergyCostDto] = None
     devices: Optional[List[EnergyDeviceEntryDto]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1134,10 +3710,66 @@ class SavingsSummaryDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SavingsInstallationDto(BaseModel):
     period: Optional[DateTimeUnitDto] = None
     production: Optional[EnergyValueDto] = None
     productionCost: Optional[EnergyCostDto] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1164,6 +3796,34 @@ class EcologySummaryDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class EcologyDetailsDto(BaseModel):
     periodStart: Optional[DateTimeUnitDto] = None
     periodEnd: Optional[DateTimeUnitDto] = None
@@ -1173,6 +3833,34 @@ class EcologyDetailsDto(BaseModel):
     reductionCO2: Optional[float] = Field(
         ..., description="Cumulative tons of CO2 reduced thanks to produced energy"
     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1211,8 +3899,64 @@ class EnergySettingsDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ResetRequestDto(BaseModel):
     recovery: Optional[bool] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1224,6 +3968,34 @@ class Energy(BaseModel):
     totalEnergy: Optional[float] = None
     current: Optional[EnergyData] = None
     total: Optional[EnergyData] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1247,12 +4019,68 @@ class EnergyData(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Temperature(BaseModel):
     id: Optional[int] = None
     temperatureD: Optional[float] = None
     temperatureH: Optional[float] = None
     temperatureM: Optional[float] = None
     temperatureW: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1267,8 +4095,64 @@ class EnergyFromTo(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DataTypeRoomsOrDevices(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1283,6 +4167,34 @@ class DataTypeSummaryOrCompare(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class TemperatureFromTo(BaseModel):
     pass
 
@@ -1291,8 +4203,64 @@ class TemperatureFromTo(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CoFromToArray(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1309,6 +4277,34 @@ class CoFromTo(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SmokeFromTo(BaseModel):
     smoke: List[List[float]]
     temperature: List[List[float]]
@@ -1319,8 +4315,64 @@ class SmokeFromTo(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ThermostatMode(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1339,11 +4391,67 @@ class ThermostatFromTo(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class iOSDev(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
     push: Optional[bool] = None
     udid: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1365,8 +4473,64 @@ class Weather(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NotificationType(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1381,8 +4545,64 @@ class ChannelType(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class IntervalType(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1405,6 +4625,34 @@ class NotificationsSettings(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceNotificationsSettings(BaseModel):
     deviceId: int
     notifications: List[NotificationsSettings]
@@ -1414,9 +4662,65 @@ class DeviceNotificationsSettings(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SectionCreateRequest(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1435,12 +4739,68 @@ class SectionUpdateRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SectionDto(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
     created: Optional[int] = None
     modified: Optional[int] = None
     sortOrder: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1459,9 +4819,65 @@ class FavoriteColorV2(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NewFavoriteColorV2(BaseModel):
     colorComponents: Dict[str, Any]
     brightness: int
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1478,6 +4894,34 @@ class DeviceNetworkDataDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NetworkDiscoveryDto(BaseModel):
     mac: Optional[List[str]] = None
 
@@ -1486,8 +4930,64 @@ class NetworkDiscoveryDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class priorityEnum(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1522,6 +5022,34 @@ class NotificationCenterDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NotificationCenterRequestDto(BaseModel):
     priority: Optional[str] = Field(
         ..., description="Notification priority: 'info', 'warning' or 'alert'"
@@ -1540,6 +5068,34 @@ class NotificationCenterRequestDto(BaseModel):
         description="Notification type, each type of notification has its own data structure",
     )
     data: Optional[NotificationCenterDataDto] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1607,11 +5163,67 @@ class NotificationCenterDataDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NotificationCenterDataIconDto(BaseModel):
     """Notification icon. Return for GenericDeviceRequest"""
 
     path: Optional[str] = Field(..., description="Path to icon file")
     source: Optional[str] = Field(..., description="Icon source")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1629,10 +5241,66 @@ class ColorDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class StepDto(BaseModel):
     color: Optional[ColorDto] = None
     duration: Optional[int] = None
     transitionTime: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1644,6 +5312,34 @@ class ProgramDto(BaseModel):
     name: Optional[str] = None
     totalDurationTime: Optional[float] = None
     steps: Optional[List[StepDto]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1663,6 +5359,34 @@ class CreateProgramRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CreateQuickAppRequest(BaseModel):
     name: Optional[str] = None
     type_: Optional[str] = Field(None, alias="type")
@@ -1676,9 +5400,65 @@ class CreateQuickAppRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class QuickAvailableTypeDto(BaseModel):
     type_: Optional[str] = Field(None, alias="type")
     label: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1696,12 +5476,68 @@ class QuickAppFile(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class QuickAppFileDetails(BaseModel):
     name: Optional[str] = None
     type_: Optional[str] = Field(None, alias="type")
     isOpen: Optional[bool] = None
     isMain: Optional[bool] = None
     content: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1722,12 +5558,68 @@ class QuickAppExportRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class HCErrorDto(BaseModel):
     type_: Optional[str] = Field(None, alias="type")
     reason: Optional[str] = None
     message: Optional[str] = Field(
         ..., description="Datild infomations about an error."
     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1744,10 +5636,66 @@ class Icon(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class BlackBoxDto(BaseModel):
     fileName: Optional[str] = None
     state: Optional[str] = None
     timestamp: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1767,9 +5715,65 @@ class DeviceListFiltersDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceListFilterDto(BaseModel):
     filter_: Optional[str] = Field(None, alias="filter")
     value: Optional[List[Dict[str, Any]]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1791,8 +5795,64 @@ class DevicesInterfacesDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class RateType(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1807,8 +5867,64 @@ class ButtonType(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DoorLockMode(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1818,6 +5934,34 @@ class DoorLockMode(BaseModel):
 class DeviceAvailableSceneDto(BaseModel):
     name: Optional[str] = None
     sceneId: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2057,10 +6201,66 @@ class DevicePropertiesDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceActionArgumentsDto(BaseModel):
     args: Optional[List[Dict[str, Any]]] = None
     delay: Optional[float] = None  # Now truly optional
     integrationPin: Optional[str] = None  # Now truly optional
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2072,6 +6272,34 @@ class ResourceTypeDto(BaseModel):
     type_: float = Field(..., alias="type")
     scales: List[float]
     rateType: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2097,6 +6325,34 @@ class DeviceInputToChannelMapDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginCreateDto(BaseModel):
     name: str = Field(..., description="Name of device to be created")
     type_: str = Field(
@@ -2107,6 +6363,34 @@ class PluginCreateDto(BaseModel):
         description="Room ID to which device will be added; default room when not given",
     )
     properties: Optional[DevicePropertiesDto] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2139,6 +6423,34 @@ class DeviceDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceInfoDto(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
@@ -2155,8 +6467,64 @@ class DeviceInfoDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceClassificationDto(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2188,10 +6556,66 @@ class DeviceInfoPropertyDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceInfoPropertyEnumValuesDto(BaseModel):
     items: Optional[List[Dict[str, Any]]] = None
     type_: Optional[str] = Field(None, alias="type")
     key: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2207,11 +6631,67 @@ class ValueMappingDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceFirmwareUpdateDto(BaseModel):
     info: Optional[str] = None
     progress: Optional[int] = None
     status: Optional[str] = None
     updateVersion: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2232,9 +6712,65 @@ class GroupActionArguments(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CentralScene(BaseModel):
     keyAttributes: Optional[List[KeyAttribute]] = None
     keyId: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2249,10 +6785,66 @@ class KeyAttribute(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NewDevice(BaseModel):
     name: Optional[str] = None
     properties: Optional[DevicePropertiesDto] = None
     type_: Optional[str] = Field(None, alias="type")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2273,11 +6865,67 @@ class DevicePropertiesDto_parameters(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class UserCodeDto(BaseModel):
     id: Optional[float] = None
     name: Optional[str] = None
     status: Optional[str] = None
     update: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2295,11 +6943,67 @@ class ViewConfig(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class FavoritePositions(BaseModel):
     name: Optional[str] = None
     label: Optional[str] = None
     value: Optional[float] = None
     slatsAngle: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2315,8 +7019,64 @@ class AvailablePosition(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceRole(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2334,9 +7094,65 @@ class DeviceTypeHierarchy(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceInfoPropertyDefinedValue(BaseModel):
     unit: Optional[str] = None
     values: Optional[List[Dict[str, Any]]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2348,6 +7164,34 @@ class DeviceInfoPropertyDefinedColorComponent(BaseModel):
     color: Optional[str] = None
     colorComponents: Optional[Dict[str, Any]] = None
     label: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2369,10 +7213,66 @@ class DeviceInfoPropertyColorComponents(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceInfoPropertyColorComponentsComponent(BaseModel):
     label: Optional[str] = None
     min: Optional[float] = None
     max: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2387,8 +7287,64 @@ class ViewVersionEnum(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DevicesDto(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2413,11 +7369,67 @@ class SystemStatusDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SystemStatusStageDto(BaseModel):
     description: Optional[str] = None
     current: Optional[int] = None
     done: Optional[bool] = None
     max: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2433,8 +7445,64 @@ class SystemStatusUpdateDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SystemStatusAction(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2460,10 +7528,66 @@ class HomeDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class HomeDto_defaultSensors(BaseModel):
     light: Optional[float] = None
     temperature: Optional[float] = None
     humidity: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2478,8 +7602,64 @@ class HomeDto_meters(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class HomeDto_notificationClient(BaseModel):
     marketingNotificationAllowed: Optional[bool] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2492,6 +7672,34 @@ class UserActivityDto(BaseModel):
     type_: Optional[str] = Field(None, alias="type")
     user: Optional[str] = None
     userId: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2516,6 +7724,34 @@ class LoginStatus(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class LogoutStatus(BaseModel):
     status: Optional[bool] = None
     retryNumber: Optional[int] = None
@@ -2527,8 +7763,64 @@ class LogoutStatus(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginViewDto(BaseModel):
     field__jason: Optional[Dict[str, Any]] = Field(None, alias="$jason")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2544,6 +7836,34 @@ class PluginBodyDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginHeaderDto(BaseModel):
     title: Optional[str] = Field(..., description="Page title")
     style: Optional[Dict[str, Any]] = None
@@ -2553,8 +7873,64 @@ class PluginHeaderDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginSectionsDto(BaseModel):
     items: Optional[List[Dict[str, Any]]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2578,11 +7954,67 @@ class PluginButtonDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginHorizontalLayoutDto(BaseModel):
     name: Optional[str] = Field(..., description="Component name")
     type_: Optional[str] = Field(None, alias="type")
     components: Optional[List[Dict[str, Any]]] = None
     style: Optional[Dict[str, Any]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2600,6 +8032,34 @@ class PluginImageDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginLabelDto(BaseModel):
     name: Optional[str] = Field(..., description="Component name")
     type_: Optional[str] = Field(None, alias="type")
@@ -2607,6 +8067,34 @@ class PluginLabelDto(BaseModel):
         ..., description="The text to be displayed inside of the label."
     )
     style: Optional[Dict[str, Any]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2629,10 +8117,66 @@ class PluginMultiSelectDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginOptionDto(BaseModel):
     value: Optional[str] = Field(..., description="Option value.")
     type_: Optional[str] = Field(None, alias="type")
     text: Optional[str] = Field(..., description="The text to be displayed.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2655,6 +8199,34 @@ class PluginSingleSelectDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginSliderDto(BaseModel):
     name: Optional[str] = Field(..., description="Component name")
     type_: Optional[str] = Field(None, alias="type")
@@ -2669,10 +8241,66 @@ class PluginSliderDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginSpaceDto(BaseModel):
     name: Optional[str] = Field(..., description="Component name")
     type_: Optional[str] = Field(None, alias="type")
     style: Optional[Dict[str, Any]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2690,6 +8318,34 @@ class PluginSwitchDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginVerticalLayoutDto(BaseModel):
     name: Optional[str] = Field(..., description="Component name")
     type_: Optional[str] = Field(None, alias="type")
@@ -2701,10 +8357,66 @@ class PluginVerticalLayoutDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginsTypesDto(BaseModel):
     installed: Optional[InstalledPluginsDto] = None
     all: Optional[Dict[str, Any]] = None
     promo: Optional[List[Dict[str, Any]]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2722,8 +8434,64 @@ class PluginUpdateDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginsV2Dto(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2749,8 +8517,64 @@ class PluginV2ElementDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class IconDto(BaseModel):
     path: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2767,6 +8591,34 @@ class PluginsDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class IPCameraDto(BaseModel):
     id: Optional[str] = None
     manufacturer: Optional[str] = None
@@ -2777,8 +8629,64 @@ class IPCameraDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class InstalledPluginsDto(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2796,8 +8704,64 @@ class InstalledPluginElementDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class AllPluginsDto(BaseModel):
     types: Optional[List[PluginByCategoryDto]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2808,6 +8772,34 @@ class PluginByCategoryDto(BaseModel):
     category: Optional[float] = None
     plugins: Optional[List[PluginDto]] = None
     installed: Optional[float] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2831,8 +8823,64 @@ class PluginDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginsPromoDto(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2848,6 +8896,34 @@ class PluginsPromoElementDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginsPromoElementImageDto(BaseModel):
     big: Optional[str] = None
     small: Optional[str] = None
@@ -2857,8 +8933,64 @@ class PluginsPromoElementImageDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class UiEventType(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2879,6 +9011,34 @@ class CreateChildDeviceDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class UpdatePropertyDto(BaseModel):
     deviceId: int
     propertyName: str
@@ -2889,9 +9049,65 @@ class UpdatePropertyDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ZwaveNodeRemovedEventDto(BaseModel):
     type_: str = Field(..., alias="type", description="Type")
     data: Dict[str, Any]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2908,10 +9124,66 @@ class CentralSceneEventDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DeviceFirmwareUpdateEventDto(BaseModel):
     type_: str = Field(..., alias="type", description="Type")
     source: int = Field(..., description="Device id")
     data: Dict[str, Any]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2928,8 +9200,64 @@ class SceneActivationEventDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ZwaveNetworkResetEventDto(BaseModel):
     type_: str = Field(..., alias="type", description="Type")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2946,6 +9274,34 @@ class AccessControlEventDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class VideoGateIncomingCallEventDto(BaseModel):
     type_: str = Field(..., alias="type", description="Type")
     data: Dict[str, Any]
@@ -2955,9 +9311,65 @@ class VideoGateIncomingCallEventDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ZwaveDeviceParametersChangedEventDto(BaseModel):
     type_: str = Field(..., alias="type", description="Type")
     source: int = Field(..., description="Device id")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2977,10 +9389,66 @@ class GeofenceEventDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PluginsInterfaceParamDto(BaseModel):
     action: str = Field(..., description="Action")
     deviceId: int = Field(..., description="Device id")
     interfaces: List[str] = Field(..., description="Interfaces to add or remove")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2995,8 +9463,64 @@ class RestartPluginRequestDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class RestartPluginResponseDto(BaseModel):
     status: bool = Field(..., description="Request status")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3015,11 +9539,67 @@ class LocationSettingsDate(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class LocationSettingsTime(BaseModel):
     """Current time on your device"""
 
     hour: Optional[int] = Field(..., description="Hour, format depends on timeFormat")
     minute: Optional[int] = Field(..., description="Minute, format mm")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3059,8 +9639,64 @@ class LocationSettings(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class LedDto(BaseModel):
     brightness: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3075,6 +9711,34 @@ class interfaces(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ipConfig(BaseModel):
     ipMode: str
     ip: Optional[str] = None
@@ -3083,6 +9747,34 @@ class ipConfig(BaseModel):
     dns1: Optional[str] = None
     dns2: Optional[str] = None
     macAddress: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3104,10 +9796,66 @@ class apConfig(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class interfaceConfiguration(BaseModel):
     enabled: bool
     ipConfig: Optional[ipConfig] = None
     apConfig: Optional[apConfig] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3122,8 +9870,64 @@ class configN(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class networkConfiguration(BaseModel):
     networkConfig: Optional[configN] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3134,6 +9938,34 @@ class ap(BaseModel):
     ssid: str
     signal: Optional[int] = None
     security: List[str]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3153,8 +9985,64 @@ class apInfo(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class apList(BaseModel):
     apList: Optional[List[ap]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3169,8 +10057,64 @@ class apListInfo(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class accessPointMode(BaseModel):
     accessPointEnabled: Optional[bool] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3186,6 +10130,34 @@ class protocols(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class internetConnectivity(BaseModel):
     internetConnectivity: bool
 
@@ -3194,8 +10166,64 @@ class internetConnectivity(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class connections(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3215,9 +10243,65 @@ class connection(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class statusResponse(BaseModel):
     code: int
     message: str
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3232,8 +10316,64 @@ class radioConfiguration(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class radioListConfiguration(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3250,6 +10390,34 @@ class remoteAccessState(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class remoteAccessStatus(BaseModel):
     user: Optional[remoteAccessState] = None
     support: Optional[remoteAccessState] = None
@@ -3259,8 +10427,64 @@ class remoteAccessStatus(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Settings(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3276,11 +10500,67 @@ class CurrentVersion(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class InstallVersion(BaseModel):
     version: Optional[str] = None
     type_: Optional[str] = Field(None, alias="type")
     status: Optional[str] = None
     progress: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3331,8 +10611,64 @@ class Info(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ZwaveEngineVersion(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3347,8 +10683,64 @@ class ZwaveRegion(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class OemId(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3375,11 +10767,67 @@ class AlarmHistoryEntryDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class NewPartitionDto(BaseModel):
     name: str
     armDelay: int
     breachDelay: int
     devices: List[int]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3402,11 +10850,67 @@ class AlarmPartitionDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PartitionArmTryResult(BaseModel):
     id: int
     result: PartitionArmState
     armTime: Optional[int] = None
     breachedDevices: Optional[List[int]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3421,8 +10925,64 @@ class PartitionArmState(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class inline_response_201(BaseModel):
     id: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3432,6 +10992,34 @@ class inline_response_201(BaseModel):
 class AlarmDeviceEntryDto(BaseModel):
     id: Optional[float] = None
     name: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3448,11 +11036,67 @@ class HumiditySetpoint(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class HumidityScheduleDay(BaseModel):
     day: Optional[HumiditySetpoint] = None
     evening: Optional[HumiditySetpoint] = None
     morning: Optional[HumiditySetpoint] = None
     night: Optional[HumiditySetpoint] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3478,6 +11122,34 @@ class HumidityScheduleWeek(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class HumidityZone(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
@@ -3490,8 +11162,64 @@ class HumidityZone(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class inline_object(BaseModel):
     name: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3525,6 +11253,34 @@ class Location(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class LocationRequest(BaseModel):
     name: str = Field(..., description="Location name")
     address: Optional[str] = Field(..., description="Location addres")
@@ -3541,6 +11297,34 @@ class LocationRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Day(BaseModel):
     pass
 
@@ -3549,8 +11333,64 @@ class Day(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class sprinklers_DayEnum(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3566,9 +11406,65 @@ class SprinklerZone(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SprinklerSequenceRequest(BaseModel):
     startTime: Optional[int] = Field(..., description="seconds from midnight")
     sprinklers: Optional[List[SprinklerZone]] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3586,8 +11482,64 @@ class SprinklerSequence(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SprinklerSequenceStartWateringRequest(BaseModel):
     wateringTime: Optional[int] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3606,8 +11558,64 @@ class SprinklerSchedule(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SprinklerScheduleCreateRequest(BaseModel):
     name: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3625,6 +11633,34 @@ class SprinklerScheduleRequest(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class FamilyLocation(BaseModel):
     timestamp: Optional[int] = None
     latitude: Optional[float] = None
@@ -3635,8 +11671,64 @@ class FamilyLocation(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Notifications(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3657,8 +11749,64 @@ class Notification(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class notifications_inline_object(BaseModel):
     name: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3668,6 +11816,34 @@ class notifications_inline_object(BaseModel):
 class CustomEventDto(BaseModel):
     name: Optional[str] = None
     userDescription: Optional[str] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3686,8 +11862,64 @@ class GlobalVariableDto(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class PanelMode(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3702,8 +11934,64 @@ class CalculationStrategy(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Mode(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3723,6 +12011,34 @@ class ClimateSetpoint(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ClimateScheduleDay(BaseModel):
     """Periods of time during the day"""
 
@@ -3730,6 +12046,34 @@ class ClimateScheduleDay(BaseModel):
     day: Optional[ClimateSetpoint] = None
     evening: Optional[ClimateSetpoint] = None
     night: Optional[ClimateSetpoint] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3782,6 +12126,34 @@ class BasicProperties(BaseModel):
     currentSetpointTimeEndMinute: Optional[float] = Field(
         ..., description="Current minute of range end"
     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3854,12 +12226,68 @@ class AdvancedProperties(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class BasicClimateZone(BaseModel):
     id: Optional[int] = Field(..., description="Climate zone id")
     name: Optional[str] = Field(..., description="Climate zone name")
     active: Optional[bool] = Field(..., description="Is climate zone active")
     mode: Optional[PanelMode] = None
     properties: Optional[BasicProperties] = None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3884,6 +12312,34 @@ class AdvancedClimateZone(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CreatePushRequest(BaseModel):
     mobileDevices: List[int] = Field(..., description="List of push receivers.")
     title: str = Field(..., description="Push title.")
@@ -3895,6 +12351,34 @@ class CreatePushRequest(BaseModel):
         description="Action which will be run on the service. Value depends on service value.",
     )
     data: Dict[str, Any] = Field(..., description="Push data.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3916,8 +12400,64 @@ class FactoryResetRequestBody(BaseModel):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SourceType(BaseModel):
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

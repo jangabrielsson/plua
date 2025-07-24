@@ -7,6 +7,7 @@
 -- by the Python runtime before this script is executed.
 
 -- Add src/lua to the front of package.path for require() statements
+_PY = _PY or {}
 local initpath = _PY.config.init_script_path:sub(1,-9).."?.lua;"
 initpath = initpath:gsub("[\\/][%w_%s]+[\\/]%.%.","")
 local current_path = package.path
@@ -24,19 +25,19 @@ else
   _PY.mobdebug = { on = function() end, coro = function() end, logging = function() end, start = function() end }
 end
 
--- Callback system for async operations (global for runtime state access)
-_callback_registry = {}
-_persistent_callbacks = {}  -- Track which callbacks should not be deleted
+-- Callback system for async operations (organized under _PY namespace)
+_PY._callback_registry = {}
+_PY._persistent_callbacks = {}  -- Track which callbacks should not be deleted
 local _callback_counter = 0
 
--- Timer-specific tracking (now uses callback IDs, global for runtime state access)
-_pending_timers = {}
+-- Timer-specific tracking (now uses callback IDs, organized under _PY namespace)
+_PY._pending_timers = {}
 
 function _PY.registerCallback(callback_func, persistent)
     _callback_counter = _callback_counter + 1
-    _callback_registry[_callback_counter] = callback_func
+    _PY._callback_registry[_callback_counter] = callback_func
     if persistent then
-        _persistent_callbacks[_callback_counter] = true
+        _PY._persistent_callbacks[_callback_counter] = true
     end
     return _callback_counter
 end
@@ -61,10 +62,10 @@ local function debugCall(typ,fun,...)
 end
 
 function _PY.executeCallback(callback_id, ...)
-    local callback = _callback_registry[callback_id]
+    local callback = _PY._callback_registry[callback_id]
     if callback then
-        if not _persistent_callbacks[callback_id] then
-            _callback_registry[callback_id] = nil  -- Clean up non-persistent callbacks
+        if not _PY._persistent_callbacks[callback_id] then
+            _PY._callback_registry[callback_id] = nil  -- Clean up non-persistent callbacks
         end
         debugCall("callback",callback,...)
     end
@@ -77,13 +78,13 @@ local function _addTimer(callback, delay_ms)
   
   -- Create a wrapper function that handles timer-specific logic
   local wrapper = function()
-    local timer = _pending_timers[callback_id]
+    local timer = _PY._pending_timers[callback_id]
     if timer and not timer.cancelled then
-      _pending_timers[callback_id] = nil  -- Cleanup
+      _PY._pending_timers[callback_id] = nil  -- Cleanup
       debugCall("timer callback",callback)  -- Execute original callback
     elseif timer and timer.cancelled then
       print("Timer", callback_id, "was cancelled")
-      _pending_timers[callback_id] = nil  -- Clean up cancelled timer
+      _PY._pending_timers[callback_id] = nil  -- Clean up cancelled timer
     end
   end
   
@@ -91,7 +92,7 @@ local function _addTimer(callback, delay_ms)
   callback_id = _PY.registerCallback(wrapper, false)
   
   -- Store timer metadata for cancellation support
-  _pending_timers[callback_id] = {
+  _PY._pending_timers[callback_id] = {
     callback = callback,
     delay_ms = delay_ms,
     id = callback_id,
@@ -104,7 +105,7 @@ local function _addTimer(callback, delay_ms)
 end
 
 function clearTimeout(callback_id)
-  local timer = _pending_timers[callback_id]
+  local timer = _PY._pending_timers[callback_id]
   if timer then
     timer.cancelled = true
     _PY.pythonCancelTimer(callback_id)  -- Notify Python to cancel the task
@@ -131,7 +132,7 @@ function setTimeout(fun,ms)
 end
 
 -- Track active intervals for proper cancellation
-_active_intervals = {}
+local _active_intervals = {}
 
 function setInterval(fun, ms)
   local interval_id = _callback_counter + 1  -- Pre-allocate the next ID

@@ -376,6 +376,12 @@ class PlUA2APIServer:
                     await websocket.receive_text()
             except WebSocketDisconnect:
                 pass
+            except asyncio.CancelledError:
+                # Server is shutting down, close gracefully
+                try:
+                    await websocket.close(code=1000, reason="Server shutting down")
+                except Exception:
+                    pass
             except Exception:
                 pass
             finally:
@@ -588,8 +594,20 @@ class PlUA2APIServer:
             # No need for additional cleanup since lifespan is disabled
             raise
 
-    def stop(self):
+    async def stop(self):
         """Stop the server and cleanup"""
+        # First, gracefully close all WebSocket connections
+        if self.websocket_connections:
+            disconnected = set()
+            for websocket in self.websocket_connections.copy():
+                try:
+                    await websocket.close(code=1000, reason="Server shutting down")
+                    disconnected.add(websocket)
+                except Exception:
+                    # Connection might already be closed
+                    disconnected.add(websocket)
+            self.websocket_connections -= disconnected
+        
         # Cleanup any pending requests
         for future in self.pending_requests.values():
             if not future.done():

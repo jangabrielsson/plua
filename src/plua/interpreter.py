@@ -291,7 +291,7 @@ end
         # Get timer count from Lua
         timer_count_script = """
 local count = 0
-for timer_id, timer in pairs(_pending_timers) do
+for timer_id, timer in pairs(_PY._pending_timers) do
     if not timer.cancelled then
         count = count + 1
     end
@@ -306,7 +306,7 @@ return count
         # Get callback count from Lua
         callback_count_script = """
 local count = 0
-for callback_id, callback in pairs(_callback_registry) do
+for callback_id, callback in pairs(_PY._callback_registry) do
     count = count + 1
 end
 return count

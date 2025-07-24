@@ -554,8 +554,8 @@ function net.WebSocketClient(options)
       -- Clean up persistent callback if we have it
       if self.callback_id then
         -- Manually clean up the persistent callback
-        _callback_registry[self.callback_id] = nil
-        _persistent_callbacks[self.callback_id] = nil
+        _PY._callback_registry[self.callback_id] = nil
+        _PY._persistent_callbacks[self.callback_id] = nil
         self.callback_id = nil
       end
     end
@@ -687,8 +687,8 @@ function net.WebSocketServer(options)
       
       -- Clean up persistent callback
       if self.callback_id then
-        _callback_registry[self.callback_id] = nil
-        _persistent_callbacks[self.callback_id] = nil
+        _PY._callback_registry[self.callback_id] = nil
+        _PY._persistent_callbacks[self.callback_id] = nil
         self.callback_id = nil
       end
     end

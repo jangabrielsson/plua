@@ -166,8 +166,16 @@ class PlUA2APIServer:
 
         # Mount static files directory
         current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Try package static directory first (for installed package)
+        package_static_dir = os.path.join(current_dir, "static")
+        
+        # Fallback to project root static directory (for development)
         project_root = os.path.dirname(os.path.dirname(current_dir))
-        static_dir = os.path.join(project_root, "static")
+        project_static_dir = os.path.join(project_root, "static")
+        
+        static_dir = package_static_dir if os.path.exists(package_static_dir) else project_static_dir
+        
         if os.path.exists(static_dir):
             self.app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
@@ -227,11 +235,17 @@ class PlUA2APIServer:
         @self.app.get("/web", response_class=HTMLResponse)
         async def web_repl():
             """Serve the Main Web Interface with tabs"""
-            # Find the HTML file relative to this script
+            # Find the HTML file - try package location first, then project root
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            # Go up to src/plua -> src -> project root
+            
+            # Try package static directory first (for installed package)
+            package_html_path = os.path.join(current_dir, "static", "plua_main_page.html")
+            
+            # Fallback to project root static directory (for development)
             project_root = os.path.dirname(os.path.dirname(current_dir))
-            html_path = os.path.join(project_root, "static", "plua_main_page.html")
+            project_html_path = os.path.join(project_root, "static", "plua_main_page.html")
+            
+            html_path = package_html_path if os.path.exists(package_html_path) else project_html_path
 
             try:
                 with open(html_path, 'r', encoding='utf-8') as f:

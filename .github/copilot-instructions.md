@@ -91,7 +91,7 @@ Note: The FastAPI REST server starts automatically on port 8888 unless `--noapi`
 - `examples/` - Clean user examples (avoid `_PY` internals)
 - `docs/dev/` - Development documentation
 - `fibaro_api_docs/` - Swagger/OpenAPI specs for auto-generation
-- `static/` - Web interface assets (HTML, CSS, JS files)
+- `src/plua/static/` - Web interface assets (HTML, CSS, JS files) packaged with plua
 
 ## Integration Points
 
@@ -105,7 +105,7 @@ The project includes a comprehensive Fibaro Home Center 3 emulator:
 ### Web REPL Interface
 - FastAPI serves both REST API and static web assets
 - Web interface available at `/static/plua_main_page.html` when API server is running
-- Static assets (HTML, CSS, JS) served from `/static/` directory
+- Static assets (HTML, CSS, JS) served from `/static/` URL, packaged in `src/plua/static/`
 - Supports HTML rendering in output (use `html_extensions.py` functions)
 - Shared interpreter state between web and CLI REPL
 

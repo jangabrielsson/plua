@@ -51,23 +51,35 @@ plua
 # Run script (API server starts automatically on port 8888)
 plua script.lua
 
+# Run script then enter interactive REPL (-i flag)
+plua -i script.lua
+
+# Combine fragments, main file, and interactive mode
+plua -i -e 'x=1' -e 'y=2' script.lua
+
 # Run with custom API port
 plua --api-port 9000 script.lua
 
 # Run without API server
 plua --noapi script.lua
 
+# Run with Fibaro support then interactive
+plua --fibaro -i my_quickapp.lua
+
 # Development tests (use dev/ directory)
 plua dev/test_timers.lua
-
-
-# DRun with fibaro API support
-plua --fibaro script.lua
 ```
 
 ### Key Commands & Flags
+- `-i, --interactive` - Enter REPL after running script content
 - `--api-port [port]` - Override default API server port (default: 8888)
 - `--noapi` - Disable API server (starts automatically otherwise)
+
+### Interactive Mode Behavior
+- **Implicit Interactive**: No script/fragments provided → automatically enters REPL
+- **Explicit Interactive**: `-i` flag → runs script content first, then enters REPL
+- **Variable Persistence**: Variables from script fragments and main file are available in REPL
+- **Shared Environment**: REPL uses the same Lua environment as the executed scripts
 - `--duration N` - Auto-terminate after N seconds
 - `--debug` - Enable verbose logging
 

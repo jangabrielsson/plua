@@ -41,7 +41,11 @@ function Emulator:__init()
     self.config.hc3_creds = _PY.base64_encode(self.config.hc3_user..":"..self.config.hc3_password)
   end
   self.config.IPAddress = _PY.config.host_ip
-  self.config.webport = _PY.config.runtime_config.api_config.port
+  if _PY.config.runtime_config.api_config then
+    self.config.webport = _PY.config.runtime_config.api_config.port
+  else
+    self.config.webport = 8080  -- Default port if not set
+  end
   self.DIR = {}
   self.lib = { 
     loadLib = loadLib,
@@ -57,6 +61,7 @@ function Emulator:__init()
     base64Encode = _PY.base64_encode,
     base64Decode = _PY.base64_decode,
     mobdebug = _PY.mobdebug,
+    getRuntimeState = _PY.getRuntimeState,
   }
   self.lib.userTime = os.time
   self.lib.userDate = os.date
@@ -138,6 +143,10 @@ function Emulator:registerDevice(info)
     device = info.device, files = info.files, env = info.env, headers = info.headers,
     UI = info.UI, UImap = info.UImap, watches = info.watches,
   }
+end
+
+function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
+  _G["QA"..qa.id] = qa
 end
 
 function Emulator:getQuickApps()
@@ -316,6 +325,15 @@ end
 
 function Emulator:createInfoFromFile(filename)
   -- Read the file content
+  if filename:match("%.fqa$") then
+    -- If it's a FQA file, Unpack andload it as a QuickApp
+    local path = self.config.tempdir..self.lib.createTempName(".lua")
+    local content = self.lib.readFile(filename)
+    local _,fqa = pcall(json.decode, content)
+    assert(fqa, "Failed to decode FQA file: " .. filename)
+    self.lib.unpackFQAAux(nil, fqa, path)
+    filename = path
+  end
   local file = io.open(filename, "r")
   assert(file, "Failed to open file: " .. filename)
   local content = file:read("*all")
@@ -373,8 +391,8 @@ end
 
 function Emulator:loadMainFile(filename)
   local info = self:createInfoFromFile(filename)
-  if info.headers.debug then self.debugFlag = true end
   if _PY.config.debug == true then self.debugFlag = true end
+  if info.headers.debug then self.debugFlag = true end
   
   if info.headers.offline then
     self.offline = true
@@ -521,7 +539,7 @@ return nil, res.status_code, res.error_message
 end
 
 function Emulator:API_CALL(method, path, data)
-  self:DEBUG("fibaroapi called:", method, path, data and json.encodeFast(data) // 100)
+  self:DEBUG(method, path, data and json.encodeFast(data) // 100)
   
   -- Try to get route from router
   local handler, vars, query = self.lib.router:getRoute(method, path)

@@ -27,6 +27,97 @@ def show_greeting() -> None:
     print(f"Plua v{__version__} with {lua_version}")
 
 
+async def run_interactive(
+    runtime=None,
+    script_fragments: list = None,
+    main_script: str = None,
+    main_file: str = None,
+    duration: Optional[int] = None,
+) -> None:
+    """
+    Run script content first (if any), then enter interactive REPL
+    """
+    # Name the main task
+    current_task = asyncio.current_task()
+    if current_task:
+        current_task.set_name("interactive_runtime")
+
+    if runtime is None:
+        from .runtime import LuaAsyncRuntime
+        runtime = LuaAsyncRuntime()
+
+    api_task = None
+    api_server = None
+
+    api_config = runtime.config.get('api_config')
+    debug = runtime.config.get('debug', False)
+    debugger_config = runtime.config.get('debugger_config')
+    source_name = runtime.config.get('source_name')
+
+    if api_config:
+        from .api_server import PlUA2APIServer
+        print(f"API server on {api_config['host']}:{api_config['port']}")
+        print(f"WebUI on http://127.0.0.1:{api_config['port']}/web")
+        api_server = PlUA2APIServer(runtime, api_config['host'], api_config['port'])
+
+        def broadcast_view_hook(qa_id, component_name, property_name, data_json):
+            if api_server:
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        asyncio.create_task(api_server.broadcast_view_update(qa_id, component_name, property_name, data_json))
+                except Exception as e:
+                    print(f"Error creating view broadcast task for QA {qa_id}: {e}")
+
+        runtime.interpreter.set_broadcast_view_update_hook(broadcast_view_hook)
+        api_task = asyncio.create_task(api_server.start_server(), name="api_server")
+
+    try:
+        # First, execute any script content if provided
+        has_script_content = bool(script_fragments or main_script or main_file)
+        if has_script_content:
+            print("Executing script content...")
+            await runtime.start_script_only(
+                script_fragments=script_fragments,
+                main_script=main_script,
+                main_file=main_file,
+                debugger_config=debugger_config,
+                source_name=source_name,
+                debug=debug,
+                api_server=api_server
+            )
+            print("Script execution completed. Entering interactive mode...")
+        else:
+            # Initialize runtime for REPL only
+            await runtime.initialize(
+                debugger_config=debugger_config,
+                debug=debug,
+                api_server=api_server
+            )
+
+        # Now enter interactive REPL
+        from .repl import PluaREPL
+        repl = PluaREPL(runtime)
+        await repl.start()
+
+    except KeyboardInterrupt:
+        print("\nReceived interrupt signal, shutting down...")
+    except Exception as e:
+        print(f"Runtime error: {e}")
+    finally:
+        if api_server:
+            try:
+                await api_server.stop()
+            except Exception:
+                pass
+        if api_task and not api_task.done():
+            api_task.cancel()
+            try:
+                await asyncio.gather(api_task, return_exceptions=True)
+            except Exception:
+                pass
+
+
 async def run_script(
     runtime=None,
     script_fragments: list = None,
@@ -55,6 +146,7 @@ async def run_script(
     if api_config:
         from .api_server import PlUA2APIServer
         print(f"API server on {api_config['host']}:{api_config['port']}")
+        print(f"WebUI on http://127.0.0.1:{api_config['port']}/web")
         api_server = PlUA2APIServer(runtime, api_config['host'], api_config['port'])
 
         def broadcast_view_hook(qa_id, component_name, property_name, data_json):
@@ -104,13 +196,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="plua - Python-Lua async runtime with timer support",
         epilog="Examples:\n"
+               "  plua                               # Interactive REPL mode\n"
                "  plua script.lua                    # Run script.lua with API server\n"
+               "  plua -i script.lua                 # Run script.lua then enter REPL\n"
                "  plua --noapi script.lua            # Run script.lua without API server\n"
                "  plua --api-port 9000 script.lua    # Run with API on port 9000\n"
                "  plua --duration 10 script.lua      # Run for 10 seconds\n"
                "  plua -e 'print(\"hello\")'           # Run inline script\n"
                "  plua -e 'x=1' -e 'print(x)'        # Multiple -e fragments\n"
                "  plua -e 'print(\"start\")' script.lua # Combine -e and file\n"
+               "  plua -i -e 'x=1' script.lua        # Run fragments + file, then REPL\n"
                "  plua --fibaro script.lua           # Run with Fibaro API support\n"
                "  plua --debugger script.lua         # Run with MobDebug\n"
                "  plua --debugger --debug script.lua # Run with verbose debug logging\n"
@@ -179,6 +274,12 @@ def main() -> None:
     parser.add_argument(
         "--fibaro",
         help="Load Fibaro API support (equivalent to -e \"require('fibaro')\")",
+        action="store_true"
+    )
+
+    parser.add_argument(
+        "-i", "--interactive",
+        help="Enter interactive REPL after running script fragments and main file",
         action="store_true"
     )
 
@@ -276,25 +377,33 @@ def main() -> None:
         # Use the file name for debugging (preserve relative path for VS Code)
         source_file_name = args.lua_file
         config['source_name'] = source_file_name
-    if not script_fragments and not main_script and not main_file:
+
+    # Determine if we should enter interactive mode
+    has_script_content = bool(script_fragments or main_script or main_file)
+    interactive_mode = args.interactive or not has_script_content
+
+    if has_script_content and not interactive_mode:
+        # Run script and exit
         try:
-            asyncio.run(run_repl(runtime=runtime))
+            asyncio.run(run_script(runtime=runtime, script_fragments=script_fragments, main_script=main_script, main_file=main_file, duration=args.duration))
+        except KeyboardInterrupt:
+            print("\nInterrupted by user")
+            sys.exit(0)
+        except asyncio.CancelledError:
+            # Handle cancellation during shutdown (e.g., from _PY.isRunning termination)
+            # This is expected behavior, exit cleanly without showing error
+            sys.exit(0)
+        except Exception as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+    else:
+        # Either no script content (implicit interactive) or explicit -i flag
+        # Run script content first (if any), then enter REPL
+        try:
+            asyncio.run(run_interactive(runtime=runtime, script_fragments=script_fragments, main_script=main_script, main_file=main_file, duration=args.duration))
         except KeyboardInterrupt:
             print("\nGoodbye!")
         sys.exit(0)
-    # Otherwise, run script (with or without API)
-    try:
-        asyncio.run(run_script(runtime=runtime, script_fragments=script_fragments, main_script=main_script, main_file=main_file, duration=args.duration))
-    except KeyboardInterrupt:
-        print("\nInterrupted by user")
-        sys.exit(0)
-    except asyncio.CancelledError:
-        # Handle cancellation during shutdown (e.g., from _PY.isRunning termination)
-        # This is expected behavior, exit cleanly without showing error
-        sys.exit(0)
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
 
 
 if __name__ == "__main__":

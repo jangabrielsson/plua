@@ -21,8 +21,11 @@ class PluaREPL:
 
     async def initialize(self):
         """Initialize the runtime and start callback loop"""
-        self.runtime.initialize_lua()
-        await self.runtime.start_callback_loop()
+        # Check if runtime is already initialized (for interactive mode)
+        if not hasattr(self.runtime, '_initialized') or not self.runtime._initialized:
+            self.runtime.initialize_lua()
+            await self.runtime.start_callback_loop()
+            self.runtime._initialized = True
 
         # Set debug mode
         if self.debug:
@@ -234,6 +237,7 @@ async def run_repl(runtime=None):
     if api_config:
         from .api_server import PlUA2APIServer
         print(f"API server on {api_config['host']}:{api_config['port']}")
+        print(f"WebUI on http://127.0.0.1:{api_config['port']}/web")
         api_server = PlUA2APIServer(repl.runtime, api_config['host'], api_config['port'])
         api_task = asyncio.create_task(api_server.start_server(), name="api_server")
         print()

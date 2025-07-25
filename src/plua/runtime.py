@@ -381,3 +381,78 @@ class LuaAsyncRuntime:
 
         finally:
             self.stop()
+
+    async def start_script_only(self, script_fragments: list = None, main_script: str = None, main_file: str = None,
+                                debugger_config: Optional[dict] = None, source_name: Optional[str] = None, 
+                                debug: bool = False, api_server=None) -> None:
+        """
+        Execute script content without entering the main event loop (for interactive mode)
+        """
+        try:
+            # Check if we have anything to execute
+            if not script_fragments and not main_script and not main_file:
+                return
+
+            # Set debug mode on interpreter
+            self.interpreter.set_debug_mode(debug)
+
+            # Initialize Lua runtime
+            self.initialize_lua()
+            self._initialized = True
+
+            # Start callback loop (but don't await it)
+            asyncio.create_task(self.start_callback_loop(), name="callback_loop")
+
+            # Execute script fragments first
+            if script_fragments:
+                for i, fragment in enumerate(script_fragments, 1):
+                    if debug:
+                        print(f"[{self.curr_time()}] Executing script fragment {i}/{len(script_fragments)}...")
+                    self.execute_script(fragment, f"fragment_{i}", debugging=False, debug=debug)
+
+            # Check for and register Fibaro API endpoints if api_server is available
+            if api_server:
+                api_server.check_and_register_fibaro_api()
+
+            # Load and execute the main script/file
+            if main_file:
+                if debug:
+                    print(f"[{self.curr_time()}] Loading main file...")
+                self.execute_file(main_file, debugging=False, debug=debug)
+            elif main_script:
+                if debug:
+                    print(f"[{self.curr_time()}] Loading main script...")
+                self.execute_script(main_script, source_name, debugging=False, debug=debug)
+
+            # Allow some time for any immediate callbacks to execute
+            await asyncio.sleep(0.1)
+
+        except Exception as e:
+            print(f"Error in script execution: {e}")
+            raise
+
+    async def initialize(self, debugger_config: Optional[dict] = None, debug: bool = False, api_server=None) -> None:
+        """
+        Initialize the runtime for REPL mode without executing any scripts
+        """
+        try:
+            # Set debug mode on interpreter
+            self.interpreter.set_debug_mode(debug)
+
+            # Initialize Lua runtime
+            self.initialize_lua()
+            self._initialized = True
+
+            # Start callback loop (but don't await it)
+            asyncio.create_task(self.start_callback_loop(), name="callback_loop")
+
+            # Check for and register Fibaro API endpoints if api_server is available
+            if api_server:
+                api_server.check_and_register_fibaro_api()
+
+            # Allow some time for initialization to complete
+            await asyncio.sleep(0.1)
+
+        except Exception as e:
+            print(f"Error in runtime initialization: {e}")
+            raise

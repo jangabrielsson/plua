@@ -107,6 +107,7 @@ function QuickAppBase:__init(dev)
   self.interfaces = dev.interfaces
   self.properties = table.copy(dev.properties)
   self.uiCallbacks = {}
+  fibaro.plua:registerQAGlobally(self) -- Register this QuickApp globally
 end
 
 -- Logs a debug message with the device tag

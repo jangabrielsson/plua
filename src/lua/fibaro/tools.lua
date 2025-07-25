@@ -211,7 +211,7 @@ local function unpackFQAAux(id,fqa,path) -- Unpack fqa and save it to disk
   if mainContent ~= "" then pr:print(mainContent) end
   local mainFilePath = path..fname..".lua"
   local content = pr:tostring()
-  print(content)
+  --print(content)
   Emu.lib.writeFile(mainFilePath,content)
   savedFiles[#savedFiles+1] = {name='main', fname=mainFilePath}
   if id then saveProject(id,{files=savedFiles},path) end -- Save project file

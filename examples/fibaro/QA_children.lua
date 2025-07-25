@@ -3,6 +3,7 @@
 --%%debug:false
 --%%var:X=9
 --%%offline:true
+--%%save:QA_children.fqa
 
 ---@class MyChild : QuickAppChild
 MyChild = {}
@@ -26,7 +27,10 @@ function QuickApp:onInit()
     print(c.name)
   end
 
-  setInterval(function() print("PING")end,2000) -- Keep alive
+  setInterval(function() 
+    --setTimeout(function() end,10)
+    -- print(json.encode(fibaro.plua.lib.getRuntimeState()))
+  end,2000) 
 end
 
 function QuickApp:turnOn() print("ON") self:updateProperty("value",true) end

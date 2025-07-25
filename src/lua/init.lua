@@ -174,10 +174,7 @@ function print(...)
   _print("<font color='white'>"..table.concat(res, " ").."</font>")
 end
 
-json = {}
-json.encode = _PY.json_encode
-json.decode = _PY.json_decode
-json.encodeFormated = _PY.json_encode_formated
+json = require("json")
 
 os.getenv = _PY.getenv_with_dotenv
 net = require("net")

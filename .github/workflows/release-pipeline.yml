@@ -5,47 +5,7 @@ on:
     types: [published]
 
 jobs:
-  # Job 1: Publish to PyPI
-  publish-pypi:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-    
-    - name: Install build dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build twine
-    
-    - name: Extract version from tag
-      id: get_version
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/}
-        VERSION=${VERSION#v}
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Extracted version: $VERSION"
-    
-    - name: Update version in __init__.py
-      run: |
-        VERSION="${{ steps.get_version.outputs.version }}"
-        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" src/plua/__init__.py
-        echo "Updated version to: $VERSION"
-        grep "__version__" src/plua/__init__.py
-    
-    - name: Build package
-      run: python -m build
-    
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        verbose: true
-
-  # Job 2: Build executables (runs in parallel with PyPI)
+  # Job 1: Build executables
   build-executables:
     strategy:
       matrix:
@@ -111,9 +71,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Job 3: Update release with summary (runs after both jobs complete)
+  # Job 2: Update release with summary (runs after build completes)
   update-release:
-    needs: [publish-pypi, build-executables]
+    needs: [build-executables]
     runs-on: ubuntu-latest
     steps:
     - name: Update release description
@@ -128,6 +88,8 @@ jobs:
           ```bash
           pip install plua==${{ github.ref_name }}
           ```
+          
+          > **Note**: PyPI package is published automatically by a separate workflow.
           
           ### Standalone Executables
           Download the appropriate executable for your platform:

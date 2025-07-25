@@ -8,8 +8,7 @@ local startServer
 
 local PORT = Emu.config.webport+2
 local function installHelper()
-  local bundled = require("plua.bundled_files")
-  local fqa =  Emu:loadResource(bundled.get_lua_path().."/rsrc/pluaHelper.fqa",true)
+  local fqa =  Emu:loadResource("PluaHelper.fqa",true)
   if not fqa then
     Emu:ERRORF("Failed to load helper")
     return nil

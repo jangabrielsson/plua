@@ -241,6 +241,8 @@ fibaro_api_docs/
 *.backup
 test.env
 run.sh
+!PluaHelper.fqa
+*.fqa
 
 # Lua compiled files
 *.luac

@@ -180,8 +180,9 @@ local function loadFile(env,path,name,content)
 end
 
 function Emulator:loadResource(fname,parseJson)
-  local file = io.open(rsrcpath..fname, "r")
-  assert(file, "Failed to open file: " .. fname)
+  local path = rsrcpath..fname
+  local file = io.open(path)
+  assert(file, "Failed to open file: " .. path)
   local content = file:read("*all")
   file:close()
   if parseJson then return json.decode(content) end

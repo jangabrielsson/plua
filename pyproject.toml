@@ -62,7 +62,7 @@ include = ["plua*", "lua*"]
 "" = "src"
 
 [tool.setuptools.package-data]
-"lua" = ["*.lua", "**/*.lua"]
+"lua" = ["*.lua", "**/*.lua", "**/*.json", "**/*.fqa"]
 "plua" = ["*.lua", "**/*.lua"]
 
 [tool.setuptools.dynamic]

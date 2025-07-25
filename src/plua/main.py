@@ -206,6 +206,7 @@ def main() -> None:
                "  plua -e 'x=1' -e 'print(x)'        # Multiple -e fragments\n"
                "  plua -e 'print(\"start\")' script.lua # Combine -e and file\n"
                "  plua -i -e 'x=1' script.lua        # Run fragments + file, then REPL\n"
+               "  plua -a 'extra args' script.lua    # Pass extra arguments to runtime\n"
                "  plua --fibaro script.lua           # Run with Fibaro API support\n"
                "  plua --debugger script.lua         # Run with MobDebug\n"
                "  plua --debugger --debug script.lua # Run with verbose debug logging\n"
@@ -260,7 +261,7 @@ def main() -> None:
 
     parser.add_argument(
         "--ignore-lua",
-        help="Enable debug logging for MobDebug and plua internals",
+        help="Busted compatibility",
         action="store_true"
     )
 
@@ -281,6 +282,20 @@ def main() -> None:
         "-i", "--interactive",
         help="Enter interactive REPL after running script fragments and main file",
         action="store_true"
+    )
+
+    parser.add_argument(
+        "-a", "--args",
+        help="Extra arguments to pass to the Lua runtime",
+        type=str,
+        default=None
+    )
+
+    parser.add_argument(
+        "-l", "--library",
+        help="EIgnored for now...",
+        type=str,
+        default=None
     )
 
     parser.add_argument(
@@ -353,6 +368,7 @@ def main() -> None:
         'debug': args.debug,
         'api_config': None if args.noapi else {'host': args.api_host, 'port': args.api_port},
         'source_name': None,  # source_name will be set based on args.lua_file
+        'args': args.args,  # Extra arguments passed via -a/--args
         # Add more CLI flags here as needed
     }
     runtime = LuaAsyncRuntime(config=config)

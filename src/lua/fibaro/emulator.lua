@@ -390,6 +390,8 @@ function Emulator:installQuickAppFile(path)
 end
 
 function Emulator:loadMainFile(filename)
+  local args = _PY.config.runtime_config.args or ""
+  if args:starts("task") then return self:runTask(filename,args) end
   local info = self:createInfoFromFile(filename)
   if _PY.config.debug == true then self.debugFlag = true end
   if info.headers.debug then self.debugFlag = true end
@@ -667,6 +669,40 @@ function Emulator:processHeaders(filename,content)
   headers.UI = UI
   headers._UI = nil
   return content,headers
+end
+
+local function getFQA(self,fname)
+  local info = self:createInfoFromFile(fname)
+  self:registerDevice(info)
+  return self.lib.getFQA(info.device.id)
+end
+
+function Emulator:runTask(file,str)
+  local cmd, args = str:match("task ([%w_]+)%s*(.*)")
+
+  if cmd == "uploadQA" then             -- uploadQA <filename>
+    self:INFO("Uploading QA",file)
+    local fqa = getFQA(self,file)
+    self.lib.uploadFQA(fqa)
+
+  elseif cmd == "updateFile" then        -- updateFile <filename>
+    self.lib.updateFile(file)
+
+  elseif cmd == "updateQA" then          -- updateQA <filename>
+    self:INFO("Not implemented: Updating QA",file)
+
+  elseif cmd == "downloadQA" then        -- downloadQA <id>:<path>
+    local id,path = args:match("^([^:]+):(.*)$")
+    self:INFO("Downloading QA",id,"to",path)
+
+  elseif cmd == "packQA" then             -- packQA <filename>
+    local fqa = getFQA(self,file)
+    _print(json.encodeFast(fqa))
+
+  else
+    self:ERROR("Unknown task: "..cmd)
+  end
+  return false
 end
 
 return Emulator

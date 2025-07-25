@@ -1442,7 +1442,7 @@ end
 
 local vscode_debugger = {} do
 
-local json = prequire'dkjson'
+local json = prequire'json'
 --local json = prequire'plua.json'
 
 local vscode_message_size = nil

@@ -15,14 +15,45 @@ package.path = initpath .. current_path
 
 local debugger_config = _PY.config.runtime_config.debugger_config
 if debugger_config then 
-  local mobdebug = require('mobdebug')
-  if debugger_config.debug then mobdebug.logging(true) end
-  mobdebug.start(debugger_config.host,debugger_config.port)
-  mobdebug.on()
-  mobdebug.coro()
-  _PY.mobdebug = mobdebug
+  local success, mobdebug = pcall(require, 'mobdebug')
+  if success then
+    if debugger_config.debug then mobdebug.logging(true) end
+    
+    -- Set timeouts to prevent hanging
+    mobdebug.yieldtimeout = 0.5  -- 500ms timeout for yield operations
+    
+    -- Try to start with timeout protection
+    local start_success = pcall(function()
+      mobdebug.start(debugger_config.host, debugger_config.port)
+      mobdebug.on()
+      mobdebug.coro()
+    end)
+    
+    if start_success then
+      _PY.mobdebug = mobdebug
+      -- Add a heartbeat mechanism to detect disconnection
+      _PY.mobdebug.check_connection = function()
+        if mobdebug.server and mobdebug.server.s then
+          -- Try to send a small test message
+          local ok = pcall(function()
+            mobdebug.server.s:settimeout(0.1)
+            mobdebug.server.s:send("")  -- Empty message as heartbeat
+            mobdebug.server.s:settimeout()
+          end)
+          return ok
+        end
+        return false
+      end
+    else
+      print("Warning: Failed to start mobdebug debugger")
+      _PY.mobdebug = { on = function() end, coro = function() end, logging = function(_) end, start = function() end, setbreakpoint = function(_,_) end, done = function() end }
+    end
+  else
+    print("Warning: mobdebug module not available")
+    _PY.mobdebug = { on = function() end, coro = function() end, logging = function(_) end, start = function() end, setbreakpoint = function(_,_) end, done = function() end }
+  end
 else 
-  _PY.mobdebug = { on = function() end, coro = function() end, logging = function(_) end, start = function() end, setbreakpoint = function(_,_) end }
+  _PY.mobdebug = { on = function() end, coro = function() end, logging = function(_) end, start = function() end, setbreakpoint = function(_,_) end, done = function() end }
 end
 
 -- Callback system for async operations (organized under _PY namespace)

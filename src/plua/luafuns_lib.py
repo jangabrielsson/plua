@@ -1246,31 +1246,90 @@ def close_all_quickapp_windows():
                             pid = window_info.get("pid")
                             if pid:
                                 try:
-                                    import subprocess
-                                    import signal
+                                    # Try psutil first (cross-platform)
+                                    import psutil
                                     import time
-                                    # Try to terminate the process gracefully first
-                                    result = subprocess.run(["kill", "-TERM", str(pid)], check=False)
-                                    time.sleep(0.5)  # Give it a moment to terminate gracefully
                                     
-                                    # Check if process still exists, if so force kill
-                                    check_result = subprocess.run(["ps", "-p", str(pid)], capture_output=True, check=False)
-                                    if check_result.returncode == 0:
-                                        # Process still running, force kill
-                                        subprocess.run(["kill", "-KILL", str(pid)], check=False)
-                                        print(f"Force killed process for window {window_id} (PID: {pid})")
+                                    # Check if process exists and terminate it
+                                    if psutil.pid_exists(pid):
+                                        process = psutil.Process(pid)
+                                        try:
+                                            # Try graceful termination first
+                                            process.terminate()
+                                            # Wait up to 3 seconds for graceful termination
+                                            process.wait(timeout=3)
+                                            print(f"Terminated process for window {window_id} (PID: {pid})")
+                                        except psutil.TimeoutExpired:
+                                            # Force kill if graceful termination failed
+                                            process.kill()
+                                            print(f"Force killed process for window {window_id} (PID: {pid})")
+                                        except psutil.NoSuchProcess:
+                                            print(f"Process {pid} for window {window_id} was already terminated")
+                                        
+                                        closed_count += 1
+                                        
+                                        # Update registry
+                                        registry["windows"][window_id]["status"] = "closed"
+                                        registry["windows"][window_id]["closed"] = time.time()
+                                        registry["windows"][window_id]["closed_iso"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                                     else:
-                                        print(f"Terminated process for window {window_id} (PID: {pid})")
+                                        print(f"Process {pid} for window {window_id} no longer exists")
+                                        # Mark as closed in registry since process is gone
+                                        registry["windows"][window_id]["status"] = "closed"
+                                        registry["windows"][window_id]["closed"] = time.time()
+                                        registry["windows"][window_id]["closed_iso"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                                        closed_count += 1
                                     
-                                    closed_count += 1
+                                except ImportError:
+                                    # Fallback: If psutil not available, try platform-specific approach
+                                    import subprocess
+                                    import sys
+                                    import time
                                     
-                                    # Update registry
+                                    try:
+                                        if sys.platform.startswith('win'):
+                                            # Windows: Use taskkill
+                                            result = subprocess.run(['taskkill', '/F', '/PID', str(pid)], 
+                                                                  capture_output=True, text=True)
+                                            if result.returncode == 0:
+                                                print(f"Terminated process for window {window_id} (PID: {pid})")
+                                                closed_count += 1
+                                            else:
+                                                print(f"Process {pid} for window {window_id} may not exist: {result.stderr.strip()}")
+                                                # Still mark as closed since we tried
+                                                closed_count += 1
+                                        else:
+                                            # Unix-like: Use kill
+                                            result = subprocess.run(["kill", "-TERM", str(pid)], check=False)
+                                            time.sleep(0.5)
+                                            check_result = subprocess.run(["ps", "-p", str(pid)], capture_output=True, check=False)
+                                            if check_result.returncode == 0:
+                                                subprocess.run(["kill", "-KILL", str(pid)], check=False)
+                                                print(f"Force killed process for window {window_id} (PID: {pid})")
+                                            else:
+                                                print(f"Terminated process for window {window_id} (PID: {pid})")
+                                            closed_count += 1
+                                        
+                                        # Update registry
+                                        registry["windows"][window_id]["status"] = "closed"
+                                        registry["windows"][window_id]["closed"] = time.time()
+                                        registry["windows"][window_id]["closed_iso"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                                        
+                                    except Exception as e:
+                                        print(f"Failed to terminate process {pid} for window {window_id}: {e}")
+                                        # Mark as closed anyway since process may be gone
+                                        registry["windows"][window_id]["status"] = "closed"
+                                        registry["windows"][window_id]["closed"] = time.time()
+                                        registry["windows"][window_id]["closed_iso"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                                        closed_count += 1
+                                        
+                                except Exception as e:
+                                    print(f"Failed to terminate process {pid} for window {window_id}: {e}")
+                                    # Mark as closed anyway since process may be gone
                                     registry["windows"][window_id]["status"] = "closed"
                                     registry["windows"][window_id]["closed"] = time.time()
                                     registry["windows"][window_id]["closed_iso"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                                    
-                                except Exception as e:
-                                    print(f"Failed to terminate process {pid} for window {window_id}: {e}")
+                                    closed_count += 1
                             else:
                                 print(f"No PID available for window {window_id}")
                 

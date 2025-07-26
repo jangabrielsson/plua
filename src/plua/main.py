@@ -19,8 +19,52 @@ def cleanup_on_exit():
     """Cleanup function called on process termination"""
     try:
         from .luafuns_lib import close_all_quickapp_windows
+        from .desktop_ui import shutdown_desktop_ui
+        
         print("\nCleaning up on exit...")
-        close_all_quickapp_windows()
+        
+        # Close QuickApp windows
+        result = close_all_quickapp_windows()
+        if result.get('closed_count', 0) > 0:
+            print(f"Closed {result['closed_count']} QuickApp windows")
+            
+        # Shutdown desktop UI manager
+        shutdown_desktop_ui()
+        
+        # Force close any remaining Python processes that might be hanging
+        try:
+            import psutil
+            import os
+            current_pid = os.getpid()
+            current_process = psutil.Process(current_pid)
+            
+            # Get all child processes
+            children = current_process.children(recursive=True)
+            for child in children:
+                try:
+                    child.terminate()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+                    
+            # Wait a moment for graceful termination
+            import time
+            time.sleep(0.2)
+            
+            # Force kill any remaining children
+            for child in children:
+                try:
+                    if child.is_running():
+                        child.kill()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+                    
+        except ImportError:
+            # psutil not available, skip process cleanup
+            pass
+        except Exception:
+            # Any other error in process cleanup, ignore
+            pass
+            
     except Exception as e:
         # Don't print errors during shutdown unless debugging
         pass
@@ -30,7 +74,8 @@ def setup_signal_handlers():
     """Set up signal handlers for graceful shutdown"""
     def signal_handler(signum, frame):
         print(f"\nReceived signal {signum}, shutting down...")
-        cleanup_on_exit()
+        # Force cleanup of mobdebug and desktop processes
+        force_cleanup_all()
         sys.exit(0)
     
     # Register signal handlers for common termination signals
@@ -48,6 +93,10 @@ def setup_signal_handlers():
     if hasattr(signal, 'SIGHUP'):
         signals_to_handle.append(signal.SIGHUP)
     
+    # SIGBREAK - Windows specific break signal (Ctrl+Break)
+    if hasattr(signal, 'SIGBREAK'):
+        signals_to_handle.append(signal.SIGBREAK)
+    
     # Register handlers for available signals
     for sig in signals_to_handle:
         try:
@@ -58,6 +107,48 @@ def setup_signal_handlers():
     
     # Also register atexit handler as final fallback
     atexit.register(cleanup_on_exit)
+
+
+def force_cleanup_all():
+    """Force cleanup of all resources when terminating"""
+    try:
+        from .luafuns_lib import close_all_quickapp_windows
+        from .desktop_ui import shutdown_desktop_ui
+        
+        print("Force cleaning up all resources...")
+        
+        # 1. Try to close QuickApp windows gracefully
+        try:
+            result = close_all_quickapp_windows()
+            if result.get('closed_count', 0) > 0:
+                print(f"Closed {result['closed_count']} QuickApp windows")
+        except Exception:
+            pass
+            
+        # 2. Shutdown desktop UI
+        try:
+            shutdown_desktop_ui()
+        except Exception:
+            pass
+            
+        # 3. Kill any hanging Python processes
+        try:
+            import subprocess
+            import sys
+            
+            if sys.platform.startswith('win'):
+                # Windows: Kill all python processes from this process tree
+                subprocess.run(['taskkill', '/F', '/T', '/PID', str(os.getpid())], 
+                             capture_output=True, timeout=2)
+            else:
+                # Unix: Send SIGKILL to process group
+                os.killpg(os.getpgid(os.getpid()), signal.SIGKILL)
+        except Exception:
+            pass
+            
+    except Exception:
+        # Final fallback - just exit
+        pass
 
 
 def show_greeting() -> None:
@@ -221,8 +312,14 @@ async def run_script(
         )
     except KeyboardInterrupt:
         print("\nReceived interrupt signal, shutting down...")
+        # Ensure runtime is properly stopped
+        if 'runtime' in locals():
+            runtime.stop()
     except Exception as e:
         print(f"Runtime error: {e}")
+        # Ensure runtime is properly stopped
+        if 'runtime' in locals():
+            runtime.stop()
     finally:
         if api_server:
             try:
@@ -428,6 +525,40 @@ def main() -> None:
             from .luafuns_lib import close_all_quickapp_windows
             result = close_all_quickapp_windows()
             print(f"QuickApp window closure: {result['message']}")
+            
+            # Also cleanup any lingering mobdebug connections on port 8172
+            try:
+                import socket
+                import time
+                
+                # Try to bind to the mobdebug port to see if it's free
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                try:
+                    sock.bind(('localhost', 8172))
+                    sock.close()
+                    print("MobDebug port 8172 is clean")
+                except OSError as e:
+                    sock.close()
+                    print(f"MobDebug port 8172 cleanup: {e}")
+                    
+                    # Try to cleanup any processes using the port
+                    try:
+                        import psutil
+                        for conn in psutil.net_connections():
+                            if conn.laddr.port == 8172:
+                                try:
+                                    proc = psutil.Process(conn.pid)
+                                    print(f"Found process using port 8172: {proc.name()} (PID: {conn.pid})")
+                                    # Don't kill - just report for now to avoid issues
+                                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                                    pass
+                    except ImportError:
+                        pass  # psutil not available
+                        
+            except Exception as e:
+                print(f"Note: MobDebug port check failed: {e}")
+            
             # Use os._exit() to bypass atexit handlers since we've already done the cleanup
             os._exit(0 if result['success'] else 1)
         except Exception as e:
@@ -547,6 +678,9 @@ def main() -> None:
             try:
                 from .luafuns_lib import close_all_quickapp_windows
                 close_all_quickapp_windows()
+                # Also ensure runtime is stopped
+                if 'runtime' in locals():
+                    runtime.stop()
             except Exception as e:
                 print(f"Window cleanup error: {e}")
         sys.exit(0)

@@ -277,17 +277,66 @@ class LuaAsyncRuntime:
 
     def stop(self) -> None:
         """Stop the callback loop and cleanup"""
-        # Cleanup QuickApp windows
+        end_time = self.curr_time()
+        print(f"[{end_time}] Stopping Lua runtime...")
+        
+        # 1. Stop mobdebug if running
+        try:
+            if hasattr(self.interpreter, 'lua') and self.interpreter.lua:
+                lua_globals = self.interpreter.lua.globals()
+                if '_PY' in lua_globals and 'mobdebug' in lua_globals['_PY']:
+                    mobdebug = lua_globals['_PY']['mobdebug']
+                    if hasattr(mobdebug, 'done'):
+                        mobdebug.done()
+                        print(f"[{end_time}] Mobdebug stopped")
+        except Exception as e:
+            print(f"Warning: Failed to stop mobdebug: {e}")
+        
+        # 2. Cancel all running timer tasks
+        try:
+            cancelled_count = 0
+            for timer_id, task in list(self.timer_tasks.items()):
+                if not task.done():
+                    task.cancel()
+                    cancelled_count += 1
+                del self.timer_tasks[timer_id]
+            if cancelled_count > 0:
+                print(f"[{end_time}] Cancelled {cancelled_count} timer tasks")
+        except Exception as e:
+            print(f"Warning: Failed to cancel timer tasks: {e}")
+        
+        # 3. Stop callback loop
+        try:
+            if self.callback_task and not self.callback_task.done():
+                self.callback_task.cancel()
+                print(f"[{end_time}] Callback loop stopped")
+        except Exception as e:
+            print(f"Warning: Failed to stop callback loop: {e}")
+        
+        # 4. Cleanup QuickApp windows
         try:
             from .luafuns_lib import close_all_quickapp_windows
-            close_all_quickapp_windows()
+            result = close_all_quickapp_windows()
+            if result.get('closed_count', 0) > 0:
+                print(f"[{end_time}] Closed {result['closed_count']} QuickApp windows")
         except Exception as e:
             print(f"Warning: Failed to cleanup QuickApp windows: {e}")
         
-        if self.callback_task:
-            self.callback_task.cancel()
-        end_time = self.curr_time()
-        # Always show runtime stopped message - it's important for user feedback
+        # 5. Clear queue and release semaphores
+        try:
+            # Clear any pending callbacks
+            while not self.callback_queue.empty():
+                try:
+                    self.callback_queue.get_nowait()
+                except:
+                    break
+                    
+            # Release any waiting semaphores
+            while self.timer_semaphore.locked():
+                self.timer_semaphore.release()
+        except Exception as e:
+            print(f"Warning: Failed to clear queue/semaphores: {e}")
+            
         print(f"[{end_time}] Lua runtime stopped")
 
     def queue_lua_callback(self, callback_id: int, result_data: Any) -> None:

@@ -356,6 +356,8 @@ def main() -> None:
                "  plua --debugger --debug script.lua # Run with verbose debug logging\n"
                "  plua --cleanup-port                # Clean up stuck API port\n"
                "  plua --close-windows               # Close all QuickApp windows\n"
+               "  plua --close-qa-window 123         # Close window for QA ID 123\n"
+               "  plua --cleanup-registry            # Clean up old window registry entries\n"
                "  plua --desktop script.lua          # Force desktop UI (override QA)\n"
                "  plua --desktop=false script.lua    # Force no desktop UI (override QA)\n"
                "  plua --debugger --debugger-host 192.168.1.100 script.lua",
@@ -491,6 +493,19 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "--close-qa-window",
+        help="Close QuickApp window for specific QA ID and exit",
+        type=int,
+        metavar="QA_ID"
+    )
+
+    parser.add_argument(
+        "--cleanup-registry",
+        help="Clean up old window registry entries and exit",
+        action="store_true"
+    )
+
+    parser.add_argument(
         "--desktop",
         help="Override desktop UI mode for QuickApp windows (true/false). If not specified, QA decides based on --%%desktop header",
         nargs="?",
@@ -524,7 +539,11 @@ def main() -> None:
         try:
             from .luafuns_lib import close_all_quickapp_windows
             result = close_all_quickapp_windows()
-            print(f"QuickApp window closure: {result['message']}")
+            if result.get("success"):
+                print(f"QuickApp window closure: {result['message']}")
+            else:
+                print(f"Error closing QuickApp windows: {result.get('error', 'Unknown error')}")
+                sys.exit(1)
             
             # Also cleanup any lingering mobdebug connections on port 8172
             try:
@@ -563,6 +582,47 @@ def main() -> None:
             os._exit(0 if result['success'] else 1)
         except Exception as e:
             print(f"Error closing QuickApp windows: {e}")
+            os._exit(1)
+
+    # Handle specific QA window closure if requested  
+    if args.close_qa_window:
+        try:
+            from .luafuns_lib import close_quickapp_window
+            result = close_quickapp_window(args.close_qa_window)
+            print(f"QuickApp {args.close_qa_window} window closure: {result.get('message', result.get('error', 'Unknown result'))}")
+            os._exit(0 if result.get('success') else 1)
+        except Exception as e:
+            print(f"Error closing QA {args.close_qa_window} window: {e}")
+            os._exit(1)
+
+    # Handle registry cleanup if requested
+    if args.cleanup_registry:
+        try:
+            from .luafuns_lib import _cleanup_old_registry_entries
+            import json
+            from pathlib import Path
+            
+            registry_file = Path.home() / ".plua" / "window_registry.json"
+            if registry_file.exists():
+                with open(registry_file, 'r') as f:
+                    registry = json.load(f)
+                
+                initial_count = len(registry.get("windows", {}))
+                _cleanup_old_registry_entries(registry, max_closed_entries=5)  # More aggressive cleanup
+                final_count = len(registry.get("windows", {}))
+                
+                with open(registry_file, 'w') as f:
+                    json.dump(registry, f, indent=2)
+                    f.write('\n')
+                
+                removed_count = initial_count - final_count
+                print(f"Registry cleanup completed: removed {removed_count} old entries ({initial_count} -> {final_count})")
+            else:
+                print("No window registry file found - nothing to clean up")
+            
+            os._exit(0)
+        except Exception as e:
+            print(f"Error cleaning up registry: {e}")
             os._exit(1)
 
     # Prepare debugger config if requested

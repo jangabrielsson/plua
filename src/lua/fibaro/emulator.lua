@@ -151,7 +151,7 @@ function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   local openWindow = _PY.config.runtime_config and _PY.config.runtime_config.desktop
   if openWindow == nil then openWindow = info.headers and info.headers.desktop end
   if openWindow then
-    _PY.open_quickapp_window(qa.id, "Auto-opened Desktop Window", 500, 700)
+    local a = _PY.open_quickapp_window(qa.id, "Auto-opened Desktop Window", 400, 700)
   end
 end
 
@@ -371,7 +371,9 @@ function Emulator:createChild(data)
   end
   props.uiCallbacks,props.viewLayout,props.uiView,info.UImap = self:createUI(info.UI or {})
   self:addEmbeds(info)
-  info.env = self.DIR[dev.parentId].env
+  local parentInfo = self.DIR[data.parentId]
+  info.headers.desktop = parentInfo.headers.desktop
+  info.env = parentInfo.env
   info.device = dev
   self:registerDevice(info)
   return dev

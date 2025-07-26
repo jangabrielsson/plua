@@ -3,6 +3,7 @@
 --%%debug:false
 --%%var:X=9
 --%%offline:true
+--%%desktop:true
 --%%save:QA_children.fqa
 
 ---@class MyChild : QuickAppChild

@@ -735,7 +735,7 @@
             createLabel(element) {
                 const label = document.createElement('div');
                 label.className = 'ui-label';
-                label.textContent = element.text || '';
+                label.innerHTML = element.text || '';
                 if (element.id) {
                     label.setAttribute('data-element-id', element.id);
                     this.elements[element.id] = label;
@@ -1077,7 +1077,7 @@
                 switch (elementType) {
                     case 'label':
                         if (property === 'text') {
-                            elementContainer.textContent = value;
+                            elementContainer.innerHTML = value;
                         }
                         break;
                         
@@ -1210,7 +1210,12 @@
             updateElement(elementId, value) {
                 const element = this.elements[elementId];
                 if (element) {
-                    element.textContent = value;
+                    // Check if this is a label element and use innerHTML for HTML rendering
+                    if (element.classList && element.classList.contains('ui-label')) {
+                        element.innerHTML = value;
+                    } else {
+                        element.textContent = value;
+                    }
                 }
             }
             

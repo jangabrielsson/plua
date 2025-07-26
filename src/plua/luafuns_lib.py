@@ -1176,11 +1176,94 @@ def _log_window_to_registry(window_id, qa_id, title):
     except Exception as e:
         print(f"Warning: Failed to log window to registry: {e}")
 
+@lua_exporter.export(description="Get screen dimensions", category="desktop", user_facing=True)
+def get_screen_dimensions():
+    """Get the dimensions of the primary screen"""
+    try:
+        # Try to get screen dimensions using platform-specific methods
+        import platform
+        system = platform.system()
+        
+        if system == "Darwin":  # macOS
+            try:
+                import subprocess
+                result = subprocess.run(['system_profiler', 'SPDisplaysDataType'], 
+                                      capture_output=True, text=True)
+                # Parse the output to get resolution
+                for line in result.stdout.split('\n'):
+                    if 'Resolution:' in line:
+                        # Extract resolution like "2560 x 1440"
+                        resolution = line.split('Resolution:')[1].strip()
+                        if 'x' in resolution:
+                            parts = resolution.split('x')
+                            width = int(parts[0].strip())
+                            height = int(parts[1].strip().split()[0])  # Remove any trailing text
+                            return {"width": width, "height": height, "success": True}
+            except:
+                pass
+                
+        elif system == "Windows":
+            try:
+                import ctypes
+                user32 = ctypes.windll.user32
+                screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+                return {"width": screensize[0], "height": screensize[1], "success": True}
+            except:
+                pass
+                
+        elif system == "Linux":
+            try:
+                import subprocess
+                result = subprocess.run(['xrandr'], capture_output=True, text=True)
+                for line in result.stdout.split('\n'):
+                    if ' connected primary' in line or (' connected' in line and 'primary' not in result.stdout):
+                        # Parse line like "DP-1 connected primary 2560x1440+0+0"
+                        parts = line.split()
+                        for part in parts:
+                            if 'x' in part and '+' in part:
+                                resolution = part.split('+')[0]
+                                width, height = map(int, resolution.split('x'))
+                                return {"width": width, "height": height, "success": True}
+            except:
+                pass
+        
+        # Fallback to common screen size
+        return {"width": 1920, "height": 1080, "success": False, "message": "Using fallback resolution"}
+        
+    except Exception as e:
+        return {"width": 1920, "height": 1080, "success": False, "error": str(e)}
+
 @lua_exporter.export(description="Open QuickApp desktop window", category="desktop", user_facing=True)
-def open_quickapp_window(qa_id, title=None, width=800, height=600):
-    """Open a desktop window for a specific QuickApp"""
+def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=None, force_new=False):
+    """
+    Open a desktop window for a specific QuickApp with optional positioning and reuse
+    
+    Args:
+        qa_id: QuickApp ID (integer)
+        title: Window title (string, optional)
+        width: Window width (integer, default 800)
+        height: Window height (integer, default 600)
+        x: Window x position (integer, optional - uses saved position or centers)
+        y: Window y position (integer, optional - uses saved position or centers)
+        force_new: Create new window even if one exists (boolean, default False)
+        
+    Returns:
+        Dict with success status, window_id, and message
+    """
     try:
         from .desktop_ui import get_desktop_manager, initialize_desktop_ui
+        
+        # Provide sensible defaults for x,y if not specified
+        if x is None or y is None:
+            # Get screen dimensions to calculate centered position
+            screen = get_screen_dimensions()
+            screen_width = screen.get("width", 1920)
+            screen_height = screen.get("height", 1080)
+            
+            if x is None:
+                x = max(0, (screen_width - width) // 2)  # Center horizontally
+            if y is None:
+                y = max(0, (screen_height - height) // 3)  # Position in upper third
         
         # Auto-initialize desktop manager if not available
         manager = get_desktop_manager()
@@ -1200,14 +1283,13 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600):
                 pass
             
             manager = initialize_desktop_ui(api_base_url)
-            print(f"Desktop UI auto-initialized for QuickApp window request")
         
         if manager:
-            window_id = manager.create_quickapp_window(qa_id, title, width, height)
+            window_id = manager.create_quickapp_window_direct(qa_id, title, width, height, x, y, force_new)
             if window_id:
-                # Log to registry for VS Code tasks
-                _log_window_to_registry(window_id, qa_id, title)
-                return {"success": True, "window_id": window_id, "message": f"Opened QuickApp {qa_id} desktop window"}
+                # Determine if this was a reuse or new window
+                action = "Created new" if force_new else "Opened/reused"
+                return {"success": True, "window_id": window_id, "message": f"{action} QuickApp {qa_id} desktop window"}
             else:
                 return {"success": False, "error": "Failed to create window"}
         else:
@@ -1225,7 +1307,7 @@ def close_all_quickapp_windows():
         import json
         from pathlib import Path
         
-        registry_file = Path.home() / ".plua" / "registry.json"
+        registry_file = Path.home() / ".plua" / "window_registry.json"  # Fixed path
         closed_count = 0
         
         if registry_file.exists():
@@ -1333,6 +1415,9 @@ def close_all_quickapp_windows():
                             else:
                                 print(f"No PID available for window {window_id}")
                 
+                # Clean up old closed windows from registry (keep only last 10 closed entries)
+                _cleanup_old_registry_entries(registry)
+                
                 # Write updated registry back
                 with open(registry_file, 'w') as f:
                     json.dump(registry, f, indent=2)
@@ -1343,44 +1428,91 @@ def close_all_quickapp_windows():
         return {"success": False, "error": f"Failed to close windows: {str(e)}"}
 
 
-def open_quickapp_window(qa_id, title=None, width=800, height=600):
-    """Open a desktop window for a specific QuickApp"""
-    try:
-        from .desktop_ui import get_desktop_manager, initialize_desktop_ui
+def _cleanup_old_registry_entries(registry, max_closed_entries=10):
+    """Clean up old closed window entries to prevent registry from growing indefinitely"""
+    import time
+    
+    if "windows" not in registry:
+        return
         
-        # Auto-initialize desktop manager if not available
+    windows = registry["windows"]
+    
+    # Find all closed windows and sort by close time
+    closed_windows = []
+    for window_id, window_info in windows.items():
+        if isinstance(window_info, dict) and window_info.get("status") == "closed":
+            closed_time = window_info.get("closed", 0)
+            closed_windows.append((closed_time, window_id))
+    
+    # Sort by close time (newest first)
+    closed_windows.sort(reverse=True)
+    
+    # Keep only the most recent closed entries
+    if len(closed_windows) > max_closed_entries:
+        windows_to_remove = closed_windows[max_closed_entries:]
+        for _, window_id in windows_to_remove:
+            del windows[window_id]
+            print(f"Cleaned up old registry entry: {window_id}")
+    
+    # Also clean up very old closed entries (older than 7 days)
+    week_ago = time.time() - (7 * 24 * 60 * 60)
+    old_windows_to_remove = []
+    
+    for window_id, window_info in windows.items():
+        if (isinstance(window_info, dict) and 
+            window_info.get("status") == "closed" and 
+            window_info.get("closed", float('inf')) < week_ago):
+            old_windows_to_remove.append(window_id)
+    
+    for window_id in old_windows_to_remove:
+        del windows[window_id]
+        print(f"Cleaned up old registry entry (>7 days): {window_id}")
+
+
+@lua_exporter.export(description="Close QuickApp desktop window by QA ID", category="desktop", user_facing=True)
+def close_quickapp_window(qa_id):
+    """
+    Close a specific QuickApp desktop window by QA ID
+    
+    Args:
+        qa_id: QuickApp ID (integer)
+        
+    Returns:
+        Dict with success status and message
+    """
+    try:
+        from .desktop_ui import get_desktop_manager
         manager = get_desktop_manager()
-        if not manager:
-            # Initialize desktop UI automatically when first window is requested
-            api_base_url = "http://localhost:8888"  # Default API URL
-            try:
-                # Try to get the actual API URL from runtime config if available
-                import plua
-                if hasattr(plua, '_runtime_config') and plua._runtime_config:
-                    api_config = plua._runtime_config.get('api_config', {})
-                    if api_config:
-                        host = api_config.get('host', 'localhost')
-                        port = api_config.get('port', 8888)
-                        api_base_url = f"http://{host}:{port}"
-            except:
-                pass
-            
-            manager = initialize_desktop_ui(api_base_url)
-            print(f"Desktop UI auto-initialized for QuickApp window request")
         
         if manager:
-            window_id = manager.create_quickapp_window(qa_id, title, width, height)
-            if window_id:
-                # Log to registry for VS Code tasks
-                _log_window_to_registry(window_id, qa_id, title)
-                return {"success": True, "window_id": window_id, "message": f"Opened QuickApp {qa_id} desktop window"}
+            success = manager.close_qa_window_direct(int(qa_id))
+            if success:
+                return {"success": True, "message": f"Closed window for QA {qa_id}"}
             else:
-                return {"success": False, "error": "Failed to create window"}
+                return {"success": False, "error": f"No window found for QA {qa_id}"}
         else:
             return {"success": False, "error": "Desktop UI not available"}
-    except ImportError:
-        return {"success": False, "error": "Desktop UI not available"}
     except Exception as e:
-        return {"success": False, "error": f"Failed to open QuickApp window: {str(e)}"}
+        return {"success": False, "error": f"Failed to close QuickApp window: {str(e)}"}
 
+
+@lua_exporter.export(description="List all open QuickApp windows", category="desktop", user_facing=True)
+def list_quickapp_windows():
+    """
+    List all open QuickApp desktop windows
+    
+    Returns:
+        Dict with window information
+    """
+    try:
+        from .desktop_ui import get_desktop_manager
+        manager = get_desktop_manager()
+        
+        if manager:
+            windows = manager.list_qa_windows()
+            return {"success": True, "windows": windows}
+        else:
+            return {"success": False, "error": "Desktop UI not available"}
+    except Exception as e:
+        return {"success": False, "error": f"Failed to list windows: {str(e)}"}
 

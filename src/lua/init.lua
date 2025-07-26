@@ -171,7 +171,9 @@ function print(...)
   for _,v in ipairs({...}) do
     res[#res+1] = tostring(v)
   end
-  _print("<font color='white'>"..table.concat(res, " ").."</font>")
+  --io.stdout:write("<font color='white'>"..table.concat(res, " ").."</font><br>")
+  _print("<font color='white'>"..table.concat(res, " ").."</font>")  -- Use the original print function
+  --io.stdin:flush()  -- Ensure output is immediately sent to the console
 end
 
 json = require("json")

@@ -75,7 +75,7 @@ async function executeLua(event) {
             if (result.output) {
                 const outputLine = document.createElement('div');
                 outputLine.className = 'output-line result';
-                outputLine.textContent = result.output.trim();
+                outputLine.innerHTML = result.output.trim();
                 output.appendChild(outputLine);
             }
             

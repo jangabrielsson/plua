@@ -276,6 +276,42 @@ local function setup()
     end
     return {data,HTTP.OK}
   end)
+
+  add("GET/alarms/v1/partitions", function(path, data, vars, query)
+    local alarms = {}
+    return {alarms,HTTP.OK}
+  end)
+
+  add("GET/alarms/v1/partitions/<id>", function(path, data, vars, query)
+    local alarms = {}
+    return {alarms,HTTP.OK}
+  end)
+
+  add("GET/alarms/v1/devices", function(path, data, vars, query)
+    local devices = {}
+    return {devices,HTTP.OK}
+  end)
+
+  add("GET/notificationCenter", function(path, data, vars, query)
+    return {{},HTTP.OK}
+  end)
+
+  add("GET/profiles", function(path, data, vars, query)
+    return {{},HTTP.OK}
+  end)
+
+  add("GET/profiles/<id>", function(path, data, vars, query)
+    return {{},HTTP.OK}
+  end)
+
+  add("GET/icons", function(path, data, vars, query)
+    return {{},HTTP.OK}
+  end)
+
+  add("GET/users", function(path, data, vars, query)
+    return {{},HTTP.OK}
+  end)
+
 end
 
 Emu.lib.setupOfflineRoutes = setup

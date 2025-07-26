@@ -117,7 +117,7 @@ body {
 }
 
 .output-area {
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(128, 116, 116, 0.588);
     border-radius: 8px;
     padding: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);

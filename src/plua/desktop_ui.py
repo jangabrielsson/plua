@@ -5,10 +5,18 @@ Desktop UI for QuickApp panels using pywebview to embed the existing web UI
 import threading
 import time
 import json
+import sys
 from typing import Dict, Optional, Any
 import requests
 from urllib.parse import urljoin
 from pathlib import Path
+
+# Windows process creation flags for proper detachment
+if sys.platform.startswith('win'):
+    import subprocess
+    CREATE_BREAKAWAY_FROM_JOB = 0x01000000  # Allows process to survive parent termination
+    DETACH_PROCESS = 0x00000008  # Creates detached process
+    WINDOWS_DETACHMENT_FLAGS = subprocess.CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB
 
 try:
     import webview
@@ -41,6 +49,7 @@ class DesktopUIManager:
             self.registry_file.parent.mkdir(exist_ok=True)
             if not self.registry_file.exists():
                 self._save_registry({"windows": {}, "positions": {}})
+            print(f"Using window registry: {self.registry_file}")
         except Exception as e:
             print(f"Warning: Failed to create window registry: {e}")
     
@@ -51,7 +60,13 @@ class DesktopUIManager:
                 with open(self.registry_file, 'r') as f:
                     content = f.read().strip()
                     if content:
-                        return json.loads(content)
+                        registry = json.loads(content)
+                        print(f"Loaded registry from {self.registry_file}: {len(registry.get('windows', {}))} windows, {len(registry.get('positions', {}))} positions")
+                        return registry
+                    else:
+                        print(f"Registry file {self.registry_file} is empty")
+            else:
+                print(f"Registry file {self.registry_file} does not exist")
         except json.JSONDecodeError as e:
             print(f"Warning: Registry JSON corrupted ({e}), creating fresh registry")
             # Backup corrupted file and create fresh one
@@ -63,6 +78,8 @@ class DesktopUIManager:
                 pass
         except Exception as e:
             print(f"Warning: Failed to load window registry: {e}")
+        
+        print(f"Creating fresh registry at {self.registry_file}")
         return {"windows": {}, "positions": {}}
     
     def _save_registry(self, registry: dict):
@@ -200,38 +217,69 @@ class DesktopUIManager:
         """
         try:
             registry = self._load_registry()
+            windows = registry.get("windows", {})
+            
+            print(f"Looking for existing window for QA {qa_id}...")
+            print(f"Registry has {len(windows)} windows total")
             
             # Look through registry for windows matching this QA ID
-            for window_id, window_info in registry.get("windows", {}).items():
-                if isinstance(window_info, dict) and window_info.get("qa_id") == qa_id:
-                    # Check if this window process is still alive
+            for window_id, window_info in windows.items():
+                if isinstance(window_info, dict):
+                    stored_qa_id = window_info.get("qa_id")
+                    status = window_info.get("status", "unknown")
                     pid = window_info.get("pid")
-                    if pid and self._is_process_alive(pid):
-                        # Reconnect to this existing window
-                        self.windows[window_id] = {
-                            "qa_id": qa_id,
-                            "title": window_info.get("title", f"QuickApp {qa_id}"),
-                            "type": "webview_process",
-                            "pid": pid,
-                            "reconnected": True  # Mark as reconnected
-                        }
-                        self.qa_windows[qa_id] = window_id
-                        return window_id
+                    
+                    print(f"  Window {window_id}: qa_id={stored_qa_id}, status={status}, pid={pid}")
+                    
+                    if stored_qa_id == qa_id and status == "open":
+                        # Check if this window process is still alive
+                        if pid and self._is_process_alive(pid):
+                            print(f"  -> Found alive process for QA {qa_id}, reconnecting to window {window_id}")
+                            # Reconnect to this existing window
+                            self.windows[window_id] = {
+                                "qa_id": qa_id,
+                                "title": window_info.get("title", f"QuickApp {qa_id}"),
+                                "type": "webview_process",
+                                "pid": pid,
+                                "reconnected": True  # Mark as reconnected
+                            }
+                            self.qa_windows[qa_id] = window_id
+                            return window_id
+                        else:
+                            print(f"  -> Process {pid} for QA {qa_id} is dead, marking window as closed")
+                            # Update registry to mark as closed since process is dead
+                            windows[window_id]["status"] = "closed"
+                            windows[window_id]["closed"] = time.time()
+                            self._save_registry(registry)
                         
+            print(f"No existing alive window found for QA {qa_id}")
             return None
         except Exception as e:
             print(f"Warning: Failed to find existing QA window: {e}")
             return None
     
     def _is_process_alive(self, pid: int) -> bool:
-        """Check if a process with given PID is still running"""
+        """Check if a process with given PID is still running (cross-platform)"""
         try:
-            import os
-            import signal
-            # Send signal 0 to check if process exists (doesn't actually send a signal)
-            os.kill(pid, 0)
-            return True
-        except (OSError, ProcessLookupError):
+            if sys.platform.startswith('win'):
+                # Windows: Use tasklist to check if process exists
+                import subprocess
+                result = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/FO', 'CSV'], 
+                                      capture_output=True, text=True, timeout=5)
+                # For CSV format, if process exists, we get a header line + data line
+                # If process doesn't exist, we only get the header line
+                lines = result.stdout.strip().split('\n')
+                alive = len(lines) > 1 and str(pid) in result.stdout
+                print(f"Process {pid} alive check: {alive} (tasklist returned {len(lines)} lines)")
+                return alive
+            else:
+                # Unix/Linux/macOS: Use os.kill with signal 0
+                import os
+                import signal
+                os.kill(pid, 0)
+                return True
+        except (OSError, ProcessLookupError, subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
+            print(f"Process {pid} alive check failed: {e}")
             return False
         
     def start(self):
@@ -286,9 +334,12 @@ class DesktopUIManager:
         
         # Check if we should reuse an existing window
         if not force_new:
+            print(f"Checking for existing window for QA {qa_id} (force_new={force_new})")
+            
             # First check in-memory mapping
             if qa_id in self.qa_windows:
                 existing_window_id = self.qa_windows[qa_id]
+                print(f"Found in-memory mapping: QA {qa_id} -> {existing_window_id}")
                 if existing_window_id in self.windows:
                     # Window still exists in memory, reuse it
                     print(f"Reusing existing window for QA {qa_id}: {existing_window_id}")
@@ -296,13 +347,18 @@ class DesktopUIManager:
                     return existing_window_id
                 else:
                     # Window was closed, remove the mapping
+                    print(f"In-memory window {existing_window_id} no longer exists, removing mapping")
                     del self.qa_windows[qa_id]
+            else:
+                print(f"No in-memory mapping found for QA {qa_id}")
             
             # Check for surviving processes from previous sessions (VS Code kill -9 scenario)
             existing_window_id = self._find_existing_qa_window(qa_id)
             if existing_window_id:
                 print(f"Reconnecting to existing window for QA {qa_id}: {existing_window_id}")
                 return existing_window_id
+        else:
+            print(f"force_new=True, creating new window for QA {qa_id}")
         
         # Get saved position if x,y not specified
         saved_pos = self._get_saved_position(qa_key)
@@ -536,12 +592,13 @@ except Exception as e:
             try:
                 # Cross-platform process detachment
                 if sys.platform.startswith('win'):
-                    # Windows: Use CREATE_NEW_PROCESS_GROUP to detach
+                    # Windows: Use CREATE_NEW_PROCESS_GROUP and CREATE_BREAKAWAY_FROM_JOB for true detachment
+                    # CREATE_BREAKAWAY_FROM_JOB allows the process to survive even if parent is in a job object (like VS Code)
                     process = subprocess.Popen([sys.executable, temp_script], 
                                              stdout=subprocess.DEVNULL, 
                                              stderr=subprocess.DEVNULL,
                                              stdin=subprocess.DEVNULL,
-                                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+                                             creationflags=WINDOWS_DETACHMENT_FLAGS
                                              )
                 else:
                     # Unix/Linux/macOS: Use setsid for full detachment
@@ -557,6 +614,7 @@ except Exception as e:
                 # Fallback with basic detachment
                 try:
                     if sys.platform.startswith('win'):
+                        # Fallback: Use at least CREATE_NEW_PROCESS_GROUP
                         process = subprocess.Popen([sys.executable, temp_script], 
                                                  stdout=subprocess.DEVNULL, 
                                                  stderr=subprocess.DEVNULL,
@@ -596,6 +654,7 @@ except Exception as e:
             # Log window to registry with PID for reconnection
             self._log_window_to_registry(window_id, qa_id, title, process.pid)
             
+            print(f"DEBUG: Window creation completed for QA {qa_id} - force_new was {force_new}")
             print(f"Created QuickApp desktop window: {window_id} for QA {qa_id}")
             
             # Clean up the temp file after a delay
@@ -974,15 +1033,20 @@ desktop_manager: Optional[DesktopUIManager] = None
 
 def get_desktop_manager() -> Optional[DesktopUIManager]:
     """Get the global desktop UI manager instance"""
+    print(f"get_desktop_manager called, desktop_manager = {desktop_manager}")
     return desktop_manager
 
 
 def initialize_desktop_ui(api_base_url: str = "http://localhost:8888") -> DesktopUIManager:
     """Initialize the global desktop UI manager"""
     global desktop_manager
+    print(f"initialize_desktop_ui called with api_base_url={api_base_url}")
     if desktop_manager is None:
+        print("Creating new DesktopUIManager instance")
         desktop_manager = DesktopUIManager(api_base_url)
         desktop_manager.start()
+    else:
+        print("Using existing DesktopUIManager instance")
     return desktop_manager
 
 

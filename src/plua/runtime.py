@@ -277,6 +277,13 @@ class LuaAsyncRuntime:
 
     def stop(self) -> None:
         """Stop the callback loop and cleanup"""
+        # Cleanup QuickApp windows
+        try:
+            from .luafuns_lib import close_all_quickapp_windows
+            close_all_quickapp_windows()
+        except Exception as e:
+            print(f"Warning: Failed to cleanup QuickApp windows: {e}")
+        
         if self.callback_task:
             self.callback_task.cancel()
         end_time = self.curr_time()

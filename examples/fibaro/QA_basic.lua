@@ -2,6 +2,7 @@
 --%%type:com.fibaro.binarySwitch
 --%%save:dev/basic.fqa
 --%%proxy:true
+--%%desktop:true
 
 function QuickApp:onInit()
   self:debug(self.name,self.id)

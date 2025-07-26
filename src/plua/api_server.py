@@ -480,6 +480,101 @@ class PlUA2APIServer:
         except Exception as e:
             print(f"Error broadcasting view update for QA {qa_id}: {e}")
 
+        # Desktop UI endpoints for QuickApp windows
+        @self.app.post("/api/desktop/create_window")
+        async def create_quickapp_window(request: dict):
+            """Create a new desktop window for a QuickApp"""
+            try:
+                from .desktop_ui import create_quickapp_window_api
+                qa_id = request.get('qa_id')
+                title = request.get('title')
+                width = request.get('width', 800)
+                height = request.get('height', 600)
+                
+                if not qa_id:
+                    raise HTTPException(status_code=400, detail="qa_id is required")
+                
+                result = create_quickapp_window_api(qa_id, title, width, height)
+                if 'error' in result:
+                    raise HTTPException(status_code=500, detail=result['error'])
+                    
+                return result
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @self.app.post("/api/desktop/close_window")
+        async def close_quickapp_window(request: dict):
+            """Close a specific QuickApp window"""
+            try:
+                from .desktop_ui import close_quickapp_window_api
+                window_id = request.get('window_id')
+                
+                if not window_id:
+                    raise HTTPException(status_code=400, detail="window_id is required")
+                
+                result = close_quickapp_window_api(window_id)
+                return result
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @self.app.get("/api/desktop/windows")
+        async def list_quickapp_windows():
+            """List all open QuickApp windows"""
+            try:
+                from .desktop_ui import list_quickapp_windows_api
+                result = list_quickapp_windows_api()
+                return result
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @self.app.post("/api/desktop/send")
+        async def send_to_quickapp_window(request: dict):
+            """Send data to a specific QuickApp window"""
+            try:
+                from .desktop_ui import send_to_quickapp_window_api
+                window_id = request.get('window_id')
+                event_type = request.get('event_type')
+                data = request.get('data')
+                
+                if not window_id or not event_type:
+                    raise HTTPException(status_code=400, detail="window_id and event_type are required")
+                
+                result = send_to_quickapp_window_api(window_id, event_type, data)
+                return result
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @self.app.post("/api/desktop/callback")
+        async def handle_quickapp_callback(request: dict):
+            """Handle QuickApp UI callback from desktop window"""
+            try:
+                qa_id = request.get('qa_id')
+                callback = request.get('callback')
+                data = request.get('data')
+                
+                if not qa_id or not callback:
+                    raise HTTPException(status_code=400, detail="qa_id and callback are required")
+                
+                # Execute callback in Lua runtime
+                lua_code = f"""
+                if _QA and _QA[{qa_id}] and _QA[{qa_id}]['{callback}'] then
+                    _QA[{qa_id}]['{callback}'](json.decode('{json.dumps(data)}'))
+                else
+                    print('QuickApp {qa_id} callback {callback} not found')
+                end
+                """
+                
+                # Execute the callback
+                result = await self._execute_lua_code_async(lua_code, f"desktop_callback_{qa_id}_{callback}")
+                
+                return {
+                    "success": result.success,
+                    "output": result.output,
+                    "error": result.error
+                }
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
     def register_fibaro_endpoints(self):
         """
         Register Fibaro API endpoints that delegate to Lua fibaro_api_hook

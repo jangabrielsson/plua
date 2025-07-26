@@ -1117,3 +1117,211 @@ def getRefreshStatesStatus(lua_runtime):
     except Exception as e:
         print(f"Error getting refresh states status: {e}", file=sys.stderr)
         return {'running': False, 'error': str(e)}
+
+import json
+import os
+from pathlib import Path
+
+def _log_window_to_registry(window_id, qa_id, title):
+    """Log window to ~/.plua/registry.json for VS Code tasks"""
+    try:
+        import time
+        from pathlib import Path
+        
+        # Create registry directory if it doesn't exist
+        registry_dir = Path.home() / ".plua"
+        registry_dir.mkdir(exist_ok=True)
+        
+        registry_file = registry_dir / "registry.json"
+        
+        # Load existing registry or create new one
+        registry = {}
+        if registry_file.exists():
+            try:
+                with open(registry_file, 'r') as f:
+                    registry = json.load(f)
+            except:
+                registry = {}
+        
+        # Ensure windows section exists
+        if "windows" not in registry:
+            registry["windows"] = {}
+        
+        # Add window entry
+        registry["windows"][window_id] = {
+            "qa_id": qa_id,
+            "title": title,
+            "created": time.time(),
+            "created_iso": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+            "status": "open"
+        }
+        
+        # Try to get the PID from desktop manager if available
+        try:
+            from .desktop_ui import get_desktop_manager
+            manager = get_desktop_manager()
+            if manager and window_id in manager.windows:
+                window_info = manager.windows[window_id]
+                if isinstance(window_info, dict) and "pid" in window_info:
+                    registry["windows"][window_id]["pid"] = window_info["pid"]
+        except:
+            pass
+        
+        # Write back to registry
+        with open(registry_file, 'w') as f:
+            json.dump(registry, f, indent=2)
+            
+        print(f"Window {window_id} logged to registry: {registry_file}")
+        
+    except Exception as e:
+        print(f"Warning: Failed to log window to registry: {e}")
+
+@lua_exporter.export(description="Open QuickApp desktop window", category="desktop", user_facing=True)
+def open_quickapp_window(qa_id, title=None, width=800, height=600):
+    """Open a desktop window for a specific QuickApp"""
+    try:
+        from .desktop_ui import get_desktop_manager, initialize_desktop_ui
+        
+        # Auto-initialize desktop manager if not available
+        manager = get_desktop_manager()
+        if not manager:
+            # Initialize desktop UI automatically when first window is requested
+            api_base_url = "http://localhost:8888"  # Default API URL
+            try:
+                # Try to get the actual API URL from runtime config if available
+                import plua
+                if hasattr(plua, '_runtime_config') and plua._runtime_config:
+                    api_config = plua._runtime_config.get('api_config', {})
+                    if api_config:
+                        host = api_config.get('host', 'localhost')
+                        port = api_config.get('port', 8888)
+                        api_base_url = f"http://{host}:{port}"
+            except:
+                pass
+            
+            manager = initialize_desktop_ui(api_base_url)
+            print(f"Desktop UI auto-initialized for QuickApp window request")
+        
+        if manager:
+            window_id = manager.create_quickapp_window(qa_id, title, width, height)
+            if window_id:
+                # Log to registry for VS Code tasks
+                _log_window_to_registry(window_id, qa_id, title)
+                return {"success": True, "window_id": window_id, "message": f"Opened QuickApp {qa_id} desktop window"}
+            else:
+                return {"success": False, "error": "Failed to create window"}
+        else:
+            return {"success": False, "error": "Desktop UI not available"}
+    except ImportError:
+        return {"success": False, "error": "Desktop UI not available"}
+    except Exception as e:
+        return {"success": False, "error": f"Failed to open QuickApp window: {str(e)}"}
+
+
+@lua_exporter.export(description="Close all QuickApp desktop windows", category="desktop", user_facing=True)
+def close_all_quickapp_windows():
+    """Close all open QuickApp desktop windows (used by VS Code tasks)"""
+    try:
+        import json
+        from pathlib import Path
+        
+        registry_file = Path.home() / ".plua" / "registry.json"
+        closed_count = 0
+        
+        if registry_file.exists():
+            with open(registry_file, 'r') as f:
+                registry = json.load(f)
+            
+            if "windows" in registry:
+                from .desktop_ui import get_desktop_manager
+                manager = get_desktop_manager()
+                
+                for window_id, window_info in registry["windows"].items():
+                    if window_info.get("status") == "open":
+                        if manager and manager.close_window(window_id):
+                            closed_count += 1
+                            print(f"Closed window: {window_id}")
+                        else:
+                            # Try to close by PID if manager not available
+                            pid = window_info.get("pid")
+                            if pid:
+                                try:
+                                    import subprocess
+                                    import signal
+                                    import time
+                                    # Try to terminate the process gracefully first
+                                    result = subprocess.run(["kill", "-TERM", str(pid)], check=False)
+                                    time.sleep(0.5)  # Give it a moment to terminate gracefully
+                                    
+                                    # Check if process still exists, if so force kill
+                                    check_result = subprocess.run(["ps", "-p", str(pid)], capture_output=True, check=False)
+                                    if check_result.returncode == 0:
+                                        # Process still running, force kill
+                                        subprocess.run(["kill", "-KILL", str(pid)], check=False)
+                                        print(f"Force killed process for window {window_id} (PID: {pid})")
+                                    else:
+                                        print(f"Terminated process for window {window_id} (PID: {pid})")
+                                    
+                                    closed_count += 1
+                                    
+                                    # Update registry
+                                    registry["windows"][window_id]["status"] = "closed"
+                                    registry["windows"][window_id]["closed"] = time.time()
+                                    registry["windows"][window_id]["closed_iso"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                                    
+                                except Exception as e:
+                                    print(f"Failed to terminate process {pid} for window {window_id}: {e}")
+                            else:
+                                print(f"No PID available for window {window_id}")
+                
+                # Write updated registry back
+                with open(registry_file, 'w') as f:
+                    json.dump(registry, f, indent=2)
+        
+        return {"success": True, "closed_count": closed_count, "message": f"Closed {closed_count} windows"}
+        
+    except Exception as e:
+        return {"success": False, "error": f"Failed to close windows: {str(e)}"}
+
+
+def open_quickapp_window(qa_id, title=None, width=800, height=600):
+    """Open a desktop window for a specific QuickApp"""
+    try:
+        from .desktop_ui import get_desktop_manager, initialize_desktop_ui
+        
+        # Auto-initialize desktop manager if not available
+        manager = get_desktop_manager()
+        if not manager:
+            # Initialize desktop UI automatically when first window is requested
+            api_base_url = "http://localhost:8888"  # Default API URL
+            try:
+                # Try to get the actual API URL from runtime config if available
+                import plua
+                if hasattr(plua, '_runtime_config') and plua._runtime_config:
+                    api_config = plua._runtime_config.get('api_config', {})
+                    if api_config:
+                        host = api_config.get('host', 'localhost')
+                        port = api_config.get('port', 8888)
+                        api_base_url = f"http://{host}:{port}"
+            except:
+                pass
+            
+            manager = initialize_desktop_ui(api_base_url)
+            print(f"Desktop UI auto-initialized for QuickApp window request")
+        
+        if manager:
+            window_id = manager.create_quickapp_window(qa_id, title, width, height)
+            if window_id:
+                # Log to registry for VS Code tasks
+                _log_window_to_registry(window_id, qa_id, title)
+                return {"success": True, "window_id": window_id, "message": f"Opened QuickApp {qa_id} desktop window"}
+            else:
+                return {"success": False, "error": "Failed to create window"}
+        else:
+            return {"success": False, "error": "Desktop UI not available"}
+    except ImportError:
+        return {"success": False, "error": "Desktop UI not available"}
+    except Exception as e:
+        return {"success": False, "error": f"Failed to open QuickApp window: {str(e)}"}
+
+

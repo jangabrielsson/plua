@@ -138,6 +138,56 @@ class LuaInterpreter:
         get_runtime_state._lua_runtime = self.lua
         py_table.getRuntimeState = get_runtime_state
 
+        # Desktop UI functions (only available if desktop mode is enabled)
+        def create_desktop_window(qa_id, title=None, width=800, height=600):
+            """Create a desktop window for a QuickApp"""
+            try:
+                from .desktop_ui import get_desktop_manager
+                manager = get_desktop_manager()
+                if manager:
+                    return manager.create_quickapp_window_direct(qa_id, title, width, height)
+                else:
+                    print("Desktop UI not initialized")
+                    return None
+            except ImportError:
+                print("Desktop UI not available")
+                return None
+
+        def close_desktop_window(window_id):
+            """Close a desktop window"""
+            try:
+                from .desktop_ui import get_desktop_manager
+                manager = get_desktop_manager()
+                if manager:
+                    return manager.close_window(window_id)
+                return False
+            except ImportError:
+                return False
+
+        def list_desktop_windows():
+            """List all desktop windows"""
+            try:
+                from .desktop_ui import get_desktop_manager
+                from .luafuns_lib import _python_to_lua_table
+                manager = get_desktop_manager()
+                if manager:
+                    windows = manager.list_windows()
+                    # Convert Python dict to Lua table
+                    return _python_to_lua_table(self.lua, windows)
+                return _python_to_lua_table(self.lua, {})
+            except ImportError:
+                return _python_to_lua_table(self.lua, {})
+
+        # Set lua runtime on functions for proper conversion
+        create_desktop_window._lua_runtime = self.lua
+        close_desktop_window._lua_runtime = self.lua  
+        list_desktop_windows._lua_runtime = self.lua
+
+        # Add desktop functions to _PY table
+        py_table.createDesktopWindow = create_desktop_window
+        py_table.closeDesktopWindow = close_desktop_window  
+        py_table.listDesktopWindows = list_desktop_windows
+
         # Add exported Python functions from luafuns_lib BEFORE executing init script
         self._register_exported_functions(py_table)
 

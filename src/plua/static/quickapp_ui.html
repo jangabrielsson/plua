@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickApp UI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .quickapp-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 4px;
+        }
+
+        .quickapp-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quickapp-status {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .quickapp-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        /* Tab navigation styles */
+        .tab-navigation {
+            display: flex;
+            border-bottom: 1px solid #e1e5e9;
+            background: #f8f9fa;
+        }
+
+        .tab-button {
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: white;
+        }
+
+        /* Tab content styles */
+        .tab-content {
+            flex: 1;
+            display: none;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-content.ui-tab {
+            padding: 16px;
+        }
+
+        .tab-content.device-tab {
+            padding: 16px;
+            font-family: monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+        }
+
+        .tab-content.debug-tab {
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+        }
+
+        .ui-element {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            background: #f8f9fa;
+            font-size: 14px;
+        }
+
+        .ui-element {
+            margin: 6px 0;
+        }
+
+        /* Match main page button styles */
+        .ui-button, .qa-ui-button {
+            background: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            padding: 6px 14px;
+            font-size: 0.98em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 1px 3px rgba(102,126,234,0.08);
+            margin: 2px;
+        }
+
+        .ui-button:hover, .qa-ui-button:hover {
+            background: #5a6fd8;
+        }
+
+        .ui-button:active, .qa-ui-button:active {
+            background: #4c63d2;
+        }
+
+        /* Switch button styles */
+        .qa-ui-switch-btn {
+            min-width: 60px;
+            font-weight: 500;
+        }
+
+        .qa-ui-switch-btn-on {
+            background: #667eea !important;
+            color: #fff !important;
+        }
+
+        .qa-ui-switch-btn-off {
+            background: #e0e0e0 !important;
+            color: #222 !important;
+        }
+
+        .ui-label {
+            background: transparent;
+            border: none;
+            color: #333;
+            font-weight: 500;
+            margin: 6px 0;
+        }
+
+        /* Row layout for buttons */
+        .ui-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 6px 0;
+            align-items: center;
+        }
+
+        .ui-row .ui-button, .ui-row .qa-ui-button {
+            flex: 1 1 auto;
+            margin: 2px;
+        }
+
+        /* Multi-select dropdown styles - matching main page */
+        .qa-ui-multidrop {
+            display: block;
+            margin: 6px 0;
+            position: relative;
+        }
+
+        .qa-ui-multidrop-btn {
+            width: 100%;
+            box-sizing: border-box;
+            height: 36px;
+            padding: 0 32px 0 12px;
+            border-radius: 5px 5px 0 0;
+            border: 1px solid #d1d5da;
+            background: #f6f8fa;
+            font-size: 1em;
+            font-family: inherit;
+            transition: border 0.2s, box-shadow 0.2s;
+            outline: none;
+            color: #222;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .qa-ui-multidrop-btn:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102,126,234,0.15);
+        }
+
+        .qa-ui-multidrop-list {
+            display: none;
+            background: #fff;
+            border: 1px solid #d1d5da;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.08);
+            padding: 4px 0;
+            width: 100%;
+            box-sizing: border-box;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .qa-ui-multidrop.open .qa-ui-multidrop-list {
+            display: block;
+        }
+
+        .qa-ui-multidrop-list label {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            line-height: 1.2;
+            padding: 6px 12px;
+            font-size: 1em;
+            cursor: pointer;
+            white-space: normal;
+            position: relative;
+            z-index: 1;
+            pointer-events: auto;
+        }
+
+        .qa-ui-multidrop-list label:hover {
+            background: #f6f8fa;
+        }
+
+        .qa-ui-multidrop-list input[type="checkbox"] {
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .ui-slider {
+            margin: 8px 0;
+        }
+
+        .ui-slider label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .ui-slider input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+        }
+
+        /* Slider container styles to match main page */
+        .qa-ui-slider-container {
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qa-ui-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .qa-slider-value {
+            min-width: 30px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .ui-switch {
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Switch button styles - single button like main page */
+        .qa-switch {
+            margin: 6px 0;
+        }
+
+        .ui-select {
+            margin: 6px 0;
+        }
+
+        .ui-select label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .ui-select select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .debug-panel {
+            border-top: 1px solid #e1e5e9;
+            background: #f8f9fa;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .debug-panel.hidden {
+            display: none;
+        }
+
+        /* Device info styles */
+        .device-info {
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .device-info h4 {
+            margin: 0 0 8px 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .device-info pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: #666;
+        }
+
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="quickapp-container">
+        <div class="quickapp-header">
+            <div class="quickapp-title">QuickApp <span id="qa-id">Loading...</span></div>
+            <div class="quickapp-status" id="status">Connecting...</div>
+        </div>
+        
+        <div class="quickapp-content">
+            <div class="tab-navigation">
+                <button class="tab-button active" data-tab="ui">UI</button>
+                <button class="tab-button" data-tab="device">Device Info</button>
+                <button class="tab-button" data-tab="debug">Debug Log</button>
+            </div>
+            
+            <div class="tab-content active ui-tab" id="ui-content">
+                <div class="loading">Loading QuickApp UI...</div>
+            </div>
+            
+            <div class="tab-content device-tab" id="device-content">
+                <div class="loading">Loading device information...</div>
+            </div>
+            
+            <div class="tab-content debug-tab" id="debug-content">
+                <div style="color: #666; font-style: italic; margin-bottom: 12px;">Debug messages will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // QuickApp Desktop UI JavaScript
+        class QuickAppDesktopUI {
+            constructor() {
+                this.qaId = this.getQueryParam('qa_id');
+                this.isDesktopMode = this.getQueryParam('desktop') === 'true';
+                this.apiBase = window.location.origin;
+                this.websocket = null;
+                this.elements = {};
+                this.currentTab = 'ui';
+                
+                this.init();
+                this.setupTabs();
+            }
+            
+            getQueryParam(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+            
+            async init() {
+                if (!this.qaId) {
+                    this.showError('No QuickApp ID specified');
+                    return;
+                }
+                
+                document.getElementById('qa-id').textContent = this.qaId;
+                
+                try {
+                    // Load QuickApp definition
+                    await this.loadQuickApp();
+                    
+                    // Connect WebSocket for real-time updates
+                    this.connectWebSocket();
+                    
+                    // Set up desktop event handler
+                    window.handleDesktopEvent = this.handleDesktopEvent.bind(this);
+                    
+                    // Close dropdowns when clicking outside
+                    document.addEventListener('click', (e) => {
+                        if (!e.target.closest('.qa-ui-multidrop')) {
+                            document.querySelectorAll('.qa-ui-multidrop.open').forEach(dropdown => {
+                                dropdown.classList.remove('open');
+                            });
+                        }
+                    });
+                    
+                } catch (error) {
+                    this.showError(`Failed to initialize: ${error.message}`);
+                }
+            }
+            
+            async loadQuickApp() {
+                this.updateStatus('Loading QuickApp...');
+                
+                try {
+                    // Get the real QuickApp definition from the Lua runtime with proper serialization
+                    const response = await fetch(`${this.apiBase}/plua/execute`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            code: `
+                                local qa = _PY.get_quickapp(${this.qaId})
+                                if qa then
+                                    -- Clean the data to remove functions and make it JSON serializable
+                                    local cleanQA = {
+                                        device = {},
+                                        UI = {}
+                                    }
+                                    
+                                    -- Copy device info safely
+                                    if qa.device then
+                                        for k, v in pairs(qa.device) do
+                                            if type(v) ~= "function" then
+                                                cleanQA.device[k] = v
+                                            end
+                                        end
+                                    end
+                                    
+                                    -- Copy UI structure safely
+                                    if qa.UI then
+                                        for i, row in ipairs(qa.UI) do
+                                            if type(row) == "table" then
+                                                if row.type then
+                                                    -- Single element
+                                                    local cleanElement = {}
+                                                    for k, v in pairs(row) do
+                                                        if type(v) ~= "function" then
+                                                            cleanElement[k] = v
+                                                        end
+                                                    end
+                                                    table.insert(cleanQA.UI, cleanElement)
+                                                else
+                                                    -- Array of elements
+                                                    local cleanRow = {}
+                                                    for j, element in ipairs(row) do
+                                                        local cleanElement = {}
+                                                        for k, v in pairs(element) do
+                                                            if type(v) ~= "function" then
+                                                                cleanElement[k] = v
+                                                            end
+                                                        end
+                                                        table.insert(cleanRow, cleanElement)
+                                                    end
+                                                    table.insert(cleanQA.UI, cleanRow)
+                                                end
+                                            end
+                                        end
+                                    end
+                                    
+                                    return json.encode(cleanQA)
+                                else
+                                    return nil
+                                end
+                            ` 
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success && result.result) {
+                        // Parse the JSON string returned from Lua
+                        const quickAppData = JSON.parse(result.result);
+                        
+                        const quickApp = {
+                            id: parseInt(this.qaId),
+                            name: quickAppData.device?.name || `QuickApp ${this.qaId}`,
+                            device: quickAppData.device,
+                            UI: quickAppData.UI || []
+                        };
+                        
+                        this.renderUI(quickApp);
+                        this.updateStatus('Connected');
+                    } else {
+                        // Fallback: QuickApp not found or not loaded
+                        this.showError(`QuickApp ${this.qaId} not found. Make sure the QuickApp is loaded in the emulator.`);
+                    }
+                } catch (error) {
+                    this.showError(`Failed to load QuickApp: ${error.message}`);
+                }
+            }
+            
+            renderUI(quickApp) {
+                const content = document.getElementById('ui-content');
+                content.innerHTML = '';
+                
+                // Handle the real Fibaro UI structure
+                if (quickApp.UI && quickApp.UI.length > 0) {
+                    for (const row of quickApp.UI) {
+                        const rowElement = this.createUIRow(row, quickApp.id);
+                        if (rowElement) {
+                            content.appendChild(rowElement);
+                        }
+                    }
+                } else {
+                    // No UI defined
+                    const noUI = document.createElement('div');
+                    noUI.className = 'ui-message';
+                    noUI.textContent = 'No UI elements defined for this QuickApp';
+                    content.appendChild(noUI);
+                }
+            }
+            
+            setupTabs() {
+                const tabButtons = document.querySelectorAll('.tab-button');
+                const tabContents = document.querySelectorAll('.tab-content');
+                
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetTab = button.getAttribute('data-tab');
+                        
+                        // Update button states
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        // Update content visibility
+                        tabContents.forEach(content => content.classList.remove('active'));
+                        document.getElementById(`${targetTab}-content`).classList.add('active');
+                        
+                        this.currentTab = targetTab;
+                        
+                        // Load tab-specific content if needed
+                        if (targetTab === 'device' && !this.deviceInfoLoaded) {
+                            this.loadDeviceInfo();
+                        }
+                    });
+                });
+            }
+            
+            async loadDeviceInfo() {
+                const deviceContent = document.getElementById('device-content');
+                deviceContent.innerHTML = '<div class="loading">Loading device information...</div>';
+                
+                try {
+                    // Get device information from the API
+                    const response = await fetch(`${this.apiBase}/plua/execute`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            code: `
+                                local qa = _PY.get_quickapp(${this.qaId})
+                                if qa and qa.device then
+                                    local cleanDevice = {}
+                                    for k, v in pairs(qa.device) do
+                                        if type(v) ~= "function" then
+                                            cleanDevice[k] = v
+                                        end
+                                    end
+                                    return json.encode(cleanDevice)
+                                else
+                                    return json.encode({error = "Device not found"})
+                                end
+                            `
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.result) {
+                        const deviceInfo = JSON.parse(data.result);
+                        if (deviceInfo.error) {
+                            deviceContent.innerHTML = `<div class="error">${deviceInfo.error}</div>`;
+                        } else {
+                            deviceContent.innerHTML = `
+                                <div class="device-info">
+                                    <h4>Device Information</h4>
+                                    <pre>${JSON.stringify(deviceInfo, null, 2)}</pre>
+                                </div>
+                            `;
+                            this.deviceInfoLoaded = true;
+                        }
+                    } else {
+                        deviceContent.innerHTML = '<div class="error">Failed to load device information</div>';
+                    }
+                } catch (error) {
+                    deviceContent.innerHTML = `<div class="error">Error loading device info: ${error.message}</div>`;
+                }
+            }
+            
+            createUIRow(row, deviceId) {
+                const rowContainer = document.createElement('div');
+                rowContainer.className = 'ui-row';
+                
+                if (Array.isArray(row)) {
+                    // Row contains multiple elements
+                    for (const element of row) {
+                        const uiElement = this.createFibaroUIElement(element, deviceId);
+                        if (uiElement) {
+                            rowContainer.appendChild(uiElement);
+                        }
+                    }
+                } else {
+                    // Single element
+                    const uiElement = this.createFibaroUIElement(row, deviceId);
+                    if (uiElement) {
+                        rowContainer.appendChild(uiElement);
+                    }
+                }
+                
+                return rowContainer;
+            }
+            
+            createFibaroUIElement(element, deviceId) {
+                if (!element || !element.type) {
+                    this.debug('Invalid element:', element);
+                    return null;
+                }
+                
+                this.debug(`Creating UI element: type=${element.type}, id=${element.id}`);
+                
+                let uiElement = null;
+                
+                switch (element.type) {
+                    case 'label':
+                        uiElement = this.createLabel(element);
+                        break;
+                        
+                    case 'button':
+                        uiElement = this.createButton(element, deviceId);
+                        break;
+                        
+                    case 'slider':
+                        uiElement = this.createSlider(element, deviceId);
+                        break;
+                        
+                    case 'switch':
+                        uiElement = this.createSwitch(element, deviceId);
+                        break;
+                        
+                    case 'select':
+                        uiElement = this.createSelect(element, deviceId);
+                        break;
+                        
+                    case 'multi':
+                        uiElement = this.createMultiSelect(element, deviceId);
+                        break;
+                        
+                    default:
+                        // Unknown element type
+                        uiElement = document.createElement('div');
+                        uiElement.className = 'ui-element unknown';
+                        uiElement.textContent = `Unknown UI element: ${element.type}`;
+                        break;
+                }
+                
+                // Set the required attributes on the actual UI element
+                if (uiElement) {
+                    uiElement.setAttribute('data-element-id', element.id || '');
+                    uiElement.setAttribute('data-element-type', element.type);
+                    this.debug(`Set attributes: data-element-id=${element.id}, data-element-type=${element.type}`);
+                }
+                
+                return uiElement;
+            }
+            
+            createLabel(element) {
+                const label = document.createElement('div');
+                label.className = 'ui-label';
+                label.textContent = element.text || '';
+                if (element.id) {
+                    label.setAttribute('data-element-id', element.id);
+                    this.elements[element.id] = label;
+                }
+                return label;
+            }
+            
+            createButton(element, deviceId) {
+                const button = document.createElement('button');
+                button.className = 'qa-ui-button';
+                button.textContent = element.text || 'Button';
+                button.setAttribute('data-element-id', element.id || '');
+                
+                button.onclick = () => {
+                    this.triggerUIAction(deviceId, element.id, 'onReleased');
+                };
+                
+                if (element.id) {
+                    this.elements[element.id] = button;
+                }
+                return button;
+            }
+            
+            createSlider(element, deviceId) {
+                const container = document.createElement('div');
+                container.className = 'qa-ui-slider-container';
+                container.setAttribute('data-element-id', element.id || '');
+                
+                // Only add label if text exists and is not empty
+                if (element.text && element.text.trim() !== '') {
+                    const label = document.createElement('span');
+                    label.textContent = element.text;
+                    label.style.marginRight = '8px';
+                    container.appendChild(label);
+                }
+                
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.className = 'qa-ui-slider qa-slider';
+                slider.min = element.min || 0;
+                slider.max = element.max || 100;
+                slider.step = element.step || 1;
+                slider.value = element.value || element.min || 0;
+                
+                // Add value display
+                const valueDisplay = document.createElement('span');
+                valueDisplay.className = 'qa-slider-value';
+                valueDisplay.textContent = slider.value;
+                container.appendChild(valueDisplay);
+                
+                container.appendChild(slider);
+                
+                slider.oninput = (e) => {
+                    valueDisplay.textContent = e.target.value;
+                    this.triggerUIAction(deviceId, element.id, 'onChanged', [parseInt(e.target.value)]);
+                };
+                
+                if (element.id) {
+                    this.elements[element.id] = container;
+                }
+                return container;
+            }
+            
+            createSwitch(element, deviceId) {
+                const button = document.createElement('button');
+                button.className = 'qa-ui-button qa-ui-switch-btn qa-switch';
+                button.textContent = element.text || 'Switch';
+                
+                const isOn = element.value === 'true' || element.value === true;
+                button.classList.add(isOn ? 'qa-ui-switch-btn-on' : 'qa-ui-switch-btn-off');
+                
+                button.onclick = () => {
+                    // Toggle state visually
+                    button.classList.toggle('qa-ui-switch-btn-on');
+                    button.classList.toggle('qa-ui-switch-btn-off');
+                    
+                    // Trigger action with true/false value
+                    const newValue = button.classList.contains('qa-ui-switch-btn-on');
+                    this.triggerUIAction(deviceId, element.id, 'onReleased', [newValue]);
+                };
+                
+                if (element.id) {
+                    this.elements[element.id] = button;
+                }
+                return button;
+            }
+            
+            createSelect(element, deviceId) {
+                const container = document.createElement('div');
+                container.className = 'ui-select';
+                container.setAttribute('data-element-id', element.id || '');
+                
+                const label = document.createElement('label');
+                label.textContent = element.text || 'Select';
+                
+                const select = document.createElement('select');
+                if (element.options) {
+                    element.options.forEach(option => {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = option.value || option;
+                        optionElement.textContent = option.text || option;
+                        if (option.value === element.value || option === element.value) {
+                            optionElement.selected = true;
+                        }
+                        select.appendChild(optionElement);
+                    });
+                }
+                
+                select.onchange = (e) => {
+                    this.triggerUIAction(deviceId, element.id, 'onToggled', [e.target.value]);
+                };
+                
+                container.appendChild(label);
+                container.appendChild(select);
+                
+                if (element.id) {
+                    this.elements[element.id] = container;
+                }
+                return container;
+            }
+            
+            createMultiSelect(element, deviceId) {
+                const container = document.createElement('div');
+                container.className = 'qa-ui-multidrop';
+                container.setAttribute('data-element-id', element.id || '');
+                
+                // Create dropdown button
+                const dropdownBtn = document.createElement('div');
+                dropdownBtn.className = 'qa-ui-multidrop-btn';
+                dropdownBtn.style.justifyContent = 'space-between';
+                
+                const displayText = document.createElement('span');
+                
+                // Set initial display text based on selected values
+                const selectedCount = element.values ? element.values.length : 0;
+                if (selectedCount === 0) {
+                    displayText.textContent = element.text || 'Choose...';
+                } else if (selectedCount === 1) {
+                    displayText.textContent = '1 selected';
+                } else {
+                    displayText.textContent = `${selectedCount} selected`;
+                }
+                
+                const arrow = document.createElement('span');
+                arrow.textContent = '▼';
+                arrow.style.fontSize = '12px';
+                arrow.style.color = '#666';
+                
+                dropdownBtn.appendChild(displayText);
+                dropdownBtn.appendChild(arrow);
+                container.appendChild(dropdownBtn);
+                
+                // Create dropdown list
+                const dropdownList = document.createElement('div');
+                dropdownList.className = 'qa-ui-multidrop-list';
+                
+                if (element.options) {
+                    element.options.forEach(option => {
+                        const optionLabel = document.createElement('label');
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = option.value || option;
+                        
+                        if (element.values && element.values.includes(option.value || option)) {
+                            checkbox.checked = true;
+                        }
+                        
+                        optionLabel.appendChild(checkbox);
+                        optionLabel.appendChild(document.createTextNode(option.text || option));
+                        dropdownList.appendChild(optionLabel);
+                    });
+                }
+                
+                container.appendChild(dropdownList);
+                
+                // Update display text based on selected options
+                const updateDisplayText = () => {
+                    const selectedOptions = Array.from(dropdownList.querySelectorAll('input[type="checkbox"]:checked'));
+                    if (selectedOptions.length === 0) {
+                        displayText.textContent = element.text || 'Choose...';
+                    } else if (selectedOptions.length === 1) {
+                        displayText.textContent = '1 selected';
+                    } else {
+                        displayText.textContent = `${selectedOptions.length} selected`;
+                    }
+                };
+                
+                // Initial display update
+                updateDisplayText();
+                
+                // Toggle dropdown
+                dropdownBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    container.classList.toggle('open');
+                    
+                    // Close other dropdowns
+                    document.querySelectorAll('.qa-ui-multidrop.open').forEach(dropdown => {
+                        if (dropdown !== container) {
+                            dropdown.classList.remove('open');
+                        }
+                    });
+                };
+                
+                // Handle option selection
+                dropdownList.onclick = (e) => {
+                    e.stopPropagation();
+                    
+                    if (e.target.type === 'checkbox') {
+                        updateDisplayText();
+                        
+                        const selectedValues = Array.from(dropdownList.querySelectorAll('input[type="checkbox"]:checked'))
+                            .map(cb => cb.value);
+                        this.triggerUIAction(deviceId, element.id, 'onToggled', [selectedValues]);
+                    }
+                };
+                
+                if (element.id) {
+                    this.elements[element.id] = container;
+                }
+                return container;
+            }
+            
+            async triggerUIAction(deviceId, elementId, eventType, values = []) {
+                this.debug(`UI Action: ${elementId}.${eventType}`, values);
+                
+                try {
+                    // Use the same FastAPI endpoint as the main page
+                    const response = await fetch('/api/plugins/callUIEvent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            deviceID: deviceId,
+                            elementName: elementId,
+                            eventType: eventType,
+                            values: values
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`UI action failed: ${response.statusText}`);
+                    }
+                    
+                    this.debug(`UI action successful: ${elementId}.${eventType}`);
+                    
+                } catch (error) {
+                    this.debug('UI action error:', error.message);
+                    console.error('Error triggering UI action:', error);
+                }
+            }
+            
+            connectWebSocket() {
+                const wsUrl = this.apiBase.replace('http', 'ws') + '/ws';
+                this.websocket = new WebSocket(wsUrl);
+                
+                this.websocket.onopen = () => {
+                    this.debug('WebSocket connected');
+                    this.updateStatus('Connected');
+                };
+                
+                this.websocket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleWebSocketMessage(message);
+                    } catch (error) {
+                        this.debug('WebSocket message error:', error.message);
+                    }
+                };
+                
+                this.websocket.onclose = () => {
+                    this.debug('WebSocket disconnected');
+                    this.updateStatus('Disconnected');
+                    // Attempt to reconnect after 5 seconds
+                    setTimeout(() => this.connectWebSocket(), 5000);
+                };
+                
+                this.websocket.onerror = (error) => {
+                    this.debug('WebSocket error:', error);
+                };
+            }
+            
+            handleWebSocketMessage(message) {
+                this.debug('WebSocket message:', message);
+                
+                if (message.type === 'ui_update' && message.qa_id === parseInt(this.qaId)) {
+                    this.handleUIUpdate(message.data);
+                }
+                
+                // Handle granular view updates
+                if (message.type === 'view_update' && message.qa_id === parseInt(this.qaId)) {
+                    this.handleViewUpdate(message.element_id, message.property, message.value);
+                }
+                
+                // Handle window control commands
+                if (message.type === 'ui_update' && message.qa_id === parseInt(this.qaId) && 
+                    message.data && message.data.element_id === 'window_control' && 
+                    message.data.property === 'action' && message.data.value === 'close') {
+                    this.handleWindowClose();
+                }
+            }
+            
+            handleDesktopEvent(eventType, data) {
+                this.debug(`Desktop event: ${eventType}`, data);
+                
+                switch (eventType) {
+                    case 'ui_update':
+                        this.handleUIUpdate(data);
+                        break;
+                    case 'device_event':
+                        this.handleDeviceEvent(data);
+                        break;
+                }
+            }
+            
+            handleUIUpdate(data) {
+                if (data.element_id) {
+                    this.updateElement(data.element_id, data.value);
+                }
+            }
+            
+            handleViewUpdate(elementId, property, value) {
+                this.debug(`View update: ${elementId}.${property} = ${value}`);
+                
+                // Find the UI element by its data-element-id
+                const elementContainer = document.querySelector(`[data-element-id="${elementId}"]`);
+                if (!elementContainer) {
+                    this.debug(`UI element ${elementId} not found`);
+                    return;
+                }
+                
+                // Update the specific property based on element type
+                const elementType = elementContainer.getAttribute('data-element-type');
+                this.updateElementProperty(elementContainer, elementType, property, value);
+            }
+            
+            updateElementProperty(elementContainer, elementType, property, value) {
+                this.debug(`Updating ${elementType} element property ${property} to:`, value);
+                
+                switch (elementType) {
+                    case 'label':
+                        if (property === 'text') {
+                            elementContainer.textContent = value;
+                        }
+                        break;
+                        
+                    case 'button':
+                        if (property === 'text') {
+                            elementContainer.textContent = value;
+                        }
+                        break;
+                        
+                    case 'slider':
+                        if (property === 'value') {
+                            const slider = elementContainer.querySelector('input[type="range"]');
+                            const valueDisplay = elementContainer.querySelector('.qa-slider-value');
+                            if (slider) {
+                                slider.value = value;
+                                if (valueDisplay) valueDisplay.textContent = value;
+                            }
+                        }
+                        break;
+                        
+                    case 'switch':
+                        if (property === 'value') {
+                            const button = elementContainer;
+                            const isOn = value === true || value === 'true';
+                            if (isOn) {
+                                button.className = 'qa-ui-button qa-ui-switch-btn qa-switch qa-ui-switch-btn-on';
+                            } else {
+                                button.className = 'qa-ui-button qa-ui-switch-btn qa-switch qa-ui-switch-btn-off';
+                            }
+                        }
+                        break;
+                        
+                    case 'select':
+                        if (property === 'selectedItem' || property === 'value') {
+                            const select = elementContainer.querySelector('select');
+                            if (select) {
+                                select.value = value;
+                            }
+                        } else if (property === 'options') {
+                            const select = elementContainer.querySelector('select');
+                            if (select && Array.isArray(value)) {
+                                select.innerHTML = '';
+                                value.forEach(option => {
+                                    const optionElement = document.createElement('option');
+                                    optionElement.value = option.value || option;
+                                    optionElement.textContent = option.text || option;
+                                    select.appendChild(optionElement);
+                                });
+                            }
+                        }
+                        break;
+                        
+                    case 'multi':
+                        if (property === 'selectedItems' || property === 'values') {
+                            const checkboxes = elementContainer.querySelectorAll('input[type="checkbox"]');
+                            const selectedValues = Array.isArray(value) ? value : [];
+                            
+                            checkboxes.forEach(checkbox => {
+                                checkbox.checked = selectedValues.includes(checkbox.value);
+                            });
+                            
+                            // Update display text
+                            const displayText = elementContainer.querySelector('.qa-ui-multidrop-btn span');
+                            if (displayText) {
+                                if (selectedValues.length === 0) {
+                                    displayText.textContent = 'Choose...';
+                                } else if (selectedValues.length === 1) {
+                                    displayText.textContent = '1 selected';
+                                } else {
+                                    displayText.textContent = `${selectedValues.length} selected`;
+                                }
+                            }
+                        } else if (property === 'options') {
+                            const dropdownList = elementContainer.querySelector('.qa-ui-multidrop-list');
+                            if (dropdownList && Array.isArray(value)) {
+                                dropdownList.innerHTML = '';
+                                value.forEach(option => {
+                                    const optionLabel = document.createElement('label');
+                                    const checkbox = document.createElement('input');
+                                    checkbox.type = 'checkbox';
+                                    checkbox.value = option.value || option;
+                                    optionLabel.appendChild(checkbox);
+                                    optionLabel.appendChild(document.createTextNode(option.text || option));
+                                    dropdownList.appendChild(optionLabel);
+                                });
+                            }
+                        }
+                        break;
+                        
+                    default:
+                        this.debug(`Unknown element type: ${elementType}`);
+                }
+            }
+            
+            handleWindowClose() {
+                this.debug('Received window close command');
+                this.updateStatus('Closing...');
+                
+                // Show a brief closing message in the UI tab
+                const content = document.getElementById('ui-content');
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <h3>QuickApp Closing</h3>
+                        <p>This window is being closed by plua...</p>
+                    </div>
+                `;
+                
+                // Close the window after a brief delay
+                setTimeout(() => {
+                    // Try multiple methods to close the window
+                    try {
+                        window.close();
+                    } catch (e) {
+                        // If window.close() doesn't work, try other methods
+                        if (window.parent && window.parent !== window) {
+                            window.parent.close();
+                        } else {
+                            // Last resort: navigate away
+                            window.location.href = 'about:blank';
+                        }
+                    }
+                }, 1000);
+            }
+            
+            handleDeviceEvent(data) {
+                this.debug('Device event:', data);
+                // Handle device state changes
+            }
+            
+            updateElement(elementId, value) {
+                const element = this.elements[elementId];
+                if (element) {
+                    element.textContent = value;
+                }
+            }
+            
+            updateStatus(status) {
+                document.getElementById('status').textContent = status;
+            }
+            
+            showError(message) {
+                const content = document.getElementById('ui-content');
+                content.innerHTML = `<div class="error">${message}</div>`;
+                this.updateStatus('Error');
+            }
+            
+            debug(message, data = null) {
+                const debugContent = document.getElementById('debug-content');
+                
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.innerHTML = `<strong>${timestamp}</strong>: ${message}`;
+                logEntry.style.marginBottom = '4px';
+                logEntry.style.padding = '4px';
+                logEntry.style.borderBottom = '1px solid #e9ecef';
+                
+                if (data) {
+                    logEntry.innerHTML += ` <em style="color: #666;">${JSON.stringify(data)}</em>`;
+                }
+                
+                // Remove the placeholder message if it exists
+                const placeholder = debugContent.querySelector('[style*="font-style: italic"]');
+                if (placeholder) {
+                    placeholder.remove();
+                }
+                
+                debugContent.appendChild(logEntry);
+                debugContent.scrollTop = debugContent.scrollHeight;
+                
+                console.log(`[QuickApp ${this.qaId}]`, message, data);
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new QuickAppDesktopUI();
+        });
+    </script>
+</body>
+</html>

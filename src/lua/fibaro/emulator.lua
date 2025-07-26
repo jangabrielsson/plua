@@ -128,7 +128,7 @@ function Emulator:__init()
   self.lib.ui = loadLib("ui",self)
 
   local localPluaConf = loadLuaFile(_PY.config.cwd.._PY.config.fileseparator..".plua")
-  local homePluaConf =loadLuaFile(_PY.config.homedir.._PY.config.fileseparator..".plua")
+  local homePluaConf =loadLuaFile(_PY.config.homedir.._PY.config.fileseparator..".plua/config.lua")
   pluaConf = table.merge(homePluaConf,localPluaConf)
 end
 
@@ -147,6 +147,12 @@ end
 
 function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   _G["QA"..qa.id] = qa
+  local info = self.DIR[qa.id]
+  local openWindow = _PY.config.runtime_config and _PY.config.runtime_config.desktop
+  if openWindow == nil then openWindow = info.headers and info.headers.desktop end
+  if openWindow then
+    _PY.open_quickapp_window(qa.id, "Auto-opened Desktop Window", 500, 700)
+  end
 end
 
 function Emulator:getQuickApps()
@@ -593,6 +599,7 @@ function headerKeys.latitude(str,info,k) info.latitude = validate(str,"number",k
 function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number",k) end
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
 function headerKeys.save(str,info) info.save = str end
+function headerKeys.desktop(str,info) info.desktop = validate(str,"boolean") end
 function headerKeys.proxyupdate(str,info) info.proxyupdate = str end
 function headerKeys.project(str,info,k) info.project = validate(str,"number",k) end
 function headerKeys.nop(str,info,k) validate(str,"boolean",k) end
@@ -636,7 +643,7 @@ local function compatHeaders(code)
 end
 
 function Emulator:processHeaders(filename,content)
-  local shortname = filename:match("([^/\\]+%.lua)")
+  local shortname = filename:match("([^/\\]+%.lua)") or filename
   local name = shortname:match("(.+)%.lua")
   local headers = {
     name=name or "MyQA",

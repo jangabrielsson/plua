@@ -6,11 +6,58 @@ import asyncio
 import argparse
 import sys
 import os
+import signal
+import atexit
 from typing import Optional
 import lupa
 
 from .runtime import LuaAsyncRuntime
 from .repl import run_repl
+
+
+def cleanup_on_exit():
+    """Cleanup function called on process termination"""
+    try:
+        from .luafuns_lib import close_all_quickapp_windows
+        print("\nCleaning up on exit...")
+        close_all_quickapp_windows()
+    except Exception as e:
+        # Don't print errors during shutdown unless debugging
+        pass
+
+
+def setup_signal_handlers():
+    """Set up signal handlers for graceful shutdown"""
+    def signal_handler(signum, frame):
+        print(f"\nReceived signal {signum}, shutting down...")
+        cleanup_on_exit()
+        sys.exit(0)
+    
+    # Register signal handlers for common termination signals
+    signals_to_handle = []
+    
+    # SIGTERM - standard termination signal (used by VS Code, Docker, etc.)
+    if hasattr(signal, 'SIGTERM'):
+        signals_to_handle.append(signal.SIGTERM)
+    
+    # SIGINT - interrupt signal (Ctrl+C) - though we also handle KeyboardInterrupt
+    if hasattr(signal, 'SIGINT'):
+        signals_to_handle.append(signal.SIGINT)
+    
+    # SIGHUP - hangup signal (terminal disconnection)
+    if hasattr(signal, 'SIGHUP'):
+        signals_to_handle.append(signal.SIGHUP)
+    
+    # Register handlers for available signals
+    for sig in signals_to_handle:
+        try:
+            signal.signal(sig, signal_handler)
+        except (OSError, ValueError):
+            # Some signals may not be available on all platforms
+            pass
+    
+    # Also register atexit handler as final fallback
+    atexit.register(cleanup_on_exit)
 
 
 def show_greeting() -> None:
@@ -211,6 +258,9 @@ def main() -> None:
                "  plua --debugger script.lua         # Run with MobDebug\n"
                "  plua --debugger --debug script.lua # Run with verbose debug logging\n"
                "  plua --cleanup-port                # Clean up stuck API port\n"
+               "  plua --close-windows               # Close all QuickApp windows\n"
+               "  plua --desktop script.lua          # Force desktop UI (override QA)\n"
+               "  plua --desktop=false script.lua    # Force no desktop UI (override QA)\n"
                "  plua --debugger --debugger-host 192.168.1.100 script.lua",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -337,7 +387,25 @@ def main() -> None:
         action="store_true"
     )
 
+    parser.add_argument(
+        "--close-windows",
+        help="Close all open QuickApp windows and exit",
+        action="store_true"
+    )
+
+    parser.add_argument(
+        "--desktop",
+        help="Override desktop UI mode for QuickApp windows (true/false). If not specified, QA decides based on --%%desktop header",
+        nargs="?",
+        const="true",
+        type=str,
+        default=None
+    )
+
     args = parser.parse_args()
+
+    # Set up signal handlers for graceful shutdown (especially for VS Code termination)
+    setup_signal_handlers()
 
     # Show greeting with version information first
     show_greeting()
@@ -354,6 +422,18 @@ def main() -> None:
         print(f"Port cleanup completed for {args.api_host}:{cleanup_port}")
         sys.exit(0 if success else 1)
 
+    # Handle window closure if requested
+    if args.close_windows:
+        try:
+            from .luafuns_lib import close_all_quickapp_windows
+            result = close_all_quickapp_windows()
+            print(f"QuickApp window closure: {result['message']}")
+            # Use os._exit() to bypass atexit handlers since we've already done the cleanup
+            os._exit(0 if result['success'] else 1)
+        except Exception as e:
+            print(f"Error closing QuickApp windows: {e}")
+            os._exit(1)
+
     # Prepare debugger config if requested
     debugger_config = None
     if args.debugger:
@@ -362,6 +442,19 @@ def main() -> None:
             'port': args.debugger_port,
             'debug': args.debug
         }
+    
+    # Parse desktop argument: None means QA decides, True/False means CLI override
+    desktop_override = None
+    if args.desktop is not None:
+        desktop_str = args.desktop.lower()
+        if desktop_str in ('true', '1', 'yes', 'on'):
+            desktop_override = True
+        elif desktop_str in ('false', '0', 'no', 'off'):
+            desktop_override = False
+        else:
+            print(f"Warning: Invalid --desktop value '{args.desktop}'. Use true/false. Ignoring.")
+            desktop_override = None
+    
     # Collect all config into a single dictionary
     config = {
         'debugger_config': debugger_config,
@@ -369,9 +462,24 @@ def main() -> None:
         'api_config': None if args.noapi else {'host': args.api_host, 'port': args.api_port},
         'source_name': None,  # source_name will be set based on args.lua_file
         'args': args.args,  # Extra arguments passed via -a/--args
+        'desktop': desktop_override,  # Desktop UI mode override (None = QA decides, True/False = CLI override)
         # Add more CLI flags here as needed
     }
     runtime = LuaAsyncRuntime(config=config)
+    
+    # Initialize desktop UI if explicitly requested via CLI (desktop_override = True)
+    # Note: If desktop_override is None, the QA will decide based on --%%desktop header
+    if desktop_override is True:
+        try:
+            from .desktop_ui import initialize_desktop_ui
+            api_base_url = f"http://{args.api_host}:{args.api_port}" if not args.noapi else "http://localhost:8888"
+            initialize_desktop_ui(api_base_url)
+            print(f"Desktop UI initialized via CLI override. API available at {api_base_url}")
+        except ImportError:
+            print("Warning: Desktop UI not available. Install with: pip install pywebview")
+        except Exception as e:
+            print(f"Warning: Could not initialize desktop UI: {e}")
+    
     # Determine which script to run
     script_fragments = args.script_fragments or []
 
@@ -404,13 +512,29 @@ def main() -> None:
             asyncio.run(run_script(runtime=runtime, script_fragments=script_fragments, main_script=main_script, main_file=main_file, duration=args.duration))
         except KeyboardInterrupt:
             print("\nInterrupted by user")
+            # Cleanup QuickApp windows on interruption
+            try:
+                from .luafuns_lib import close_all_quickapp_windows
+                close_all_quickapp_windows()
+            except Exception as e:
+                print(f"Window cleanup error: {e}")
             sys.exit(0)
         except asyncio.CancelledError:
             # Handle cancellation during shutdown (e.g., from _PY.isRunning termination)
             # This is expected behavior, exit cleanly without showing error
+            try:
+                from .luafuns_lib import close_all_quickapp_windows
+                close_all_quickapp_windows()
+            except:
+                pass
             sys.exit(0)
         except Exception as e:
             print(f"Error: {e}")
+            try:
+                from .luafuns_lib import close_all_quickapp_windows
+                close_all_quickapp_windows()
+            except:
+                pass
             sys.exit(1)
     else:
         # Either no script content (implicit interactive) or explicit -i flag
@@ -419,6 +543,12 @@ def main() -> None:
             asyncio.run(run_interactive(runtime=runtime, script_fragments=script_fragments, main_script=main_script, main_file=main_file, duration=args.duration))
         except KeyboardInterrupt:
             print("\nGoodbye!")
+            # Cleanup QuickApp windows on interruption
+            try:
+                from .luafuns_lib import close_all_quickapp_windows
+                close_all_quickapp_windows()
+            except Exception as e:
+                print(f"Window cleanup error: {e}")
         sys.exit(0)
 
 

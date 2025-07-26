@@ -4,6 +4,7 @@
 --%%debug:false
 --%% proxy:true
 --%%offline:true
+--%%desktop:true
 
 --%%u:{label="lbl1",text="Hello Tue Jul 1 06_34:53 2025"}
 --%%u:{{button="button_ID_6_1",text="Btn 1",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn1"},{button="button_ID_6_2",text="Btn 2",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn2"},{button="button_ID_6_3",text="Btn 3",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn3"},{button="button_ID_6_4",text="Btn 5",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn5"}}
@@ -62,13 +63,9 @@ end
 function QuickApp:onInit()
   self:debug("onInit")
   local a = self:getVariable("textenv")
-  -- Only open browser on first initialization
-  if not self.browser_opened then
-    local result = _PY.open_web_interface_browser()
-    print("Web interface opened:", json.encode(result))
-    self.browser_opened = true
-  end
-
+  -- Browser opening is now handled automatically by --%%desktop:true header
+  -- No need to manually open web interface
+  
   local i = 0
   -- setInterval(function()
   --   -- Update the label with current time every second

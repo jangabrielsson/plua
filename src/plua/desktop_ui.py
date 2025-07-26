@@ -66,63 +66,111 @@ class DesktopUIManager:
         return {"windows": {}, "positions": {}}
     
     def _save_registry(self, registry: dict):
-        """Save window registry to disk atomically with cross-platform file locking"""
+        """Save window registry to disk atomically with robust cross-platform file locking"""
         import sys
         import tempfile
+        import time
+        import random
+        import os
         
-        try:
-            # Use file locking to prevent concurrent writes (cross-platform)
-            lock_file = self.registry_file.with_suffix('.lock')
-            
-            with open(lock_file, 'w') as lock_fd:
+        max_retries = 5
+        base_delay = 0.01  # 10ms base delay
+        
+        for attempt in range(max_retries):
+            try:
+                # Use unique temp file names to avoid conflicts
+                timestamp = int(time.time() * 1000000)  # microseconds
+                random_suffix = random.randint(1000, 9999)
+                temp_file = self.registry_file.with_suffix(f'.json.tmp.{timestamp}.{random_suffix}')
+                
+                # Direct file locking on the registry file itself
+                lock_acquired = False
+                lock_fd = None
+                
                 try:
-                    # Cross-platform file locking
+                    # Try to acquire exclusive lock on registry file
+                    lock_fd = open(self.registry_file.with_suffix('.lockfile'), 'w')
+                    
+                    # Cross-platform file locking with timeout
                     if sys.platform.startswith('win'):
                         # Windows: Use msvcrt for file locking
                         import msvcrt
-                        msvcrt.locking(lock_fd.fileno(), msvcrt.LK_LOCK, 1)
+                        for lock_attempt in range(10):  # 100ms timeout
+                            try:
+                                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_NBLCK, 1)
+                                lock_acquired = True
+                                break
+                            except OSError:
+                                time.sleep(0.01)  # Wait 10ms
                     else:
-                        # Unix/Linux/macOS: Use fcntl
+                        # Unix/Linux/macOS: Use fcntl with timeout
                         import fcntl
-                        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+                        for lock_attempt in range(10):  # 100ms timeout
+                            try:
+                                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                                lock_acquired = True
+                                break
+                            except (OSError, IOError):
+                                time.sleep(0.01)  # Wait 10ms
                     
-                    # Write to temporary file first, then rename (atomic operation)
-                    temp_file = self.registry_file.with_suffix('.json.tmp')
+                    if not lock_acquired:
+                        raise Exception(f"Could not acquire lock after timeout (attempt {attempt + 1})")
+                    
+                    # Write to temporary file first
                     with open(temp_file, 'w') as f:
                         json.dump(registry, f, indent=2)
                         f.write('\n')  # Ensure newline at end
+                        f.flush()  # Ensure data is written
+                        os.fsync(f.fileno())  # Force to disk using os.fsync
                     
-                    # Atomic rename
+                    # Atomic rename (Windows requires removing target file first)
+                    if sys.platform.startswith('win') and self.registry_file.exists():
+                        self.registry_file.unlink()  # Remove existing file on Windows
                     temp_file.rename(self.registry_file)
                     
+                    # Success - exit retry loop
+                    return
+                    
                 finally:
-                    # Unlock file before closing (Windows requires explicit unlock)
-                    if sys.platform.startswith('win'):
+                    # Always unlock and clean up
+                    if lock_acquired and lock_fd:
                         try:
-                            import msvcrt
-                            msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+                            if sys.platform.startswith('win'):
+                                import msvcrt
+                                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+                            # fcntl locks are automatically released when file is closed
                         except Exception:
                             pass
-                    # fcntl locks are automatically released when file is closed
-            
-            # Remove lock file
-            try:
-                lock_file.unlink()
-            except Exception:
-                pass
-                
-        except Exception as e:
-            print(f"Warning: Failed to save window registry: {e}")
-            # Clean up temp and lock files if they exist
-            try:
-                temp_file = self.registry_file.with_suffix('.json.tmp')
-                if temp_file.exists():
-                    temp_file.unlink()
-                lock_file = self.registry_file.with_suffix('.lock')
-                if lock_file.exists():
-                    lock_file.unlink()
-            except Exception:
-                pass
+                    
+                    if lock_fd:
+                        try:
+                            lock_fd.close()
+                        except Exception:
+                            pass
+                    
+                    # Clean up temp file if it exists
+                    try:
+                        if temp_file.exists():
+                            temp_file.unlink()
+                    except Exception:
+                        pass
+                    
+                    # Clean up lock file
+                    try:
+                        lock_file = self.registry_file.with_suffix('.lockfile')
+                        if lock_file.exists():
+                            lock_file.unlink()
+                    except Exception:
+                        pass
+                        
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(f"Warning: Failed to save window registry after {max_retries} attempts: {e}")
+                    return
+                else:
+                    # Exponential backoff with jitter
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 0.01)
+                    time.sleep(delay)
     
     def _get_qa_key(self, qa_id: int, title: str = None, qa_type: str = "quickapp") -> str:
         """Generate a stable key for QuickApp identification"""
@@ -341,63 +389,117 @@ def save_position(window):
         import json
         import sys
         import tempfile
+        import time
+        import random
         from pathlib import Path
         
         registry_file = Path.home() / ".plua" / "window_registry.json"
-        lock_file = registry_file.with_suffix('.lock')
+        max_retries = 3
+        base_delay = 0.01
         
-        with open(lock_file, 'w') as lock_fd:
+        for attempt in range(max_retries):
             try:
-                # Cross-platform file locking
-                if sys.platform.startswith('win'):
-                    # Windows: Use msvcrt for file locking
-                    import msvcrt
-                    msvcrt.locking(lock_fd.fileno(), msvcrt.LK_LOCK, 1)
-                else:
-                    # Unix/Linux/macOS: Use fcntl
-                    import fcntl
-                    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+                # Use unique temp file names to avoid conflicts
+                timestamp = int(time.time() * 1000000)
+                random_suffix = random.randint(1000, 9999)
+                temp_file = registry_file.with_suffix(f'.json.tmp.{{timestamp}}.{{random_suffix}}')
                 
-                # Read current registry
-                if registry_file.exists():
-                    with open(registry_file, 'r') as f:
-                        registry = json.load(f)
-                else:
-                    registry = {{"windows": {{}}, "positions": {{}}}}
+                lock_acquired = False
+                lock_fd = None
                 
-                qa_key = "{qa_key}"
-                registry["positions"][qa_key] = {{
-                    "x": window.x,
-                    "y": window.y, 
-                    "width": window.width,
-                    "height": window.height,
-                    "timestamp": time.time(),
-                    "updated": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                }}
-                
-                # Write atomically
-                temp_file = registry_file.with_suffix('.json.tmp')
-                with open(temp_file, 'w') as f:
-                    json.dump(registry, f, indent=2)
-                    f.write('\\n')
-                
-                temp_file.rename(registry_file)
-                
-            finally:
-                # Unlock file before closing (Windows requires explicit unlock)
-                if sys.platform.startswith('win'):
-                    try:
+                try:
+                    lock_fd = open(registry_file.with_suffix('.lockfile'), 'w')
+                    
+                    # Cross-platform file locking with timeout
+                    if sys.platform.startswith('win'):
                         import msvcrt
-                        msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+                        for lock_attempt in range(10):
+                            try:
+                                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_NBLCK, 1)
+                                lock_acquired = True
+                                break
+                            except OSError:
+                                time.sleep(0.01)
+                    else:
+                        import fcntl
+                        for lock_attempt in range(10):
+                            try:
+                                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                                lock_acquired = True
+                                break
+                            except (OSError, IOError):
+                                time.sleep(0.01)
+                    
+                    if not lock_acquired:
+                        raise Exception(f"Could not acquire lock (attempt {{attempt + 1}})")
+                    
+                    # Read current registry
+                    if registry_file.exists():
+                        with open(registry_file, 'r') as f:
+                            registry = json.load(f)
+                    else:
+                        registry = {{"windows": {{}}, "positions": {{}}}}
+                    
+                    qa_key = "{qa_key}"
+                    registry["positions"][qa_key] = {{
+                        "x": window.x,
+                        "y": window.y, 
+                        "width": window.width,
+                        "height": window.height,
+                        "timestamp": time.time(),
+                        "updated": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                    }}
+                    
+                    # Write atomically
+                    with open(temp_file, 'w') as f:
+                        json.dump(registry, f, indent=2)
+                        f.write('\\n')
+                        f.flush()
+                        import os
+                        os.fsync(f.fileno())
+                    
+                    # Atomic rename (Windows requires removing target file first)
+                    if sys.platform.startswith('win') and registry_file.exists():
+                        registry_file.unlink()
+                    temp_file.rename(registry_file)
+                    
+                    return  # Success
+                    
+                finally:
+                    if lock_acquired and lock_fd:
+                        try:
+                            if sys.platform.startswith('win'):
+                                import msvcrt
+                                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+                        except Exception:
+                            pass
+                    
+                    if lock_fd:
+                        try:
+                            lock_fd.close()
+                        except Exception:
+                            pass
+                    
+                    try:
+                        if temp_file.exists():
+                            temp_file.unlink()
                     except Exception:
                         pass
-                # fcntl locks are automatically released when file is closed
-        
-        # Remove lock file
-        try:
-            lock_file.unlink()
-        except Exception:
-            pass
+                    
+                    try:
+                        lock_file = registry_file.with_suffix('.lockfile')
+                        if lock_file.exists():
+                            lock_file.unlink()
+                    except Exception:
+                        pass
+                        
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print("Failed to save window position after retries:", e)
+                    return
+                else:
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 0.01)
+                    time.sleep(delay)
             
     except Exception as e:
         print("Failed to save window position:", e)

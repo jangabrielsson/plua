@@ -66,23 +66,61 @@ class DesktopUIManager:
         return {"windows": {}, "positions": {}}
     
     def _save_registry(self, registry: dict):
-        """Save window registry to disk atomically to prevent corruption"""
+        """Save window registry to disk atomically with cross-platform file locking"""
+        import sys
+        import tempfile
+        
         try:
-            # Write to temporary file first, then rename (atomic operation)
-            temp_file = self.registry_file.with_suffix('.json.tmp')
-            with open(temp_file, 'w') as f:
-                json.dump(registry, f, indent=2)
-                f.write('\n')  # Ensure newline at end
+            # Use file locking to prevent concurrent writes (cross-platform)
+            lock_file = self.registry_file.with_suffix('.lock')
             
-            # Atomic rename
-            temp_file.rename(self.registry_file)
+            with open(lock_file, 'w') as lock_fd:
+                try:
+                    # Cross-platform file locking
+                    if sys.platform.startswith('win'):
+                        # Windows: Use msvcrt for file locking
+                        import msvcrt
+                        msvcrt.locking(lock_fd.fileno(), msvcrt.LK_LOCK, 1)
+                    else:
+                        # Unix/Linux/macOS: Use fcntl
+                        import fcntl
+                        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+                    
+                    # Write to temporary file first, then rename (atomic operation)
+                    temp_file = self.registry_file.with_suffix('.json.tmp')
+                    with open(temp_file, 'w') as f:
+                        json.dump(registry, f, indent=2)
+                        f.write('\n')  # Ensure newline at end
+                    
+                    # Atomic rename
+                    temp_file.rename(self.registry_file)
+                    
+                finally:
+                    # Unlock file before closing (Windows requires explicit unlock)
+                    if sys.platform.startswith('win'):
+                        try:
+                            import msvcrt
+                            msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+                        except Exception:
+                            pass
+                    # fcntl locks are automatically released when file is closed
+            
+            # Remove lock file
+            try:
+                lock_file.unlink()
+            except Exception:
+                pass
+                
         except Exception as e:
             print(f"Warning: Failed to save window registry: {e}")
-            # Clean up temp file if it exists
+            # Clean up temp and lock files if they exist
             try:
                 temp_file = self.registry_file.with_suffix('.json.tmp')
                 if temp_file.exists():
                     temp_file.unlink()
+                lock_file = self.registry_file.with_suffix('.lock')
+                if lock_file.exists():
+                    lock_file.unlink()
             except Exception:
                 pass
     
@@ -274,46 +312,92 @@ def signal_handler(sig, frame):
     else:
         print(f"Received signal {{sig}}, ignoring to survive parent process death")
 
-# Set up signal handlers to survive VS Code kill -9
+# Set up signal handlers to survive VS Code kill -9 (cross-platform)
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-# Ignore SIGHUP (parent process death) to survive VS Code kill -9
+# Ignore SIGHUP (parent process death) to survive VS Code kill -9 (Unix only)
 try:
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 except AttributeError:
-    pass  # SIGHUP not available on all platforms
+    pass  # SIGHUP not available on Windows
 
-# Also ignore SIGPIPE in case parent process dies
+# Also ignore SIGPIPE in case parent process dies (Unix only)  
 try:
     signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 except AttributeError:
-    pass
+    pass  # SIGPIPE not available on Windows
+
+# Windows-specific signal handling
+if sys.platform.startswith('win'):
+    try:
+        # Handle Windows-specific signals
+        signal.signal(signal.SIGBREAK, signal_handler)  # Ctrl+Break
+    except AttributeError:
+        pass
 
 def save_position(window):
     try:
         import json
+        import sys
+        import tempfile
         from pathlib import Path
         
         registry_file = Path.home() / ".plua" / "window_registry.json"
-        if registry_file.exists():
-            with open(registry_file, 'r') as f:
-                registry = json.load(f)
-        else:
-            registry = {{"windows": {{}}, "positions": {{}}}}
+        lock_file = registry_file.with_suffix('.lock')
         
-        qa_key = "{qa_key}"
-        registry["positions"][qa_key] = {{
-            "x": window.x,
-            "y": window.y, 
-            "width": window.width,
-            "height": window.height,
-            "timestamp": time.time(),
-            "updated": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        }}
+        with open(lock_file, 'w') as lock_fd:
+            try:
+                # Cross-platform file locking
+                if sys.platform.startswith('win'):
+                    # Windows: Use msvcrt for file locking
+                    import msvcrt
+                    msvcrt.locking(lock_fd.fileno(), msvcrt.LK_LOCK, 1)
+                else:
+                    # Unix/Linux/macOS: Use fcntl
+                    import fcntl
+                    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+                
+                # Read current registry
+                if registry_file.exists():
+                    with open(registry_file, 'r') as f:
+                        registry = json.load(f)
+                else:
+                    registry = {{"windows": {{}}, "positions": {{}}}}
+                
+                qa_key = "{qa_key}"
+                registry["positions"][qa_key] = {{
+                    "x": window.x,
+                    "y": window.y, 
+                    "width": window.width,
+                    "height": window.height,
+                    "timestamp": time.time(),
+                    "updated": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                }}
+                
+                # Write atomically
+                temp_file = registry_file.with_suffix('.json.tmp')
+                with open(temp_file, 'w') as f:
+                    json.dump(registry, f, indent=2)
+                    f.write('\\n')
+                
+                temp_file.rename(registry_file)
+                
+            finally:
+                # Unlock file before closing (Windows requires explicit unlock)
+                if sys.platform.startswith('win'):
+                    try:
+                        import msvcrt
+                        msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+                    except Exception:
+                        pass
+                # fcntl locks are automatically released when file is closed
         
-        with open(registry_file, 'w') as f:
-            json.dump(registry, f, indent=2)
+        # Remove lock file
+        try:
+            lock_file.unlink()
+        except Exception:
+            pass
             
     except Exception as e:
         print("Failed to save window position:", e)
@@ -346,25 +430,52 @@ except Exception as e:
                 f.write(webview_script)
                 temp_script = f.name
             
-            # Start the webview process with full detachment
+            # Start the webview process with cross-platform detachment
             try:
-                # Try with full detachment first
-                process = subprocess.Popen([sys.executable, temp_script], 
-                                         stdout=subprocess.DEVNULL, 
-                                         stderr=subprocess.DEVNULL,
-                                         stdin=subprocess.DEVNULL,
-                                         start_new_session=True,  # Detach from parent process group
-                                         preexec_fn=os.setsid if hasattr(os, 'setsid') else None  # Create new session
-                                         )
+                # Cross-platform process detachment
+                if sys.platform.startswith('win'):
+                    # Windows: Use CREATE_NEW_PROCESS_GROUP to detach
+                    process = subprocess.Popen([sys.executable, temp_script], 
+                                             stdout=subprocess.DEVNULL, 
+                                             stderr=subprocess.DEVNULL,
+                                             stdin=subprocess.DEVNULL,
+                                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+                                             )
+                else:
+                    # Unix/Linux/macOS: Use setsid for full detachment
+                    process = subprocess.Popen([sys.executable, temp_script], 
+                                             stdout=subprocess.DEVNULL, 
+                                             stderr=subprocess.DEVNULL,
+                                             stdin=subprocess.DEVNULL,
+                                             start_new_session=True,  # Detach from parent process group
+                                             preexec_fn=os.setsid if hasattr(os, 'setsid') else None  # Create new session
+                                             )
             except Exception as e:
-                print(f"Failed with setsid, trying without: {e}")
-                # Fallback without setsid
-                process = subprocess.Popen([sys.executable, temp_script], 
-                                         stdout=subprocess.DEVNULL, 
-                                         stderr=subprocess.DEVNULL,
-                                         stdin=subprocess.DEVNULL,
-                                         start_new_session=True  # Still detach from parent process group
-                                         )
+                print(f"Failed with full detachment, trying basic: {e}")
+                # Fallback with basic detachment
+                try:
+                    if sys.platform.startswith('win'):
+                        process = subprocess.Popen([sys.executable, temp_script], 
+                                                 stdout=subprocess.DEVNULL, 
+                                                 stderr=subprocess.DEVNULL,
+                                                 stdin=subprocess.DEVNULL,
+                                                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                                                 )
+                    else:
+                        process = subprocess.Popen([sys.executable, temp_script], 
+                                                 stdout=subprocess.DEVNULL, 
+                                                 stderr=subprocess.DEVNULL,
+                                                 stdin=subprocess.DEVNULL,
+                                                 start_new_session=True  # Still detach from parent process group
+                                                 )
+                except Exception as e2:
+                    print(f"Failed with basic detachment: {e2}")
+                    # Final fallback - no detachment
+                    process = subprocess.Popen([sys.executable, temp_script], 
+                                             stdout=subprocess.DEVNULL, 
+                                             stderr=subprocess.DEVNULL,
+                                             stdin=subprocess.DEVNULL
+                                             )
             
             self.windows[window_id] = {
                 "process": process,

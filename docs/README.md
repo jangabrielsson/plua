@@ -9,6 +9,9 @@ Welcome to the plua documentation! This directory contains comprehensive guides 
 - [VSCode Integration](lua/VSCodeintegration.md) - **Complete guide for Visual Studio Code setup, debugging, and task automation**
 - [Web REPL HTML Examples](WEB_REPL_HTML_EXAMPLES.md) - HTML rendering examples for the web interface
 
+### Lua API Reference
+- **[Lua API Documentation](lua/README.md)** - **Complete Lua API reference with HTTP, WebSockets, Timers, Fibaro, and QuickApp APIs**
+
 ### Development Workflow
 - [QuickApp Templates](lua/VSCodeintegration.md#quickapp-templates) - 42+ device templates for Fibaro HC3
 - [Project Scaffolding](lua/VSCodeintegration.md#project-initialization) - `plua --init-quickapp` setup guide
@@ -51,10 +54,11 @@ docs/
 ## 🚀 Quick Links
 
 - **For End Users**: Start with the [main README](../README.md) and [Web REPL examples](WEB_REPL_HTML_EXAMPLES.md)
+- **For Lua Developers**: Explore the [Lua API Documentation](lua/README.md) for HTTP, WebSockets, Timers, and more
 - **For VSCode Users**: Check out [VSCode Integration](lua/VSCodeintegration.md) for complete setup and workflow guide
 - **For QuickApp Developers**: Use `plua --init-quickapp` and see [project scaffolding docs](lua/VSCodeintegration.md#project-initialization)
+- **For Fibaro Users**: See [Fibaro API docs](lua/Fibaro.md) and [QuickApp API docs](lua/QuickApp.md) in the Lua API reference
 - **For API Integration**: Review [REST API documentation](api/API_USAGE.md)
-- **For API Users**: Check out [REST API documentation](api/API_USAGE.md)
 - **For Developers**: Browse the [development docs](dev/) for implementation details and progress tracking
 
 ## 📖 Documentation Conventions

@@ -518,6 +518,7 @@ coroutine.wrap(asyncTask)()
 Comprehensive documentation is available in the `docs/` directory:
 
 - **[Documentation Index](docs/README.md)** - Complete documentation overview
+- **[Lua API Reference](docs/lua/README.md)** - Complete Lua API documentation with examples
 - **[VSCode Integration Guide](docs/lua/VSCodeintegration.md)** - Complete setup for debugging, tasks, and project scaffolding
 - **[Web REPL HTML Examples](docs/WEB_REPL_HTML_EXAMPLES.md)** - HTML rendering guide for web interface
 - **[REST API Documentation](docs/api/README.md)** - Complete API reference and examples
@@ -525,6 +526,7 @@ Comprehensive documentation is available in the `docs/` directory:
 
 ### Quick Links
 - 🚀 **Getting Started**: This README
+- 📖 **Lua API**: [Lua API Documentation](docs/lua/README.md) - HTTP, WebSockets, Timers, Fibaro, QuickApp APIs
 - 💻 **VSCode Setup**: [VSCode Integration](docs/lua/VSCodeintegration.md) - Debug, run, and upload QuickApps
 - 🌐 **Web Interface**: [Web REPL Examples](docs/WEB_REPL_HTML_EXAMPLES.md)
 - 📡 **API Integration**: [REST API Docs](docs/api/README.md)

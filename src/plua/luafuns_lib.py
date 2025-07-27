@@ -1123,7 +1123,7 @@ import os
 from pathlib import Path
 
 def _log_window_to_registry(window_id, qa_id, title):
-    """Log window to ~/.plua/registry.json for VS Code tasks"""
+    """Log window to ~/.plua/window_registry.json for VS Code tasks"""
     try:
         import time
         from pathlib import Path
@@ -1132,7 +1132,7 @@ def _log_window_to_registry(window_id, qa_id, title):
         registry_dir = Path.home() / ".plua"
         registry_dir.mkdir(exist_ok=True)
         
-        registry_file = registry_dir / "registry.json"
+        registry_file = registry_dir / "window_registry.json"  # Use consistent filename
         
         # Load existing registry or create new one
         registry = {}
@@ -1250,6 +1250,7 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
     Returns:
         Dict with success status, window_id, and message
     """
+    print(f"LUAFUNS DEBUG: open_quickapp_window called with qa_id={qa_id}, title={title}, force_new={force_new}")
     try:
         from .desktop_ui import get_desktop_manager, initialize_desktop_ui
         
@@ -1267,7 +1268,9 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
         
         # Auto-initialize desktop manager if not available
         manager = get_desktop_manager()
+        print(f"LUAFUNS DEBUG: get_desktop_manager returned: {manager}")
         if not manager:
+            print("LUAFUNS DEBUG: No manager found, initializing...")
             # Initialize desktop UI automatically when first window is requested
             api_base_url = "http://localhost:8888"  # Default API URL
             try:
@@ -1283,8 +1286,10 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
                 pass
             
             manager = initialize_desktop_ui(api_base_url)
+            print(f"LUAFUNS DEBUG: initialized desktop manager: {manager}")
         
         if manager:
+            print(f"LUAFUNS DEBUG: Calling manager.create_quickapp_window_direct(qa_id={qa_id}, title={title}, force_new={force_new})")
             window_id = manager.create_quickapp_window_direct(qa_id, title, width, height, x, y, force_new)
             if window_id:
                 # Determine if this was a reuse or new window

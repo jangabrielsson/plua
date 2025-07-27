@@ -18,6 +18,7 @@ plua is a Python package that provides an async runtime environment for executin
 - **JSON support**: Built-in JSON encoding/decoding in Lua
 - **Fibaro HC3 API**: Complete Home Center 3 API emulation with 267+ endpoints
 - **MobDebug support**: Remote debugging with IDE integration
+- **VSCode integration**: `--init-quickapp` scaffolding with 42+ device templates
 - **Coroutine support**: Full Lua coroutine functionality with yielding
 - **Multi-platform executables**: Standalone binaries for Linux, Windows, macOS
 
@@ -186,6 +187,9 @@ plua --debugger script.lua                           # Enable MobDebug
 plua --debugger --debug script.lua                   # Verbose debug logging
 plua --debugger --debugger-host 192.168.1.100 script.lua  # Remote debugger
 
+# Project scaffolding
+plua --init-quickapp                                  # Create new QuickApp project
+
 # Utility commands
 plua --cleanup-port                                   # Clean up stuck API port
 plua --version                                        # Show version
@@ -321,60 +325,40 @@ The API server and local REPL share the same Lua interpreter instance, so:
 - Timers set via API continue running in the background
 - State is shared seamlessly between web and terminal interfaces
 
-## VSCode launch
-Setup launch tasks in .vscode/launch.json
-The executable is `plua` if installed and accesible globally,
+## 💻 VSCode Integration
 
-Running current lua file, with or without Fibaro support loaded.
+plua includes comprehensive Visual Studio Code integration for debugging, running scripts, and QuickApp development.
+
+### Quick Setup
+1. **Initialize a QuickApp project**: Run `plua --init-quickapp` in an empty directory
+2. **Choose from 42+ templates**: Binary switches, sensors, thermostats, and more
+3. **Auto-configured VSCode**: Debug configurations and upload tasks ready to use
+
+### Key Features
+- **One-command setup**: `plua --init-quickapp` creates complete project structure
+- **Professional templates**: All Fibaro device types with proper headers and methods
+- **Debug integration**: F5 to run/debug, breakpoints, variable inspection
+- **HC3 upload tasks**: Direct upload to Home Center 3 via tasks
+- **GitHub templates**: Always up-to-date from repository
+
+### Example Configuration
 ```json
 {
-    "version": "0.2.0",
+    "version": "0.2.0", 
     "configurations": [
         {
-            "name": "plua: Run Current Lua file with Debugger", 
-            "type": "luaMobDebug",
-            "request": "launch",
-            "workingDirectory": "${workspaceFolder}",
-            "sourceBasePath": "${workspaceFolder}",
-            "listenPort": 8172,
-            "listenPublicly": false,
-            "stopOnEntry": false,
-            "sourceEncoding": "UTF-8",
-            "executable": "plua",
-            "arguments": [
-                "--debugger",
-                "--debugger-host",
-                "localhost",
-                "--debugger-port",
-                "8172",
-                "${file}"
-            ]
-        },
-        {
-            "name": "plua: Run Current Fibaro file with Debugger", 
-            "type": "luaMobDebug",
-            "request": "launch",
-            "workingDirectory": "${workspaceFolder}",
-            "sourceBasePath": "${workspaceFolder}",
-            "listenPort": 8172,
-            "listenPublicly": false,
-            "stopOnEntry": false,
-            "sourceEncoding": "UTF-8",
-            "executable": "plua",
-            "arguments": [
-                "--debugger",
-                "--debugger-host",
-                "localhost",
-                "--debugger-port",
-                "8172",
-                "--fibaro",
-                "${file}"
-            ]
+            "name": "Run plua with current file",
+            "type": "python",
+            "request": "launch", 
+            "module": "plua",
+            "args": ["--fibaro", "-i", "${file}"],
+            "console": "integratedTerminal"
         }
     ]
 }
 ```
-[See VSCode integration guide](docs/lua/VSCodeintegration.md)
+
+**📖 Complete Guide**: [VSCode Integration Documentation](docs/lua/VSCodeintegration.md)
 
 ## Lua API
 
@@ -534,12 +518,14 @@ coroutine.wrap(asyncTask)()
 Comprehensive documentation is available in the `docs/` directory:
 
 - **[Documentation Index](docs/README.md)** - Complete documentation overview
+- **[VSCode Integration Guide](docs/lua/VSCodeintegration.md)** - Complete setup for debugging, tasks, and project scaffolding
 - **[Web REPL HTML Examples](docs/WEB_REPL_HTML_EXAMPLES.md)** - HTML rendering guide for web interface
 - **[REST API Documentation](docs/api/README.md)** - Complete API reference and examples
 - **[Developer Documentation](docs/dev/README.md)** - Implementation details and development guides
 
 ### Quick Links
 - 🚀 **Getting Started**: This README
+- 💻 **VSCode Setup**: [VSCode Integration](docs/lua/VSCodeintegration.md) - Debug, run, and upload QuickApps
 - 🌐 **Web Interface**: [Web REPL Examples](docs/WEB_REPL_HTML_EXAMPLES.md)
 - 📡 **API Integration**: [REST API Docs](docs/api/README.md)
 - 🔧 **Contributing**: [Developer Docs](docs/dev/README.md)

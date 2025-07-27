@@ -50,6 +50,8 @@ function Emulator:__init()
   self.lib = { 
     loadLib = loadLib,
     openWebBrowser = _PY.open_web_interface_browser,
+    getScreenDimension = _PY.get_screen_dimensions,
+    openQuickAppWindow = _PY.open_quickapp_window,
     fileExist = _PY.fileExist,
     getCwd = _PY.getcwd,
     listDir = _PY.listdir,
@@ -145,13 +147,16 @@ function Emulator:registerDevice(info)
   }
 end
 
+local tileX, tileY = 20,20
 function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   _G["QA"..qa.id] = qa
   local info = self.DIR[qa.id]
   local openWindow = _PY.config.runtime_config and _PY.config.runtime_config.desktop
   if openWindow == nil then openWindow = info.headers and info.headers.desktop end
   if openWindow then
-    local a = _PY.open_quickapp_window(qa.id, "Auto-opened Desktop Window", 400, 700)
+    local dim = self.lib.getScreenDimension()
+    local a = _PY.open_quickapp_window(qa.id, "Auto-opened Desktop Window", 400, 400, tileX, tileY)
+    tileX = tileX + 400 + 10
   end
 end
 

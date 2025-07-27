@@ -1,6 +1,8 @@
 --%%name:MultilevelSwitch
 --%%type:com.fibaro.multilevelSwitch
 --%%description:"Multilevel switch template"
+--%%desktop:true
+
 -- Multilevel switch type should handle actions: turnOn, turnOff, setValue
 -- To update multilevel switch state, update property "value" with integer 0-99
 

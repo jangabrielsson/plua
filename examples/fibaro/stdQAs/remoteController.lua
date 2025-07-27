@@ -1,6 +1,8 @@
 --%%name:RemoteController
 --%%type:com.fibaro.remoteController
 --%%description:"My description"
+--%%desktop:true
+
 -- Remote controller type have no actions to handle
 
 -- Method for emitting central scene events. Default value for keyAttribute is "Pressed" 

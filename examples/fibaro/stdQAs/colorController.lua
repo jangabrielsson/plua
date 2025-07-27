@@ -1,6 +1,8 @@
 --%%name:ColorController
 --%%type:com.fibaro.colorController
 --%%description:Color controller template
+--%%desktop:true
+
 -- Color controller type should handle actions: turnOn, turnOff, setValue, setColor
 -- To update color controller state, update property color with a string in the following format: "r,g,b,w" eg. "200,10,100,255"
 -- To update brightness, update property "value" with integer 0-99

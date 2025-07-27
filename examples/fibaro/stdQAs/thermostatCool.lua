@@ -1,6 +1,8 @@
 --%%name:ThermostatCool
 --%%type:com.fibaro.thermostatCool
 --%%description:"Thermostat cool template"
+--%%desktop:true
+
 -- Thermostat cool should handle actions: setThermostatMode, setCoolingThermostatSetpoint
 -- Properties that should be updated:
 -- * supportedThermostatModes - array of modes supported by the thermostat eg. {"Off", "Cool"}

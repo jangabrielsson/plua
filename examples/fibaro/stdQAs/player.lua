@@ -1,6 +1,8 @@
 --%%name:Player
 --%%type:com.fibaro.player
 --%%description:"My description"
+--%%desktop:true
+
 -- Player type should handle actions: play, pause, stop, next, prev, setVolume, setMute
 -- To update player state, update properties:
 -- * "volume" with integer 0-100

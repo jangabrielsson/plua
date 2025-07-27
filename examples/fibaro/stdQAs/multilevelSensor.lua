@@ -1,6 +1,8 @@
 --%%name:MultilevelSensor
 --%%type:com.fibaro.multilevelSensor
 --%%description:"My description"
+--%%desktop:true
+
 -- Multilevel sensor type have no actions to handle
 -- To update multilevel sensor state, update property "value" with integer
 -- Eg. self:updateProperty("value", 37.21) 

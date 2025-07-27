@@ -323,8 +323,7 @@ The API server and local REPL share the same Lua interpreter instance, so:
 
 ## VSCode launch
 Setup launch tasks in .vscode/launch.json
-The executable is either `plua` if installed and accesible globally,
-or if running from the plua repo, `${workspaceFolder}/run.sh`
+The executable is `plua` if installed and accesible globally,
 
 Running current lua file, with or without Fibaro support loaded.
 ```json
@@ -375,6 +374,7 @@ Running current lua file, with or without Fibaro support loaded.
     ]
 }
 ```
+[See VSCode integration guide](docs/lua/VSCodeintegration.md)
 
 ## Lua API
 

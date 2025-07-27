@@ -1,6 +1,8 @@
 --%%name:HVACSystemAuto
 --%%type:com.fibaro.hvacSystemAuto
 --%%description:"My description"
+--%%desktop:true
+
 -- Thermostat auto should handle actions: setThermostatMode, setCoolingThermostatSetpoint, setHeatingThermostatSetpoint
 -- Properties that should be updated:
 -- * supportedThermostatModes - array of modes supported by the thermostat eg. {"Auto", "Off", "Heat", "Cool"}

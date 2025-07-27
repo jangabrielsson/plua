@@ -1,6 +1,8 @@
 --%%name:BinarySwitch
 --%%type:com.fibaro.binarySwitch
 --%%description:"My description"
+--%%desktop:true
+
 -- Binary switch type should handle actions turnOn, turnOff
 -- To update binary switch state, update property "value" with boolean
 

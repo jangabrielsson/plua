@@ -1,6 +1,8 @@
 --%%name:Weather
 --%%type:com.fibaro.weather
 --%%description:"My description"
+--%%desktop:true
+
 -- Weather type have no actions to handle
 -- To update temperature, update property "Temperature" with floating point number, supported units: "C" - Celsius, "F" - Fahrenheit
 -- To update humidity, update property "Humidity" with floating point number

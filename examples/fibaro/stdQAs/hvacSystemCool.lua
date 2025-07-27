@@ -1,6 +1,8 @@
 --%%name:HVACSystemCool
 --%%type:com.fibaro.hvacSystemCool
 --%%description:"HVAC system cool template"
+--%%desktop:true
+
 -- Thermostat cool should handle actions: setThermostatMode, setCoolingThermostatSetpoint
 -- Properties that should be updated:
 -- * supportedThermostatModes - array of modes supported by the thermostat eg. {"Off", "Cool"}

@@ -1,6 +1,8 @@
 --%%name:FloodSensor
 --%%type:com.fibaro.floodSensor
 --%%description:"Flood sensor template"
+--%%desktop:true
+
 -- Flood sensor type have no actions to handle
 -- To update flood sensor state, update property "value" with boolean
 -- Eg. self:updateProperty("value", true) will indicate that flood was detected 

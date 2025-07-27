@@ -7,6 +7,7 @@ Welcome to the plua documentation! This directory contains comprehensive guides 
 ### Getting Started
 - [Main README](../README.md) - Project overview, installation, and basic usage
 - [Web REPL HTML Examples](WEB_REPL_HTML_EXAMPLES.md) - HTML rendering examples for the web interface
+- [VSCode Integration](lua/VSCodeintegration.md) - Complete guide for Visual Studio Code setup, debugging, and task automation
 
 ### API Documentation
 - [REST API Usage](api/API_USAGE.md) - Complete REST API reference and examples
@@ -31,6 +32,8 @@ docs/
 ├── WEB_REPL_HTML_EXAMPLES.md   # User guide for web REPL HTML features
 ├── api/                        # API documentation
 │   └── API_USAGE.md            # REST API reference
+├── lua/                        # Lua development documentation
+│   └── VSCodeintegration.md    # VSCode setup, debugging, and task automation
 └── dev/                        # Developer documentation
     ├── DEBUG_MESSAGES_FIXED.md
     ├── FUNCTIONALITY_VERIFIED.md
@@ -44,6 +47,7 @@ docs/
 ## 🚀 Quick Links
 
 - **For End Users**: Start with the [main README](../README.md) and [Web REPL examples](WEB_REPL_HTML_EXAMPLES.md)
+- **For VSCode Users**: Check out [VSCode Integration](lua/VSCodeintegration.md) for complete setup and workflow guide
 - **For API Users**: Check out [REST API documentation](api/API_USAGE.md)
 - **For Developers**: Browse the [development docs](dev/) for implementation details and progress tracking
 

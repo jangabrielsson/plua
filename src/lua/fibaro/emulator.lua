@@ -596,7 +596,12 @@ function headerKeys.uid(str,info,k) info.version =str end
 function headerKeys.manufacturer(str,info) info.manufacturer = str end
 function headerKeys.model(str,info) info.model = str end
 function headerKeys.role(str,info) info.role = str end
-function headerKeys.description(str,info) info.description = str end
+function headerKeys.description(str,info) 
+  if str:sub(1,1) == '"' and str:sub(-1) == '"' then
+    str = str:sub(2,-2) -- Remove quotes
+  end
+  info.description = str
+end
 function headerKeys.latitude(str,info,k) info.latitude = validate(str,"number",k) end
 function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number",k) end
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
@@ -700,13 +705,16 @@ function Emulator:runTask(file,str)
 
   elseif cmd == "updateQA" then          -- updateQA <filename>
     self:INFO("Not implemented: Updating QA",file)
+    self.lib.updateQA(file)
 
   elseif cmd == "downloadQA" then        -- downloadQA <id>:<path>
     local id,path = args:match("^([^:]+):(.*)$")
     self:INFO("Downloading QA",id,"to",path)
+    self.lib.downloadFQA(id,path)
 
   elseif cmd == "packQA" then             -- packQA <filename>
     local fqa = getFQA(self,file)
+    self:INFO("Packing QA",file)
     _print(json.encodeFast(fqa))
 
   else

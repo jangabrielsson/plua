@@ -1,6 +1,8 @@
 --%%name:Thermostat
 --%%type:com.fibaro.thermostat
 --%%description:"Thermostat template"
+--%%desktop:true
+
 -- Thermostat should handle actions: setThermostatMode, setHeatingThermostatSetpoint, setCoolingThermostatSetpoint
 -- Properties that should be updated:
 -- * supportedThermostatModes - array of modes supported by the thermostat eg. {"Off", "Heat", "Cool", "Auto"}

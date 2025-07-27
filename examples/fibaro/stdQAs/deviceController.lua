@@ -1,6 +1,8 @@
 --%%name:DeviceController
 --%%type:com.fibaro.deviceController
 --%%description:"Device controller template"
+--%%desktop:true
+
 -- Device Controller is a little more advanced than other types. 
 -- It can create child devices, so it can be used for handling multiple physical devices.
 -- E.g. when connecting to a hub, some cloud service or just when you want to represent a single physical device as multiple endpoints.

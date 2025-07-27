@@ -1,6 +1,8 @@
 --%%name:ThermostatSetpoint
 --%%type:com.fibaro.thermostatSetpoint
 --%%description:"Thermostat setpoint template"
+--%%desktop:true
+
 -- Thermostat setpoint should handle actions: setHeatingThermostatSetpoint, setCoolingThermostatSetpoint
 -- Properties that should be updated:
 -- * heatingThermostatSetpoint - set point for heating, supported units: "C" - Celsius, "F" - Fahrenheit

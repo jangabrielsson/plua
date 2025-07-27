@@ -1,6 +1,6 @@
 --%%name:HVACSystemHeatCool
 --%%type:com.fibaro.hvacSystemHeatCool
---%%description:HVAC system heat/cool template
+--%%description:"HVAC system heat/cool template"
 -- Thermostat heat/cool should handle actions: setThermostatMode, setHeatingThermostatSetpoint, setCoolingThermostatSetpoint
 -- Properties that should be updated:
 -- * supportedThermostatModes - array of modes supported by the thermostat eg. {"Off", "Heat", "Cool", "Auto"}

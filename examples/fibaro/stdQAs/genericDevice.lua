@@ -1,6 +1,8 @@
 --%%name:GenericDevice
 --%%type:com.fibaro.genericDevice
 --%%description:"My description"
+--%%desktop:true
+
 -- Generic device type have no default actions to handle 
 
 function QuickApp:onInit()

@@ -530,7 +530,12 @@ function Emulator:updateView(id,data,noUpdate)
 end
 
 function Emulator:HC3_CALL(method, path, data)
-  assert(self.config.hc3_creds, "HC3 credentials are not set")
+  if not self.config.hc3_creds then
+    self:ERROR("HC3 credentials are not set")
+    self:INFO("Setup an .env or ~/.env file with HC3 credentials")
+    self:INFO("Please see https://github.com/jangabrielsson/plua/blob/main/README.md for instructions")
+    os.exit()
+  end
   local url = self.config.hc3_url.."/api"..path
   if type(data) == 'table' then data = json.encode(data) end
   local res = _PY.http_call_sync(
@@ -550,6 +555,12 @@ if res.success then
     _,data = pcall(json.decode, res.data)
     return data, res.status_code
   end
+end
+if res.status_code == 401 or res.status_code == 403  then
+  self:ERROR("HC3 Aauthentication failed: " .. res.status_code .." ".. (res.error_message or ""))
+  self:INFO("Please check your HC3 credentials in the .env or ~/.env file") 
+  self.INFO("Terminating emulator due to authentication failure, and to avoid lock out of HC3")
+  os.exit()
 end
 return nil, res.status_code, res.error_message
 end

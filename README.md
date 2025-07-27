@@ -41,7 +41,7 @@ plua myscript.lua
 
 After installation, the `plua` command will be available system-wide in your terminal/command prompt.
 
-### Alternative: Standalone Executables
+### Alternative: Standalone Executables (TBD)
 
 For users who prefer not to install Python dependencies, standalone executables are available:
 

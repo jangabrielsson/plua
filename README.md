@@ -536,6 +536,25 @@ Comprehensive documentation is available in the `docs/` directory:
 - 📡 **API Integration**: [REST API Docs](docs/api/README.md)
 - 🔧 **Contributing**: [Developer Docs](docs/dev/README.md)
 
+### 📄 PDF Documentation
+
+Generate a comprehensive PDF from all documentation:
+
+```bash
+# Full-featured PDF with table of contents and formatting
+./scripts/create-docs-pdf.sh
+
+# Quick and simple PDF generation
+./scripts/simple-pdf.sh
+```
+
+**Requirements**: Install [pandoc](https://pandoc.org/installing.html) for PDF generation:
+- **macOS**: `brew install pandoc` (+ `brew install --cask mactex` for better formatting)
+- **Ubuntu**: `sudo apt install pandoc texlive-xetex`
+- **Windows**: `choco install pandoc miktex`
+
+The generated PDF includes all documentation in proper order with table of contents, making it perfect for offline reading or sharing.
+
 ## Fibaro HC3 API Integration
 
 plua includes a comprehensive Fibaro Home Center 3 API emulator with full type safety and documentation:
@@ -680,6 +699,16 @@ black src/ tests/
 
 ```bash
 mypy src/
+```
+
+### Generate Documentation PDF
+
+```bash
+# Create comprehensive PDF documentation
+./scripts/create-docs-pdf.sh
+
+# Simple PDF generation (requires pandoc)
+./scripts/simple-pdf.sh
 ```
 
 ### Creating Releases

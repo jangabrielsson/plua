@@ -820,7 +820,7 @@ def main() -> None:
     """Main entry point for the plua command line tool"""
 
     parser = argparse.ArgumentParser(
-        description="plua - Python-Lua async runtime with timer support",
+        description="plua - Python-Lua async runtime with timer support (https://github.com/jangabrielsson/plua/blob/main/README.md)",
         epilog="Examples:\n"
                "  plua                               # Interactive REPL mode\n"
                "  plua script.lua                    # Run script.lua with API server\n"

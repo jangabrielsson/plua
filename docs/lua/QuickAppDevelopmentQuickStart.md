@@ -224,9 +224,9 @@ end
 Use the save header to create versioned `.fqa` files:
 
 ```lua
---%%save:MyQuickApp_v1.0
 --%%name:My QuickApp
 --%%type:com.fibaro.binarySwitch
+--%%save:MyQuickApp_v1.fqa
 
 function QuickApp:onInit()
     self:debug("QuickApp v1.0 started")

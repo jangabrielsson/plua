@@ -1,5 +1,9 @@
 # plua
 
+<div align="center">
+  <img src="docs/Plua.png" alt="plua logo" width="200"/>
+</div>
+
 Python-Lua async runtime with timer support
 
 ## Table of Contents

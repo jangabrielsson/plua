@@ -4,8 +4,8 @@
   <img src="docs/Plua.png" alt="plua logo" width="200"/>
 </div>
 
-Python-Lua async runtime with timer support
-
+Python-Lua async runtime with timer support 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jangabrielsson/plua)
 ## Table of Contents
 
 - [Overview](#overview)

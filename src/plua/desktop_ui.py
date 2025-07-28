@@ -49,7 +49,7 @@ class DesktopUIManager:
             self.registry_file.parent.mkdir(exist_ok=True)
             if not self.registry_file.exists():
                 self._save_registry({"windows": {}, "positions": {}})
-            print(f"Using window registry: {self.registry_file}")
+            # Registry loading debug message removed
         except Exception as e:
             print(f"Warning: Failed to create window registry: {e}")
     
@@ -61,12 +61,14 @@ class DesktopUIManager:
                     content = f.read().strip()
                     if content:
                         registry = json.loads(content)
-                        print(f"Loaded registry from {self.registry_file}: {len(registry.get('windows', {}))} windows, {len(registry.get('positions', {}))} positions")
+                        # Registry loading debug message removed
                         return registry
                     else:
-                        print(f"Registry file {self.registry_file} is empty")
+                        # Registry empty debug message removed
+                        pass
             else:
-                print(f"Registry file {self.registry_file} does not exist")
+                # Registry does not exist debug message removed
+                pass
         except json.JSONDecodeError as e:
             print(f"Warning: Registry JSON corrupted ({e}), creating fresh registry")
             # Backup corrupted file and create fresh one
@@ -79,7 +81,7 @@ class DesktopUIManager:
         except Exception as e:
             print(f"Warning: Failed to load window registry: {e}")
         
-        print(f"Creating fresh registry at {self.registry_file}")
+        # Registry creation debug message removed
         return {"windows": {}, "positions": {}}
     
     def _save_registry(self, registry: dict):
@@ -219,8 +221,7 @@ class DesktopUIManager:
             registry = self._load_registry()
             windows = registry.get("windows", {})
             
-            print(f"Looking for existing window for QA {qa_id}...")
-            print(f"Registry has {len(windows)} windows total")
+            # Window search debug messages removed
             
             # Look through registry for windows matching this QA ID
             for window_id, window_info in windows.items():
@@ -229,12 +230,12 @@ class DesktopUIManager:
                     status = window_info.get("status", "unknown")
                     pid = window_info.get("pid")
                     
-                    print(f"  Window {window_id}: qa_id={stored_qa_id}, status={status}, pid={pid}")
+                    # Window detail debug message removed
                     
                     if stored_qa_id == qa_id and status == "open":
                         # Check if this window process is still alive
                         if pid and self._is_process_alive(pid):
-                            print(f"  -> Found alive process for QA {qa_id}, reconnecting to window {window_id}")
+                            # Found alive process debug message removed
                             # Reconnect to this existing window
                             self.windows[window_id] = {
                                 "qa_id": qa_id,
@@ -246,13 +247,13 @@ class DesktopUIManager:
                             self.qa_windows[qa_id] = window_id
                             return window_id
                         else:
-                            print(f"  -> Process {pid} for QA {qa_id} is dead, marking window as closed")
+                            # Dead process debug message removed
                             # Update registry to mark as closed since process is dead
                             windows[window_id]["status"] = "closed"
                             windows[window_id]["closed"] = time.time()
                             self._save_registry(registry)
                         
-            print(f"No existing alive window found for QA {qa_id}")
+            # No existing window found debug message removed
             return None
         except Exception as e:
             print(f"Warning: Failed to find existing QA window: {e}")
@@ -260,17 +261,17 @@ class DesktopUIManager:
     
     def _is_process_alive(self, pid: int) -> bool:
         """Check if a process with given PID is still running (cross-platform)"""
+        import subprocess
         try:
             if sys.platform.startswith('win'):
                 # Windows: Use tasklist to check if process exists
-                import subprocess
                 result = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/FO', 'CSV'], 
                                       capture_output=True, text=True, timeout=5)
                 # For CSV format, if process exists, we get a header line + data line
                 # If process doesn't exist, we only get the header line
                 lines = result.stdout.strip().split('\n')
                 alive = len(lines) > 1 and str(pid) in result.stdout
-                print(f"Process {pid} alive check: {alive} (tasklist returned {len(lines)} lines)")
+                # Process alive check debug message removed
                 return alive
             else:
                 # Unix/Linux/macOS: Use os.kill with signal 0
@@ -288,7 +289,7 @@ class DesktopUIManager:
             raise RuntimeError("pywebview not available. Install with: pip install pywebview")
         
         self._running = True
-        print("Desktop UI Manager started")
+        # Manager start debug message removed
         
     def stop(self):
         """Stop the desktop UI manager and optionally close windows based on context"""
@@ -300,16 +301,16 @@ class DesktopUIManager:
             # Terminal usage - close all windows
             for window_id in list(self.windows.keys()):
                 self.close_window(window_id)
-            print("Desktop UI Manager stopped - closed all windows")
+            # Manager stop debug message removed
         else:
             # VS Code/non-terminal usage - leave windows open for reuse
             # Just mark them as orphaned in registry but don't kill processes
             for window_id, window_info in self.windows.items():
                 if isinstance(window_info, dict):
                     window_info["orphaned"] = True
-            print("Desktop UI Manager stopped - windows left open for reuse")
+            # Manager stop debug message removed
             
-        print("Desktop UI Manager stopped")
+        # Manager stop debug message removed
     
     def create_quickapp_window(self, qa_id: int, title: str = None, width: int = 800, height: int = 600, x: int = None, y: int = None, force_new: bool = False) -> str:
         """
@@ -334,7 +335,7 @@ class DesktopUIManager:
         
         # Check if we should reuse an existing window
         if not force_new:
-            print(f"Checking for existing window for QA {qa_id} (force_new={force_new})")
+            # Window check debug message removed
             
             # First check in-memory mapping
             if qa_id in self.qa_windows:
@@ -350,7 +351,8 @@ class DesktopUIManager:
                     print(f"In-memory window {existing_window_id} no longer exists, removing mapping")
                     del self.qa_windows[qa_id]
             else:
-                print(f"No in-memory mapping found for QA {qa_id}")
+                # No mapping found debug message removed
+                pass
             
             # Check for surviving processes from previous sessions (VS Code kill -9 scenario)
             existing_window_id = self._find_existing_qa_window(qa_id)
@@ -610,7 +612,7 @@ except Exception as e:
                                              preexec_fn=os.setsid if hasattr(os, 'setsid') else None  # Create new session
                                              )
             except Exception as e:
-                print(f"Failed with full detachment, trying basic: {e}")
+                # Detachment failure debug message removed
                 # Fallback with basic detachment
                 try:
                     if sys.platform.startswith('win'):
@@ -654,8 +656,7 @@ except Exception as e:
             # Log window to registry with PID for reconnection
             self._log_window_to_registry(window_id, qa_id, title, process.pid)
             
-            print(f"DEBUG: Window creation completed for QA {qa_id} - force_new was {force_new}")
-            print(f"Created QuickApp desktop window: {window_id} for QA {qa_id}")
+            # Window creation debug messages removed
             
             # Clean up the temp file after a delay
             def cleanup_temp_file():
@@ -708,7 +709,7 @@ except Exception as e:
                 "pid": process.pid  # Store PID for external closure
             }
             
-            print(f"Created QuickApp desktop window: {window_id} for QA {qa_id}")
+            # Window creation debug message removed
             print(f"Window process PID: {process.pid}")
             
             # Clean up the temp file after a delay
@@ -884,7 +885,7 @@ except Exception as e:
                 }
                 
             self._save_registry(registry)
-            print(f"Window {window_id} marked as closed in registry")
+            # Window closed debug message removed
         except Exception as e:
             print(f"Warning: Failed to log window closure: {e}")
     
@@ -1033,16 +1034,16 @@ desktop_manager: Optional[DesktopUIManager] = None
 
 def get_desktop_manager() -> Optional[DesktopUIManager]:
     """Get the global desktop UI manager instance"""
-    print(f"get_desktop_manager called, desktop_manager = {desktop_manager}")
+    # Desktop manager lookup debug message removed
     return desktop_manager
 
 
 def initialize_desktop_ui(api_base_url: str = "http://localhost:8888") -> DesktopUIManager:
     """Initialize the global desktop UI manager"""
     global desktop_manager
-    print(f"initialize_desktop_ui called with api_base_url={api_base_url}")
+    # Desktop UI initialization debug message removed
     if desktop_manager is None:
-        print("Creating new DesktopUIManager instance")
+        # Creating manager debug message removed
         desktop_manager = DesktopUIManager(api_base_url)
         desktop_manager.start()
     else:

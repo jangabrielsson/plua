@@ -16,56 +16,14 @@ from .repl import run_repl
 
 
 def cleanup_on_exit():
-    """Cleanup function called on process termination"""
+    """Cleanup function called on exit"""
     try:
         from .luafuns_lib import close_all_quickapp_windows
-        from .desktop_ui import shutdown_desktop_ui
-        
-        print("\nCleaning up on exit...")
-        
-        # Close QuickApp windows
         result = close_all_quickapp_windows()
+        # Only show message if windows were actually closed
         if result.get('closed_count', 0) > 0:
-            print(f"Closed {result['closed_count']} QuickApp windows")
-            
-        # Shutdown desktop UI manager
-        shutdown_desktop_ui()
-        
-        # Force close any remaining Python processes that might be hanging
-        try:
-            import psutil
-            import os
-            current_pid = os.getpid()
-            current_process = psutil.Process(current_pid)
-            
-            # Get all child processes
-            children = current_process.children(recursive=True)
-            for child in children:
-                try:
-                    child.terminate()
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    pass
-                    
-            # Wait a moment for graceful termination
-            import time
-            time.sleep(0.2)
-            
-            # Force kill any remaining children
-            for child in children:
-                try:
-                    if child.is_running():
-                        child.kill()
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    pass
-                    
-        except ImportError:
-            # psutil not available, skip process cleanup
-            pass
-        except Exception:
-            # Any other error in process cleanup, ignore
-            pass
-            
-    except Exception as e:
+            pass  # Removed debug output - cleanup happens silently
+    except Exception:
         # Don't print errors during shutdown unless debugging
         pass
 
@@ -91,7 +49,7 @@ def setup_signal_handlers(interactive_mode=False):
             
             def force_exit_after_timeout():
                 time.sleep(2.0)  # Wait 2 seconds
-                print("Force exiting due to timeout...")
+                # Removed debug output - timeout cleanup happens silently
                 force_cleanup_all()
                 os._exit(0)  # Force exit without cleanup
             
@@ -140,13 +98,12 @@ def force_cleanup_all():
         from .luafuns_lib import close_all_quickapp_windows
         from .desktop_ui import shutdown_desktop_ui
         
-        print("Force cleaning up all resources...")
-        
         # 1. Try to close QuickApp windows gracefully
         try:
             result = close_all_quickapp_windows()
+            # Only show message if windows were actually closed and in debug mode
             if result.get('closed_count', 0) > 0:
-                print(f"Closed {result['closed_count']} QuickApp windows")
+                pass  # Removed debug output - cleanup happens silently
         except Exception:
             pass
             

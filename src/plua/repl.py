@@ -202,7 +202,6 @@ class PluaREPL:
             # Check for shutdown signal from signal handler
             import sys
             if hasattr(sys, '_plua_shutdown_requested') and sys._plua_shutdown_requested:
-                print("\nShutdown requested, cleaning up...")
                 return None  # This will cause REPL to exit
                 
             try:
@@ -299,12 +298,12 @@ class PluaREPL:
                     
                     # Wait for stop to complete with timeout
                     if not stop_completed.wait(timeout=1.5):  # 1.5 second timeout
-                        print("Runtime stop timed out, forcing exit...")
+                        # Force exit silently if timeout
                         import os
                         os._exit(0)
                         
                 except Exception as e:
-                    print(f"Error during runtime cleanup: {e}")
+                    # Force exit silently on error
                     import os
                     os._exit(0)
 

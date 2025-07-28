@@ -1250,7 +1250,7 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
     Returns:
         Dict with success status, window_id, and message
     """
-    print(f"LUAFUNS DEBUG: open_quickapp_window called with qa_id={qa_id}, title={title}, force_new={force_new}")
+    # Debug message removed
     try:
         from .desktop_ui import get_desktop_manager, initialize_desktop_ui
         
@@ -1268,9 +1268,9 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
         
         # Auto-initialize desktop manager if not available
         manager = get_desktop_manager()
-        print(f"LUAFUNS DEBUG: get_desktop_manager returned: {manager}")
+        # Debug message removed
         if not manager:
-            print("LUAFUNS DEBUG: No manager found, initializing...")
+            # Debug message removed
             # Initialize desktop UI automatically when first window is requested
             api_base_url = "http://localhost:8888"  # Default API URL
             try:
@@ -1286,10 +1286,10 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
                 pass
             
             manager = initialize_desktop_ui(api_base_url)
-            print(f"LUAFUNS DEBUG: initialized desktop manager: {manager}")
+            # Debug message removed
         
         if manager:
-            print(f"LUAFUNS DEBUG: Calling manager.create_quickapp_window_direct(qa_id={qa_id}, title={title}, force_new={force_new})")
+            # Debug message removed
             window_id = manager.create_quickapp_window_direct(qa_id, title, width, height, x, y, force_new)
             if window_id:
                 # Determine if this was a reuse or new window
@@ -1327,7 +1327,7 @@ def close_all_quickapp_windows():
                     if window_info.get("status") == "open":
                         if manager and manager.close_window(window_id):
                             closed_count += 1
-                            print(f"Closed window: {window_id}")
+                            # Window closed silently
                         else:
                             # Try to close by PID if manager not available
                             pid = window_info.get("pid")
@@ -1345,13 +1345,14 @@ def close_all_quickapp_windows():
                                             process.terminate()
                                             # Wait up to 3 seconds for graceful termination
                                             process.wait(timeout=3)
-                                            print(f"Terminated process for window {window_id} (PID: {pid})")
+                                            # Process terminated silently
                                         except psutil.TimeoutExpired:
                                             # Force kill if graceful termination failed
                                             process.kill()
-                                            print(f"Force killed process for window {window_id} (PID: {pid})")
+                                            # Process force killed silently
                                         except psutil.NoSuchProcess:
-                                            print(f"Process {pid} for window {window_id} was already terminated")
+                                            # Process was already terminated
+                                            pass
                                         
                                         closed_count += 1
                                         
@@ -1360,7 +1361,7 @@ def close_all_quickapp_windows():
                                         registry["windows"][window_id]["closed"] = time.time()
                                         registry["windows"][window_id]["closed_iso"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                                     else:
-                                        print(f"Process {pid} for window {window_id} no longer exists")
+                                        # Process no longer exists
                                         # Mark as closed in registry since process is gone
                                         registry["windows"][window_id]["status"] = "closed"
                                         registry["windows"][window_id]["closed"] = time.time()
@@ -1379,7 +1380,7 @@ def close_all_quickapp_windows():
                                             result = subprocess.run(['taskkill', '/F', '/PID', str(pid)], 
                                                                   capture_output=True, text=True)
                                             if result.returncode == 0:
-                                                print(f"Terminated process for window {window_id} (PID: {pid})")
+                                                # Process terminated silently
                                                 closed_count += 1
                                             else:
                                                 print(f"Process {pid} for window {window_id} may not exist: {result.stderr.strip()}")
@@ -1392,9 +1393,10 @@ def close_all_quickapp_windows():
                                             check_result = subprocess.run(["ps", "-p", str(pid)], capture_output=True, check=False)
                                             if check_result.returncode == 0:
                                                 subprocess.run(["kill", "-KILL", str(pid)], check=False)
-                                                print(f"Force killed process for window {window_id} (PID: {pid})")
+                                                # Process force killed silently
                                             else:
-                                                print(f"Terminated process for window {window_id} (PID: {pid})")
+                                                # Process terminated silently
+                                                pass
                                             closed_count += 1
                                         
                                         # Update registry

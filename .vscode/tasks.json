@@ -1,354 +1,149 @@
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Close All QuickApp Windows",
-      "type": "shell",
-      "group": "build",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "echo": false,
-        "close": false,
-        "reveal": "silent",
-        "revealProblems": "never",
-        "focus": false,
-        "panel": "shared",
-        "clear": false,
-        "showReuseMessage": false
-      },
-      "problemMatcher": [],
-      // Platform-specific commands for cross-platform compatibility
-      "windows": {
-        "command": "cmd",
-        "args": [
-          "/c",
-          "if exist \"${workspaceFolder}\\.venv\\Scripts\\python.exe\" (\"${workspaceFolder}\\.venv\\Scripts\\python.exe\" -m plua --close-windows) else (python -m plua --close-windows)"
-        ]
-      },
-      "osx": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
-        ]
-      },
-      "linux": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
-        ]
-      }
-    },
-    {
-      "label": "QA, upload current file as QA to HC3",
-      "type": "shell",
-      "command": "lua",
-      "args": [
-        "-e",
-        "\"require('hc3emu2')\"",
-        "uploadQA",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "QA, update single file (part of .project)",
-      "type": "shell",
-      "command": "lua",
-      "args": [
-        "-e",
-        "\"require('hc3emu2')\"",
-        "updateFile",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "QA, update QA (defined in .project)",
-      "type": "shell",
-      "command": "lua",
-      "args": [
-        "-e",
-        "\"require('hc3emu2')\"",
-        "updateQA",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "QA, Download and unpack from HC3",
-      "type": "shell",
-      "command": "lua",
-      "args": [
-        "-e",
-        "\"require('hc3emu2')\"",
-        "downloadQA",
-        "${input:QA_id}",
-        "${input:path_id}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "PyPI: Clean Build Artifacts",
-      "type": "shell",
-      "command": "rm",
-      "args": [
-        "-rf",
-        "dist/",
-        "build/",
-        "src/*.egg-info"
-      ],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "PyPI: Build Package",
-      "type": "shell",
-      "command": "python",
-      "args": [
-        "-m",
-        "build"
-      ],
-      "group": "build",
-      "dependsOn": "PyPI: Clean Build Artifacts",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "PyPI: Upload to PyPI",
-      "type": "shell",
-      "command": "python",
-      "args": [
-        "-m",
-        "twine",
-        "upload",
-        "dist/*"
-      ],
-      "group": "build",
-      "dependsOn": "PyPI: Build Package",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "PyPI: Bump Patch Version & Upload",
-      "type": "shell",
-      "command": "/bin/bash",
-      "args": [
-        "-c",
-        "python -c \"import re; content = open('src/plua/__init__.py').read(); match = re.search(r'__version__ = \\\"(\\d+)\\.(\\d+)\\.(\\d+)\\\"', content); new_patch = int(match.group(3)) + 1; new_version = f'{match.group(1)}.{match.group(2)}.{new_patch}'; new_content = re.sub(r'__version__ = \\\"\\d+\\.\\d+\\.\\d+\\\"', f'__version__ = \\\"{new_version}\\\"', content); open('src/plua/__init__.py', 'w').write(new_content); print(f'Version bumped to {new_version}')\""
-      ],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "PyPI: Bump Version (Interactive)",
-      "type": "shell",
-      "command": "/bin/bash",
-      "args": [
-        "-c",
-        "python -c \"import re; import sys; bump_type='${input:versionBumpType}'; custom='${input:customVersion}'; content = open('src/plua/__init__.py').read(); match = re.search(r'__version__ = \\\"(\\d+)\\.(\\d+)\\.(\\d+)\\\"', content); major, minor, patch = int(match.group(1)), int(match.group(2)), int(match.group(3)); new_version = custom if custom else (f'{major}.{minor}.{patch+1}' if bump_type=='patch' else f'{major}.{minor+1}.0' if bump_type=='minor' else f'{major+1}.0.0'); new_content = re.sub(r'__version__ = \\\"\\d+\\.\\d+\\.\\d+\\\"', f'__version__ = \\\"{new_version}\\\"', content); open('src/plua/__init__.py', 'w').write(new_content); print(f'Version updated to {new_version}')\""
-      ],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "PyPI: Full Release (Bump + Build + Upload)",
-      "type": "shell",
-      "command": "echo",
-      "args": ["Starting full PyPI release..."],
-      "group": "build",
-      "dependsOrder": "sequence",
-      "dependsOn": [
-        "PyPI: Bump Version (Interactive)",
-        "PyPI: Upload to PyPI"
-      ],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "PyPI: Quick Patch Release",
-      "type": "shell",
-      "command": "echo",
-      "args": ["Starting quick patch release..."],
-      "group": "build",
-      "dependsOrder": "sequence",
-      "dependsOn": [
-        "PyPI: Bump Patch Version & Upload",
-        "PyPI: Upload to PyPI"
-      ],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "GitHub: Create Patch Release",
-      "type": "shell",
-      "command": "./scripts/create-release.sh",
-      "args": ["patch"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "options": {
-        "cwd": "${workspaceFolder}"
-      }
-    },
-    {
-      "label": "GitHub: Create Release (Interactive)",
-      "type": "shell",
-      "command": "./scripts/create-release.sh",
-      "args": ["${input:versionBumpType}", "${input:releaseNotes}"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "options": {
-        "cwd": "${workspaceFolder}"
-      }
-    },
-    {
-      "label": "GitHub: Create Patch Release (Quick)",
-      "type": "shell",
-      "command": "./scripts/create-release.sh",
-      "args": ["patch", "Patch release - bug fixes and minor improvements"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "options": {
-        "cwd": "${workspaceFolder}"
-      }
-    },
-    {
-      "label": "GitHub: Create Minor Release (Quick)",
-      "type": "shell",
-      "command": "./scripts/create-release.sh",
-      "args": ["minor", "Minor release - new features and enhancements"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "options": {
-        "cwd": "${workspaceFolder}"
-      }
-    },
-    {
-      "label": "GitHub: Create Custom Release",
-      "type": "shell",
-      "command": "./scripts/create-release.sh",
-      "args": ["${input:customVersion}", "${input:releaseNotes}"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared"
-      },
-      "options": {
-        "cwd": "${workspaceFolder}"
-      }
-    }
-  ],
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "QA_id",
-      "description": "deviceId of QA from HC3 you want to download?",
-      "default": "-"
-    },
-    {
-      "type": "promptString",
-      "id": "path_id",
-      "description": "path where to store the QA",
-      "default": "dev"
-    },
-    {
-      "type": "promptString",
-      "id": "QA_name",
-      "description": "'.' for open file, or QA path name",
-      "default": "."
-    },
-    {
-      "id": "pickEnvFile",
-      "type": "command",
-      "command": "launch-file-picker.pick",
-      "args": {
-        "options": {
-          "title": "pick env file",
-          "path": ".",
-          "filterExt": ".env"
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Plua: Close All QuickApp Windows",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": false,
+                "close": false,
+                "reveal": "silent",
+                "revealProblems": "never",
+                "focus": false,
+                "panel": "shared",
+                "clear": false,
+                "showReuseMessage": false
+            },
+            "problemMatcher": [],
+            "windows": {
+                "command": "cmd",
+                "args": [
+                    "/c",
+                    "if exist \"${workspaceFolder}\\.venv\\Scripts\\python.exe\" (\"${workspaceFolder}\\.venv\\Scripts\\python.exe\" -m plua --close-windows) else (python -m plua --close-windows)"
+                ]
+            },
+            "osx": {
+                "command": "bash",
+                "args": [
+                    "-c",
+                    "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
+                ]
+            },
+            "linux": {
+                "command": "bash",
+                "args": [
+                    "-c",
+                    "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
+                ]
+            }
         },
-        "output": {
-          "defaultPath": "client/env/dev.env"
+        {
+            "label": "Plua, upload current file as QA to HC3",
+            "type": "shell",
+            "command": "plua",
+            "args": [
+                "--fibaro",
+                "-a",
+                "uploadQA",
+                "${relativeFile}"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Plua, update single file (part of .project)",
+            "type": "shell",
+            "command": "plua",
+            "args": [
+                "--fibaro",
+                "-a",
+                "updateFile",
+                "${relativeFile}"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Plua, update QA (defined in .project)",
+            "type": "shell",
+            "command": "plua",
+            "args": [
+                "--fibaro",
+                "updateQA",
+                "-a",
+                "${relativeFile}"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Plua, Download and unpack from HC3",
+            "type": "shell",
+            "command": "plua",
+            "args": [
+                "--fibaro",
+                "-a",
+                "downloadQA ${input:QA_id:${input:path_id}",
+                "dummy.lua"
+            ],
+            "group": "build"
         }
-      }
-    },
-    {
-      "type": "pickString",
-      "id": "versionBumpType",
-      "description": "Select version bump type",
-      "options": [
-        "patch",
-        "minor",
-        "major"
-      ],
-      "default": "patch"
-    },
-    {
-      "type": "promptString",
-      "id": "customVersion",
-      "description": "Enter custom version (e.g., 1.2.3) or leave empty for auto-bump"
-    },
-    {
-      "type": "promptString",
-      "id": "releaseNotes",
-      "description": "Enter release notes for this version"
-    }
-  ]
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "QA_id",
+            "description": "deviceId of QA from HC3 you want to download?",
+            "default": "-"
+        },
+        {
+            "type": "promptString",
+            "id": "path_id",
+            "description": "path where to store the QA",
+            "default": "dev"
+        },
+        {
+            "type": "promptString",
+            "id": "QA_name",
+            "description": "'.' for open file, or QA path name",
+            "default": "."
+        },
+        {
+            "id": "pickEnvFile",
+            "type": "command",
+            "command": "launch-file-picker.pick",
+            "args": {
+                "options": {
+                    "title": "pick env file",
+                    "path": ".",
+                    "filterExt": ".env"
+                },
+                "output": {
+                    "defaultPath": "client/env/dev.env"
+                }
+            }
+        },
+        {
+            "type": "pickString",
+            "id": "versionBumpType",
+            "description": "Select version bump type",
+            "options": [
+                "patch",
+                "minor",
+                "major"
+            ],
+            "default": "patch"
+        },
+        {
+            "type": "promptString",
+            "id": "customVersion",
+            "description": "Enter custom version (e.g., 1.2.3) or leave empty for auto-bump"
+        },
+        {
+            "type": "promptString",
+            "id": "releaseNotes",
+            "description": "Enter release notes for this version"
+        }
+    ]
 }

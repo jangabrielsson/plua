@@ -1311,8 +1311,24 @@ def close_all_quickapp_windows():
         closed_count = 0
         
         if registry_file.exists():
-            with open(registry_file, 'r') as f:
-                registry = json.load(f)
+            try:
+                with open(registry_file, 'r') as f:
+                    registry = json.load(f)
+            except (json.JSONDecodeError, ValueError) as e:
+                print(f"Warning: Registry file corrupted, attempting backup recovery: {e}")
+                # Try to read a backup if it exists
+                backup_file = registry_file.with_suffix('.json.backup')
+                if backup_file.exists():
+                    try:
+                        with open(backup_file, 'r') as f:
+                            registry = json.load(f)
+                        print("Successfully loaded from backup registry")
+                    except (json.JSONDecodeError, ValueError):
+                        print("Backup registry also corrupted, starting with empty registry")
+                        registry = {"windows": {}}
+                else:
+                    print("No backup available, starting with empty registry")
+                    registry = {"windows": {}}
             
             if "windows" in registry:
                 from .desktop_ui import get_desktop_manager

@@ -5,19 +5,23 @@ Provides a Lua-like interactive prompt with access to plua features
 
 import asyncio
 import traceback
+import sys
+import threading
+import queue
 from typing import Optional
 from .runtime import LuaAsyncRuntime
 
 
 class PluaREPL:
-    """Interactive        # Give the API server a moment to start
-        await asyncio.sleep(0.5)L for plua with async support"""
+    """Interactive REPL for plua with async support"""
 
     def __init__(self, runtime):
         self.runtime = runtime
         self.debug = runtime.config.get('debug', False)
         self.running = True
         self.repl_task = None
+        self.input_queue = queue.Queue()
+        self.input_thread = None
 
     async def initialize(self):
         """Initialize the runtime and start callback loop"""
@@ -164,19 +168,50 @@ class PluaREPL:
                 traceback.print_exc()
             return False
 
+    def _input_thread_worker(self):
+        """Worker thread for reading input"""
+        while self.running:
+            try:
+                if not sys.stdin.isatty():
+                    # Non-interactive mode, exit immediately
+                    self.input_queue.put(None)
+                    break
+                    
+                line = input("plua> ")
+                self.input_queue.put(line)
+            except EOFError:
+                self.input_queue.put(None)
+                break
+            except KeyboardInterrupt:
+                # This won't actually work in the thread, but let's try
+                self.input_queue.put("")
+                continue
+            except:
+                # Thread is being terminated
+                break
+
     async def read_input(self) -> Optional[str]:
-        """Read input from user asynchronously"""
-        # Use asyncio to read input without blocking the event loop
-        loop = asyncio.get_event_loop()
-        try:
-            # Run input() in a thread pool to avoid blocking
-            line = await loop.run_in_executor(None, input, "plua> ")
-            return line
-        except EOFError:
-            return None
-        except KeyboardInterrupt:
-            print()  # New line after ^C
-            return ""  # Empty string to continue
+        """Read input from user, handling Ctrl+C gracefully"""
+        # Start input thread if not already running
+        if self.input_thread is None or not self.input_thread.is_alive():
+            self.input_thread = threading.Thread(target=self._input_thread_worker, daemon=True)
+            self.input_thread.start()
+        
+        # Poll the queue with timeout to allow cancellation
+        while self.running:
+            try:
+                # Check queue with short timeout to remain responsive
+                try:
+                    line = self.input_queue.get(timeout=0.1)
+                    return line
+                except queue.Empty:
+                    # No input yet, continue polling
+                    await asyncio.sleep(0.01)
+                    continue
+            except Exception:
+                return None
+        
+        return None
 
     async def repl_loop(self):
         """Main REPL loop"""
@@ -197,6 +232,10 @@ class PluaREPL:
             except KeyboardInterrupt:
                 print("\nUse exit() or Ctrl+D to quit")
                 continue
+            except asyncio.CancelledError:
+                # Handle graceful cancellation
+                print("\nREPL interrupted")
+                break
             except Exception as e:
                 print(f"REPL error: {e}")
                 if self.debug:
@@ -215,9 +254,24 @@ class PluaREPL:
             self.repl_task = asyncio.create_task(self.repl_loop(), name="repl_loop")
             await self.repl_task
 
+        except asyncio.CancelledError:
+            print("\nREPL cancelled")
+            raise
+        except KeyboardInterrupt:
+            print("\nREPL interrupted")
+            if self.repl_task and not self.repl_task.done():
+                self.repl_task.cancel()
         finally:
             # Clean shutdown
-            self.runtime.stop()
+            self.running = False
+            
+            # Clean up input thread
+            if self.input_thread and self.input_thread.is_alive():
+                # Give the thread a chance to exit naturally
+                self.input_thread.join(timeout=0.5)
+            
+            if hasattr(self.runtime, 'stop'):
+                self.runtime.stop()
 
 
 async def run_repl(runtime=None):

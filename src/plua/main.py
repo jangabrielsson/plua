@@ -72,10 +72,26 @@ def cleanup_on_exit():
 
 def setup_signal_handlers():
     """Set up signal handlers for graceful shutdown"""
-    def signal_handler(signum, frame):
+    def unified_signal_handler(signum, frame):
         print(f"\nReceived signal {signum}, shutting down...")
-        # Force cleanup of mobdebug and desktop processes
-        force_cleanup_all()
+        
+        # Always try to close QuickApp windows first
+        try:
+            from .luafuns_lib import close_all_quickapp_windows
+            result = close_all_quickapp_windows()
+            if result.get('closed_count', 0) > 0:
+                print(f"Closed {result['closed_count']} QuickApp windows")
+        except Exception as e:
+            print(f"Warning: Could not close QuickApp windows: {e}")
+        
+        # Force cleanup of other resources
+        try:
+            force_cleanup_all()
+        except Exception:
+            pass
+        
+        # Clean exit
+        import sys
         sys.exit(0)
     
     # Register signal handlers for common termination signals
@@ -89,7 +105,7 @@ def setup_signal_handlers():
     if hasattr(signal, 'SIGINT'):
         signals_to_handle.append(signal.SIGINT)
     
-    # SIGHUP - hangup signal (terminal disconnection)
+    # SIGHUP - hangup signal (terminal disconnection) - Unix only
     if hasattr(signal, 'SIGHUP'):
         signals_to_handle.append(signal.SIGHUP)
     
@@ -100,9 +116,10 @@ def setup_signal_handlers():
     # Register handlers for available signals
     for sig in signals_to_handle:
         try:
-            signal.signal(sig, signal_handler)
-        except (OSError, ValueError):
+            signal.signal(sig, unified_signal_handler)
+        except (OSError, ValueError) as e:
             # Some signals may not be available on all platforms
+            # This is expected and normal
             pass
     
     # Also register atexit handler as final fallback
@@ -239,7 +256,14 @@ async def run_interactive(
         # Now enter interactive REPL
         from .repl import PluaREPL
         repl = PluaREPL(runtime)
-        await repl.start()
+        
+        # The unified signal handler will handle Ctrl+C for us
+        # No need for special REPL signal handling - keep it simple!
+        
+        try:
+            await repl.start()
+        except KeyboardInterrupt:
+            print("\nInterrupted")
 
     except KeyboardInterrupt:
         print("\nReceived interrupt signal, shutting down...")

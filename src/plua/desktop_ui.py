@@ -323,13 +323,27 @@ except Exception as e:
                 temp_script = f.name
             
             # Start the webview process with full detachment
-            process = subprocess.Popen([sys.executable, temp_script], 
-                                     stdout=subprocess.DEVNULL, 
-                                     stderr=subprocess.DEVNULL,
-                                     stdin=subprocess.DEVNULL,
-                                     start_new_session=True,  # Detach from parent process group
-                                     preexec_fn=os.setsid if hasattr(os, 'setsid') else None  # Create new session
-                                     )
+            # Use different approaches based on platform for maximum compatibility
+            popen_kwargs = {
+                'stdout': subprocess.DEVNULL,
+                'stderr': subprocess.DEVNULL,
+                'stdin': subprocess.DEVNULL,
+            }
+            
+            # Platform-specific detachment
+            import platform
+            if platform.system() == 'Windows':
+                # Windows: Use CREATE_NEW_PROCESS_GROUP
+                popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP if hasattr(subprocess, 'CREATE_NEW_PROCESS_GROUP') else 0
+            else:
+                # Unix/macOS: Try different detachment methods
+                try:
+                    popen_kwargs['start_new_session'] = True
+                except:
+                    # If start_new_session fails, try without it
+                    pass
+            
+            process = subprocess.Popen([sys.executable, temp_script], **popen_kwargs)
             
             self.windows[window_id] = {
                 "process": process,

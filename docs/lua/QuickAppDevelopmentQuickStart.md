@@ -52,10 +52,6 @@ Example `.env` contents:
 HC3_URL=https://192.168.1.100
 HC3_USER=admin
 HC3_PASSWORD=mySecretPassword123
-
-# Optional: Development settings
-DEBUG=true
-LOG_LEVEL=info
 ```
 
 ## Project Scaffolding

@@ -2,6 +2,24 @@
 
 Python-Lua async runtime with timer support
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [VSCode integration](#vscode-integration)
+- [Examples](#examples)
+- [📚 Documentation](#-documentation)
+  - [Lua API Documentation](#lua-api-documentation)
+  - [Fibaro HC3 Integration](#fibaro-hc3-integration)
+  - [Plua Development](#plua-development)
+  - [Quick Links](#quick-links)
+- [Development](#development)
+- [Architecture](#architecture)
+- [License](#license)
+- [Requirements](#requirements)
+
 ## Overview
 
 plua is a Python package that provides an async runtime environment for executing Lua scripts with JavaScript-like timer functionality. It bridges Python's asyncio with Lua's coroutines, allowing for sophisticated async programming patterns.
@@ -321,7 +339,7 @@ The API server and local REPL share the same Lua interpreter instance, so:
 - Timers set via API continue running in the background
 - State is shared seamlessly between web and terminal interfaces
 
-## VSCode launch
+## VSCode integration
 Setup launch tasks in .vscode/launch.json
 The executable is either `plua` if installed and accesible globally,
 or if running from the plua repo, `${workspaceFolder}/run.sh`
@@ -375,8 +393,8 @@ Running current lua file, with or without Fibaro support loaded.
     ]
 }
 ```
-
-## Lua API
+[More information in VSCode integration chapter](docs/lua/VSCodeintegration.md)
+## Examples
 
 ### Timer Functions
 
@@ -423,45 +441,7 @@ ws:connect("wss://echo.websocket.org/", {
 })
 ```
 
-### Fibaro HC3 API Integration
-
-```lua
--- Enable Fibaro API support
--- Run with: plua --fibaro script.lua
-
--- Use standard Fibaro API functions
-fibaro.call(123, "turnOn")
-local value = fibaro.getValue(456, "value") 
-fibaro.sleep(1000)
-
--- QuickApp development
-function QuickApp:onInit()
-    self:debug("QuickApp started")
-    self:updateProperty("value", 42)
-end
-```
-
-### Coroutines
-
-```lua
-local function asyncFunction()
-    print("Start")
-    local co = coroutine.running()
-    
-    setTimeout(function() 
-        coroutine.resume(co, "result") 
-    end, 1000)
-    
-    local result = coroutine.yield()
-    print("Got result:", result)
-end
-
-coroutine.wrap(asyncFunction)()
-```
-
-## Examples
-
-### Example 1: HTTP Client with Timers
+### HTTP Client with Timers
 
 ```lua
 local client = net.HTTPClient()
@@ -478,7 +458,7 @@ client:get("https://httpbin.org/delay/2", function(response)
 end)
 ```
 
-### Example 2: Interval Timer with Cancellation
+### Interval Timer with Cancellation
 
 ```lua
 local count = 0
@@ -493,9 +473,24 @@ local interval_id = setInterval(function()
 end, 1000)
 ```
 
-### Example 3: Coroutine with Async Operations
+### Coroutines with Async Operations
 
 ```lua
+local function asyncFunction()
+    print("Start")
+    local co = coroutine.running()
+    
+    setTimeout(function() 
+        coroutine.resume(co, "result") 
+    end, 1000)
+    
+    local result = coroutine.yield()
+    print("Got result:", result)
+end
+
+coroutine.wrap(asyncFunction)()
+
+-- More complex async task
 local function asyncTask()
     print("Task starting...")
     
@@ -510,6 +505,139 @@ local function asyncTask()
 end
 
 coroutine.wrap(asyncTask)()
+```
+
+### Fibaro HC3 API Integration
+
+Enable Fibaro API support by running with the `--fibaro` flag:
+
+```bash
+# Run with Fibaro API support
+plua --fibaro script.lua
+```
+
+#### Basic Fibaro API Usage
+
+```lua
+-- Use standard Fibaro API functions
+fibaro.call(123, "turnOn")
+local value = fibaro.getValue(456, "value") 
+fibaro.sleep(1000)
+
+-- Get device information
+local devices = api.get("/devices")
+for _, device in ipairs(devices) do
+    print("Device:", device.name, "ID:", device.id)
+end
+```
+
+#### QuickApp Development
+
+```lua
+-- QuickApp class example
+function QuickApp:onInit()
+    self:debug("QuickApp started")
+    self:updateProperty("value", 42)
+    
+    -- Set up timer for periodic updates
+    setInterval(function()
+        local newValue = math.random(1, 100)
+        self:updateProperty("value", newValue)
+        self:debug("Updated value to:", newValue)
+    end, 5000)
+end
+
+function QuickApp:turnOn()
+    self:updateProperty("value", 100)
+    self:debug("Device turned on")
+end
+
+function QuickApp:turnOff()
+    self:updateProperty("value", 0)
+    self:debug("Device turned off")
+end
+```
+
+#### Generated API Endpoints
+
+The Fibaro API endpoints are auto-generated from official Swagger/OpenAPI specifications:
+
+```bash
+# Regenerate Fibaro API endpoints and models
+python src/plua/generate_typed_fibaro_api.py
+
+# Start server with Fibaro API
+plua --api-port 8888 --fibaro
+
+# Test an endpoint
+curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
+```
+
+Features include:
+- **Complete Coverage**: All major Fibaro HC3 API endpoints
+- **Type Safety**: Full Pydantic validation for request/response data
+- **Swagger Documentation**: Auto-generated API docs at `/docs`
+- **Lua Integration**: All calls delegate to `_PY.fibaro_api_hook(method, path, data)`
+- **Easy Testing**: Use web interface or curl to test endpoints
+
+#### HC3 Configuration with .env File
+
+To connect plua to a real Fibaro Home Center 3 device, create a `.env` file with your HC3 credentials. plua searches for `.env` files in the following order:
+
+1. **Current directory** (project-specific): `./.env`
+2. **Home directory** (user-global): `~/.env` 
+3. **Config directory** (platform-specific):
+   - Linux/macOS: `~/.config/plua/.env`
+   - Windows: `%APPDATA%\plua\.env`
+
+```bash
+# Option 1: Project-specific .env (recommended for development)
+cd /path/to/your/fibaro/project
+cat > .env << EOF
+HC3_URL=https://192.168.1.100
+HC3_USER=admin
+HC3_PASSWORD=your_password_here
+EOF
+
+# Option 2: User-global .env (works from any directory)
+cat > ~/.env << EOF
+HC3_URL=https://192.168.1.100
+HC3_USER=admin
+HC3_PASSWORD=your_password_here
+EOF
+```
+
+Example `.env` file:
+```env
+# Fibaro HC3 Connection Settings
+HC3_URL=https://192.168.1.100
+HC3_USER=admin
+HC3_PASSWORD=mySecretPassword123
+
+# Optional: Add other environment variables your scripts might need
+DEBUG=true
+LOG_LEVEL=info
+```
+
+**Usage Examples:**
+```bash
+# Works from any directory if you have ~/.env configured
+cd /any/directory
+plua --fibaro my_script.lua
+
+# Works from project directory with local .env
+cd /my/fibaro/project
+plua --fibaro script.lua   # Uses ./env (takes precedence over ~/.env)
+```
+
+**Usage in Lua Scripts:**
+```lua
+-- Access environment variables in your Lua code
+local hc3_url = os.getenv("HC3_URL")
+local debug_mode = os.getenv("DEBUG") == "true"
+
+-- Environment variables are automatically loaded by the Fibaro emulator
+-- when you use --fibaro flag
 ```
 
 ## Architecture
@@ -533,7 +661,8 @@ coroutine.wrap(asyncTask)()
 
 Comprehensive documentation is available in the `docs/` directory:
 
-- **[Documentation Index](docs/README.md)** - Complete documentation overview
+
+### Plua Development
 - **[Web REPL HTML Examples](docs/WEB_REPL_HTML_EXAMPLES.md)** - HTML rendering guide for web interface
 - **[REST API Documentation](docs/api/README.md)** - Complete API reference and examples
 - **[Developer Documentation](docs/dev/README.md)** - Implementation details and development guides
@@ -563,115 +692,6 @@ Detailed Lua API documentation is available in `docs/lua/`:
 - 📡 **API Integration**: [REST API Docs](docs/api/README.md)
 - 🔧 **Contributing**: [Developer Docs](docs/dev/README.md)
 - 📖 **Lua API**: [Lua Documentation](docs/lua/README.md)
-
-## Fibaro HC3 API Integration
-
-plua includes a comprehensive Fibaro Home Center 3 API emulator with full type safety and documentation:
-
-### Generated API Endpoints
-
-The Fibaro API endpoints are auto-generated from official Swagger/OpenAPI specifications:
-
-```bash
-# Regenerate Fibaro API endpoints and models
-python src/plua/generate_typed_fibaro_api.py
-
-# Generate with custom paths
-python src/plua/generate_typed_fibaro_api.py --docs-dir fibaro_api_docs --output-dir src/plua
-```
-
-This generates:
-- **`fibaro_api_models.py`**: 305+ Pydantic models with full type validation
-- **`fibaro_api_endpoints.py`**: 267+ FastAPI endpoints with proper documentation
-
-### Fibaro API Features
-
-- **Complete Coverage**: All major Fibaro HC3 API endpoints
-- **Type Safety**: Full Pydantic validation for request/response data
-- **Swagger Documentation**: Auto-generated API docs at `/docs`
-- **Lua Integration**: All calls delegate to `_PY.fibaro_api_hook(method, path, data)`
-- **Easy Testing**: Use web interface or curl to test endpoints
-
-```bash
-# Start server with Fibaro API
-plua --api-port 8888 --fibaro
-
-# Test an endpoint
-curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
-```
-
-### HC3 Configuration with .env File
-
-To connect plua to a real Fibaro Home Center 3 device, create a `.env` file with your HC3 credentials. plua searches for `.env` files in the following order:
-
-1. **Current directory** (project-specific): `./.env`
-2. **Home directory** (user-global): `~/.env` 
-3. **Config directory** (platform-specific):
-   - Linux/macOS: `~/.config/plua/.env`
-   - Windows: `%APPDATA%\plua\.env`
-
-```bash
-# Option 1: Project-specific .env (recommended for development)
-cd /path/to/your/fibaro/project
-cat > .env << EOF
-HC3_URL=https://192.168.1.100
-HC3_USER=admin
-HC3_PASSWORD=your_password_here
-EOF
-
-# Option 2: User-global .env (works from any directory)
-cat > ~/.env << EOF
-HC3_URL=https://192.168.1.100
-HC3_USER=admin
-HC3_PASSWORD=your_password_here
-EOF
-```
-
-The `.env` file should contain:
-- **`HC3_URL`**: Your Home Center 3 IP address or hostname (without trailing slash)
-- **`HC3_USER`**: HC3 username (usually 'admin')  
-- **`HC3_PASSWORD`**: HC3 password
-
-Example `.env` file:
-```env
-# Fibaro HC3 Connection Settings
-HC3_URL=https://192.168.1.100
-HC3_USER=admin
-HC3_PASSWORD=mySecretPassword123
-
-# Optional: Add other environment variables your scripts might need
-DEBUG=true
-LOG_LEVEL=info
-```
-
-**Security Notes:**
-- Project-specific `.env` files: Add `.env` to your `.gitignore` file to prevent committing credentials
-- User-global `~/.env` file: Set appropriate file permissions (`chmod 600 ~/.env` on Unix systems)
-- Use HTTPS URLs when possible
-- Consider using environment variables directly in production environments
-
-**Usage Examples:**
-```bash
-# Works from any directory if you have ~/.env configured
-cd /any/directory
-plua --fibaro my_script.lua
-
-# Works from project directory with local .env
-cd /my/fibaro/project
-plua --fibaro script.lua   # Uses ./env (takes precedence over ~/.env)
-```
-
-**Usage in Lua Scripts:**
-```lua
--- Access environment variables in your Lua code
-local hc3_url = os.getenv("HC3_URL")
-local debug_mode = os.getenv("DEBUG") == "true"
-
--- Environment variables are automatically loaded by the Fibaro emulator
--- when you use --fibaro flag
-```
-
-When you run plua with the `--fibaro` flag, it automatically reads these environment variables and configures the HC3 connection for API calls.
 
 ## Development
 

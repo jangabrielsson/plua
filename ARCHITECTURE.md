@@ -635,10 +635,6 @@ curl -s https://pypi.org/pypi/plua/1.0.85/json | jq -r '.urls[0].size'
 
 ### Development Issues
 
-#### VS Code Tasks Not Working
-- **Requirement**: Lua with hc3emu2 module installed
-- **Solution**: Install required HC3 development tools separately
-
 #### Fibaro API Not Responding
 - **Cause**: `_PY.fibaro_api_hook` not implemented
 - **Solution**: Load `fibaro.lua` or implement custom hook handler

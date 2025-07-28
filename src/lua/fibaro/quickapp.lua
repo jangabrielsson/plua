@@ -1,4 +1,4 @@
--- @module hc3emu2.quickapp
+-- @module fibaro.quickapp
 ---@description QuickApp core functionality for Plua
 ---@author Jan Gabrielsson
 ---@license MIT

@@ -312,14 +312,14 @@ def init_quickapp_project() -> None:
         "cwd": "${workspaceFolder}"
       },
       "presentation": {
-        "echo": false,
-        "close": false,
+        "echo": False,
+        "close": False,
         "reveal": "silent",
         "revealProblems": "never",
-        "focus": false,
+        "focus": False,
         "panel": "shared",
-        "clear": false,
-        "showReuseMessage": false
+        "clear": False,
+        "showReuseMessage": False
       },
       "problemMatcher": [],
       "windows": {
@@ -632,14 +632,14 @@ def get_vscode_tasks_config() -> Dict[str, Any]:
         "cwd": "${workspaceFolder}"
       },
       "presentation": {
-        "echo": false,
-        "close": false,
+        "echo": False,
+        "close": False,
         "reveal": "silent",
         "revealProblems": "never",
-        "focus": false,
+        "focus": False,
         "panel": "shared",
-        "clear": false,
-        "showReuseMessage": false
+        "clear": False,
+        "showReuseMessage": False
       },
       "problemMatcher": [],
       "windows": {

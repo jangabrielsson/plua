@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run plua with current file",
+            "type": "python",
+            "request": "launch",
+            "module": "plua",
+            "args": [
+                "--fibaro",
+                "-i",
+                "${file}"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Run plua interactive",
+            "type": "python",
+            "request": "launch",
+            "module": "plua",
+            "args": [
+                "--fibaro",
+                "-i"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

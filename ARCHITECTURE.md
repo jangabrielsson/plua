@@ -2,11 +2,15 @@
 
 plua is a Python-Lua async runtime that bridges Python's asyncio with Lua's coroutines, providing JavaScript-like timers and async operations. This document outlines the core architecture, components, and subsystems.
 
+**Current Version**: 1.1.4
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Core Architecture](#core-architecture)
 - [Component Details](#component-details)
+- [Signal Handling & Process Management](#signal-handling--process-management)
+- [Configuration System](#configuration-system)
 - [Data Flow](#data-flow)
 - [Fibaro Integration](#fibaro-integration)
 - [Development Patterns](#development-patterns)
@@ -182,6 +186,180 @@ graph LR
 3. **Callback Queue**: Decouples timer expiration from Lua execution
 4. **Resource Management**: Automatic cleanup of expired timers
 
+## 🛡️ Signal Handling & Process Management
+
+plua implements robust signal handling and process cleanup for reliable operation across platforms:
+
+### Unified Signal Handler
+
+```mermaid
+graph TB
+    subgraph "Signal Detection"
+        A[SIGINT/SIGTERM] --> B[Unified Signal Handler]
+        C[Ctrl+C/Keyboard Interrupt] --> B
+        D[IDE/Editor Termination] --> B
+    end
+    
+    subgraph "Cleanup Coordination"
+        B --> E[REPL Shutdown Flag]
+        B --> F[QuickApp Window Cleanup]
+        B --> G[Desktop UI Manager Stop]
+        B --> H[API Server Shutdown]
+    end
+    
+    subgraph "Cross-Platform Process Management"
+        F --> I[Windows: taskkill /F]
+        F --> J[Unix: kill -TERM/-KILL]
+        F --> K[Process Registry Cleanup]
+    end
+    
+    subgraph "Graceful Termination"
+        E --> L[Cooperative REPL Exit]
+        G --> M[Window Close Coordination]
+        H --> N[FastAPI Shutdown]
+        K --> O[Timeout Protection]
+    end
+    
+    style B fill:#ff9999
+    style F fill:#99ccff
+    style O fill:#99ff99
+```
+
+### Desktop UI Management (`desktop_ui.py`)
+
+The desktop UI system manages QuickApp windows with full lifecycle control:
+
+#### Key Features:
+- **Window Registry**: Persistent tracking of QuickApp windows across sessions
+- **Process Management**: Cross-platform process termination and cleanup
+- **Force Cleanup**: Handles orphaned processes from IDE kills (kill -9)
+- **Graceful Shutdown**: Coordinates with signal handler for clean exits
+
+#### Window Lifecycle:
+```mermaid
+sequenceDiagram
+    participant User as User/IDE
+    participant Signal as Signal Handler
+    participant Manager as DesktopUIManager
+    participant Registry as Window Registry
+    participant Process as Window Process
+    
+    User->>Signal: Ctrl+C / IDE Stop
+    Signal->>Manager: cleanup_all_windows()
+    Manager->>Registry: Get active windows
+    Registry-->>Manager: Window list with PIDs
+    
+    loop For each window
+        Manager->>Process: Graceful termination (SIGTERM)
+        alt Process responds
+            Process-->>Manager: Clean exit
+        else Timeout
+            Manager->>Process: Force kill (SIGKILL)
+        end
+        Manager->>Registry: Mark window as closed
+    end
+    
+    Manager-->>Signal: Cleanup complete
+    Signal-->>User: Clean exit
+```
+
+### Timeout Protection
+
+All cleanup operations include timeout protection to prevent hanging:
+
+```python
+# Example timeout protection pattern
+try:
+    # Graceful termination attempt
+    process.terminate()
+    process.wait(timeout=3)  # 3-second grace period
+except TimeoutExpired:
+    # Force termination if graceful fails
+    process.kill()
+    process.wait(timeout=2)  # Additional timeout for force kill
+```
+
+## ⚙️ Configuration System
+
+plua provides multiple configuration mechanisms for different use cases:
+
+### CLI Configuration
+
+```bash
+# Basic execution modes
+plua script.lua                    # Standard execution
+plua --noapi script.lua           # Disable API server
+plua --duration 60 script.lua     # Auto-terminate after 60 seconds
+
+# Development flags
+plua --local script.lua           # Enable local development mode
+plua --fibaro script.lua          # Enable Fibaro HC3 emulation
+plua --debugger script.lua        # Enable MobDebug remote debugging
+
+# Signal handling and cleanup
+plua --close-windows              # Close all QuickApp windows and exit
+plua --cleanup-registry           # Clean up window registry and exit
+plua --cleanup-port              # Clean up stuck API port and exit
+```
+
+### Runtime Configuration Bridge
+
+The `--local` flag demonstrates the configuration bridge pattern:
+
+```mermaid
+graph LR
+    subgraph "CLI Layer"
+        A[--local flag] --> B[argparse]
+        B --> C[runtime_config dict]
+    end
+    
+    subgraph "Python Runtime"
+        C --> D[LuaAsyncRuntime.config]
+        D --> E[Lua Environment Setup]
+    end
+    
+    subgraph "Lua Environment"
+        E --> F[runtime_config.local = true]
+        F --> G[User Script Access]
+    end
+    
+    style A fill:#ffcc99
+    style D fill:#99ccff
+    style F fill:#99ff99
+```
+
+#### Implementation Pattern:
+```python
+# Python side (main.py)
+def setup_runtime_config(args):
+    config = {}
+    if args.local:
+        config['local'] = True
+    return config
+
+# Lua side (accessible in scripts)
+if runtime_config.local then
+    print("Running in local development mode")
+    -- Enable local-specific features
+end
+```
+
+### Environment Configuration
+
+plua supports `.env` file configuration for external integrations:
+
+```env
+# HC3 Integration
+HC3_URL=https://192.168.1.100
+HC3_USER=admin
+HC3_PASSWORD=your_password
+
+# Development Settings
+DEBUG=true
+LOG_LEVEL=info
+API_PORT=8888
+```
+
 ### 4. Network Layer
 
 The network subsystem provides async networking with Fibaro HC3 compatibility:
@@ -220,7 +398,56 @@ graph TB
     style O fill:#99ff99
 ```
 
-### 5. Web Interface and REST API
+### 5. User Experience & Output Management
+
+plua prioritizes clean, professional output with comprehensive debug message management:
+
+#### Output Philosophy:
+- **Silent Operation**: Background processes (window creation, cleanup) operate silently
+- **Essential Warnings Only**: Error conditions that need user attention are preserved
+- **Development vs Production**: Debug output available when explicitly enabled
+- **Clean Termination**: Signal handling produces minimal, informative output
+
+#### Debug Output Cleanup:
+```mermaid
+graph LR
+    subgraph "Verbose Debug Messages (Removed)"
+        A[Window Creation Details] --> B[Process Termination Logs]
+        C[Registry Update Messages] --> D[Manager State Changes]
+        E[Process Status Checks] --> F[Signal Handler Details]
+    end
+    
+    subgraph "Essential Output (Preserved)"
+        G[Error Conditions] --> H[Important Warnings]
+        I[User-Facing Status] --> J[Critical Failures]
+    end
+    
+    subgraph "Optional Debug Output"
+        K[--debug Flag] --> L[Verbose Logging]
+        M[Development Mode] --> N[Enhanced Diagnostics]
+    end
+    
+    style A fill:#ffcccc
+    style G fill:#ccffcc
+    style K fill:#ccccff
+```
+
+#### Clean Output Examples:
+```bash
+# Before cleanup (verbose)
+get_desktop_manager called, desktop_manager = None
+Creating new DesktopUIManager instance
+Checking for existing window for QA 4123
+Terminated process for window qa_4123_1234567 (PID: 1234)
+Desktop UI Manager stopped - closed all windows
+
+# After cleanup (clean)
+Plua v1.1.4 with Lua 5.4
+API server on 0.0.0.0:8888
+[DEBUG][Basic_Proxy4123]: Basic_Proxy initialized
+```
+
+### 6. Web Interface and REST API
 
 plua provides multiple interfaces for interaction:
 
@@ -455,15 +682,23 @@ client:request("https://api.example.com/data", {
 ```mermaid
 sequenceDiagram
     participant CLI as plua CLI
+    participant Signal as Signal Handler
     participant Runtime as LuaAsyncRuntime
     participant API as FastAPI Server
     participant Lua as Lua Environment
     participant Script as User Script
     
+    CLI->>Signal: Register signal handlers (SIGINT/SIGTERM)
     CLI->>Runtime: Initialize with config
     Runtime->>API: Start FastAPI server (port 8888)
     Runtime->>Lua: Create LuaInterpreter
     Lua->>Lua: Load init.lua (timers, _PY bridge)
+    
+    alt Configuration flags
+        Note over Runtime,Lua: --local → runtime_config.local=true
+        Note over Runtime,API: --fibaro → Register HC3 endpoints
+        Note over Runtime,Lua: --debugger → Enable MobDebug
+    end
     
     alt Fibaro flag enabled
         Runtime->>API: Register 194 Fibaro endpoints
@@ -479,6 +714,70 @@ sequenceDiagram
     
     API-->>CLI: Web interface available
     Runtime->>Runtime: Run event loop until termination
+    
+    Note over Signal: Ctrl+C or termination signal
+    Signal->>Runtime: Initiate graceful shutdown
+    Runtime->>API: Stop FastAPI server
+    Runtime->>Lua: Cleanup QuickApp windows
+    Signal-->>CLI: Clean exit (return code 0)
+```
+
+## 🔧 Enhanced CLI Interface
+
+### Command Structure
+
+plua's CLI follows Unix conventions with comprehensive flag support:
+
+```bash
+# Execution Modes
+plua                              # Interactive REPL
+plua script.lua                   # Execute script
+plua -e 'code' script.lua         # Inline code + script
+plua -i script.lua                # Execute then enter REPL
+
+# Configuration Flags
+plua --local script.lua           # Enable local development mode
+plua --fibaro script.lua          # Enable HC3 emulation
+plua --duration 60 script.lua     # Auto-terminate after 60 seconds
+plua --debugger script.lua        # Enable remote debugging
+
+# API Server Control
+plua --noapi script.lua           # Disable API server
+plua --api-port 9000 script.lua   # Custom API port
+plua --api-host 127.0.0.1 script.lua  # Custom API host
+
+# Utility Commands
+plua --cleanup-port               # Clean up stuck API port
+plua --close-windows              # Close all QuickApp windows
+plua --close-qa-window 123        # Close specific QA window
+plua --cleanup-registry           # Clean up window registry
+plua --version                    # Show version information
+```
+
+### Enhanced Help System
+
+```bash
+$ plua --help
+usage: plua [-h] [-e SCRIPT_FRAGMENTS] [--duration DURATION] 
+            [--debugger] [--debug] [--fibaro] [--local] [-i]
+            [--noapi] [--api-port API_PORT] [--cleanup-port]
+            [--close-windows] [--version] [lua_file]
+
+plua - Python-Lua async runtime with timer support
+
+positional arguments:
+  lua_file              Lua file to execute
+
+options:
+  --local               Enable local mode (sets runtime_config.local=true)
+  --fibaro              Load Fibaro API support  
+  --cleanup-port        Clean up the API port and exit
+  --close-windows       Close all open QuickApp windows and exit
+  
+Examples:
+  plua --local script.lua           # Local development mode
+  plua --fibaro --local script.lua  # HC3 emulation + local mode
+  plua --cleanup-port               # Fix stuck API port
 ```
 
 ## 📊 Performance Considerations
@@ -616,7 +915,7 @@ search_paths = [
 Correct plua wheel should be ~160KB. Smaller sizes (87KB) indicate missing lua files:
 ```bash
 # Check PyPI package size
-curl -s https://pypi.org/pypi/plua/1.0.85/json | jq -r '.urls[0].size'
+curl -s https://pypi.org/pypi/plua/1.1.4/json | jq -r '.urls[0].size'
 ```
 
 ### Runtime Issues
@@ -632,6 +931,56 @@ curl -s https://pypi.org/pypi/plua/1.0.85/json | jq -r '.urls[0].size'
 #### API Server Not Starting
 - **Cause**: Port already in use or permissions issue
 - **Solution**: Use `--api-port` flag or `--noapi` to disable
+- **Emergency Cleanup**: Use `plua --cleanup-port` to clean up stuck ports
+
+### Signal Handling & Process Management Issues
+
+#### Process Hanging on Exit
+**Symptoms**: plua doesn't respond to Ctrl+C or hangs on exit
+
+**Solutions**:
+1. **Check for Background Processes**:
+   ```bash
+   plua --close-windows  # Close any orphaned QuickApp windows
+   plua --cleanup-registry  # Clean up process registry
+   ```
+
+2. **Force Termination** (if needed):
+   ```bash
+   # Find plua processes
+   ps aux | grep plua
+   kill -9 <pid>  # Force kill if necessary
+   ```
+
+#### QuickApp Windows Not Closing
+**Symptoms**: Desktop QuickApp windows remain open after plua exits
+
+**Solutions**:
+1. **Manual Cleanup**:
+   ```bash
+   plua --close-windows  # Close all QuickApp windows
+   ```
+
+2. **Specific Window Cleanup**:
+   ```bash
+   plua --close-qa-window 123  # Close window for QA ID 123
+   ```
+
+3. **Registry Cleanup**:
+   ```bash
+   plua --cleanup-registry  # Clean up orphaned registry entries
+   ```
+
+#### Cross-Platform Process Issues
+
+**Windows-Specific**:
+- **Subprocess Variable Error**: Fixed in v1.1.4+ (ensure latest version)
+- **Process Termination**: Uses `taskkill /F` for reliable cleanup
+- **Path Issues**: Enhanced Windows path resolution
+
+**macOS/Linux-Specific**:
+- **Process Signals**: Uses `SIGTERM`/`SIGKILL` for graceful/force termination
+- **Permission Issues**: Ensure user has permission to terminate processes
 
 ### Development Issues
 
@@ -639,4 +988,96 @@ curl -s https://pypi.org/pypi/plua/1.0.85/json | jq -r '.urls[0].size'
 - **Cause**: `_PY.fibaro_api_hook` not implemented
 - **Solution**: Load `fibaro.lua` or implement custom hook handler
 
-This architecture provides a robust, extensible foundation for async Lua development with comprehensive HC3 compatibility and modern web-based development tools.
+#### Local Development Mode Not Working
+**Symptoms**: `runtime_config.local` is nil in Lua scripts
+
+**Solutions**:
+1. **Verify Flag Usage**:
+   ```bash
+   plua --local script.lua  # Ensure --local flag is used
+   ```
+
+2. **Check in Lua Script**:
+   ```lua
+   if runtime_config and runtime_config.local then
+       print("Local mode enabled")
+   else
+       print("Local mode not enabled")
+   end
+   ```
+
+#### Debug Output Issues
+**Problem**: Too much or too little debug output
+
+**Solutions**:
+1. **Clean Output** (default in v1.1.4+):
+   ```bash
+   plua script.lua  # Minimal, clean output
+   ```
+
+2. **Enable Debug Output**:
+   ```bash
+   plua --debug script.lua  # Verbose debug logging
+   ```
+
+3. **Check Output Cleanup**:
+   - Window creation/destruction happens silently
+   - Process termination messages removed
+   - Only essential warnings preserved
+
+### Performance Issues
+
+#### High Memory Usage
+- **Cause**: Lua objects not being garbage collected
+- **Solution**: Explicit cleanup in long-running scripts
+  ```lua
+  collectgarbage("collect")  -- Force Lua GC
+  ```
+
+#### Slow Startup
+- **Cause**: Large number of Fibaro endpoints being registered
+- **Solution**: Use `--noapi` flag if web interface not needed
+  ```bash
+  plua --noapi --fibaro script.lua  # Faster startup
+  ```
+
+#### Timer Performance Degradation
+- **Cause**: Accumulation of expired timer callbacks
+- **Solution**: Use proper timer cleanup patterns
+  ```lua
+  local timer_id = setTimeout(callback, delay)
+  clearTimeout(timer_id)  -- Clean up when done
+  ```
+
+This comprehensive troubleshooting guide covers the enhanced signal handling, process management, and user experience improvements introduced in recent versions.
+
+---
+
+## 🎯 Architecture Evolution & Maturity
+
+### Recent Improvements (v1.1.x)
+
+The plua architecture has evolved significantly to provide enterprise-grade reliability:
+
+1. **Robust Process Management**: Cross-platform signal handling with graceful cleanup
+2. **Enhanced User Experience**: Clean, professional output with debug message management
+3. **Flexible Configuration**: Runtime configuration bridge with `--local` and other flags
+4. **Production Ready**: Comprehensive error handling and timeout protection
+5. **Developer Friendly**: Extensive CLI options and troubleshooting capabilities
+
+### Architecture Strengths
+
+- **Thread Safety**: Consistent Lua execution in main thread
+- **Resource Management**: Automatic cleanup of timers, processes, and network connections
+- **Cross-Platform Compatibility**: Unified operation across Windows, macOS, and Linux
+- **Extensibility**: Clear patterns for adding functionality and integration points
+- **Debugging Support**: Multiple debugging and development assistance features
+
+### Future Considerations
+
+- **Performance Optimization**: Continued refinement of timer and network subsystems
+- **Extended Platform Support**: Additional deployment and packaging options
+- **Enhanced IDE Integration**: Deeper VS Code and editor integration
+- **Advanced Debugging**: Enhanced debugging tools and profiling capabilities
+
+This architecture provides a robust, extensible foundation for async Lua development with comprehensive HC3 compatibility, modern web-based development tools, and production-ready reliability.

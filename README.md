@@ -59,7 +59,7 @@ plua myscript.lua
 
 After installation, the `plua` command will be available system-wide in your terminal/command prompt.
 
-### Alternative: Standalone Executables
+### Alternative: Standalone Executables (TBD)
 
 For users who prefer not to install Python dependencies, standalone executables are available:
 
@@ -199,6 +199,9 @@ plua -e 'print("setup")' script.lua                  # Combine -e and file
 # Fibaro HC3 API support
 plua --fibaro script.lua
 
+# Note: For real HC3 device integration, setup a .env file with your HC3 credentials
+# See HC3 Configuration section below for details
+
 # Debugging support
 plua --debugger script.lua                           # Enable MobDebug
 plua --debugger --debug script.lua                   # Verbose debug logging
@@ -208,6 +211,8 @@ plua --debugger --debugger-host 192.168.1.100 script.lua  # Remote debugger
 plua --cleanup-port                                   # Clean up stuck API port
 plua --version                                        # Show version
 ```
+
+**Note for Fibaro HC3 Users:** If you plan to connect to a real Fibaro Home Center 3 device, you'll need to configure a `.env` file with your HC3 credentials. See the [HC3 Configuration with .env File](#hc3-configuration-with-env-file) section for detailed setup instructions.
 
 ### Interactive REPL
 
@@ -586,9 +591,8 @@ To connect plua to a real Fibaro Home Center 3 device, create a `.env` file with
 
 1. **Current directory** (project-specific): `./.env`
 2. **Home directory** (user-global): `~/.env` 
-3. **Config directory** (platform-specific):
-   - Linux/macOS: `~/.config/plua/.env`
-   - Windows: `%APPDATA%\plua\.env`
+
+Recommended to put it in home directory so it is accessible from all development directories.
 
 ```bash
 # Option 1: Project-specific .env (recommended for development)

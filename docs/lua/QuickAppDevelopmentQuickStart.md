@@ -375,8 +375,6 @@ pip install pywebview
 
 ### Task Failures
 ```bash
-# Ensure hc3emu2 is installed
-luarocks install hc3emu2
 ```
 
 This guide provides everything needed to start developing QuickApps with plua efficiently. For detailed API documentation, refer to the comprehensive guides linked above.

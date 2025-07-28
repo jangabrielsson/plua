@@ -2,46 +2,133 @@
 
 This document lists all the Fibaro HC3 API functions available in the plua Fibaro emulation environment.
 
+## Function Index
+
+### Logging and Debug Functions
+- [`fibaro.debug(tag, ...)`](#fibarodebugtag-) - Debug level logging with tag
+- [`fibaro.trace(tag, ...)`](#fibarotracetag-) - Trace level logging with tag
+- [`fibaro.warning(tag, ...)`](#fibarowarningtag-) - Warning level logging with tag
+- [`fibaro.error(tag, ...)`](#fibaroerrortag-) - Error level logging with tag
+
+### Device Management Functions
+- [`fibaro.call(deviceId, action, ...)`](#fibarocalldeviceid-action-) - Execute action on device(s)
+- [`fibaro.callhc3(deviceId, action, ...)`](#fibarocallhc3deviceid-action-) - HC3-specific device action call
+- [`fibaro.get(deviceId, propertyName)`](#fibarogetdeviceid-propertyname) - Get device property value
+- [`fibaro.getValue(deviceId, propertyName)`](#fibarogetvaluedeviceid-propertyname) - Get device property value (alias)
+- [`fibaro.getType(deviceId)`](#fibarogettypedeviceid) - Get device type
+- [`fibaro.getName(deviceId)`](#fibarogetnamedeviceid) - Get device name
+- [`fibaro.getRoomID(deviceId)`](#fibarogetroomiddeviceid) - Get room ID for device
+- [`fibaro.getSectionID(deviceId)`](#fibarogetsectioniddeviceid) - Get section ID for device
+- [`fibaro.getRoomName(roomId)`](#fibarogetroomnameroomid) - Get room name by room ID
+- [`fibaro.getRoomNameByDeviceID(deviceId)`](#fibarogetroomnamebydeviceiddeviceid) - Get room name for device
+- [`fibaro.getDevicesID(filter)`](#fibarogetdevicesidfilter) - Get device IDs matching filter
+- [`fibaro.getIds(devices)`](#fibarogetidsdevices) - Extract IDs from device objects
+- [`fibaro.wakeUpDeadDevice(deviceID)`](#fibarowakeupdeaddevicedeviceid) - Wake up dead Z-Wave device
+
+### Global Variables
+- [`fibaro.getGlobalVariable(name)`](#fibarogetglobalvariablename) - Get global variable value and timestamp
+- [`fibaro.setGlobalVariable(name, value)`](#fibarosetglobalvariablename-value) - Set global variable value
+
+### Scene Variables
+- [`fibaro.getSceneVariable(name)`](#fibarogetscenevariablename) - Get scene variable value
+- [`fibaro.setSceneVariable(name, value)`](#fibarosetscenevariablename-value) - Set scene variable value
+
+### Scene and Profile Management
+- [`fibaro.scene(action, ids)`](#fibarosceneaction-ids) - Execute or kill scenes
+- [`fibaro.profile(action, id)`](#fibaroprofileaction-id) - Activate user profile
+
+### Security and Alarms
+- [`fibaro.alarm(partitionId, action)`](#fibaroalarmpartitionid-action) - Control alarm partitions
+- [`fibaro.getPartitions()`](#fibarogetpartitions) - Get all alarm partitions
+- [`fibaro.isHomeBreached()`](#fibaroisbreached) - Check if home security is breached
+- [`fibaro.isPartitionBreached(partitionId)`](#fibaroispartitionbreachedpartitionid) - Check if partition is breached
+- [`fibaro.getPartitionArmState(partitionId)`](#fibarogetpartitionarmstatepartitionid) - Get partition arm state
+- [`fibaro.getHomeArmState()`](#fibarogethomearmstate) - Get overall home arm state
+- [`fibaro.alert(alertType, ids, notification)`](#fibaroalertalerttype-ids-notification) - Send alerts to devices
+
+### Events and Actions
+- [`fibaro.emitCustomEvent(name)`](#fibaroemitcustomeventname) - Emit custom event
+- [`fibaro.callGroupAction(actionName, actionData)`](#fibarocallgroupactionactionname-actiondata) - Call group action
+
+### Timing Functions
+- [`fibaro.setTimeout(timeout, action, errorHandler)`](#fibarosettimeouttimeout-action-errorhandler) - Set timeout for delayed execution
+- [`fibaro.clearTimeout(ref)`](#fibarocleartimeoutref) - Clear timeout
+- [`fibaro.sleep(ms)`](#fibarosleepms) - Sleep current coroutine
+- [`fibaro.useAsyncHandler(value)`](#fibarouseasynchandlervalue) - Control async handler behavior
+
+### Global Functions
+- [`print(...)`](#print-) - Enhanced print function
+- [`class(name)`](#classname) - Create new class
+- [`setTimeout(func, ms)`](#settimeoutfunc-ms) - Global setTimeout function
+- [`setInterval(func, ms)`](#setintervalfunc-ms) - Global setInterval function
+- [`onAction(id, event)`](#onactionid-event) - QuickApp action handler
+- [`onUIEvent(id, event)`](#onuieventid-event) - QuickApp UI event handler
+
+### Utility Functions
+- [`urlencode(str)`](#urlencodestr) - URL encode string
+- [`table.copy(obj)`](#tablecopyobj) - Deep copy table
+- [`table.equal(e1, e2)`](#tableequale1-e2) - Compare tables for equality
+- [`table.merge(a, b)`](#tablemergea-b) - Merge two tables
+
+---
+
 ## Core Fibaro Functions
 
 ### Logging and Debug Functions
 
 #### fibaro.debug(tag, ...)
-Debug level logging with tag.
+Outputs a debug-level log message with the specified tag for troubleshooting and development purposes.
+
 - **Parameters**: 
-  - `tag` (string): Log tag identifier
-  - `...`: Values to log
-- **Usage**: `fibaro.debug("MyTag", "Debug message", value)`
+  - `tag` (string): Log tag identifier for categorizing and filtering log messages
+  - `...`: Variable number of arguments to be logged (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  fibaro.debug("MyTag", "Debug message", value)
+  ```
 
 #### fibaro.trace(tag, ...)
-Trace level logging with tag.
+Outputs a trace-level log message with the specified tag for detailed execution tracking.
+
 - **Parameters**: 
-  - `tag` (string): Log tag identifier  
-  - `...`: Values to log
-- **Usage**: `fibaro.trace("MyTag", "Trace message")`
+  - `tag` (string): Log tag identifier for categorizing and filtering log messages
+  - `...`: Variable number of arguments to be logged (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  fibaro.trace("MyTag", "Trace message")
+  ```
 
 #### fibaro.warning(tag, ...)
-Warning level logging with tag.
+Outputs a warning-level log message with the specified tag for non-critical issues and alerts.
+
 - **Parameters**: 
-  - `tag` (string): Log tag identifier
-  - `...`: Values to log
-- **Usage**: `fibaro.warning("MyTag", "Warning message")`
+  - `tag` (string): Log tag identifier for categorizing and filtering log messages
+  - `...`: Variable number of arguments to be logged (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  fibaro.warning("MyTag", "Warning message")
+  ```
 
 #### fibaro.error(tag, ...)
-Error level logging with tag.
+Outputs an error-level log message with the specified tag for critical issues and failures.
+
 - **Parameters**: 
-  - `tag` (string): Log tag identifier
-  - `...`: Values to log
-- **Usage**: `fibaro.error("MyTag", "Error message")`
+  - `tag` (string): Log tag identifier for categorizing and filtering log messages
+  - `...`: Variable number of arguments to be logged (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  fibaro.error("MyTag", "Error message")
+  ```
 
 ### Device Management Functions
 
 #### fibaro.call(deviceId, action, ...)
-Calls an action on a device or multiple devices.
+Executes an action on a single device or multiple devices simultaneously.
+
 - **Parameters**: 
-  - `deviceId` (number|table): Device ID or table of device IDs
-  - `action` (string): Action name to call
-  - `...`: Arguments to pass to the action
+  - `deviceId` (number|table): Device ID or table of device IDs to target
+  - `action` (string): Name of the action to execute (e.g., "turnOn", "setValue", "turnOff")
+  - `...`: Variable number of arguments to pass to the action method
 - **Returns**: API call result for single device, nil for multiple devices
 - **Usage**: 
   ```lua
@@ -50,76 +137,116 @@ Calls an action on a device or multiple devices.
   ```
 
 #### fibaro.callhc3(deviceId, action, ...)
-HC3-specific device action call.
+Executes an HC3-specific device action call with enhanced functionality.
+
 - **Parameters**: 
-  - `deviceId` (number): Device ID
-  - `action` (string): Action name
-  - `...`: Action arguments
-- **Usage**: `fibaro.callhc3(123, "setValue", 75)`
+  - `deviceId` (number): The unique identifier of the target device
+  - `action` (string): Name of the action to execute
+  - `...`: Variable number of arguments to pass to the action method
+- **Usage**: 
+  ```lua
+  fibaro.callhc3(123, "setValue", 75)
+  ```
 
 #### fibaro.get(deviceId, propertyName)
-Gets a device property value.
+Retrieves a specific property value from a device in the HC3 system.
+
 - **Parameters**: 
-  - `deviceId` (number): Device ID
-  - `propertyName` (string): Property name
-- **Returns**: Property value or nil if not found
-- **Usage**: `local value = fibaro.get(123, "value")`
+  - `deviceId` (number): The unique identifier of the device
+  - `propertyName` (string): The name of the property to retrieve (e.g., "value", "state", "name")
+- **Returns**: The current value of the specified property or nil if not found
+- **Usage**: 
+  ```lua
+  local value = fibaro.get(123, "value")
+  ```
 
 #### fibaro.getValue(deviceId, propertyName)
-Gets a device property value (alias for fibaro.get).
+Retrieves a device property value (alias for fibaro.get with identical functionality).
+
 - **Parameters**: 
-  - `deviceId` (number): Device ID
-  - `propertyName` (string): Property name
-- **Returns**: Property value or nil if not found
-- **Usage**: `local value = fibaro.getValue(123, "value")`
+  - `deviceId` (number): The unique identifier of the device
+  - `propertyName` (string): The name of the property to retrieve (e.g., "value", "state", "name")
+- **Returns**: The current value of the specified property or nil if not found
+- **Usage**: 
+  ```lua
+  local value = fibaro.getValue(123, "value")
+  ```
 
 #### fibaro.getType(deviceId)
-Gets the device type.
+Retrieves the device type identifier from the HC3 system.
+
 - **Parameters**: 
-  - `deviceId` (number): Device ID
-- **Returns**: Device type string or nil if not found
-- **Usage**: `local type = fibaro.getType(123)`
+  - `deviceId` (number): The unique identifier of the device
+- **Returns**: Device type string (e.g., "com.fibaro.binarySwitch") or nil if not found
+- **Usage**: 
+  ```lua
+  local type = fibaro.getType(123)
+  ```
 
 #### fibaro.getName(deviceId)
-Gets the device name.
+Retrieves the display name of a device from the HC3 system.
+
 - **Parameters**: 
-  - `deviceId` (number): Device ID
+  - `deviceId` (number): The unique identifier of the device
 - **Returns**: Device name string or nil if not found
-- **Usage**: `local name = fibaro.getName(123)`
+- **Usage**: 
+  ```lua
+  local name = fibaro.getName(123)
+  ```
 
 #### fibaro.getRoomID(deviceId)
-Gets the room ID for a device.
+Retrieves the room identifier where a device is located.
+
 - **Parameters**: 
-  - `deviceId` (number): Device ID
+  - `deviceId` (number): The unique identifier of the device
 - **Returns**: Room ID (number) or nil if not found
-- **Usage**: `local roomId = fibaro.getRoomID(123)`
+- **Usage**: 
+  ```lua
+  local roomId = fibaro.getRoomID(123)
+  ```
 
 #### fibaro.getSectionID(deviceId)
-Gets the section ID for a device.
+Retrieves the section identifier where a device is located.
+
 - **Parameters**: 
-  - `deviceId` (number): Device ID
+  - `deviceId` (number): The unique identifier of the device
 - **Returns**: Section ID (number) or nil if not found
-- **Usage**: `local sectionId = fibaro.getSectionID(123)`
+- **Usage**: 
+  ```lua
+  local sectionId = fibaro.getSectionID(123)
+  ```
 
 #### fibaro.getRoomName(roomId)
-Gets the room name by room ID.
+Retrieves the display name of a room by its identifier.
+
 - **Parameters**: 
-  - `roomId` (number): Room ID
+  - `roomId` (number): The unique identifier of the room
 - **Returns**: Room name string or nil if not found
-- **Usage**: `local roomName = fibaro.getRoomName(5)`
+- **Usage**: 
+  ```lua
+  local roomName = fibaro.getRoomName(5)
+  ```
 
 #### fibaro.getRoomNameByDeviceID(deviceId)
-Gets the room name for a device.
+Retrieves the room name for a specific device by looking up its room association.
+
 - **Parameters**: 
-  - `deviceId` (number): Device ID
+  - `deviceId` (number): The unique identifier of the device
 - **Returns**: Room name string or nil if not found
-- **Usage**: `local roomName = fibaro.getRoomNameByDeviceID(123)`
+- **Usage**: 
+  ```lua
+  local roomName = fibaro.getRoomNameByDeviceID(123)
+  ```
 
 #### fibaro.getDevicesID(filter)
-Gets device IDs matching a filter.
+Retrieves device IDs that match the specified filter criteria.
+
 - **Parameters**: 
-  - `filter` (table): Filter criteria (properties, interfaces, etc.)
-- **Returns**: Table of device IDs
+  - `filter` (table): Filter criteria table containing properties, interfaces, roomID, etc.
+    - `interfaces` (table, optional): Array of interface names to match
+    - `properties` (table, optional): Property values to match
+    - `roomID` (number, optional): Specific room ID to filter by
+- **Returns**: Table of device IDs that match the filter criteria
 - **Usage**: 
   ```lua
   local devices = fibaro.getDevicesID({
@@ -129,61 +256,83 @@ Gets device IDs matching a filter.
   ```
 
 #### fibaro.getIds(devices)
-Extracts IDs from device objects.
+Extracts device IDs from a table of device objects.
+
 - **Parameters**: 
-  - `devices` (table): Table of device objects
-- **Returns**: Table of device IDs
-- **Usage**: `local ids = fibaro.getIds(deviceObjects)`
+  - `devices` (table): Table of device objects containing device information
+- **Returns**: Table of device IDs extracted from the device objects
+- **Usage**: 
+  ```lua
+  local ids = fibaro.getIds(deviceObjects)
+  ```
 
 #### fibaro.wakeUpDeadDevice(deviceID)
-Attempts to wake up a dead Z-Wave device.
+Attempts to wake up a dead Z-Wave device by sending wake-up commands.
+
 - **Parameters**: 
-  - `deviceID` (number): Device ID
-- **Usage**: `fibaro.wakeUpDeadDevice(123)`
+  - `deviceID` (number): The unique identifier of the Z-Wave device to wake up
+- **Usage**: 
+  ```lua
+  fibaro.wakeUpDeadDevice(123)
+  ```
 
 ### Global Variables
 
 #### fibaro.getGlobalVariable(name)
-Gets global variable value and modification time.
+Retrieves a global variable value and its last modification timestamp.
+
 - **Parameters**: 
-  - `name` (string): Variable name
-- **Returns**: Variable value, modification timestamp
+  - `name` (string): The name of the global variable to retrieve
+- **Returns**: Variable value and modification timestamp (value, modified)
 - **Usage**: 
   ```lua
   local value, modified = fibaro.getGlobalVariable("MyVar")
   ```
 
 #### fibaro.setGlobalVariable(name, value)
-Sets global variable value.
+Creates or updates a global variable with the specified name and value.
+
 - **Parameters**: 
-  - `name` (string): Variable name
-  - `value` (string): New value
-- **Returns**: API call result
-- **Usage**: `fibaro.setGlobalVariable("MyVar", "NewValue")`
+  - `name` (string): The name of the global variable to set
+  - `value` (string): The new value to assign to the variable
+- **Returns**: API call result indicating success or failure
+- **Usage**: 
+  ```lua
+  fibaro.setGlobalVariable("MyVar", "NewValue")
+  ```
 
 ### Scene Variables
 
 #### fibaro.getSceneVariable(name)
-Gets scene variable value.
+Retrieves the current value of a scene variable.
+
 - **Parameters**: 
-  - `name` (string): Variable name
-- **Returns**: Variable value
-- **Usage**: `local value = fibaro.getSceneVariable("counter")`
+  - `name` (string): The name of the scene variable to retrieve
+- **Returns**: The current value of the scene variable
+- **Usage**: 
+  ```lua
+  local value = fibaro.getSceneVariable("counter")
+  ```
 
 #### fibaro.setSceneVariable(name, value)
-Sets scene variable value.
+Creates or updates a scene variable with the specified name and value.
+
 - **Parameters**: 
-  - `name` (string): Variable name
-  - `value`: New value
-- **Usage**: `fibaro.setSceneVariable("counter", 5)`
+  - `name` (string): The name of the scene variable to set
+  - `value`: The new value to assign to the variable (can be string, number, boolean, or table)
+- **Usage**: 
+  ```lua
+  fibaro.setSceneVariable("counter", 5)
+  ```
 
 ### Scene and Profile Management
 
 #### fibaro.scene(action, ids)
-Executes or kills scenes.
+Executes or terminates scenes based on the specified action.
+
 - **Parameters**: 
-  - `action` (string): "execute" or "kill"
-  - `ids` (table): Table of scene IDs
+  - `action` (string): Action to perform - "execute" to start scenes or "kill" to stop them
+  - `ids` (table): Table of scene IDs to target
 - **Usage**: 
   ```lua
   fibaro.scene("execute", {101, 102})
@@ -191,20 +340,25 @@ Executes or kills scenes.
   ```
 
 #### fibaro.profile(action, id)
-Activates a user profile.
+Activates a specific user profile in the HC3 system.
+
 - **Parameters**: 
-  - `action` (string): Must be "activeProfile"
-  - `id` (number): Profile ID
-- **Returns**: API call result
-- **Usage**: `fibaro.profile("activeProfile", 1)`
+  - `action` (string): Must be "activeProfile" to activate a profile
+  - `id` (number): The unique identifier of the profile to activate
+- **Returns**: API call result indicating success or failure
+- **Usage**: 
+  ```lua
+  fibaro.profile("activeProfile", 1)
+  ```
 
 ### Security and Alarms
 
 #### fibaro.alarm(partitionId, action)
-Controls alarm partitions.
+Controls alarm partition states and operations.
+
 - **Parameters**: 
-  - `partitionId` (number): Partition ID (0 for all partitions)
-  - `action` (string): "arm", "disarm", "armDelay"
+  - `partitionId` (number): Partition ID (0 for all partitions, 1+ for specific partitions)
+  - `action` (string): Action to perform - "arm", "disarm", or "armDelay"
 - **Usage**: 
   ```lua
   fibaro.alarm(1, "arm")
@@ -212,40 +366,61 @@ Controls alarm partitions.
   ```
 
 #### fibaro.getPartitions()
-Gets all alarm partitions.
-- **Returns**: Table of partition objects
-- **Usage**: `local partitions = fibaro.getPartitions()`
+Retrieves all alarm partitions and their current states.
+
+- **Returns**: Table of partition objects containing partition information and states
+- **Usage**: 
+  ```lua
+  local partitions = fibaro.getPartitions()
+  ```
 
 #### fibaro.isHomeBreached()
-Checks if home security is breached.
-- **Returns**: Boolean indicating breach status
-- **Usage**: `local breached = fibaro.isHomeBreached()`
+Checks if the home security system has been breached.
+
+- **Returns**: Boolean indicating whether the home security is currently breached
+- **Usage**: 
+  ```lua
+  local breached = fibaro.isHomeBreached()
+  ```
 
 #### fibaro.isPartitionBreached(partitionId)
-Checks if specific partition is breached.
+Checks if a specific alarm partition has been breached.
+
 - **Parameters**: 
-  - `partitionId` (number): Partition ID
-- **Returns**: Boolean indicating breach status
-- **Usage**: `local breached = fibaro.isPartitionBreached(1)`
+  - `partitionId` (number): The unique identifier of the partition to check
+- **Returns**: Boolean indicating whether the specified partition is breached
+- **Usage**: 
+  ```lua
+  local breached = fibaro.isPartitionBreached(1)
+  ```
 
 #### fibaro.getPartitionArmState(partitionId)
-Gets partition arm state.
+Retrieves the current arm state of a specific alarm partition.
+
 - **Parameters**: 
-  - `partitionId` (number): Partition ID
-- **Returns**: Arm state string
-- **Usage**: `local state = fibaro.getPartitionArmState(1)`
+  - `partitionId` (number): The unique identifier of the partition
+- **Returns**: Arm state string (e.g., "armed", "disarmed", "arming")
+- **Usage**: 
+  ```lua
+  local state = fibaro.getPartitionArmState(1)
+  ```
 
 #### fibaro.getHomeArmState()
-Gets overall home arm state.
-- **Returns**: Arm state string
-- **Usage**: `local state = fibaro.getHomeArmState()`
+Retrieves the overall home security arm state.
+
+- **Returns**: Arm state string representing the overall home security status
+- **Usage**: 
+  ```lua
+  local state = fibaro.getHomeArmState()
+  ```
 
 #### fibaro.alert(alertType, ids, notification)
-Sends alerts to devices.
+Sends alerts and notifications to specified devices.
+
 - **Parameters**: 
-  - `alertType` (string): Type of alert
-  - `ids` (table): Device IDs to alert
-  - `notification` (table): Notification details
+  - `alertType` (string): Type of alert (e.g., "critical", "warning", "info")
+  - `ids` (table): Table of device IDs to receive the alert
+  - `notification` (table): Notification details containing title, text, and other properties
 - **Usage**: 
   ```lua
   fibaro.alert("critical", {123}, {
@@ -257,27 +432,36 @@ Sends alerts to devices.
 ### Events and Actions
 
 #### fibaro.emitCustomEvent(name)
-Emits a custom event.
+Emits a custom event that can be listened to by other scripts and scenes.
+
 - **Parameters**: 
-  - `name` (string): Event name
-- **Usage**: `fibaro.emitCustomEvent("MyCustomEvent")`
+  - `name` (string): The name of the custom event to emit
+- **Usage**: 
+  ```lua
+  fibaro.emitCustomEvent("MyCustomEvent")
+  ```
 
 #### fibaro.callGroupAction(actionName, actionData)
-Calls a group action.
+Executes a group action across multiple devices or scenes.
+
 - **Parameters**: 
-  - `actionName` (string): Action name
-  - `actionData`: Action data
-- **Usage**: `fibaro.callGroupAction("allLightsOff", {})`
+  - `actionName` (string): The name of the group action to execute
+  - `actionData`: Data or parameters to pass to the group action
+- **Usage**: 
+  ```lua
+  fibaro.callGroupAction("allLightsOff", {})
+  ```
 
 ### Timing Functions
 
 #### fibaro.setTimeout(timeout, action, errorHandler)
-Sets a timeout for delayed execution.
+Sets a timeout for delayed execution of a function.
+
 - **Parameters**: 
-  - `timeout` (number): Timeout in milliseconds
-  - `action` (function): Function to execute
-  - `errorHandler` (function): Error handler function
-- **Returns**: Timer reference
+  - `timeout` (number): Timeout duration in milliseconds
+  - `action` (function): Function to execute when the timeout expires
+  - `errorHandler` (function, optional): Function to handle any errors during execution
+- **Returns**: Timer reference that can be used to cancel the timeout
 - **Usage**: 
   ```lua
   local timer = fibaro.setTimeout(5000, function()
@@ -286,36 +470,53 @@ Sets a timeout for delayed execution.
   ```
 
 #### fibaro.clearTimeout(ref)
-Clears a timeout.
+Cancels a previously set timeout before it executes.
+
 - **Parameters**: 
-  - `ref`: Timer reference from setTimeout
-- **Usage**: `fibaro.clearTimeout(timer)`
+  - `ref`: Timer reference returned from fibaro.setTimeout
+- **Usage**: 
+  ```lua
+  fibaro.clearTimeout(timer)
+  ```
 
 #### fibaro.sleep(ms)
-Sleeps current coroutine for specified milliseconds.
+Suspends the current coroutine for the specified number of milliseconds.
+
 - **Parameters**: 
-  - `ms` (number): Milliseconds to sleep
-- **Usage**: `fibaro.sleep(1000) -- Sleep 1 second`
+  - `ms` (number): Number of milliseconds to sleep
+- **Usage**: 
+  ```lua
+  fibaro.sleep(1000) -- Sleep 1 second
+  ```
 
 #### fibaro.useAsyncHandler(value)
-Controls async handler behavior.
+Controls the behavior of asynchronous handlers in the system.
+
 - **Parameters**: 
-  - `value` (boolean): Enable/disable async handlers
-- **Returns**: Boolean indicating current state
-- **Usage**: `fibaro.useAsyncHandler(true)`
+  - `value` (boolean): True to enable async handlers, false to disable them
+- **Returns**: Boolean indicating the current async handler state
+- **Usage**: 
+  ```lua
+  fibaro.useAsyncHandler(true)
+  ```
 
 ## Global Functions
 
 ### print(...)
-Enhanced print function using fibaro.debug.
-- **Parameters**: `...`: Values to print
-- **Usage**: `print("Hello", "World", 42)`
+Enhanced print function that uses fibaro.debug for consistent logging.
+
+- **Parameters**: `...`: Variable number of arguments to print (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  print("Hello", "World", 42)
+  ```
 
 ### class(name)
-Creates a new class (QuickApp development).
+Creates a new class constructor for object-oriented QuickApp development.
+
 - **Parameters**: 
-  - `name` (string): Class name
-- **Returns**: Class constructor
+  - `name` (string): The name of the class to create
+- **Returns**: Class constructor function
 - **Usage**: 
   ```lua
   local MyClass = class("MyClass")
@@ -325,11 +526,12 @@ Creates a new class (QuickApp development).
   ```
 
 ### setTimeout(func, ms)
-Global setTimeout function for QuickApps.
+Global setTimeout function for QuickApps to schedule delayed execution.
+
 - **Parameters**: 
-  - `func` (function): Function to execute
-  - `ms` (number): Delay in milliseconds
-- **Returns**: Timer reference
+  - `func` (function): Function to execute after the delay
+  - `ms` (number): Delay duration in milliseconds
+- **Returns**: Timer reference that can be used to cancel the timeout
 - **Usage**: 
   ```lua
   setTimeout(function()
@@ -338,11 +540,12 @@ Global setTimeout function for QuickApps.
   ```
 
 ### setInterval(func, ms)
-Global setInterval function for repeated execution.
+Global setInterval function for QuickApps to schedule repeated execution.
+
 - **Parameters**: 
-  - `func` (function): Function to execute repeatedly
-  - `ms` (number): Interval in milliseconds
-- **Returns**: Interval reference
+  - `func` (function): Function to execute repeatedly at the specified interval
+  - `ms` (number): Interval duration in milliseconds
+- **Returns**: Interval reference that can be used to stop the interval
 - **Usage**: 
   ```lua
   local interval = setInterval(function()
@@ -351,10 +554,11 @@ Global setInterval function for repeated execution.
   ```
 
 ### onAction(id, event)
-QuickApp action handler.
+Global QuickApp action handler that processes device action events.
+
 - **Parameters**: 
-  - `id` (number): Device ID
-  - `event` (table): Action event data
+  - `id` (number): The device ID where the action was triggered
+  - `event` (table): Action event data containing action details and parameters
 - **Usage**: 
   ```lua
   function onAction(id, event)
@@ -363,10 +567,11 @@ QuickApp action handler.
   ```
 
 ### onUIEvent(id, event)
-QuickApp UI event handler.
+Global QuickApp UI event handler that processes user interface events.
+
 - **Parameters**: 
-  - `id` (number): Device ID
-  - `event` (table): UI event data
+  - `id` (number): The device ID where the UI event occurred
+  - `event` (table): UI event data containing element information and event details
 - **Usage**: 
   ```lua
   function onUIEvent(id, event)
@@ -377,32 +582,48 @@ QuickApp UI event handler.
 ## Utility Functions
 
 ### urlencode(str)
-URL encodes a string.
+URL encodes a string for safe transmission in HTTP requests.
+
 - **Parameters**: 
-  - `str` (string): String to encode
-- **Returns**: URL-encoded string
-- **Usage**: `local encoded = urlencode("hello world")`
+  - `str` (string): The string to URL encode
+- **Returns**: URL-encoded string with special characters properly escaped
+- **Usage**: 
+  ```lua
+  local encoded = urlencode("hello world")
+  ```
 
 ### table.copy(obj)
-Deep copies a table.
+Creates a deep copy of a table, including nested tables and structures.
+
 - **Parameters**: 
-  - `obj` (table): Table to copy
-- **Returns**: Deep copy of the table
-- **Usage**: `local copy = table.copy(originalTable)`
+  - `obj` (table): The table to create a deep copy of
+- **Returns**: A completely independent copy of the original table
+- **Usage**: 
+  ```lua
+  local copy = table.copy(originalTable)
+  ```
 
 ### table.equal(e1, e2)
-Compares two tables for equality.
+Compares two tables for deep equality, checking all nested values.
+
 - **Parameters**: 
-  - `e1`, `e2`: Tables to compare
-- **Returns**: Boolean indicating equality
-- **Usage**: `local same = table.equal(table1, table2)`
+  - `e1`, `e2`: The tables to compare for equality
+- **Returns**: Boolean indicating whether the tables are deeply equal
+- **Usage**: 
+  ```lua
+  local same = table.equal(table1, table2)
+  ```
 
 ### table.merge(a, b)
-Merges two tables.
+Merges two tables, with values from table b taking precedence over table a.
+
 - **Parameters**: 
-  - `a`, `b` (table): Tables to merge
-- **Returns**: Merged table
-- **Usage**: `local merged = table.merge(table1, table2)`
+  - `a`, `b` (table): The tables to merge together
+- **Returns**: A new table containing the merged contents of both input tables
+- **Usage**: 
+  ```lua
+  local merged = table.merge(table1, table2)
+  ```
 
 ## Usage Examples
 

@@ -2,44 +2,143 @@
 
 This document covers the QuickApp framework classes and methods available in the plua Fibaro emulation environment for developing QuickApp plugins.
 
+## Function Index
+
+### Plugin Namespace Functions
+- [`plugin.getDevice(deviceId)`](#plugingetdevicedeviceid) - Retrieve device by ID
+- [`plugin.deleteDevice(deviceId)`](#plugindeletedevicedeviceid) - Delete device by ID
+- [`plugin.getProperty(deviceId, propertyName)`](#plugingetpropertydeviceid-propertyname) - Get device property value
+- [`plugin.getChildDevices(deviceId)`](#plugingetchilddevicesdeviceid) - Get child devices of parent device
+- [`plugin.createChildDevice(opts)`](#plugincreatechilddeviceopts) - Create new child device
+- [`plugin.restart(id)`](#pluginrestartid) - Restart QuickApp plugin
+
+### QuickAppBase Class Methods
+
+#### Constructor
+- [`QuickAppBase:__init(dev)`](#quickappbase__initdev) - Initialize QuickAppBase instance
+
+#### Logging Methods
+- [`QuickAppBase:debug(...)`](#quickappbasedebug-) - Log debug message with device tag
+- [`QuickAppBase:trace(...)`](#quickappbasetrace-) - Log trace message with device tag
+- [`QuickAppBase:warning(...)`](#quickappbasewarning-) - Log warning message with device tag
+- [`QuickAppBase:error(...)`](#quickappbaseerror-) - Log error message with device tag
+
+#### UI Management Methods
+- [`QuickAppBase:registerUICallback(elm, typ, fun)`](#quickappbaseregisteruicallbackelm-typ-fun) - Register UI callback function
+- [`QuickAppBase:setupUICallbacks()`](#quickappbasesetupuicallbacks) - Setup UI callbacks from device properties
+- [`QuickAppBase:updateView(elm, prop, value)`](#quickappbaseupdateviewelm-prop-value) - Update UI view element property
+- [`QuickAppBase:UIAction(eventType, elementName, arg)`](#quickappbaseuiactioneventtype-elementname-arg) - Trigger UI action programmatically
+
+#### Device Management Methods
+- [`QuickAppBase:callAction(name, ...)`](#quickappbasecallactionname-) - Call action method on QuickApp
+- [`QuickAppBase:updateProperty(name, value)`](#quickappbaseupdatepropertyname-value) - Update device property
+- [`QuickAppBase:hasInterface(name)`](#quickappbasehasinterfacename) - Check if device has interface
+- [`QuickAppBase:addInterfaces(values)`](#quickappbaseaddinterfacesvalues) - Add interfaces to device
+- [`QuickAppBase:deleteInterfaces(values)`](#quickappbasedeleteinterfacesvalues) - Remove interfaces from device
+- [`QuickAppBase:setName(name)`](#quickappbasesetnamename) - Set device name
+- [`QuickAppBase:setEnabled(enabled)`](#quickappbasesetenabledenabled) - Set device enabled state
+- [`QuickAppBase:setVisible(visible)`](#quickappbasesetvisiblevisible) - Set device visibility
+
+#### Variable Management Methods
+- [`QuickAppBase:setVariable(name, value)`](#quickappbasesetvariablename-value) - Set QuickApp variable value
+- [`QuickAppBase:getVariable(name)`](#quickappbasegetvariablename) - Get QuickApp variable value
+
+#### Internal Storage Methods
+- [`QuickAppBase:internalStorageSet(key, val, hidden)`](#quickappbaseinternalstoragesetkey-val-hidden) - Set value in internal storage
+- [`QuickAppBase:internalStorageGet(key)`](#quickappbaseinternalstoragegetkey) - Get value from internal storage
+- [`QuickAppBase:internalStorageRemove(key)`](#quickappbaseinternalstorageremovekey) - Remove variable from internal storage
+- [`QuickAppBase:internalStorageClear()`](#quickappbaseinternalstorageclear) - Clear all variables from internal storage
+
+### QuickApp Class Methods
+
+#### Constructor
+- [`QuickApp:__init(dev)`](#quickapp__initdev) - Initialize main QuickApp instance
+
+#### Child Device Management
+- [`QuickApp:initChildDevices(map)`](#quickappinitchilddevicesmap) - Initialize child devices with optional class mappings
+- [`QuickApp:createChildDevice(options, classRepresentation)`](#quickappcreatechilddeviceoptions-classrepresentation) - Create new child device instance
+
+### QuickAppChild Class Methods
+
+#### Constructor
+- [`QuickAppChild:__init(dev)`](#quickappchild__initdev) - Initialize child device instance
+
+### RefreshStateSubscriber Class Methods
+
+#### Constructor
+- [`RefreshStateSubscriber:__init()`](#refreshstatesubscriber__init) - Initialize refresh state subscriber
+
+#### Subscription Methods
+- [`RefreshStateSubscriber:subscribe(filter, handler)`](#refreshstatesubscribersubscribefilter-handler) - Subscribe to refresh state events
+- [`RefreshStateSubscriber:unsubscribe(subscription)`](#refreshstatesubscriberunsubscribesubscription) - Unsubscribe from refresh state events
+- [`RefreshStateSubscriber:run()`](#refreshstatesubscriberrun) - Start refresh state subscriber
+- [`RefreshStateSubscriber:stop()`](#refreshstatesubscriberstop) - Stop refresh state subscriber
+
+### Global Event Handlers
+- [`onAction(id, event)`](#onactionid-event) - Global device action handler
+- [`onUIEvent(id, event)`](#onuieventid-event) - Global UI event handler
+
+---
+
 ## Plugin Namespace Functions
 
 The `plugin` namespace provides utility functions for device and plugin management.
 
 ### plugin.getDevice(deviceId)
-Retrieves a device by its ID.
+Retrieves a device object from the HC3 system by its unique identifier.
+
 - **Parameters**: 
-  - `deviceId` (number): The ID of the device to retrieve
-- **Returns**: Device object from the HC3 API
-- **Usage**: `local device = plugin.getDevice(123)`
+  - `deviceId` (number): The unique identifier of the device to retrieve
+- **Returns**: Device object from the HC3 API containing device properties and metadata
+- **Usage**: 
+  ```lua
+  local device = plugin.getDevice(123)
+  ```
 
 ### plugin.deleteDevice(deviceId)
-Deletes a device by its ID.
+Permanently removes a device from the HC3 system by its identifier.
+
 - **Parameters**: 
-  - `deviceId` (number): The ID of the device to delete
-- **Returns**: Result of the delete operation
-- **Usage**: `plugin.deleteDevice(123)`
+  - `deviceId` (number): The unique identifier of the device to delete
+- **Returns**: Result of the delete operation (success/failure status)
+- **Usage**: 
+  ```lua
+  plugin.deleteDevice(123)
+  ```
 
 ### plugin.getProperty(deviceId, propertyName)
-Gets a specific property of a device.
+Retrieves a specific property value from a device in the HC3 system.
+
 - **Parameters**: 
-  - `deviceId` (number): The ID of the device
-  - `propertyName` (string): The name of the property to retrieve
-- **Returns**: The property value
-- **Usage**: `local value = plugin.getProperty(123, "value")`
+  - `deviceId` (number): The unique identifier of the device
+  - `propertyName` (string): The name of the property to retrieve (e.g., "value", "state", "name")
+- **Returns**: The current value of the specified property
+- **Usage**: 
+  ```lua
+  local value = plugin.getProperty(123, "value")
+  ```
 
 ### plugin.getChildDevices(deviceId)
-Gets all child devices of a parent device.
+Retrieves all child devices associated with a parent device.
+
 - **Parameters**: 
-  - `deviceId` (number): The ID of the parent device
-- **Returns**: Array of child device objects
-- **Usage**: `local children = plugin.getChildDevices(123)`
+  - `deviceId` (number): The unique identifier of the parent device
+- **Returns**: Array of child device objects, each containing device properties and metadata
+- **Usage**: 
+  ```lua
+  local children = plugin.getChildDevices(123)
+  ```
 
 ### plugin.createChildDevice(opts)
-Creates a new child device.
+Creates a new child device with the specified configuration options.
+
 - **Parameters**: 
-  - `opts` (table): Options for creating the child device
-- **Returns**: The created child device object
+  - `opts` (table): Configuration table containing device creation options
+    - `name` (string): Display name for the child device
+    - `type` (string): Device type identifier (e.g., "com.fibaro.binarySwitch")
+    - `interfaces` (table, optional): Array of interface names
+    - `properties` (table, optional): Initial property values
+- **Returns**: The newly created child device object
 - **Usage**: 
   ```lua
   local child = plugin.createChildDevice({
@@ -49,11 +148,16 @@ Creates a new child device.
   ```
 
 ### plugin.restart(id)
-Restarts a QuickApp plugin.
+Restarts a QuickApp plugin, reloading its code and reinitializing the device.
+
 - **Parameters**: 
-  - `id` (number, optional): The device ID to restart (defaults to mainDeviceId)
-- **Returns**: Result of the restart operation
-- **Usage**: `plugin.restart()` or `plugin.restart(123)`
+  - `id` (number, optional): The device ID to restart (defaults to mainDeviceId if not specified)
+- **Returns**: Result of the restart operation (success/failure status)
+- **Usage**: 
+  ```lua
+  plugin.restart()
+  plugin.restart(123)
+  ```
 
 ## QuickAppBase Class
 
@@ -62,41 +166,59 @@ The base class for all QuickApp devices, providing core functionality for device
 ### Constructor
 
 #### QuickAppBase:__init(dev)
-Constructor for QuickAppBase class.
+Initializes a new QuickAppBase instance with the provided device configuration.
+
 - **Parameters**: 
-  - `dev` (table): Device object containing device properties and metadata
+  - `dev` (table): Device object containing device properties, metadata, and configuration
 - **Usage**: Called automatically when creating QuickApp instances
 
 ### Logging Methods
 
 #### QuickAppBase:debug(...)
-Logs a debug message with the device tag.
-- **Parameters**: `...`: Arguments to be logged
-- **Usage**: `self:debug("Debug message", value)`
+Outputs a debug-level log message with the device tag for troubleshooting and development.
+
+- **Parameters**: `...`: Variable number of arguments to be logged (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  self:debug("Debug message", value)
+  ```
 
 #### QuickAppBase:trace(...)
-Logs a trace message with the device tag.
-- **Parameters**: `...`: Arguments to be logged
-- **Usage**: `self:trace("Trace message")`
+Outputs a trace-level log message with the device tag for detailed execution tracking.
+
+- **Parameters**: `...`: Variable number of arguments to be logged (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  self:trace("Trace message")
+  ```
 
 #### QuickAppBase:warning(...)
-Logs a warning message with the device tag.
-- **Parameters**: `...`: Arguments to be logged
-- **Usage**: `self:warning("Warning message")`
+Outputs a warning-level log message with the device tag for non-critical issues.
+
+- **Parameters**: `...`: Variable number of arguments to be logged (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  self:warning("Warning message")
+  ```
 
 #### QuickAppBase:error(...)
-Logs an error message with the device tag.
-- **Parameters**: `...`: Arguments to be logged
-- **Usage**: `self:error("Error message")`
+Outputs an error-level log message with the device tag for critical issues and failures.
+
+- **Parameters**: `...`: Variable number of arguments to be logged (strings, numbers, tables, etc.)
+- **Usage**: 
+  ```lua
+  self:error("Error message")
+  ```
 
 ### UI Management Methods
 
 #### QuickAppBase:registerUICallback(elm, typ, fun)
-Registers a UI callback function for a specific element and event type.
+Registers a callback function to handle UI events for a specific element and event type.
+
 - **Parameters**: 
-  - `elm` (string): The UI element name
-  - `typ` (string): The event type (e.g., "onReleased", "onChanged")
-  - `fun` (function): The callback function to register
+  - `elm` (string): The name of the UI element to monitor
+  - `typ` (string): The type of UI event to handle (e.g., "onReleased", "onChanged", "onPressed")
+  - `fun` (function): The callback function to execute when the event occurs
 - **Usage**: 
   ```lua
   self:registerUICallback("button1", "onReleased", function(event)
@@ -105,111 +227,167 @@ Registers a UI callback function for a specific element and event type.
   ```
 
 #### QuickAppBase:setupUICallbacks()
-Sets up UI callbacks based on device properties.
-Reads uiCallbacks from device properties and registers them.
-- **Usage**: `self:setupUICallbacks()`
+Automatically configures UI callbacks based on the device's uiCallbacks property configuration.
+
+- **Usage**: 
+  ```lua
+  self:setupUICallbacks()
+  ```
 
 #### QuickAppBase:updateView(elm, prop, value)
-Updates a UI view element property.
+Updates a specific property of a UI element in the device's user interface.
+
 - **Parameters**: 
-  - `elm` (string): The UI element name
-  - `prop` (string): The property name to update
-  - `value`: The new value for the property
-- **Usage**: `self:updateView("label1", "text", "New Text")`
+  - `elm` (string): The name of the UI element to update
+  - `prop` (string): The property name to modify (e.g., "text", "visible", "enabled")
+  - `value`: The new value to assign to the property
+- **Usage**: 
+  ```lua
+  self:updateView("label1", "text", "New Text")
+  ```
 
 #### QuickAppBase:UIAction(eventType, elementName, arg)
-Programmatically triggers a UI action for testing purposes.
+Programmatically simulates a UI action event for testing and automation purposes.
+
 - **Parameters**: 
-  - `eventType` (string): The type of UI event to trigger
-  - `elementName` (string): The name of the UI element
-  - `arg` (optional): Optional argument value for the event
-- **Usage**: `self:UIAction("onReleased", "button1")`
+  - `eventType` (string): The type of UI event to simulate (e.g., "onReleased", "onChanged")
+  - `elementName` (string): The name of the UI element to trigger the event on
+  - `arg` (optional): Optional argument value to pass with the event
+- **Usage**: 
+  ```lua
+  self:UIAction("onReleased", "button1")
+  ```
 
 ### Device Management Methods
 
 #### QuickAppBase:callAction(name, ...)
-Calls an action method on the QuickApp if it exists.
+Dynamically calls an action method on the QuickApp if it exists and is accessible.
+
 - **Parameters**: 
   - `name` (string): The name of the action/method to call
-  - `...`: Arguments to pass to the action method
-- **Returns**: Result of the action method or nil if method doesn't exist
-- **Usage**: `self:callAction("turnOn")`
+  - `...`: Variable number of arguments to pass to the action method
+- **Returns**: Result of the action method execution or nil if method doesn't exist
+- **Usage**: 
+  ```lua
+  self:callAction("turnOn")
+  ```
 
 #### QuickAppBase:updateProperty(name, value)
-Updates a device property and sends the update to the HC3 system.
+Updates a device property and immediately synchronizes the change with the HC3 system.
+
 - **Parameters**: 
   - `name` (string): The name of the property to update
-  - `value`: The new value for the property
-- **Usage**: `self:updateProperty("value", 75)`
+  - `value`: The new value to assign to the property
+- **Usage**: 
+  ```lua
+  self:updateProperty("value", 75)
+  ```
 
 #### QuickAppBase:hasInterface(name)
-Checks if the device has a specific interface.
+Checks whether the device currently supports a specific interface capability.
+
 - **Parameters**: 
-  - `name` (string): The interface name to check for
-- **Returns**: Boolean indicating if the device has the interface
-- **Usage**: `local hasDimmer = self:hasInterface("dimmable")`
+  - `name` (string): The interface name to check for (e.g., "dimmable", "energy", "turnOn")
+- **Returns**: Boolean indicating whether the device has the specified interface
+- **Usage**: 
+  ```lua
+  local hasDimmer = self:hasInterface("dimmable")
+  ```
 
 #### QuickAppBase:addInterfaces(values)
-Adds new interfaces to the device.
+Adds new interface capabilities to the device, expanding its functionality.
+
 - **Parameters**: 
-  - `values` (table): Table of interface names to add
-- **Usage**: `self:addInterfaces({"dimmable", "energy"})`
+  - `values` (table): Array of interface names to add to the device
+- **Usage**: 
+  ```lua
+  self:addInterfaces({"dimmable", "energy"})
+  ```
 
 #### QuickAppBase:deleteInterfaces(values)
-Removes interfaces from the device.
+Removes interface capabilities from the device, reducing its functionality.
+
 - **Parameters**: 
-  - `values` (table): Table of interface names to remove
-- **Usage**: `self:deleteInterfaces({"energy"})`
+  - `values` (table): Array of interface names to remove from the device
+- **Usage**: 
+  ```lua
+  self:deleteInterfaces({"energy"})
+  ```
 
 #### QuickAppBase:setName(name)
-Sets the device name.
+Changes the display name of the device in the HC3 interface.
+
 - **Parameters**: 
-  - `name` (string): The new name for the device
-- **Usage**: `self:setName("New Device Name")`
+  - `name` (string): The new display name for the device
+- **Usage**: 
+  ```lua
+  self:setName("New Device Name")
+  ```
 
 #### QuickAppBase:setEnabled(enabled)
-Sets the device enabled state.
+Controls whether the device is enabled and can perform its functions.
+
 - **Parameters**: 
-  - `enabled` (boolean): Boolean indicating if device should be enabled
-- **Usage**: `self:setEnabled(true)`
+  - `enabled` (boolean): True to enable the device, false to disable it
+- **Usage**: 
+  ```lua
+  self:setEnabled(true)
+  ```
 
 #### QuickAppBase:setVisible(visible)
-Sets the device visibility.
+Controls whether the device is visible in the HC3 user interface.
+
 - **Parameters**: 
-  - `visible` (boolean): Boolean indicating if device should be visible
-- **Usage**: `self:setVisible(false)`
+  - `visible` (boolean): True to make the device visible, false to hide it
+- **Usage**: 
+  ```lua
+  self:setVisible(false)
+  ```
 
 ### Variable Management Methods
 
 #### QuickAppBase:setVariable(name, value)
-Sets a QuickApp variable value.
+Creates or updates a QuickApp variable with the specified name and value.
+
 - **Parameters**: 
-  - `name` (string): The variable name
-  - `value`: The variable value
-- **Usage**: `self:setVariable("counter", "5")`
+  - `name` (string): The name of the variable to set
+  - `value`: The value to assign to the variable (can be string, number, boolean, or table)
+- **Usage**: 
+  ```lua
+  self:setVariable("counter", "5")
+  ```
 
 #### QuickAppBase:getVariable(name)
-Gets a QuickApp variable value.
+Retrieves the current value of a QuickApp variable by its name.
+
 - **Parameters**: 
-  - `name` (string): The variable name
-- **Returns**: The variable value or empty string if not found
-- **Usage**: `local counter = self:getVariable("counter")`
+  - `name` (string): The name of the variable to retrieve
+- **Returns**: The current value of the variable or an empty string if not found
+- **Usage**: 
+  ```lua
+  local counter = self:getVariable("counter")
+  ```
 
 ### Internal Storage Methods
 
 #### QuickAppBase:internalStorageSet(key, val, hidden)
-Sets a value in internal storage.
+Stores a value in the device's persistent internal storage for later retrieval.
+
 - **Parameters**: 
-  - `key` (string): The storage key
-  - `val`: The value to store
-  - `hidden` (boolean, optional): Boolean indicating if the variable should be hidden
-- **Returns**: HTTP status code
-- **Usage**: `self:internalStorageSet("config", {param1 = "value"})`
+  - `key` (string): The unique key to identify the stored value
+  - `val`: The value to store (can be any Lua data type)
+  - `hidden` (boolean, optional): True to hide the variable from the UI, false to show it
+- **Returns**: HTTP status code indicating the success of the storage operation
+- **Usage**: 
+  ```lua
+  self:internalStorageSet("config", {param1 = "value"})
+  ```
 
 #### QuickAppBase:internalStorageGet(key)
-Gets a value from internal storage.
+Retrieves a value from the device's persistent internal storage.
+
 - **Parameters**: 
-  - `key` (string, optional): The storage key (if nil returns all variables)
+  - `key` (string, optional): The key of the value to retrieve (if nil, returns all stored variables)
 - **Returns**: The stored value or nil if not found
 - **Usage**: 
   ```lua
@@ -218,16 +396,24 @@ Gets a value from internal storage.
   ```
 
 #### QuickAppBase:internalStorageRemove(key)
-Removes a variable from internal storage.
+Removes a specific variable from the device's persistent internal storage.
+
 - **Parameters**: 
-  - `key` (string): The storage key to remove
-- **Returns**: Result of the delete operation
-- **Usage**: `self:internalStorageRemove("config")`
+  - `key` (string): The key of the variable to remove from storage
+- **Returns**: Result of the delete operation (success/failure status)
+- **Usage**: 
+  ```lua
+  self:internalStorageRemove("config")
+  ```
 
 #### QuickAppBase:internalStorageClear()
-Clears all variables from internal storage.
-- **Returns**: Result of the delete operation
-- **Usage**: `self:internalStorageClear()`
+Removes all variables from the device's persistent internal storage.
+
+- **Returns**: Result of the clear operation (success/failure status)
+- **Usage**: 
+  ```lua
+  self:internalStorageClear()
+  ```
 
 ## QuickApp Class
 
@@ -236,17 +422,19 @@ The main QuickApp class, extending QuickAppBase with additional functionality fo
 ### Constructor
 
 #### QuickApp:__init(dev)
-Constructor for QuickApp class (main QuickApp instance).
+Initializes a new main QuickApp instance with the provided device configuration.
+
 - **Parameters**: 
-  - `dev` (table): Device object containing device properties and metadata
+  - `dev` (table): Device object containing device properties, metadata, and configuration
 - **Usage**: Called automatically when creating the main QuickApp instance
 
 ### Child Device Management
 
 #### QuickApp:initChildDevices(map)
-Initializes child devices for this QuickApp.
+Initializes and sets up child devices for this QuickApp with optional custom class mappings.
+
 - **Parameters**: 
-  - `map` (table, optional): Optional mapping table of device types to constructor functions
+  - `map` (table, optional): Optional mapping table of device types to custom constructor functions
 - **Usage**: 
   ```lua
   self:initChildDevices({
@@ -255,11 +443,16 @@ Initializes child devices for this QuickApp.
   ```
 
 #### QuickApp:createChildDevice(options, classRepresentation)
-Creates a new child device for this QuickApp.
+Creates a new child device instance with the specified configuration and optional custom class.
+
 - **Parameters**: 
-  - `options` (table): Options table containing device configuration
-  - `classRepresentation` (function, optional): Optional class constructor for the child device
-- **Returns**: The created child device instance
+  - `options` (table): Configuration table containing device setup options
+    - `name` (string): Display name for the child device
+    - `type` (string): Device type identifier
+    - `initialInterfaces` (table, optional): Array of initial interface names
+    - `properties` (table, optional): Initial property values
+  - `classRepresentation` (function, optional): Optional custom class constructor for the child device
+- **Returns**: The newly created child device instance
 - **Usage**: 
   ```lua
   local child = self:createChildDevice({
@@ -271,42 +464,47 @@ Creates a new child device for this QuickApp.
 
 ## QuickAppChild Class
 
-The class for child devices, extending QuickAppBase with child-specific functionality.
+The class for child devices, extending QuickAppBase with child-specific functionality and parent relationship management.
 
 ### Constructor
 
 #### QuickAppChild:__init(dev)
-Constructor for QuickAppChild class (child device of a QuickApp).
+Initializes a new child device instance with the provided device configuration and parent relationship.
+
 - **Parameters**: 
-  - `dev` (table): Device object containing device properties and metadata
+  - `dev` (table): Device object containing device properties, metadata, and configuration
 - **Usage**: Called automatically when creating child device instances
 
 ## RefreshStateSubscriber Class
 
-A class for subscribing to and handling refresh state events from the HC3 system.
+A class for subscribing to and handling refresh state events from the HC3 system, enabling real-time monitoring of device changes.
 
 ### Constructor
 
 #### RefreshStateSubscriber:__init()
-Constructor for RefreshStateSubscriber class.
-Initializes the subscriber for refresh state events.
-- **Usage**: `local subscriber = RefreshStateSubscriber()`
+Initializes a new refresh state subscriber for monitoring HC3 system events.
+
+- **Usage**: 
+  ```lua
+  local subscriber = RefreshStateSubscriber()
+  ```
 
 ### Properties
 
-- **time** (number): Time to skip events before this timestamp
-- **subscribers** (table): Table of subscribers with their filters and handlers
-- **last** (number): Last processed event timestamp
-- **subject** (table): Subject for handling refresh state events
+- **time** (number): Timestamp threshold for filtering events (skip events before this time)
+- **subscribers** (table): Collection of registered subscribers with their filters and handlers
+- **last** (number): Timestamp of the last processed event
+- **subject** (table): Event subject for managing refresh state event handling
 
 ### Subscription Methods
 
 #### RefreshStateSubscriber:subscribe(filter, handler)
-Subscribes to refresh state events with a filter and handler.
+Registers a new subscription to refresh state events with custom filtering and handling logic.
+
 - **Parameters**: 
-  - `filter` (function): Function to filter events (return true to handle)
-  - `handler` (function): Function to handle matching events
-- **Returns**: Subscription object
+  - `filter` (function): Function that determines which events to handle (return true to process)
+  - `handler` (function): Function to execute when matching events are received
+- **Returns**: Subscription object that can be used to unsubscribe later
 - **Usage**: 
   ```lua
   local subscription = subscriber:subscribe(
@@ -316,33 +514,47 @@ Subscribes to refresh state events with a filter and handler.
   ```
 
 #### RefreshStateSubscriber:unsubscribe(subscription)
-Unsubscribes from refresh state events.
+Removes a previously registered subscription from the refresh state subscriber.
+
 - **Parameters**: 
-  - `subscription`: The subscription object to remove
-- **Usage**: `subscriber:unsubscribe(subscription)`
+  - `subscription`: The subscription object to remove (returned from subscribe method)
+- **Usage**: 
+  ```lua
+  subscriber:unsubscribe(subscription)
+  ```
 
 #### RefreshStateSubscriber:run()
-Starts the refresh state subscriber.
-- **Usage**: `subscriber:run()`
+Starts the refresh state subscriber and begins processing events from the HC3 system.
+
+- **Usage**: 
+  ```lua
+  subscriber:run()
+  ```
 
 #### RefreshStateSubscriber:stop()
-Stops the refresh state subscriber.
-- **Usage**: `subscriber:stop()`
+Stops the refresh state subscriber and ceases event processing.
+
+- **Usage**: 
+  ```lua
+  subscriber:stop()
+  ```
 
 ## Global Event Handlers
 
 ### onAction(id, event)
-Global handler for device actions. Routes actions to the appropriate QuickApp or child device.
+Global event handler that routes device actions to the appropriate QuickApp or child device instance.
+
 - **Parameters**: 
-  - `id` (number): Device ID where the action was called
-  - `event` (table): Event object containing action details
+  - `id` (number): The device ID where the action was triggered
+  - `event` (table): Event object containing action details and parameters
 - **Usage**: Called automatically by the system when device actions are triggered
 
 ### onUIEvent(id, event)
-Global handler for UI events. Routes UI events to the appropriate QuickApp callbacks.
+Global event handler that routes UI events to the appropriate QuickApp callback functions.
+
 - **Parameters**: 
-  - `id` (number): Device ID where the UI event occurred
-  - `event` (table): Event object containing UI event details
+  - `id` (number): The device ID where the UI event occurred
+  - `event` (table): Event object containing UI event details and element information
 - **Usage**: Called automatically by the system when UI events occur
 
 ## Usage Examples

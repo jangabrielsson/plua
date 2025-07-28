@@ -453,6 +453,12 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "--local",
+        help="Enable local mode (sets runtime_config.local=true in Lua)",
+        action="store_true"
+    )
+
+    parser.add_argument(
         "-i", "--interactive",
         help="Enter interactive REPL after running script fragments and main file",
         action="store_true"
@@ -683,6 +689,7 @@ def main() -> None:
         'source_name': None,  # source_name will be set based on args.lua_file
         'args': args.args,  # Extra arguments passed via -a/--args
         'desktop': desktop_override,  # Desktop UI mode override (None = QA decides, True/False = CLI override)
+        'local': args.local,  # Local mode flag (propagated as runtime_config.local to Lua)
         # Add more CLI flags here as needed
     }
     runtime = LuaAsyncRuntime(config=config)

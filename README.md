@@ -5,7 +5,8 @@
 </div>
 
 Python-Lua async runtime with timer support 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jangabrielsson/plua)
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jangabrielsson/plua) [![Tutorial: Async Python-Lua Integration](https://img.shields.io/badge/Tutorial-Code2Tutorial-blue)](https://code2tutorial.com/tutorial/4003e87c-fee7-4a5c-be38-036472745c34/index.md)
 ## Table of Contents
 
 - [Overview](#overview)

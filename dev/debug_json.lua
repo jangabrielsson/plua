@@ -12,3 +12,8 @@ for i=1,1000 do
     end 
   end,1)
 end
+
+--[[
+
+The key insight is that on Windows, certain cleanup operations (especially threading-related ones) can sometimes deadlock, so we need aggressive timeout protection to ensure the process can always exit.
+--]]

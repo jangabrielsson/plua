@@ -348,6 +348,9 @@ The API server and local REPL share the same Lua interpreter instance, so:
 - Timers set via API continue running in the background
 - State is shared seamlessly between web and terminal interfaces
 
+**QuickApp Development Quick Start:**  
+See [docs/lua/QuickAppDevelopmentQuickStart.md](docs/lua/QuickAppDevelopmentQuickStart.md) for a step-by-step guide to developing Fibaro QuickApps with plua.
+
 ## VSCode integration
 Setup launch tasks in .vscode/launch.json
 The executable is either `plua` if installed and accesible globally,
@@ -689,6 +692,7 @@ Detailed Lua API documentation is available in `docs/lua/`:
 
 ### Fibaro HC3 Integration
 
+- **[QuickApp Development Quick Start](docs/lua/QuickAppDevelopmentQuickStart.md)** - Complete guide to get started with QuickApp development
 - **[Fibaro API Overview](docs/lua/Fibaro.md)** - Fibaro HC3 API integration and functions
 - **[QuickApp Development](docs/lua/QuickApp.md)** - QuickApp class and development patterns
 - **[QuickApp Emulator](docs/lua/EmulatorQA.md)** - Local QuickApp development with header directives

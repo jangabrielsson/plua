@@ -5,18 +5,10 @@ Desktop UI for QuickApp panels using pywebview to embed the existing web UI
 import threading
 import time
 import json
-import sys
 from typing import Dict, Optional, Any
 import requests
 from urllib.parse import urljoin
 from pathlib import Path
-
-# Windows process creation flags for proper detachment
-if sys.platform.startswith('win'):
-    import subprocess
-    CREATE_BREAKAWAY_FROM_JOB = 0x01000000  # Allows process to survive parent termination
-    DETACH_PROCESS = 0x00000008  # Creates detached process
-    WINDOWS_DETACHMENT_FLAGS = subprocess.CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB
 
 try:
     import webview
@@ -49,145 +41,26 @@ class DesktopUIManager:
             self.registry_file.parent.mkdir(exist_ok=True)
             if not self.registry_file.exists():
                 self._save_registry({"windows": {}, "positions": {}})
-            print(f"Using window registry: {self.registry_file}")
         except Exception as e:
             print(f"Warning: Failed to create window registry: {e}")
     
     def _load_registry(self) -> dict:
-        """Load window registry from disk with error recovery"""
+        """Load window registry from disk"""
         try:
             if self.registry_file.exists():
                 with open(self.registry_file, 'r') as f:
-                    content = f.read().strip()
-                    if content:
-                        registry = json.loads(content)
-                        print(f"Loaded registry from {self.registry_file}: {len(registry.get('windows', {}))} windows, {len(registry.get('positions', {}))} positions")
-                        return registry
-                    else:
-                        print(f"Registry file {self.registry_file} is empty")
-            else:
-                print(f"Registry file {self.registry_file} does not exist")
-        except json.JSONDecodeError as e:
-            print(f"Warning: Registry JSON corrupted ({e}), creating fresh registry")
-            # Backup corrupted file and create fresh one
-            try:
-                backup_file = self.registry_file.with_suffix('.json.backup')
-                self.registry_file.rename(backup_file)
-                print(f"Corrupted registry backed up to {backup_file}")
-            except Exception:
-                pass
+                    return json.load(f)
         except Exception as e:
             print(f"Warning: Failed to load window registry: {e}")
-        
-        print(f"Creating fresh registry at {self.registry_file}")
         return {"windows": {}, "positions": {}}
     
     def _save_registry(self, registry: dict):
-        """Save window registry to disk atomically with robust cross-platform file locking"""
-        import sys
-        import tempfile
-        import time
-        import random
-        import os
-        
-        max_retries = 5
-        base_delay = 0.01  # 10ms base delay
-        
-        for attempt in range(max_retries):
-            try:
-                # Use unique temp file names to avoid conflicts
-                timestamp = int(time.time() * 1000000)  # microseconds
-                random_suffix = random.randint(1000, 9999)
-                temp_file = self.registry_file.with_suffix(f'.json.tmp.{timestamp}.{random_suffix}')
-                
-                # Direct file locking on the registry file itself
-                lock_acquired = False
-                lock_fd = None
-                
-                try:
-                    # Try to acquire exclusive lock on registry file
-                    lock_fd = open(self.registry_file.with_suffix('.lockfile'), 'w')
-                    
-                    # Cross-platform file locking with timeout
-                    if sys.platform.startswith('win'):
-                        # Windows: Use msvcrt for file locking
-                        import msvcrt
-                        for lock_attempt in range(10):  # 100ms timeout
-                            try:
-                                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_NBLCK, 1)
-                                lock_acquired = True
-                                break
-                            except OSError:
-                                time.sleep(0.01)  # Wait 10ms
-                    else:
-                        # Unix/Linux/macOS: Use fcntl with timeout
-                        import fcntl
-                        for lock_attempt in range(10):  # 100ms timeout
-                            try:
-                                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                                lock_acquired = True
-                                break
-                            except (OSError, IOError):
-                                time.sleep(0.01)  # Wait 10ms
-                    
-                    if not lock_acquired:
-                        raise Exception(f"Could not acquire lock after timeout (attempt {attempt + 1})")
-                    
-                    # Write to temporary file first
-                    with open(temp_file, 'w') as f:
-                        json.dump(registry, f, indent=2)
-                        f.write('\n')  # Ensure newline at end
-                        f.flush()  # Ensure data is written
-                        os.fsync(f.fileno())  # Force to disk using os.fsync
-                    
-                    # Atomic rename (Windows requires removing target file first)
-                    if sys.platform.startswith('win') and self.registry_file.exists():
-                        self.registry_file.unlink()  # Remove existing file on Windows
-                    temp_file.rename(self.registry_file)
-                    
-                    # Success - exit retry loop
-                    return
-                    
-                finally:
-                    # Always unlock and clean up
-                    if lock_acquired and lock_fd:
-                        try:
-                            if sys.platform.startswith('win'):
-                                import msvcrt
-                                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
-                            # fcntl locks are automatically released when file is closed
-                        except Exception:
-                            pass
-                    
-                    if lock_fd:
-                        try:
-                            lock_fd.close()
-                        except Exception:
-                            pass
-                    
-                    # Clean up temp file if it exists
-                    try:
-                        if temp_file.exists():
-                            temp_file.unlink()
-                    except Exception:
-                        pass
-                    
-                    # Clean up lock file
-                    try:
-                        lock_file = self.registry_file.with_suffix('.lockfile')
-                        if lock_file.exists():
-                            lock_file.unlink()
-                    except Exception:
-                        pass
-                        
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    print(f"Warning: Failed to save window registry after {max_retries} attempts: {e}")
-                    return
-                else:
-                    # Exponential backoff with jitter
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 0.01)
-                    time.sleep(delay)
+        """Save window registry to disk"""
+        try:
+            with open(self.registry_file, 'w') as f:
+                json.dump(registry, f, indent=2)
+        except Exception as e:
+            print(f"Warning: Failed to save window registry: {e}")
     
     def _get_qa_key(self, qa_id: int, title: str = None, qa_type: str = "quickapp") -> str:
         """Generate a stable key for QuickApp identification"""
@@ -217,69 +90,38 @@ class DesktopUIManager:
         """
         try:
             registry = self._load_registry()
-            windows = registry.get("windows", {})
-            
-            print(f"Looking for existing window for QA {qa_id}...")
-            print(f"Registry has {len(windows)} windows total")
             
             # Look through registry for windows matching this QA ID
-            for window_id, window_info in windows.items():
-                if isinstance(window_info, dict):
-                    stored_qa_id = window_info.get("qa_id")
-                    status = window_info.get("status", "unknown")
+            for window_id, window_info in registry.get("windows", {}).items():
+                if isinstance(window_info, dict) and window_info.get("qa_id") == qa_id:
+                    # Check if this window process is still alive
                     pid = window_info.get("pid")
-                    
-                    print(f"  Window {window_id}: qa_id={stored_qa_id}, status={status}, pid={pid}")
-                    
-                    if stored_qa_id == qa_id and status == "open":
-                        # Check if this window process is still alive
-                        if pid and self._is_process_alive(pid):
-                            print(f"  -> Found alive process for QA {qa_id}, reconnecting to window {window_id}")
-                            # Reconnect to this existing window
-                            self.windows[window_id] = {
-                                "qa_id": qa_id,
-                                "title": window_info.get("title", f"QuickApp {qa_id}"),
-                                "type": "webview_process",
-                                "pid": pid,
-                                "reconnected": True  # Mark as reconnected
-                            }
-                            self.qa_windows[qa_id] = window_id
-                            return window_id
-                        else:
-                            print(f"  -> Process {pid} for QA {qa_id} is dead, marking window as closed")
-                            # Update registry to mark as closed since process is dead
-                            windows[window_id]["status"] = "closed"
-                            windows[window_id]["closed"] = time.time()
-                            self._save_registry(registry)
+                    if pid and self._is_process_alive(pid):
+                        # Reconnect to this existing window
+                        self.windows[window_id] = {
+                            "qa_id": qa_id,
+                            "title": window_info.get("title", f"QuickApp {qa_id}"),
+                            "type": "webview_process",
+                            "pid": pid,
+                            "reconnected": True  # Mark as reconnected
+                        }
+                        self.qa_windows[qa_id] = window_id
+                        return window_id
                         
-            print(f"No existing alive window found for QA {qa_id}")
             return None
         except Exception as e:
             print(f"Warning: Failed to find existing QA window: {e}")
             return None
     
     def _is_process_alive(self, pid: int) -> bool:
-        """Check if a process with given PID is still running (cross-platform)"""
+        """Check if a process with given PID is still running"""
         try:
-            if sys.platform.startswith('win'):
-                # Windows: Use tasklist to check if process exists
-                import subprocess
-                result = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/FO', 'CSV'], 
-                                      capture_output=True, text=True, timeout=5)
-                # For CSV format, if process exists, we get a header line + data line
-                # If process doesn't exist, we only get the header line
-                lines = result.stdout.strip().split('\n')
-                alive = len(lines) > 1 and str(pid) in result.stdout
-                print(f"Process {pid} alive check: {alive} (tasklist returned {len(lines)} lines)")
-                return alive
-            else:
-                # Unix/Linux/macOS: Use os.kill with signal 0
-                import os
-                import signal
-                os.kill(pid, 0)
-                return True
-        except (OSError, ProcessLookupError, subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
-            print(f"Process {pid} alive check failed: {e}")
+            import os
+            import signal
+            # Send signal 0 to check if process exists (doesn't actually send a signal)
+            os.kill(pid, 0)
+            return True
+        except (OSError, ProcessLookupError):
             return False
         
     def start(self):
@@ -334,12 +176,9 @@ class DesktopUIManager:
         
         # Check if we should reuse an existing window
         if not force_new:
-            print(f"Checking for existing window for QA {qa_id} (force_new={force_new})")
-            
             # First check in-memory mapping
             if qa_id in self.qa_windows:
                 existing_window_id = self.qa_windows[qa_id]
-                print(f"Found in-memory mapping: QA {qa_id} -> {existing_window_id}")
                 if existing_window_id in self.windows:
                     # Window still exists in memory, reuse it
                     print(f"Reusing existing window for QA {qa_id}: {existing_window_id}")
@@ -347,18 +186,13 @@ class DesktopUIManager:
                     return existing_window_id
                 else:
                     # Window was closed, remove the mapping
-                    print(f"In-memory window {existing_window_id} no longer exists, removing mapping")
                     del self.qa_windows[qa_id]
-            else:
-                print(f"No in-memory mapping found for QA {qa_id}")
             
             # Check for surviving processes from previous sessions (VS Code kill -9 scenario)
             existing_window_id = self._find_existing_qa_window(qa_id)
             if existing_window_id:
                 print(f"Reconnecting to existing window for QA {qa_id}: {existing_window_id}")
                 return existing_window_id
-        else:
-            print(f"force_new=True, creating new window for QA {qa_id}")
         
         # Get saved position if x,y not specified
         saved_pos = self._get_saved_position(qa_key)
@@ -416,146 +250,46 @@ def signal_handler(sig, frame):
     else:
         print(f"Received signal {{sig}}, ignoring to survive parent process death")
 
-# Set up signal handlers to survive VS Code kill -9 (cross-platform)
+# Set up signal handlers to survive VS Code kill -9
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
-# Ignore SIGHUP (parent process death) to survive VS Code kill -9 (Unix only)
+# Ignore SIGHUP (parent process death) to survive VS Code kill -9
 try:
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 except AttributeError:
-    pass  # SIGHUP not available on Windows
+    pass  # SIGHUP not available on all platforms
 
-# Also ignore SIGPIPE in case parent process dies (Unix only)  
+# Also ignore SIGPIPE in case parent process dies
 try:
     signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 except AttributeError:
-    pass  # SIGPIPE not available on Windows
-
-# Windows-specific signal handling
-if sys.platform.startswith('win'):
-    try:
-        # Handle Windows-specific signals
-        signal.signal(signal.SIGBREAK, signal_handler)  # Ctrl+Break
-    except AttributeError:
-        pass
+    pass
 
 def save_position(window):
     try:
         import json
-        import sys
-        import tempfile
-        import time
-        import random
         from pathlib import Path
         
         registry_file = Path.home() / ".plua" / "window_registry.json"
-        max_retries = 3
-        base_delay = 0.01
+        if registry_file.exists():
+            with open(registry_file, 'r') as f:
+                registry = json.load(f)
+        else:
+            registry = {{"windows": {{}}, "positions": {{}}}}
         
-        for attempt in range(max_retries):
-            try:
-                # Use unique temp file names to avoid conflicts
-                timestamp = int(time.time() * 1000000)
-                random_suffix = random.randint(1000, 9999)
-                temp_file = registry_file.with_suffix(f'.json.tmp.{{timestamp}}.{{random_suffix}}')
-                
-                lock_acquired = False
-                lock_fd = None
-                
-                try:
-                    lock_fd = open(registry_file.with_suffix('.lockfile'), 'w')
-                    
-                    # Cross-platform file locking with timeout
-                    if sys.platform.startswith('win'):
-                        import msvcrt
-                        for lock_attempt in range(10):
-                            try:
-                                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_NBLCK, 1)
-                                lock_acquired = True
-                                break
-                            except OSError:
-                                time.sleep(0.01)
-                    else:
-                        import fcntl
-                        for lock_attempt in range(10):
-                            try:
-                                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                                lock_acquired = True
-                                break
-                            except (OSError, IOError):
-                                time.sleep(0.01)
-                    
-                    if not lock_acquired:
-                        raise Exception(f"Could not acquire lock (attempt {{attempt + 1}})")
-                    
-                    # Read current registry
-                    if registry_file.exists():
-                        with open(registry_file, 'r') as f:
-                            registry = json.load(f)
-                    else:
-                        registry = {{"windows": {{}}, "positions": {{}}}}
-                    
-                    qa_key = "{qa_key}"
-                    registry["positions"][qa_key] = {{
-                        "x": window.x,
-                        "y": window.y, 
-                        "width": window.width,
-                        "height": window.height,
-                        "timestamp": time.time(),
-                        "updated": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                    }}
-                    
-                    # Write atomically
-                    with open(temp_file, 'w') as f:
-                        json.dump(registry, f, indent=2)
-                        f.write('\\n')
-                        f.flush()
-                        import os
-                        os.fsync(f.fileno())
-                    
-                    # Atomic rename (Windows requires removing target file first)
-                    if sys.platform.startswith('win') and registry_file.exists():
-                        registry_file.unlink()
-                    temp_file.rename(registry_file)
-                    
-                    return  # Success
-                    
-                finally:
-                    if lock_acquired and lock_fd:
-                        try:
-                            if sys.platform.startswith('win'):
-                                import msvcrt
-                                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
-                        except Exception:
-                            pass
-                    
-                    if lock_fd:
-                        try:
-                            lock_fd.close()
-                        except Exception:
-                            pass
-                    
-                    try:
-                        if temp_file.exists():
-                            temp_file.unlink()
-                    except Exception:
-                        pass
-                    
-                    try:
-                        lock_file = registry_file.with_suffix('.lockfile')
-                        if lock_file.exists():
-                            lock_file.unlink()
-                    except Exception:
-                        pass
-                        
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    print("Failed to save window position after retries:", e)
-                    return
-                else:
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 0.01)
-                    time.sleep(delay)
+        qa_key = "{qa_key}"
+        registry["positions"][qa_key] = {{
+            "x": window.x,
+            "y": window.y, 
+            "width": window.width,
+            "height": window.height,
+            "timestamp": time.time(),
+            "updated": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        }}
+        
+        with open(registry_file, 'w') as f:
+            json.dump(registry, f, indent=2)
             
     except Exception as e:
         print("Failed to save window position:", e)
@@ -588,54 +322,14 @@ except Exception as e:
                 f.write(webview_script)
                 temp_script = f.name
             
-            # Start the webview process with cross-platform detachment
-            try:
-                # Cross-platform process detachment
-                if sys.platform.startswith('win'):
-                    # Windows: Use CREATE_NEW_PROCESS_GROUP and CREATE_BREAKAWAY_FROM_JOB for true detachment
-                    # CREATE_BREAKAWAY_FROM_JOB allows the process to survive even if parent is in a job object (like VS Code)
-                    process = subprocess.Popen([sys.executable, temp_script], 
-                                             stdout=subprocess.DEVNULL, 
-                                             stderr=subprocess.DEVNULL,
-                                             stdin=subprocess.DEVNULL,
-                                             creationflags=WINDOWS_DETACHMENT_FLAGS
-                                             )
-                else:
-                    # Unix/Linux/macOS: Use setsid for full detachment
-                    process = subprocess.Popen([sys.executable, temp_script], 
-                                             stdout=subprocess.DEVNULL, 
-                                             stderr=subprocess.DEVNULL,
-                                             stdin=subprocess.DEVNULL,
-                                             start_new_session=True,  # Detach from parent process group
-                                             preexec_fn=os.setsid if hasattr(os, 'setsid') else None  # Create new session
-                                             )
-            except Exception as e:
-                print(f"Failed with full detachment, trying basic: {e}")
-                # Fallback with basic detachment
-                try:
-                    if sys.platform.startswith('win'):
-                        # Fallback: Use at least CREATE_NEW_PROCESS_GROUP
-                        process = subprocess.Popen([sys.executable, temp_script], 
-                                                 stdout=subprocess.DEVNULL, 
-                                                 stderr=subprocess.DEVNULL,
-                                                 stdin=subprocess.DEVNULL,
-                                                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
-                                                 )
-                    else:
-                        process = subprocess.Popen([sys.executable, temp_script], 
-                                                 stdout=subprocess.DEVNULL, 
-                                                 stderr=subprocess.DEVNULL,
-                                                 stdin=subprocess.DEVNULL,
-                                                 start_new_session=True  # Still detach from parent process group
-                                                 )
-                except Exception as e2:
-                    print(f"Failed with basic detachment: {e2}")
-                    # Final fallback - no detachment
-                    process = subprocess.Popen([sys.executable, temp_script], 
-                                             stdout=subprocess.DEVNULL, 
-                                             stderr=subprocess.DEVNULL,
-                                             stdin=subprocess.DEVNULL
-                                             )
+            # Start the webview process with full detachment
+            process = subprocess.Popen([sys.executable, temp_script], 
+                                     stdout=subprocess.DEVNULL, 
+                                     stderr=subprocess.DEVNULL,
+                                     stdin=subprocess.DEVNULL,
+                                     start_new_session=True,  # Detach from parent process group
+                                     preexec_fn=os.setsid if hasattr(os, 'setsid') else None  # Create new session
+                                     )
             
             self.windows[window_id] = {
                 "process": process,
@@ -654,7 +348,6 @@ except Exception as e:
             # Log window to registry with PID for reconnection
             self._log_window_to_registry(window_id, qa_id, title, process.pid)
             
-            print(f"DEBUG: Window creation completed for QA {qa_id} - force_new was {force_new}")
             print(f"Created QuickApp desktop window: {window_id} for QA {qa_id}")
             
             # Clean up the temp file after a delay
@@ -1033,20 +726,15 @@ desktop_manager: Optional[DesktopUIManager] = None
 
 def get_desktop_manager() -> Optional[DesktopUIManager]:
     """Get the global desktop UI manager instance"""
-    print(f"get_desktop_manager called, desktop_manager = {desktop_manager}")
     return desktop_manager
 
 
 def initialize_desktop_ui(api_base_url: str = "http://localhost:8888") -> DesktopUIManager:
     """Initialize the global desktop UI manager"""
     global desktop_manager
-    print(f"initialize_desktop_ui called with api_base_url={api_base_url}")
     if desktop_manager is None:
-        print("Creating new DesktopUIManager instance")
         desktop_manager = DesktopUIManager(api_base_url)
         desktop_manager.start()
-    else:
-        print("Using existing DesktopUIManager instance")
     return desktop_manager
 
 

@@ -1123,7 +1123,7 @@ import os
 from pathlib import Path
 
 def _log_window_to_registry(window_id, qa_id, title):
-    """Log window to ~/.plua/window_registry.json for VS Code tasks"""
+    """Log window to ~/.plua/registry.json for VS Code tasks"""
     try:
         import time
         from pathlib import Path
@@ -1132,7 +1132,7 @@ def _log_window_to_registry(window_id, qa_id, title):
         registry_dir = Path.home() / ".plua"
         registry_dir.mkdir(exist_ok=True)
         
-        registry_file = registry_dir / "window_registry.json"  # Use consistent filename
+        registry_file = registry_dir / "registry.json"
         
         # Load existing registry or create new one
         registry = {}
@@ -1250,7 +1250,6 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
     Returns:
         Dict with success status, window_id, and message
     """
-    print(f"LUAFUNS DEBUG: open_quickapp_window called with qa_id={qa_id}, title={title}, force_new={force_new}")
     try:
         from .desktop_ui import get_desktop_manager, initialize_desktop_ui
         
@@ -1268,9 +1267,7 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
         
         # Auto-initialize desktop manager if not available
         manager = get_desktop_manager()
-        print(f"LUAFUNS DEBUG: get_desktop_manager returned: {manager}")
         if not manager:
-            print("LUAFUNS DEBUG: No manager found, initializing...")
             # Initialize desktop UI automatically when first window is requested
             api_base_url = "http://localhost:8888"  # Default API URL
             try:
@@ -1286,10 +1283,8 @@ def open_quickapp_window(qa_id, title=None, width=800, height=600, x=None, y=Non
                 pass
             
             manager = initialize_desktop_ui(api_base_url)
-            print(f"LUAFUNS DEBUG: initialized desktop manager: {manager}")
         
         if manager:
-            print(f"LUAFUNS DEBUG: Calling manager.create_quickapp_window_direct(qa_id={qa_id}, title={title}, force_new={force_new})")
             window_id = manager.create_quickapp_window_direct(qa_id, title, width, height, x, y, force_new)
             if window_id:
                 # Determine if this was a reuse or new window
@@ -1312,7 +1307,7 @@ def close_all_quickapp_windows():
         import json
         from pathlib import Path
         
-        registry_file = Path.home() / ".plua" / "window_registry.json"  # Fixed path
+        registry_file = Path.home() / ".plua" / "registry.json"
         closed_count = 0
         
         if registry_file.exists():
@@ -1420,9 +1415,6 @@ def close_all_quickapp_windows():
                             else:
                                 print(f"No PID available for window {window_id}")
                 
-                # Clean up old closed windows from registry (keep only last 10 closed entries)
-                _cleanup_old_registry_entries(registry)
-                
                 # Write updated registry back
                 with open(registry_file, 'w') as f:
                     json.dump(registry, f, indent=2)
@@ -1431,47 +1423,6 @@ def close_all_quickapp_windows():
         
     except Exception as e:
         return {"success": False, "error": f"Failed to close windows: {str(e)}"}
-
-
-def _cleanup_old_registry_entries(registry, max_closed_entries=10):
-    """Clean up old closed window entries to prevent registry from growing indefinitely"""
-    import time
-    
-    if "windows" not in registry:
-        return
-        
-    windows = registry["windows"]
-    
-    # Find all closed windows and sort by close time
-    closed_windows = []
-    for window_id, window_info in windows.items():
-        if isinstance(window_info, dict) and window_info.get("status") == "closed":
-            closed_time = window_info.get("closed", 0)
-            closed_windows.append((closed_time, window_id))
-    
-    # Sort by close time (newest first)
-    closed_windows.sort(reverse=True)
-    
-    # Keep only the most recent closed entries
-    if len(closed_windows) > max_closed_entries:
-        windows_to_remove = closed_windows[max_closed_entries:]
-        for _, window_id in windows_to_remove:
-            del windows[window_id]
-            print(f"Cleaned up old registry entry: {window_id}")
-    
-    # Also clean up very old closed entries (older than 7 days)
-    week_ago = time.time() - (7 * 24 * 60 * 60)
-    old_windows_to_remove = []
-    
-    for window_id, window_info in windows.items():
-        if (isinstance(window_info, dict) and 
-            window_info.get("status") == "closed" and 
-            window_info.get("closed", float('inf')) < week_ago):
-            old_windows_to_remove.append(window_id)
-    
-    for window_id in old_windows_to_remove:
-        del windows[window_id]
-        print(f"Cleaned up old registry entry (>7 days): {window_id}")
 
 
 @lua_exporter.export(description="Close QuickApp desktop window by QA ID", category="desktop", user_facing=True)

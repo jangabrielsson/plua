@@ -58,4 +58,8 @@ do
   function json.initArray(e) 
     return setmetatable(e,{__isArray=true})
   end
+  json.util = {}
+  function json.util.InitArray(e) 
+    return setmetatable(e,{__isArray=true})
+  end
 end

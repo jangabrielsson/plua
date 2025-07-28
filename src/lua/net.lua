@@ -14,7 +14,8 @@ function net.HTTPClient()
       method = options.options and options.options.method or "GET",
       headers = options.options and options.options.headers or {},
       body = options.options and options.options.data or nil,
-      timeout = options.options and options.options.timeout or 30
+      timeout = options.options and options.options.timeout or 30,
+      checkCertificate = options.options and options.options.checkCertificate
     }
     
     -- Create a callback function that will handle the response
@@ -496,7 +497,7 @@ function net.WebSocketClient(options)
   end
   
   -- Connect to WebSocket server
-  function self:connect(url)
+  function self:connect(url, headers)
     if self.connected then
       self:_fireEvent("error", "Already connected")
       return
@@ -521,7 +522,7 @@ function net.WebSocketClient(options)
     -- Register the callback and make the connection (mark as persistent for multiple events)
     local callback_id = _PY.registerCallback(event_callback, true)  -- true = persistent
     self.callback_id = callback_id  -- Store for cleanup
-    local headers = self.options.headers or nil
+    local headers = headers or self.options.headers or nil
     self.conn_id = _PY.websocket_connect(url, callback_id, headers)
   end
   

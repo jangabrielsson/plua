@@ -1,7 +1,6 @@
 --%%name:alarmPartition
 --%%type:com.fibaro.alarmPartition
 --%%description:"My description"
---%%desktop:true
 
 -- Alarm partition type should handle following actions: arm, disarm
 -- To update arm state of alarm partition, update property "armed" with boolean

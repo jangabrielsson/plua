@@ -437,6 +437,15 @@ router:add("DELETE","/plugins/<id>/variables",function(path, data, vars, query)
   return Emu.api.hc3.restricted.delete(path,data)
 end)
 
+router:add("POST","/plugins/interfaces",function(path, data, vars, query) 
+  local dev = Emu.DIR[vars.id]
+  if dev then
+    if dev.device.isProxy then return Emu.api.hc3.restricted.delete(path,data) end
+    -- ToDo, add interfaces
+  end
+  return Emu.api.hc3.restricted.delete(path,data)
+end)
+
 router:add("POST", "/plugins/callUIEvent", function(path, data, vars, query)
   --return create_response({status = "ui_event_called"})
   local dev = Emu.DIR[data.deviceID]

@@ -459,12 +459,16 @@ function Emulator:loadQA(info)
   info.env = env
   env._G = env
   env._ENV = env
+  env.type = function(e) local t = type(e) return t == "table" and e.__USERDATA and "userdata" or t end
   loadfile(libpath.."fibaro_funs.lua","t",env)()
   loadfile(libpath.."quickapp.lua","t",env)()
   env.__TAG = info.device.name:upper()..info.device.id
   env.plugin.mainDeviceId = info.device.id
-  for name,f in pairs(info.files) do
-    if name ~= 'main' then loadFile(env,f.path,name,f.content) end
+  local fileEntries = {}
+  local n = 0; for _,_ in pairs(info.files) do n=n+1 end
+  for name,f in pairs(info.files) do fileEntries[f.order or n] = f; f.name = name end
+  for _,f in ipairs(fileEntries) do
+    if f.name ~= 'main' then loadFile(env,f.path,f.name,f.content) end
   end
   if info.headers.breakOnLoad then
     local firstLine,onInitLine = self.lib.findFirstLine(info.files.main.content)
@@ -475,7 +479,7 @@ end
 
 local venv = setmetatable({}, { __index = function(t,k) return os.getenv(k) end })
 local function validate(str,typ,key)
-  local stat,val = pcall(function() return load("return "..str, nil, "t", {env = venv, plua = pluaConf})() end)
+  local stat,val = pcall(function() return load("return "..str, nil, "t", {env = venv, plua = pluaConf, config = pluaConf})() end)
   if not stat then error(fmt("Invalid header %s: %s",key,str)) end
   if typ and type(val) ~= typ then 
     error(fmt("Invalid header %s: expected %s, got %s",key,typ,type(val)))
@@ -557,7 +561,7 @@ if res.success then
   end
 end
 if res.status_code == 401 or res.status_code == 403  then
-  self:ERROR("HC3 Aauthentication failed: " .. res.status_code .." ".. (res.error_message or ""))
+  self:ERROR("HC3 Authentication failed: " .. res.status_code .." ".. (res.error_message or ""))
   self:INFO("Please check your HC3 credentials in the .env or ~/.env file") 
   self.INFO("Terminating emulator due to authentication failure, and to avoid lock out of HC3")
   os.exit()
@@ -634,16 +638,23 @@ function headerKeys.var(str,info,k)
   info.vars[#info.vars+1] = {name=name,value=validate(value,nil,k)}
 end
 function headerKeys.u(str,info) info._UI[#info._UI+1] = str end
+local fileOrder = 1
 function headerKeys.file(str,info)
   local path,name = str:match("^([^,]+),(.+)$")
+  if path == nil then path,name = str:match("^([^:]+):(.+)$") end
   assert(path,"Invalid file header: "..str)
   if path:sub(1,1) == '$' then
     local lpath = package.searchpath(path:sub(2),package.path)
     if _PY.fileExist(lpath) then path = lpath
     else error(fmt("Library not found: '%s'",path)) end
+  elseif path:sub(1,1) == '%' then
+    path = info.path..path:sub(2) -- Relative to the QA path
   end
   if _PY.fileExist(path) then
-    info.files[name] = {path = path, content = nil }
+    local seen = info.files[name] ~= nil
+    assert( not seen, fmt("File '%s' already exists in QA",name) )
+    info.files[name] = {path = path, content = nil, order = fileOrder } 
+    fileOrder = fileOrder + 1
   else
     error(fmt("File not found: '%s'",path))
   end
@@ -667,6 +678,7 @@ end
 
 function Emulator:processHeaders(filename,content)
   local shortname = filename:match("([^/\\]+%.lua)") or filename
+  local path = filename:sub(1,-(#shortname+1))
   local name = shortname:match("(.+)%.lua")
   local headers = {
     name=name or "MyQA",
@@ -674,6 +686,7 @@ function Emulator:processHeaders(filename,content)
     files={},
     vars={},
     _UI={},
+    path = path or ""
   }
   local code = "\n"..content
   local eod = code:find("\n%-[%-]+ENDOFHEADERS") -- Embedded headers

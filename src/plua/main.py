@@ -833,6 +833,7 @@ def main() -> None:
                "  plua -e 'print(\"start\")' script.lua # Combine -e and file\n"
                "  plua -i -e 'x=1' script.lua        # Run fragments + file, then REPL\n"
                "  plua -a 'extra args' script.lua    # Pass extra arguments to runtime\n"
+               "  plua -H 'var:x=8' -H 'var:y=9' script.lua # Pass header strings\n"
                "  plua --fibaro script.lua           # Run with Fibaro API support\n"
                "  plua --debugger script.lua         # Run with MobDebug\n"
                "  plua --debugger --debug script.lua # Run with verbose debug logging\n"
@@ -920,6 +921,14 @@ def main() -> None:
         help="Extra arguments to pass to the Lua runtime",
         type=str,
         default=None
+    )
+
+    parser.add_argument(
+        "-H", "--header",
+        help="Header strings to inject into QuickApp (e.g., 'var:x=8'). Can be used multiple times.",
+        action="append",
+        type=str,
+        dest="headers"
     )
 
     parser.add_argument(
@@ -1151,6 +1160,7 @@ def main() -> None:
         'source_name': None,  # source_name will be set based on args.lua_file
         'args': args.args,  # Extra arguments passed via -a/--args
         'desktop': desktop_override,  # Desktop UI mode override (None = QA decides, True/False = CLI override)
+        'headers': args.headers or [],  # Header strings passed via -H/--header
         # Add more CLI flags here as needed
     }
     runtime = LuaAsyncRuntime(config=config)
@@ -1162,7 +1172,6 @@ def main() -> None:
             from .desktop_ui import initialize_desktop_ui
             api_base_url = f"http://{args.api_host}:{args.api_port}" if not args.noapi else "http://localhost:8888"
             initialize_desktop_ui(api_base_url)
-            print(f"Desktop UI initialized via CLI override. API available at {api_base_url}")
         except ImportError:
             print("Warning: Desktop UI not available. Install with: pip install pywebview")
         except Exception as e:

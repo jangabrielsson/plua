@@ -5,6 +5,7 @@ Provides async HTTP, TCP, UDP and other network functions using the timer callba
 
 import asyncio
 import aiohttp
+import ssl
 import uuid
 from aiomqtt import Client as AioMQTTClient, MqttError
 from typing import Dict, Any, Optional
@@ -39,16 +40,23 @@ def http_request_async(request_table: Dict[str, Any], callback_id: int) -> None:
             headers = dict(request_table['headers']) if 'headers' in request_table else {}
             body = request_table['body'] if 'body' in request_table else None
             timeout = request_table['timeout'] if 'timeout' in request_table else 30
+            ssl_verify = request_table['checkCertificate'] if 'checkCertificate' in request_table else True
 
             # Create timeout configuration
             timeout_config = aiohttp.ClientTimeout(total=timeout)
+
+            # Handle SSL verification for HTTPS requests
+            ssl_param = True  # Default: verify SSL certificates
+            if url.startswith('https://') and not ssl_verify:
+                ssl_param = False  # Disable SSL verification completely
 
             async with aiohttp.ClientSession(timeout=timeout_config) as session:
                 async with session.request(
                     method=method,
                     url=url,
                     headers=headers,
-                    data=body
+                    data=body,
+                    ssl=ssl_param
                 ) as response:
                     response_body = await response.text()
 
@@ -940,8 +948,8 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
             if url.startswith('wss://'):
                 ssl_context = ssl.create_default_context()
                 # For development, you might want to disable certificate verification
-                # ssl_context.check_hostname = False
-                # ssl_context.verify_mode = ssl.CERT_NONE
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
 
             session = aiohttp.ClientSession()
             ws = await session.ws_connect(url, headers=headers_dict, ssl=ssl_context)

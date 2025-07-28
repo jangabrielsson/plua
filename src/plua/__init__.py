@@ -2,7 +2,7 @@
 plua - Python-Lua async runtime with timer support
 """
 
-__version__ = "1.1.3"
+__version__ = "1.1.4"
 __author__ = "Jan Gabrielsson"
 __email__ = "jan@gabrielsson.com"
 

@@ -538,11 +538,31 @@ Comprehensive documentation is available in the `docs/` directory:
 - **[REST API Documentation](docs/api/README.md)** - Complete API reference and examples
 - **[Developer Documentation](docs/dev/README.md)** - Implementation details and development guides
 
+### Lua API Documentation
+
+Detailed Lua API documentation is available in `docs/lua/`:
+
+- **[Lua API Overview](docs/lua/README.md)** - Complete Lua API reference
+- **[plua Core API](docs/lua/Plua.md)** - Timer functions and core plua features
+- **[Timer System](docs/lua/Timers.md)** - setTimeout, setInterval, and timer management
+- **[HTTP Client](docs/lua/HTTPClient.md)** - HTTP requests and client functionality
+- **[WebSocket Client](docs/lua/WebSocket.md)** - WebSocket connections and messaging
+- **[TCP Socket](docs/lua/TCPSocket.md)** - TCP client/server functionality
+- **[UDP Socket](docs/lua/UDPSocket.md)** - UDP client/server functionality
+
+### Fibaro HC3 Integration
+
+- **[Fibaro API Overview](docs/lua/Fibaro.md)** - Fibaro HC3 API integration and functions
+- **[QuickApp Development](docs/lua/QuickApp.md)** - QuickApp class and development patterns
+- **[QuickApp Emulator](docs/lua/EmulatorQA.md)** - Local QuickApp development with header directives
+- **[VS Code Integration](docs/lua/VSCodeintegration.md)** - IDE setup and debugging
+
 ### Quick Links
 - 🚀 **Getting Started**: This README
 - 🌐 **Web Interface**: [Web REPL Examples](docs/WEB_REPL_HTML_EXAMPLES.md)
 - 📡 **API Integration**: [REST API Docs](docs/api/README.md)
 - 🔧 **Contributing**: [Developer Docs](docs/dev/README.md)
+- 📖 **Lua API**: [Lua Documentation](docs/lua/README.md)
 
 ## Fibaro HC3 API Integration
 

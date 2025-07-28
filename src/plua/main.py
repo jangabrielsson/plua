@@ -70,29 +70,38 @@ def cleanup_on_exit():
         pass
 
 
-def setup_signal_handlers():
+def setup_signal_handlers(interactive_mode=False):
     """Set up signal handlers for graceful shutdown"""
-    def unified_signal_handler(signum, frame):
+    # Initialize shutdown flag for interactive mode
+    if interactive_mode:
+        import sys
+        sys._plua_shutdown_requested = False
+        
+    def signal_handler(signum, frame):
         print(f"\nReceived signal {signum}, shutting down...")
         
-        # Always try to close QuickApp windows first
-        try:
-            from .luafuns_lib import close_all_quickapp_windows
-            result = close_all_quickapp_windows()
-            if result.get('closed_count', 0) > 0:
-                print(f"Closed {result['closed_count']} QuickApp windows")
-        except Exception as e:
-            print(f"Warning: Could not close QuickApp windows: {e}")
-        
-        # Force cleanup of other resources
-        try:
+        if interactive_mode:
+            # In interactive mode, don't exit immediately - let the REPL handle it
+            # Signal the REPL to stop by setting a global flag
+            import sys
+            sys._plua_shutdown_requested = True
+            # Give the REPL a moment to handle the shutdown gracefully
+            import time
+            import threading
+            
+            def force_exit_after_timeout():
+                time.sleep(2.0)  # Wait 2 seconds
+                print("Force exiting due to timeout...")
+                force_cleanup_all()
+                os._exit(0)  # Force exit without cleanup
+            
+            # Start timeout thread
+            timeout_thread = threading.Thread(target=force_exit_after_timeout, daemon=True)
+            timeout_thread.start()
+        else:
+            # In non-interactive mode, exit immediately after cleanup
             force_cleanup_all()
-        except Exception:
-            pass
-        
-        # Clean exit
-        import sys
-        sys.exit(0)
+            sys.exit(0)
     
     # Register signal handlers for common termination signals
     signals_to_handle = []
@@ -105,7 +114,7 @@ def setup_signal_handlers():
     if hasattr(signal, 'SIGINT'):
         signals_to_handle.append(signal.SIGINT)
     
-    # SIGHUP - hangup signal (terminal disconnection) - Unix only
+    # SIGHUP - hangup signal (terminal disconnection)
     if hasattr(signal, 'SIGHUP'):
         signals_to_handle.append(signal.SIGHUP)
     
@@ -116,10 +125,9 @@ def setup_signal_handlers():
     # Register handlers for available signals
     for sig in signals_to_handle:
         try:
-            signal.signal(sig, unified_signal_handler)
-        except (OSError, ValueError) as e:
+            signal.signal(sig, signal_handler)
+        except (OSError, ValueError):
             # Some signals may not be available on all platforms
-            # This is expected and normal
             pass
     
     # Also register atexit handler as final fallback
@@ -166,9 +174,6 @@ def force_cleanup_all():
     except Exception:
         # Final fallback - just exit
         pass
-
-
-
 
 
 def show_greeting() -> None:
@@ -256,14 +261,7 @@ async def run_interactive(
         # Now enter interactive REPL
         from .repl import PluaREPL
         repl = PluaREPL(runtime)
-        
-        # The unified signal handler will handle Ctrl+C for us
-        # No need for special REPL signal handling - keep it simple!
-        
-        try:
-            await repl.start()
-        except KeyboardInterrupt:
-            print("\nInterrupted")
+        await repl.start()
 
     except KeyboardInterrupt:
         print("\nReceived interrupt signal, shutting down...")
@@ -365,7 +363,7 @@ def main() -> None:
     """Main entry point for the plua command line tool"""
 
     parser = argparse.ArgumentParser(
-        description="plua - Python-Lua async runtime with timer support (https://github.com/jangabrielsson/plua/blob/main/README.md)",
+        description="plua - Python-Lua async runtime with timer support",
         epilog="Examples:\n"
                "  plua                               # Interactive REPL mode\n"
                "  plua script.lua                    # Run script.lua with API server\n"
@@ -378,7 +376,6 @@ def main() -> None:
                "  plua -e 'print(\"start\")' script.lua # Combine -e and file\n"
                "  plua -i -e 'x=1' script.lua        # Run fragments + file, then REPL\n"
                "  plua -a 'extra args' script.lua    # Pass extra arguments to runtime\n"
-               "  plua -H 'var:x=8' -H 'var:y=9' script.lua # Pass header strings\n"
                "  plua --fibaro script.lua           # Run with Fibaro API support\n"
                "  plua --debugger script.lua         # Run with MobDebug\n"
                "  plua --debugger --debug script.lua # Run with verbose debug logging\n"
@@ -469,14 +466,6 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "-H", "--header",
-        help="Header strings to inject into QuickApp (e.g., 'var:x=8'). Can be used multiple times.",
-        action="append",
-        type=str,
-        dest="headers"
-    )
-
-    parser.add_argument(
         "-l", "--library",
         help="EIgnored for now...",
         type=str,
@@ -550,22 +539,20 @@ def main() -> None:
         default=None
     )
 
-    parser.add_argument(
-        "--init-quickapp",
-        help="Initialize a new QuickApp project with .vscode config, .project file, and starter code",
-        action="store_true"
-    )
-
     args = parser.parse_args()
-
-    # Set up signal handlers for graceful shutdown (especially for VS Code termination)
-    setup_signal_handlers()
 
     # Show greeting with version information first
     show_greeting()
 
     if args.version:
         sys.exit(0)
+
+    # Determine if we should enter interactive mode (needed for signal handler setup)
+    has_script_content = bool(args.script_fragments or args.lua_file)
+    interactive_mode = args.interactive or not has_script_content
+    
+    # Set up signal handlers for graceful shutdown (especially for VS Code termination)
+    setup_signal_handlers(interactive_mode=interactive_mode)
 
     # Handle port cleanup if requested
     if args.cleanup_port:
@@ -667,16 +654,6 @@ def main() -> None:
             print(f"Error cleaning up registry: {e}")
             os._exit(1)
 
-    # Handle QuickApp project initialization if requested
-    if args.init_quickapp:
-        try:
-            from .scaffolding import init_quickapp_project
-            init_quickapp_project()
-            os._exit(0)
-        except Exception as e:
-            print(f"Error initializing QuickApp project: {e}")
-            os._exit(1)
-
     # Prepare debugger config if requested
     debugger_config = None
     if args.debugger:
@@ -706,7 +683,6 @@ def main() -> None:
         'source_name': None,  # source_name will be set based on args.lua_file
         'args': args.args,  # Extra arguments passed via -a/--args
         'desktop': desktop_override,  # Desktop UI mode override (None = QA decides, True/False = CLI override)
-        'headers': args.headers or [],  # Header strings passed via -H/--header
         # Add more CLI flags here as needed
     }
     runtime = LuaAsyncRuntime(config=config)
@@ -718,6 +694,7 @@ def main() -> None:
             from .desktop_ui import initialize_desktop_ui
             api_base_url = f"http://{args.api_host}:{args.api_port}" if not args.noapi else "http://localhost:8888"
             initialize_desktop_ui(api_base_url)
+            print(f"Desktop UI initialized via CLI override. API available at {api_base_url}")
         except ImportError:
             print("Warning: Desktop UI not available. Install with: pip install pywebview")
         except Exception as e:

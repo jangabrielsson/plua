@@ -199,6 +199,12 @@ class PluaREPL:
         
         # Poll the queue with timeout to allow cancellation
         while self.running:
+            # Check for shutdown signal from signal handler
+            import sys
+            if hasattr(sys, '_plua_shutdown_requested') and sys._plua_shutdown_requested:
+                print("\nShutdown requested, cleaning up...")
+                return None  # This will cause REPL to exit
+                
             try:
                 # Check queue with short timeout to remain responsive
                 try:
@@ -262,16 +268,45 @@ class PluaREPL:
             if self.repl_task and not self.repl_task.done():
                 self.repl_task.cancel()
         finally:
-            # Clean shutdown
+            # Clean shutdown with timeout protection
             self.running = False
             
-            # Clean up input thread
+            # Clean up input thread with timeout
             if self.input_thread and self.input_thread.is_alive():
                 # Give the thread a chance to exit naturally
                 self.input_thread.join(timeout=0.5)
             
+            # Stop runtime with timeout protection
             if hasattr(self.runtime, 'stop'):
-                self.runtime.stop()
+                try:
+                    import signal
+                    import threading
+                    import time
+                    
+                    stop_completed = threading.Event()
+                    
+                    def stop_runtime():
+                        try:
+                            self.runtime.stop()
+                            stop_completed.set()
+                        except Exception as e:
+                            print(f"Runtime stop error: {e}")
+                            stop_completed.set()
+                    
+                    # Start stop in separate thread
+                    stop_thread = threading.Thread(target=stop_runtime, daemon=True)
+                    stop_thread.start()
+                    
+                    # Wait for stop to complete with timeout
+                    if not stop_completed.wait(timeout=1.5):  # 1.5 second timeout
+                        print("Runtime stop timed out, forcing exit...")
+                        import os
+                        os._exit(0)
+                        
+                except Exception as e:
+                    print(f"Error during runtime cleanup: {e}")
+                    import os
+                    os._exit(0)
 
 
 async def run_repl(runtime=None):

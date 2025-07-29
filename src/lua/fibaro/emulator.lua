@@ -46,6 +46,7 @@ function Emulator:__init()
   else
     self.config.webport = 8080  -- Default port if not set
   end
+  self.offline = _PY.config.runtime_config['local']
   self.DIR = {}
   self.lib = { 
     loadLib = loadLib,

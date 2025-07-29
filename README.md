@@ -215,6 +215,7 @@ plua --debugger --debugger-host 192.168.1.100 script.lua  # Remote debugger
 # Utility commands
 plua --cleanup-port                                   # Clean up stuck API port
 plua --version                                        # Show version
+plua --init-quickapp                                  # Create QuickApp scaffolding in current dir
 ```
 
 **Note for Fibaro HC3 Users:** If you plan to connect to a real Fibaro Home Center 3 device, you'll need to configure a `.env` file with your HC3 credentials. See the [HC3 Configuration with .env File](#hc3-configuration-with-env-file) section for detailed setup instructions.
@@ -351,6 +352,35 @@ The API server and local REPL share the same Lua interpreter instance, so:
 
 **QuickApp Development Quick Start:**  
 See [docs/lua/QuickAppDevelopmentQuickStart.md](docs/lua/QuickAppDevelopmentQuickStart.md) for a step-by-step guide to developing Fibaro QuickApps with plua.
+
+### QuickApp Project Scaffolding
+
+Plua provides a built-in scaffolding tool to quickly create new QuickApp projects with proper structure and configuration:
+
+```bash
+# Create a new directory and initialize QuickApp project
+mkdir my_project && cd my_project
+plua --init-quickapp
+
+# Or initialize in current directory
+plua --init-quickapp
+
+# This creates:
+# ├── main.lua              # Main QuickApp code (from template)
+# ├── .vscode/               # VS Code configuration
+# │   ├── launch.json        # Debug configurations
+# │   └── tasks.json         # Build/upload tasks
+# ├── .project              # VS Code task configuration  
+# └── .env.example          # HC3 connection template (if template includes it)
+```
+
+The scaffolding creates:
+- **main.lua**: A complete QuickApp template with `onInit()` and example methods
+- **.vscode/**: Full VS Code integration with debug and upload tasks
+- **.project**: Configuration for VS Code tasks (upload, update, download)
+- **.env.example**: Template for HC3 connection credentials (template-dependent)
+
+The tool offers 42+ different QuickApp templates including sensors, switches, thermostats, and more. After scaffolding, configure your HC3 connection by creating a `.env` file with your credentials. The VS Code tasks will then allow you to upload and manage your QuickApp directly on your HC3 device.
 
 ## VSCode integration
 Setup launch tasks in .vscode/launch.json

@@ -340,6 +340,7 @@ def main() -> None:
                "  plua --close-windows               # Close all QuickApp windows\n"
                "  plua --close-qa-window 123         # Close window for QA ID 123\n"
                "  plua --cleanup-registry            # Clean up old window registry entries\n"
+               "  plua --init-quickapp               # Initialize new QuickApp project\n"
                "  plua --desktop script.lua          # Force desktop UI (override QA)\n"
                "  plua --desktop=false script.lua    # Force no desktop UI (override QA)\n"
                "  plua --debugger --debugger-host 192.168.1.100 script.lua",
@@ -494,6 +495,12 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "--init-quickapp",
+        help="Initialize a new QuickApp project with VS Code config and templates",
+        action="store_true"
+    )
+
+    parser.add_argument(
         "--desktop",
         help="Override desktop UI mode for QuickApp windows (true/false). If not specified, QA decides based on --%%desktop header",
         nargs="?",
@@ -615,6 +622,16 @@ def main() -> None:
             os._exit(0)
         except Exception as e:
             print(f"Error cleaning up registry: {e}")
+            os._exit(1)
+
+    # Handle QuickApp project initialization if requested
+    if args.init_quickapp:
+        try:
+            from .scaffolding import init_quickapp_project
+            init_quickapp_project()
+            os._exit(0)
+        except Exception as e:
+            print(f"Error initializing QuickApp project: {e}")
             os._exit(1)
 
     # Prepare debugger config if requested

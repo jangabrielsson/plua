@@ -84,7 +84,7 @@
             "args": [
                 "--fibaro",
                 "-a",
-                "downloadQA ${input:QA_id:${input:path_id}",
+                "downloadQA ${input:QA_id}:${input:path_id}",
                 "dummy.lua"
             ],
             "group": "build"

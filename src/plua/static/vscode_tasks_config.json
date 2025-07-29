@@ -41,7 +41,7 @@
         ]
       }
     },
-       {
+    {
       "label": "Plua, upload current file as QA to HC3",
       "type": "shell",
       "command": "plua",

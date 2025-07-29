@@ -66,7 +66,7 @@ include = ["plua*", "lua*"]
 
 [tool.setuptools.package-data]
 "lua" = ["*.lua", "**/*.lua", "**/*.json", "**/*.fqa"]
-"plua" = ["*.lua", "**/*.lua", "static/*.html", "static/*.css", "static/*.js"]
+"plua" = ["*.lua", "**/*.lua", "static/*.html", "static/*.css", "static/*.js", "static/*.json"]
 
 [tool.setuptools.dynamic]
 version = {attr = "plua.__version__"}

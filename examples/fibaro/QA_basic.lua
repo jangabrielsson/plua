@@ -1,7 +1,8 @@
 --%%name:Basic
 --%%type:com.fibaro.binarySwitch
 --%%save:dev/basic.fqa
---%%proxy:true
+--%% proxy:true
+--%%project:888
 --%%desktop:true
 
 function QuickApp:onInit()

@@ -7,6 +7,11 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 from typing import Dict, Any
+try:
+    from importlib.resources import files
+except ImportError:
+    # Fallback for Python < 3.9
+    from importlib_resources import files
 
 
 def init_quickapp_project() -> None:
@@ -264,32 +269,7 @@ def init_quickapp_project() -> None:
     
     # Create launch.json for VS Code debugging
     launch_json_path = vscode_dir / "launch.json"
-    launch_config = {
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "Run plua with current file",
-                "type": "python",
-                "request": "launch",
-                "module": "plua",
-                "args": ["--fibaro", "-i", "${file}"],
-                "console": "integratedTerminal",
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "PYTHONPATH": "${workspaceFolder}"
-                }
-            },
-            {
-                "name": "Run plua interactive",
-                "type": "python", 
-                "request": "launch",
-                "module": "plua",
-                "args": ["--fibaro", "-i"],
-                "console": "integratedTerminal",
-                "cwd": "${workspaceFolder}"
-            }
-        ]
-    }
+    launch_config = get_vscode_launch_config()
     
     if launch_json_path.exists():
         print(f"  Updating {launch_json_path}")
@@ -301,155 +281,7 @@ def init_quickapp_project() -> None:
     
     # Create tasks.json for HC3 upload/download
     tasks_json_path = vscode_dir / "tasks.json"
-    tasks_config = {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Plua: Close All QuickApp Windows",
-      "type": "shell",
-      "group": "build",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "echo": False,
-        "close": False,
-        "reveal": "silent",
-        "revealProblems": "never",
-        "focus": False,
-        "panel": "shared",
-        "clear": False,
-        "showReuseMessage": False
-      },
-      "problemMatcher": [],
-      "windows": {
-        "command": "cmd",
-        "args": [
-          "/c",
-          "if exist \"${workspaceFolder}\\.venv\\Scripts\\python.exe\" (\"${workspaceFolder}\\.venv\\Scripts\\python.exe\" -m plua --close-windows) else (python -m plua --close-windows)"
-        ]
-      },
-      "osx": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
-        ]
-      },
-      "linux": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
-        ]
-      }
-    },
-       {
-      "label": "Plua, upload current file as QA to HC3",
-      "type": "shell",
-      "command": "plua",
-      "args": [
-        "--fibaro",
-        "-a",
-        "uploadQA",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "Plua, update single file (part of .project)",
-      "type": "shell",
-      "command": "plua",
-      "args": [
-        "--fibaro",
-        "-a",
-        "updateFile",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "Plua, update QA (defined in .project)",
-      "type": "shell",
-      "command": "plua",
-      "args": [
-        "--fibaro",
-        "updateQA",
-        "-a",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "Plua, Download and unpack from HC3",
-      "type": "shell",
-      "command": "plua",
-      "args": [
-        "--fibaro",
-        "-a",
-        "downloadQA ${input:QA_id:${input:path_id}",
-        "dummy.lua"
-      ],
-      "group": "build"
-    }
-  ],
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "QA_id",
-      "description": "deviceId of QA from HC3 you want to download?",
-      "default": "-"
-    },
-    {
-      "type": "promptString",
-      "id": "path_id",
-      "description": "path where to store the QA",
-      "default": "dev"
-    },
-    {
-      "type": "promptString",
-      "id": "QA_name",
-      "description": "'.' for open file, or QA path name",
-      "default": "."
-    },
-    {
-      "id": "pickEnvFile",
-      "type": "command",
-      "command": "launch-file-picker.pick",
-      "args": {
-        "options": {
-          "title": "pick env file",
-          "path": ".",
-          "filterExt": ".env"
-        },
-        "output": {
-          "defaultPath": "client/env/dev.env"
-        }
-      }
-    },
-    {
-      "type": "pickString",
-      "id": "versionBumpType",
-      "description": "Select version bump type",
-      "options": [
-        "patch",
-        "minor",
-        "major"
-      ],
-      "default": "patch"
-    },
-    {
-      "type": "promptString",
-      "id": "customVersion",
-      "description": "Enter custom version (e.g., 1.2.3) or leave empty for auto-bump"
-    },
-    {
-      "type": "promptString",
-      "id": "releaseNotes",
-      "description": "Enter release notes for this version"
-    }
-  ]
-}
+    tasks_config = get_vscode_tasks_config()
     
     if tasks_json_path.exists():
         print(f"  Updating {tasks_json_path}")
@@ -461,28 +293,7 @@ def init_quickapp_project() -> None:
     
     # Create .project file for HC3 project configuration
     project_file_path = project_dir / ".project"
-    project_config = '''{
-  "name": "My QuickApp",
-  "id": 0,
-  "type": "com.fibaro.quickApp",
-  "properties": {
-    "deviceIcon": 0,
-    "viewLayout": {"$jason": {"body": {"header": {"title": "quickApp_device_812"},"sections": {"items": [{"components": [{"name": "button","text": "Hello","type": "button"}],"type": "vertical"}]}}}},
-    "uiCallbacks": ["main.lua"]
-  },
-  "apiVersion": "1.2",
-  "initialProperties": {},
-  "initialInterfaces": [],
-  "files": [
-    {
-      "name": "main",
-      "type": "lua",
-      "isMain": true,
-      "isOpen": true,
-      "content": "main.lua"
-    }
-  ]
-}'''
+    project_config = get_project_config()
     
     if project_file_path.exists():
         print(f"  Project file already exists: {project_file_path}")
@@ -497,38 +308,7 @@ def init_quickapp_project() -> None:
     # Get template content
     if selected_key == "basic" or "url" not in selected_template:
         # Use built-in basic template
-        main_lua_content = '''--%%name:My QuickApp
---%%type:com.fibaro.quickApp
---%%description:A starter QuickApp template
-
-function QuickApp:onInit()
-    self:debug("QuickApp started:", self.name, self.id)
-    
-    -- Initialize UI callback
-    self:updateProperty("log", "QuickApp initialized at " .. os.date("%c"))
-    
-    -- Example: Set up a timer for periodic updates
-    fibaro.setTimeout(5000, function()
-        self:updateProperty("log", "Timer update at " .. os.date("%c"))
-    end)
-end
-
-function QuickApp:button(event)
-    self:debug("Button pressed!")
-    self:updateProperty("log", "Button pressed at " .. os.date("%c"))
-    
-    -- Example: Toggle a property or call an API
-    local currentValue = self:getVariable("counter") or "0"
-    local newValue = tostring(tonumber(currentValue) + 1)
-    self:setVariable("counter", newValue)
-    self:updateProperty("log", "Button count: " .. newValue)
-end
-
--- Add more QuickApp methods here as needed
--- function QuickApp:turnOn()
--- function QuickApp:turnOff()
--- function QuickApp:setValue(value)
-'''
+        main_lua_content = get_basic_quickapp_template()
     else:
         # Fetch template from GitHub
         print(f"  Fetching {selected_template['name']} template from GitHub...")
@@ -539,38 +319,7 @@ end
         except urllib.error.URLError as e:
             print(f"  ✗ Failed to fetch template: {e}")
             print(f"  Falling back to basic template")
-            main_lua_content = '''--%%name:My QuickApp
---%%type:com.fibaro.quickApp
---%%description:A starter QuickApp template
-
-function QuickApp:onInit()
-    self:debug("QuickApp started:", self.name, self.id)
-    
-    -- Initialize UI callback
-    self:updateProperty("log", "QuickApp initialized at " .. os.date("%c"))
-    
-    -- Example: Set up a timer for periodic updates
-    fibaro.setTimeout(5000, function()
-        self:updateProperty("log", "Timer update at " .. os.date("%c"))
-    end)
-end
-
-function QuickApp:button(event)
-    self:debug("Button pressed!")
-    self:updateProperty("log", "Button pressed at " .. os.date("%c"))
-    
-    -- Example: Toggle a property or call an API
-    local currentValue = self:getVariable("counter") or "0"
-    local newValue = tostring(tonumber(currentValue) + 1)
-    self:setVariable("counter", newValue)
-    self:updateProperty("log", "Button count: " .. newValue)
-end
-
--- Add more QuickApp methods here as needed
--- function QuickApp:turnOn()
--- function QuickApp:turnOff()
--- function QuickApp:setValue(value)
-'''
+            main_lua_content = get_basic_quickapp_template()
     
     if main_lua_path.exists():
         print(f"  Lua file already exists: {main_lua_path}")
@@ -591,244 +340,25 @@ end
 
 def get_vscode_launch_config() -> Dict[str, Any]:
     """Get VS Code launch configuration for plua projects"""
-    return {
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "Run plua with current file",
-                "type": "python",
-                "request": "launch",
-                "module": "plua",
-                "args": ["--fibaro", "-i", "${file}"],
-                "console": "integratedTerminal",
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "PYTHONPATH": "${workspaceFolder}"
-                }
-            },
-            {
-                "name": "Run plua interactive",
-                "type": "python", 
-                "request": "launch",
-                "module": "plua",
-                "args": ["--fibaro", "-i"],
-                "console": "integratedTerminal",
-                "cwd": "${workspaceFolder}"
-            }
-        ]
-    }
+    static_files = files('plua') / 'static'
+    config_content = (static_files / 'vscode_launch_config.json').read_text()
+    return json.loads(config_content)
 
 
 def get_vscode_tasks_config() -> Dict[str, Any]:
     """Get VS Code tasks configuration for HC3 integration"""
-    return {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Plua: Close All QuickApp Windows",
-      "type": "shell",
-      "group": "build",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "echo": False,
-        "close": False,
-        "reveal": "silent",
-        "revealProblems": "never",
-        "focus": False,
-        "panel": "shared",
-        "clear": False,
-        "showReuseMessage": False
-      },
-      "problemMatcher": [],
-      "windows": {
-        "command": "cmd",
-        "args": [
-          "/c",
-          "if exist \"${workspaceFolder}\\.venv\\Scripts\\python.exe\" (\"${workspaceFolder}\\.venv\\Scripts\\python.exe\" -m plua --close-windows) else (python -m plua --close-windows)"
-        ]
-      },
-      "osx": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
-        ]
-      },
-      "linux": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
-        ]
-      }
-    },
-       {
-      "label": "Plua, upload current file as QA to HC3",
-      "type": "shell",
-      "command": "plua",
-      "args": [
-        "--fibaro",
-        "-a",
-        "uploadQA",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "Plua, update single file (part of .project)",
-      "type": "shell",
-      "command": "plua",
-      "args": [
-        "--fibaro",
-        "-a",
-        "updateFile",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "Plua, update QA (defined in .project)",
-      "type": "shell",
-      "command": "plua",
-      "args": [
-        "--fibaro",
-        "updateQA",
-        "-a",
-        "${relativeFile}"
-      ],
-      "group": "build"
-    },
-    {
-      "label": "Plua, Download and unpack from HC3",
-      "type": "shell",
-      "command": "plua",
-      "args": [
-        "--fibaro",
-        "-a",
-        "downloadQA ${input:QA_id:${input:path_id}",
-        "dummy.lua"
-      ],
-      "group": "build"
-    }
-  ],
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "QA_id",
-      "description": "deviceId of QA from HC3 you want to download?",
-      "default": "-"
-    },
-    {
-      "type": "promptString",
-      "id": "path_id",
-      "description": "path where to store the QA",
-      "default": "dev"
-    },
-    {
-      "type": "promptString",
-      "id": "QA_name",
-      "description": "'.' for open file, or QA path name",
-      "default": "."
-    },
-    {
-      "id": "pickEnvFile",
-      "type": "command",
-      "command": "launch-file-picker.pick",
-      "args": {
-        "options": {
-          "title": "pick env file",
-          "path": ".",
-          "filterExt": ".env"
-        },
-        "output": {
-          "defaultPath": "client/env/dev.env"
-        }
-      }
-    },
-    {
-      "type": "pickString",
-      "id": "versionBumpType",
-      "description": "Select version bump type",
-      "options": [
-        "patch",
-        "minor",
-        "major"
-      ],
-      "default": "patch"
-    },
-    {
-      "type": "promptString",
-      "id": "customVersion",
-      "description": "Enter custom version (e.g., 1.2.3) or leave empty for auto-bump"
-    },
-    {
-      "type": "promptString",
-      "id": "releaseNotes",
-      "description": "Enter release notes for this version"
-    }
-  ]
-}
+    static_files = files('plua') / 'static'
+    config_content = (static_files / 'vscode_tasks_config.json').read_text()
+    return json.loads(config_content)
 
 
 def get_basic_quickapp_template() -> str:
     """Get the basic QuickApp template content"""
-    return '''--%%name:My QuickApp
---%%type:com.fibaro.quickApp
---%%description:A starter QuickApp template
-
-function QuickApp:onInit()
-    self:debug("QuickApp started:", self.name, self.id)
-    
-    -- Initialize UI callback
-    self:updateProperty("log", "QuickApp initialized at " .. os.date("%c"))
-    
-    -- Example: Set up a timer for periodic updates
-    fibaro.setTimeout(5000, function()
-        self:updateProperty("log", "Timer update at " .. os.date("%c"))
-    end)
-end
-
-function QuickApp:button(event)
-    self:debug("Button pressed!")
-    self:updateProperty("log", "Button pressed at " .. os.date("%c"))
-    
-    -- Example: Toggle a property or call an API
-    local currentValue = self:getVariable("counter") or "0"
-    local newValue = tostring(tonumber(currentValue) + 1)
-    self:setVariable("counter", newValue)
-    self:updateProperty("log", "Button count: " .. newValue)
-end
-
--- Add more QuickApp methods here as needed
--- function QuickApp:turnOn()
--- function QuickApp:turnOff()
--- function QuickApp:setValue(value)
-'''
+    static_files = files('plua') / 'static'
+    return (static_files / 'basic_quickapp_template.lua').read_text()
 
 
 def get_project_config() -> str:
     """Get the .project file configuration for HC3"""
-    return '''{
-  "name": "My QuickApp",
-  "id": 0,
-  "type": "com.fibaro.quickApp",
-  "properties": {
-    "deviceIcon": 0,
-    "viewLayout": {"$jason": {"body": {"header": {"title": "quickApp_device_812"},"sections": {"items": [{"components": [{"name": "button","text": "Hello","type": "button"}],"type": "vertical"}]}}}},
-    "uiCallbacks": ["main.lua"]
-  },
-  "apiVersion": "1.2",
-  "initialProperties": {},
-  "initialInterfaces": [],
-  "files": [
-    {
-      "name": "main",
-      "type": "lua",
-      "isMain": true,
-      "isOpen": true,
-      "content": "main.lua"
-    }
-  ]
-}'''
+    static_files = files('plua') / 'static'
+    return (static_files / 'project_config.json').read_text()

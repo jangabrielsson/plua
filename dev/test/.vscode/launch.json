@@ -2,32 +2,37 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run plua with current file",
-            "type": "python",
+            "name": "plua: Run Current Lua File with Debugger",
+            "type": "luaMobDebug",
             "request": "launch",
-            "module": "plua",
-            "args": [
-                "--fibaro",
-                "-i",
+            "workingDirectory": "${workspaceFolder}",
+            "sourceBasePath": "${workspaceFolder}",
+            "listenPort": 8172,
+            "listenPublicly": false,
+            "stopOnEntry": false,
+            "sourceEncoding": "UTF-8",
+            "executable": "plua",
+            "arguments": [
+                "--debugger",
                 "${file}"
-            ],
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
+            ]
         },
         {
-            "name": "Run plua interactive",
-            "type": "python",
+            "name": "plua: Run Current Fibaro File with Debugger",
+            "type": "luaMobDebug",
             "request": "launch",
-            "module": "plua",
-            "args": [
+            "workingDirectory": "${workspaceFolder}",
+            "sourceBasePath": "${workspaceFolder}",
+            "listenPort": 8172,
+            "listenPublicly": false,
+            "stopOnEntry": false,
+            "sourceEncoding": "UTF-8",
+            "executable": "plua",
+            "arguments": [
+                "--debugger",
                 "--fibaro",
-                "-i"
-            ],
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+                "${file}"
+            ]
         }
     ]
 }

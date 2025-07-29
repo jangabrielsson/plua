@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "plua: Run Current Lua File with Debugger", 
+      "type": "luaMobDebug",
+      "request": "launch",
+      "workingDirectory": "${workspaceFolder}",
+      "sourceBasePath": "${workspaceFolder}",
+      "listenPort": 8172,
+      "listenPublicly": false,
+      "stopOnEntry": false,
+      "sourceEncoding": "UTF-8",
+      "executable": "plua",
+      "arguments": [
+        "--debugger",
+        "${file}"
+      ]
+    },
+    {
+      "name": "plua: Run Current Fibaro File with Debugger", 
+      "type": "luaMobDebug",
+      "request": "launch",
+      "workingDirectory": "${workspaceFolder}",
+      "sourceBasePath": "${workspaceFolder}",
+      "listenPort": 8172,
+      "listenPublicly": false,
+      "stopOnEntry": false,
+      "sourceEncoding": "UTF-8",
+      "executable": "plua",
+      "arguments": [
+        "--debugger",
+        "--fibaro",
+        "${file}"
+      ]
+    }
+  ]
+}

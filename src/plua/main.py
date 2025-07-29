@@ -15,6 +15,21 @@ from .runtime import LuaAsyncRuntime
 from .repl import run_repl
 
 
+def ensure_plua_directory():
+    """Ensure the ~/.plua/ directory exists for config and registry files"""
+    from pathlib import Path
+    
+    plua_dir = Path.home() / ".plua"
+    try:
+        plua_dir.mkdir(exist_ok=True)
+        # Also ensure it has proper permissions (user read/write/execute)
+        plua_dir.chmod(0o755)
+        return True
+    except Exception as e:
+        print(f"Warning: Could not create ~/.plua directory: {e}")
+        return False
+
+
 def cleanup_on_exit():
     """Cleanup function called on exit"""
     try:
@@ -334,6 +349,8 @@ def main() -> None:
                "  plua -i -e 'x=1' script.lua        # Run fragments + file, then REPL\n"
                "  plua -a 'extra args' script.lua    # Pass extra arguments to runtime\n"
                "  plua --fibaro script.lua           # Run with Fibaro API support\n"
+               "  plua -H 'type=com.fibaro.binarySwitch' script.lua # Add QA headers\n"
+               "  plua -H 'name=MyQA' -H 'proxy=true' script.lua    # Multiple headers\n"
                "  plua --debugger script.lua         # Run with MobDebug\n"
                "  plua --debugger --debug script.lua # Run with verbose debug logging\n"
                "  plua --cleanup-port                # Clean up stuck API port\n"
@@ -417,6 +434,14 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "-H", "--header",
+        help="Add header string for QuickApp injection (can be used multiple times)",
+        action="append",
+        type=str,
+        dest="headers"
+    )
+
+    parser.add_argument(
         "-i", "--interactive",
         help="Enter interactive REPL after running script fragments and main file",
         action="store_true"
@@ -431,7 +456,7 @@ def main() -> None:
 
     parser.add_argument(
         "-l", "--library",
-        help="EIgnored for now...",
+        help="Ignored for now...",
         type=str,
         default=None
     )
@@ -513,6 +538,9 @@ def main() -> None:
 
     # Show greeting with version information first
     show_greeting()
+
+    # Ensure ~/.plua directory exists for config and registry files
+    ensure_plua_directory()
 
     if args.version:
         sys.exit(0)
@@ -664,6 +692,7 @@ def main() -> None:
         'args': args.args,  # Extra arguments passed via -a/--args
         'desktop': desktop_override,  # Desktop UI mode override (None = QA decides, True/False = CLI override)
         'local': args.local,  # Local mode flag (propagated as runtime_config.local to Lua)
+        'headers': args.headers or [],  # Header strings for QuickApp injection
         # Add more CLI flags here as needed
     }
     runtime = LuaAsyncRuntime(config=config)

@@ -49,13 +49,11 @@ def build_nuitka():
             rel_path = file.relative_to(lua_path)
             data_file_args.append(f"--include-data-file={file}=lua/{rel_path}")
     
-    # Build command
+    # Build command base
     cmd = [
         sys.executable, "-m", "nuitka",
-        "--onefile",                    # Single executable file
         "--assume-yes-for-downloads",   # Auto-download dependencies
         "--lto=yes",                   # Link-time optimization
-        "--enable-plugin=upx",         # UPX compression (optional, needs upx installed)
         f"--include-data-dir={static_path}=static",  # Web UI files
         # Lua files included individually below
         *data_file_args,
@@ -71,30 +69,59 @@ def build_nuitka():
         "build_main_standalone.py"
     ]
     
+    # Add platform-specific mode flags and UPX handling
+    if sys.platform == "darwin":
+        cmd.insert(3, "--mode=app")  # Required for Foundation framework on macOS
+        cmd.insert(4, "--macos-app-icon=none")  # Disable dock icon warning
+        print("[INFO] macOS detected: Using --mode=app for Foundation framework compatibility")
+        # Skip UPX on macOS as it often fails with native frameworks
+        print("[INFO] Skipping UPX compression on macOS due to framework compatibility issues")
+    else:
+        cmd.insert(3, "--onefile")  # Single executable file for other platforms
+        # Add UPX compression for other platforms if available
+        if shutil.which("upx"):
+            cmd.insert(4, "--enable-plugin=upx")
+            print("[INFO] UPX compression enabled")
+        else:
+            print("[WARN] UPX not found, skipping compression")
+    
     print("[BUILD] Building plua with Nuitka...")
     print(f"Command: {' '.join(cmd)}")
-    
-    # Remove UPX plugin if UPX is not available
-    if not shutil.which("upx"):
-        print("[WARN] UPX not found, removing compression (install UPX for smaller binaries)")
-        cmd = [arg for arg in cmd if not arg.startswith("--enable-plugin=upx")]
     
     try:
         result = subprocess.run(cmd, check=True, cwd=project_root)
         
         # Find the created executable
         dist_dir = project_root / "dist"
-        executable_name = "plua.exe" if sys.platform == "win32" else "plua"
-        executable_path = dist_dir / executable_name
+        
+        if sys.platform == "darwin":
+            # On macOS with --mode=app, Nuitka creates an .app bundle
+            executable_path = dist_dir / "plua.app" / "Contents" / "MacOS" / "plua"
+            app_bundle_path = dist_dir / "plua.app"
+        else:
+            # On other platforms with --onefile, creates a single executable
+            executable_name = "plua.exe" if sys.platform == "win32" else "plua"
+            executable_path = dist_dir / executable_name
+            app_bundle_path = None
         
         if executable_path.exists():
             size_mb = executable_path.stat().st_size / (1024 * 1024)
             print("[OK] Build successful!")
-            print(f"  Executable: {executable_path}")
-            print(f"  Size: {size_mb:.1f} MB")
-            print(f"  Test with: {executable_path} --help")
+            if app_bundle_path:
+                print(f"  App Bundle: {app_bundle_path}")
+                print(f"  Executable: {executable_path}")
+                print(f"  Size: {size_mb:.1f} MB")
+                print(f"  Test with: {executable_path} --help")
+                print(f"  Or run app: open {app_bundle_path}")
+            else:
+                print(f"  Executable: {executable_path}")
+                print(f"  Size: {size_mb:.1f} MB")
+                print(f"  Test with: {executable_path} --help")
         else:
             print("[ERROR] Executable not found in expected location")
+            if app_bundle_path:
+                print(f"  Expected app bundle: {app_bundle_path}")
+            print(f"  Expected executable: {executable_path}")
             
     except subprocess.CalledProcessError as e:
         print(f"[ERROR] Build failed with exit code {e.returncode}")

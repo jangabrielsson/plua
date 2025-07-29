@@ -389,6 +389,7 @@ end
 -- @param event - Event object containing action details
 function onAction(id,event) -- { deviceID = 1234, actionName = "test", args = {1,2,3} }
   --if Emu:DBGFLAG('onAction') then print("onAction: ", json.encode(event)) end
+  setTimeout(function()
   local self = plugin.mainQA
   ---@diagnostic disable-next-line: undefined-field
   if self.actionHandler then return self:actionHandler(event) end
@@ -398,6 +399,7 @@ function onAction(id,event) -- { deviceID = 1234, actionName = "test", args = {1
     return self.childDevices[event.deviceId]:callAction(event.actionName, table.unpack(event.args or {}))
   end
   self:error(fmt("Child with id:%s not found",id))
+end,0)
 end
 
 -- Global handler for UI events
@@ -416,7 +418,7 @@ function onUIEvent(id, event)
       fibaro.warning(__TAG,fmt("UI callback for %s %s not found.", event.elementName, event.eventType))
       return
     end
-    quickApp:callAction(action, event)
+    setTimeout(function() quickApp:callAction(action, event) end,0)
   else
     fibaro.warning(__TAG,fmt("UI callback for element %s not found.", event.elementName))
   end

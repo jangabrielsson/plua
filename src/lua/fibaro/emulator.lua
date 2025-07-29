@@ -249,9 +249,9 @@ end
 
 local deviceTypes = nil
 
-function Emulator:createInfoFromContent(filename,content)
+function Emulator:createInfoFromContent(filename,content,extraHeaders)
   local info = {}
-  local preprocessed,headers = self:processHeaders(filename,content)
+  local preprocessed,headers = self:processHeaders(filename,content,extraHeaders)
   local orgUI = table.copy(headers.UI or {})
   if self.offline then headers.offline = true end
   
@@ -337,7 +337,7 @@ function Emulator:createInfoFromContent(filename,content)
   return info
 end
 
-function Emulator:createInfoFromFile(filename)
+function Emulator:createInfoFromFile(filename,extraHeaders)
   -- Read the file content
   if filename:match("%.fqa$") then
     -- If it's a FQA file, Unpack andload it as a QuickApp
@@ -352,7 +352,7 @@ function Emulator:createInfoFromFile(filename)
   assert(file, "Failed to open file: " .. filename)
   local content = file:read("*all")
   file:close()
-  return self:createInfoFromContent(filename,content)
+  return self:createInfoFromContent(filename,content,extraHeaders)
 end
 
 function Emulator:createChild(data)
@@ -393,12 +393,12 @@ function Emulator:saveQA(fname,id)
   self:INFO("Saved QA to",fname)
 end
 
-function Emulator:installQuickAppFile(path)
+function Emulator:installQuickAppFile(path,extraHeaders)
   local file = io.open(path, "r")
   assert(file, "Failed to open file: " .. path)
   local content = file:read("*all")
   file:close()
-  local info = self:createInfoFromContent(path,content)
+  local info = self:createInfoFromContent(path,content,extraHeaders)
   self:loadQA(info)
   self:registerDevice(info)
   self:startQA(info.device.id)
@@ -408,7 +408,8 @@ end
 function Emulator:loadMainFile(filename)
   local args = _PY.config.runtime_config.args or ""
   if args:starts("task") then return self:runTask(filename,args) end
-  local info = self:createInfoFromFile(filename)
+  local extraHeaders = self.config.runtime_config.headers
+  local info = self:createInfoFromFile(filename,extraHeaders)
   if _PY.config.debug == true then self.debugFlag = true end
   if info.headers.debug then self.debugFlag = true end
   
@@ -500,13 +501,13 @@ function Emulator:startQA(id)
     end
   end
 
-  env.setTimeout(function()
+  --env.setTimeout(function()
     coroutine.wrapdebug(func, function(err,tb)
       err = err:match(":(%d+: .*)")
       print("Error in QA " .. id .. ": " .. tostring(err))
       print(tb)
     end)() 
-  end, 200)
+  --end, 200)
 end
 
 local viewProps = {}
@@ -632,6 +633,7 @@ function headerKeys.desktop(str,info) info.desktop = validate(str,"boolean") end
 function headerKeys.proxyupdate(str,info) info.proxyupdate = str end
 function headerKeys.project(str,info,k) info.project = validate(str,"number",k) end
 function headerKeys.nop(str,info,k) validate(str,"boolean",k) end
+function headerKeys.norun(str,info,k) end
 function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
 function headerKeys.breakonload(str,info,k) info.breakOnLoad = validate(str,"boolean",k) end
 function headerKeys.var(str,info,k) 
@@ -678,7 +680,7 @@ local function compatHeaders(code)
   return code
 end
 
-function Emulator:processHeaders(filename,content)
+function Emulator:processHeaders(filename,content,extraHeaders)
   local shortname = filename:match("([^/\\]+%.lua)") or filename
   local path = filename:sub(1,-(#shortname+1))
   local name = shortname:match("(.+)%.lua")
@@ -702,6 +704,12 @@ function Emulator:processHeaders(filename,content)
       headerKeys[key](str,headers,key)
     else print(fmt("Unknown header key: '%s' - ignoring",key)) end 
   end)
+  for _,h in ipairs(extraHeaders or {}) do
+    local key,str = h:match("^%s*([%w_]+):%s*(.*)$")
+    if headerKeys[key] then
+      headerKeys[key](str,headers,key)
+    else print(fmt("Unknown header key: '%s' - ignoring",key)) end 
+  end
   local UI = (nil or {}).UI or {} -- ToDo: extraHeaders
   for _,v in ipairs(headers._UI) do 
     local v0 = validate(v,"table","u")

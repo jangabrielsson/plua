@@ -36,14 +36,14 @@ local function findFirstLine(src)
   return first or 1,init
 end
 
-local function loadQAString(src,optionalDirectives) -- Load QA from string and run it
+local function loadQAString(src,optionalHeaders) -- Load QA from string and run it
   local path = Emu.config.tempdir..createTempName(".lua")
   local f = io.open(path,"w")
   assert(f,"Can't open file "..path)
   f:write(src)
   f:close()
   ---@diagnostic disable-next-line: need-check-nil
-  return Emu:installQuickAppFile(path)
+  return Emu:installQuickAppFile(path, optionalHeaders)
 end
 
 
@@ -134,7 +134,7 @@ end
 
 local function loadQA(path,optionalHeaders,noRun)   -- Load QA from file and maybe run it
   optionalHeaders = optionalHeaders or {}
-  optionalHeaders.norun = tostring(noRun==true) -- If noRun is true, don't run the QuickApp
+  table.insert(optionalHeaders,"norun:"..tostring(noRun==true)) -- If noRun is true, don't run the QuickApp
   local struct = Emu:installQuickAppFile(path,optionalHeaders)
   return struct
 end

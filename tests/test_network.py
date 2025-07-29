@@ -21,10 +21,13 @@ class TestNetworkFunctionality:
             data = await request.text()
             return web.json_response({"echo": data, "method": request.method})
         
+        async def status_handler(request):
+            return web.json_response({"status": "running"})
+        
         app = web.Application()
         app.router.add_get('/hello', hello_handler)
         app.router.add_post('/echo', echo_handler)
-        app.router.add_get('/status', lambda r: web.json_response({"status": "running"}))
+        app.router.add_get('/status', status_handler)
         
         runner = web.AppRunner(app)
         await runner.setup()

@@ -472,6 +472,50 @@ return count
         res = _python_to_lua_table(self.lua, res)  # Convert to Lua table format
         return res
 
+    def get_runtime_state_for_api(self) -> dict:
+        """Get current runtime state information for the API server (returns Python dict)"""
+        if not self.lua:
+            return {
+                'active_timers': 0,
+                'pending_callbacks': 0,
+                'total_tasks': 0
+            }
+
+        # Get timer count from Lua
+        timer_count_script = """
+local count = 0
+for timer_id, timer in pairs(_PY._pending_timers) do
+    if not timer.cancelled then
+        count = count + 1
+    end
+end
+return count
+"""
+        try:
+            active_timers = int(self.lua.execute(timer_count_script) or 0)
+        except Exception:
+            active_timers = 0
+
+        # Get callback count from Lua
+        callback_count_script = """
+local count = 0
+for callback_id, callback in pairs(_PY._callback_registry) do
+    count = count + 1
+end
+return count
+"""
+        try:
+            pending_callbacks = int(self.lua.execute(callback_count_script) or 0)
+        except Exception:
+            pending_callbacks = 0
+
+        # Return plain Python dict for API server
+        return {
+            'active_timers': active_timers,
+            'pending_callbacks': pending_callbacks,
+            'total_tasks': active_timers + pending_callbacks
+        }
+
 
     def check_is_running_hook(self) -> bool:
         """Check if user-defined _PY.isRunning hook says we should continue running"""

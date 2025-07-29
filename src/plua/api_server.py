@@ -299,7 +299,7 @@ class PlUA2APIServer:
         async def state():
             """Get detailed runtime state information"""
             try:
-                state = self.runtime.interpreter.get_runtime_state()
+                state = self.runtime.interpreter.get_runtime_state_for_api()
                 return {
                     "task_info": state.get("task_info", {}),
                     "active_timers": state.get("active_timers", 0),

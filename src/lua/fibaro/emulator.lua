@@ -46,7 +46,7 @@ function Emulator:__init()
   else
     self.config.webport = 8080  -- Default port if not set
   end
-  self.offline = _PY.config.runtime_config['local']
+  self.offline = _PY.config.runtime_config['local'] or false
   self.DIR = {}
   self.lib = { 
     loadLib = loadLib,
@@ -68,7 +68,6 @@ function Emulator:__init()
   }
   self.lib.userTime = os.time
   self.lib.userDate = os.date
-  self.offline = false
   
   self.EVENT = {}
   self.debugFlag = false
@@ -254,6 +253,8 @@ function Emulator:createInfoFromContent(filename,content)
   local info = {}
   local preprocessed,headers = self:processHeaders(filename,content)
   local orgUI = table.copy(headers.UI or {})
+  if self.offline then headers.offline = true end
+  
   if headers.offline and headers.proxy then
     headers.proxy = false
     self:WARNING("Offline mode, proxy disabled")

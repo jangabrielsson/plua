@@ -67,11 +67,11 @@ function QuickApp:onInit()
   -- No need to manually open web interface
   
   local i = 0
-  -- setInterval(function()
-  --   -- Update the label with current time every second
-  --   i=i+1
-  --   local txt = "A:"..i
-  --   print(txt)
-  --   self:updateView("lbl1", "text", txt)
-  -- end, 2000)  -- Update every second
+  setInterval(function()
+    -- Update the label with current time every second
+    i=i+1
+    local txt = "A:"..i
+    print(txt)
+    self:updateView("lbl1", "text", txt)
+  end, 2000)  -- Update every second
 end

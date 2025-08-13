@@ -202,7 +202,7 @@ class PlUA2APIServer:
             if not lua:
                 return None
 
-            fibaro_hook = self.runtime.interpreter.PY.fibaro_api_hook
+            fibaro_hook = self.runtime.interpreter.PY.fibaroApiHook
             if not fibaro_hook:
                 return None
 
@@ -364,12 +364,12 @@ class PlUA2APIServer:
             Returns:
                 Tuple of (response_data, status_code)
             """
-            if not self.runtime.interpreter.PY.fibaro_api_hook:
+            if not self.runtime.interpreter.PY.fibaroApiHook:
                 raise HTTPException(status_code=501, detail="Fibaro API not implemented")
 
             try:
                 # Call the Lua fibaro_api_hook function
-                response_data, status_code = self.runtime.interpreter.PY.fibaro_api_hook(method, path, request_data or {})
+                response_data, status_code = self.runtime.interpreter.PY.fibaroApiHook(method, path, request_data or {})
                 return response_data, status_code
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Fibaro API error: {e}")

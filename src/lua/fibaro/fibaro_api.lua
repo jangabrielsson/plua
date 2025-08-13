@@ -599,6 +599,16 @@ local function findFile(name,files)
   for i,f in ipairs(files) do if f.name == name then return f,i end end
 end
 
+router:add("GET", "/quickApp/<id>/info", function(path, data, vars, query)
+  local info = Emu:getQuickApp(vars.id)
+  return info,HTTP.OK
+end)
+
+router:add("GET", "/quickApp/info", function(path, data, vars, query)
+  local info = Emu:getQuickApps()
+  return info,HTTP.OK
+end)
+
 router:add("GET", "/quickApp/<id>/files", function(path, data, vars, query)
   local dev = Emu.DIR[vars.id]
   if not (dev and dev.files) then if Emu.offline then return nil,HTTP.NOT_FOUND else return nil,301 end end

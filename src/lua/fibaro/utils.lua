@@ -53,6 +53,10 @@ function string.split(inputstr, sep)
   return t
 end
 
+if not table.maxn then
+  function table.maxn(t) local c=0 for _ in pairs(t) do c=c+1 end return c end
+end
+
 getmetatable("").__idiv = function(str,len) return (#str < len or #str < 4) and str or str:sub(1,len-2)..".." end -- truncate strings
 
 local function readFile(fname,silent)
@@ -105,17 +109,22 @@ local typeColor = {
 -- @param tag - The tag for the debug message.
 -- @param msg - The message string.
 -- @param typ - The type of message (e.g., "DEBUG", "ERROR").
+-- local function __fibaro_add_debug_message(tag, msg, typ, nohtml)
+--   tag = tag or "PLUA"
+--   local time = ""
+--   if Emu.shortTime then
+--     time = tostring(Emu.lib.userDate("[%H:%M:%S]"))
+--   else
+--     time = tostring(Emu.lib.userDate("[%d.%m.%Y][%H:%M:%S]"))
+--   end
+--   local typStr = fmt("<font color='%s'>%-7s</font>", typeColor[typ], typ)
+--   msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
+--   _print(msg)
+-- end
+
 local function __fibaro_add_debug_message(tag, msg, typ, nohtml)
   tag = tag or "PLUA"
-  local time = ""
-  if Emu.shortTime then
-    time = tostring(Emu.lib.userDate("[%H:%M:%S]"))
-  else
-    time = tostring(Emu.lib.userDate("[%d.%m.%Y][%H:%M:%S]"))
-  end
-  local typStr = fmt("<font color='%s'>%-7s</font>", typeColor[typ], typ)
-  msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
-  _print(msg)
+  Emu.lib.log.debugOutput(tag, msg, typ)
 end
 
 local logStr = function(...) 

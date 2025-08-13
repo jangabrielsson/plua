@@ -1,97 +1,53 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "plua"
-dynamic = ["version"]
-description = "Python-Lua async runtime with timer support"
+version = "1.2.0"
+description = "Python project using Lupa to run Lua scripts with async timer functionality"
+authors = [{name = "Jan Gabrielsson", email = "jan@gabrielsson.com"}]
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.8"
-license = "MIT"
-authors = [
-    {name = "Jan Gabrielsson", email = "jan@gabrielsson.com"},
-]
-keywords = ["lua", "async", "timer", "coroutine"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-]
 dependencies = [
     "lupa>=2.0",
+    "asyncio",
     "aiohttp>=3.8.0",
-    "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.35.0",
-    "psutil>=5.9.0",
+    "aiomqtt>=2.0.0",  # MQTT client support
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "httpx>=0.24.0",  # For FastAPI testing
     "requests>=2.28.0",
-    "httpx>=0.24.0",
-    "aiomqtt>=2.0.0",
-    "websockets>=13.0,<14.0",  # Pin to avoid deprecation warnings
+    "tkhtmlview>=0.3.0",  # HTML rendering in tkinter (works with Tcl 9.x)
 ]
 
+[project.scripts]
+plua = "plua.cli:main"
+
 [project.optional-dependencies]
-desktop = [
-    "pywebview>=4.0",
-]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21.0",
     "black>=22.0",
     "flake8>=5.0",
-    "mypy>=1.0",
-    "nuitka>=2.7.0",  # For building standalone executables
 ]
-build = [
-    "nuitka>=2.7.0",  # For creating standalone executables
-]
-
-[project.scripts]
-plua = "plua.main:main"
-
-[project.urls]
-Homepage = "https://github.com/jangabrielsson/plua"
-Documentation = "https://github.com/jangabrielsson/plua/docs"
-Repository = "https://github.com/jangabrielsson/plua.git"
-Issues = "https://github.com/jangabrielsson/plua/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["plua*", "lua*"]
+include = ["plua*", "pylib*", "lua*"]
 
 [tool.setuptools.package-dir]
 "" = "src"
 
 [tool.setuptools.package-data]
-"lua" = ["*.lua", "**/*.lua", "**/*.json", "**/*.fqa"]
-"plua" = ["*.lua", "**/*.lua", "static/*.html", "static/*.css", "static/*.js", "static/*.json"]
-
-[tool.setuptools.dynamic]
-version = {attr = "plua.__version__"}
+plua = ["static/*"]
+lua = ["**/*"]
 
 [tool.black]
 line-length = 88
 target-version = ['py38']
 
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 asyncio_mode = "auto"
-filterwarnings = [
-    "ignore::DeprecationWarning:websockets.legacy",
-    "ignore::DeprecationWarning:uvicorn.protocols.websockets.websockets_impl",
-    "ignore:websockets.legacy is deprecated:DeprecationWarning",
-    "ignore:websockets.server.WebSocketServerProtocol is deprecated:DeprecationWarning",
-]
+testpaths = ["tests"]

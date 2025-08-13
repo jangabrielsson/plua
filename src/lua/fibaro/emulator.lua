@@ -2,11 +2,12 @@
 local mobdebug = require("mobdebug")
 _PY.mobdebug.on()
 local class = require("class")
+json = require("json")
 require("fibaro.json")
 local fpath = package.searchpath("fibaro", package.path) or ""
 fpath = fpath:sub(1,-(#"fibaro.lua"+1))
-local libpath = fpath.."fibaro".._PY.config.fileseparator
-local rsrcpath = fpath.."rsrc".._PY.config.fileseparator
+local libpath = fpath.."fibaro".._PY.config.fileSeparator
+local rsrcpath = fpath.."rsrc".._PY.config.fileSeparator
 local fmt = string.format
 local function loadLib(name,...) return loadfile(libpath..name..".lua","t",_G)(...) end
 _print = print
@@ -14,7 +15,7 @@ local pluaConf = {}
 local DEVICEID = 5555-1
 
 local function loadLuaFile(filename)
-  if not _PY.fileExist(filename) then return {} end
+  if not _PY.file_exists(filename) then return {} end
   local f, err = loadfile(filename, "t", _G)
   if not f then error(fmt("Failed to load %s: %s",filename,err)) end
   local stat,res = pcall(f)
@@ -41,30 +42,26 @@ function Emulator:__init()
     self.config.hc3_creds = _PY.base64_encode(self.config.hc3_user..":"..self.config.hc3_password)
   end
   self.config.IPAddress = _PY.config.host_ip
-  if _PY.config.runtime_config.api_config then
-    self.config.webport = _PY.config.runtime_config.api_config.port
+  local environment = _PY.get_system_info().environment
+  self.config.cwd = environment.cwd
+  self.config.homedir = environment.home
+  self.config.headers = _PY.python_2_lua_table(_PY.config.headers)
+  if _PY.config.webport then
+    self.config.webport = _PY.config.webport
   else
     self.config.webport = 8080  -- Default port if not set
   end
-  self.offline = _PY.config.runtime_config['local'] or false
+  self.offline = _PY.config.offline or false
   self.DIR = {}
   self.lib = { 
     loadLib = loadLib,
-    openWebBrowser = _PY.open_web_interface_browser,
-    getScreenDimension = _PY.get_screen_dimensions,
-    openQuickAppWindow = _PY.open_quickapp_window,
-    fileExist = _PY.fileExist,
-    getCwd = _PY.getcwd,
-    listDir = _PY.listdir,
-    getAvailableColors = _PY.get_available_colors,
-    listUserFunctions = _PY.list_user_functions,
-    readFile = _PY.readFile,
-    writeFile = _PY.writeFile,
-    millitime = _PY.millitime,
+    log = loadLib("log",self),
+    readFile = _PY.fread_file,
+    writeFile = _PY.fwrite_file,
+    millitime = _PY.milli_time,
     base64Encode = _PY.base64_encode,
     base64Decode = _PY.base64_decode,
     mobdebug = _PY.mobdebug,
-    getRuntimeState = _PY.getRuntimeState,
   }
   self.lib.userTime = os.time
   self.lib.userDate = os.date
@@ -112,7 +109,7 @@ function Emulator:__init()
   
   local function round(x) return math.floor(x+0.5) end
   local function userTime(a) 
-    return a == nil and round(_PY.millitime() + timeOffset) or orgTime(a) 
+    return a == nil and round(_PY.milli_time() + timeOffset) or orgTime(a) 
   end
   local function userDate(a, b) 
     return b == nil and orgDate(a, userTime()) or orgDate(a, round(b)) 
@@ -129,8 +126,8 @@ function Emulator:__init()
   loadLib("tools",self)
   self.lib.ui = loadLib("ui",self)
 
-  local localPluaConf = loadLuaFile(_PY.config.cwd.._PY.config.fileseparator..".plua")
-  local homePluaConf =loadLuaFile(_PY.config.homedir.._PY.config.fileseparator..".plua/config.lua")
+  local localPluaConf = loadLuaFile(_PY.config.cwd.._PY.config.fileSeparator..".plua")
+  local homePluaConf =loadLuaFile(_PY.config.homedir.._PY.config.fileSeparator..".plua/config.lua")
   pluaConf = table.merge(homePluaConf,localPluaConf)
 end
 
@@ -141,38 +138,59 @@ function Emulator:ERROR(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib
 
 function Emulator:registerDevice(info)
   if info.device.id == nil then DEVICEID = DEVICEID + 1; info.device.id = DEVICEID end
+  self:DEBUG("Registering device with ID: " .. tostring(info.device.id))
   self.DIR[info.device.id] = { 
     device = info.device, files = info.files, env = info.env, headers = info.headers,
     UI = info.UI, UImap = info.UImap, watches = info.watches,
   }
+  self:DEBUG("Device registered. Total devices in DIR: " .. table.maxn(self.DIR))
 end
 
 local tileX, tileY = 20,20
 function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   _G["QA"..qa.id] = qa
   local info = self.DIR[qa.id]
-  local openWindow = _PY.config.runtime_config and _PY.config.runtime_config.desktop
+  local openWindow -- = _PY.config.runtime_config and _PY.config.runtime_config.desktop
   if openWindow == nil then openWindow = info.headers and info.headers.desktop end
   if openWindow then
     local dim = self.lib.getScreenDimension()
-    local a = _PY.open_quickapp_window(qa.id, "Auto-opened Desktop Window", 400, 400, tileX, tileY)
-    tileX = tileX + 400 + 10
+    local success = self.lib.createQuickAppWindow(qa.id, "Auto-opened Desktop Window", 400, 400, tileX, tileY)
+    if success then
+      tileX = tileX + 400 + 10
+    end
   end
 end
 
 function Emulator:getQuickApps()
   local quickApps = {}
+  self:DEBUG("Getting QuickApps, DIR contents:")
   for id, info in pairs(self.DIR) do
+    self:DEBUG("  ID: " .. tostring(id) .. ", has UI: " .. tostring(info.UI ~= nil))
     if info.UI then
       quickApps[#quickApps + 1] = { UI = info.UI, device = info.device }
     end
   end
+  self:DEBUG("Returning " .. #quickApps .. " QuickApps")
   return quickApps
 end
 
 function Emulator:getQuickApp(id)
+  id = tonumber(id)
+  self:DEBUG("Looking for QuickApp with ID: " .. tostring(id))
   local info = self.DIR[id or ""]
-  if info then return { UI = info.UI, device = info.device } end
+  if info then 
+    self:DEBUG("Found QuickApp with ID " .. tostring(id))
+    return { UI = info.UI, device = info.device }
+  else
+    self:DEBUG("QuickApp with ID " .. tostring(id) .. " not found in DIR")
+    -- List available IDs for debugging
+    local available = {}
+    for did, _ in pairs(self.DIR) do
+      available[#available + 1] = tostring(did)
+    end
+    self:DEBUG("Available IDs: " .. table.concat(available, ", "))
+    return nil
+  end
 end
 
 function Emulator:saveState() end
@@ -406,9 +424,9 @@ function Emulator:installQuickAppFile(path,extraHeaders)
 end
 
 function Emulator:loadMainFile(filename)
-  local args = _PY.config.runtime_config.args or ""
+  local args = _PY.config.args or ""
   if args:starts("task") then return self:runTask(filename,args) end
-  local extraHeaders = self.config.runtime_config.headers
+  local extraHeaders = self.config.headers
   local info = self:createInfoFromFile(filename,extraHeaders)
   if _PY.config.debug == true then self.debugFlag = true end
   if info.headers.debug then self.debugFlag = true end
@@ -518,20 +536,39 @@ function viewProps.selectedItems(elm,data) elm.values = data.newValue end
 function viewProps.selectedItem(elm,data) elm.value = data.newValue end
 
 function Emulator:updateView(id,data,noUpdate)
+  -- print("🔍 DEBUG: updateView called with:")
+  -- print("  id:", id)
+  -- print("  data:", json.encodeFast(data))
+  -- print("  noUpdate:", noUpdate)
+  
   local info = self.DIR[id]
   local elm = info.UImap[data.componentName or ""]
   if elm then
+    --print("  Found UI element:", data.componentName)
     if viewProps[data.propertyName] then
+      --print("  Updating property:", data.propertyName, "to:", data.newValue)
       viewProps[data.propertyName](elm,data)
       --print("broadcast_ui_update",data.componentName)
       if not noUpdate then 
         -- Send granular UI update with specific element data (if function available)
+        --print("  🔄 Calling _PY.broadcast_view_update...")
         if _PY.broadcast_view_update then
-          _PY.broadcast_view_update(id, data.componentName, data.propertyName, data.newValue)
+          local success = _PY.broadcast_view_update(id, data.componentName, data.propertyName, data.newValue)
+          --print("  📡 Broadcast result:", success)
+        else
+          --print("  ❌ _PY.broadcast_view_update not available")
         end
+      else
+        --print("  ⏭️  Skipping broadcast (noUpdate=true)")
       end
     else
       self:DEBUG("Unknown view property: " .. data.propertyName)
+    end
+  else
+    print("  ❌ UI element not found:", data.componentName)
+    print("  Available elements:")
+    for name, _ in pairs(info.UImap or {}) do
+      print("    -", name)
     end
   end
 end
@@ -545,31 +582,30 @@ function Emulator:HC3_CALL(method, path, data)
   end
   local url = self.config.hc3_url.."/api"..path
   if type(data) == 'table' then data = json.encode(data) end
-  local res = _PY.http_call_sync(
-  method, 
-  url,
-  data,
-  {
-    ["User-Agent"] = "plua/0.1.0",
-    ["Content-Type"] = "application/json",
-    ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
+  local res = _PY.http_request_sync({
+    method = method, 
+    url = url,
+    data = data,
+    headers = {
+      ["User-Agent"] = "plua/0.1.0",
+      ["Content-Type"] = "application/json",
+      ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
+    }
   }
 )
 
-if res.success then
-  if tonumber(res.status_code) and res.status_code >= 200 and res.status_code < 300 then
-    local data = nil
-    _,data = pcall(json.decode, res.data)
-    return data, res.status_code
+if res.ok then
+  if tonumber(res.status) and res.status >= 200 and res.status < 300 then
+    return res.json, res.status
   end
 end
-if res.status_code == 401 or res.status_code == 403  then
-  self:ERROR("HC3 Authentication failed: " .. res.status_code .." ".. (res.error_message or ""))
+if res.status == 401 or res.status == 403  then
+  self:ERROR("HC3 Authentication failed: " .. res.status.." ".. (res.status_text or ""))
   self:INFO("Please check your HC3 credentials in the .env or ~/.env file") 
   self.INFO("Terminating emulator due to authentication failure, and to avoid lock out of HC3")
   os.exit()
 end
-return nil, res.status_code, res.error_message
+return nil, res.status, res.status_text
 end
 
 function Emulator:API_CALL(method, path, data)
@@ -605,7 +641,7 @@ end
 
 function Emulator:getRefreshStates(last) return _PY.getEvents(last) end
 
-function Emulator:refreshEvent(typ,data) _PY.addEvent(json.encode({type=typ,data=data})) end
+function Emulator:refreshEvent(typ,data) _PY.add_event(json.encode({type=typ,data=data})) end
 
 local headerKeys = {}
 function headerKeys.name(str,info) info.name = str end
@@ -649,12 +685,12 @@ function headerKeys.file(str,info)
   assert(path,"Invalid file header: "..str)
   if path:sub(1,1) == '$' then
     local lpath = package.searchpath(path:sub(2),package.path)
-    if _PY.fileExist(lpath) then path = lpath
+    if _PY.file_exists(lpath) then path = lpath
     else error(fmt("Library not found: '%s'",path)) end
   elseif path:sub(1,1) == '%' then
     path = info.path..path:sub(2) -- Relative to the QA path
   end
-  if _PY.fileExist(path) then
+  if _PY.file_exists(path) then
     local seen = info.files[name] ~= nil
     assert( not seen, fmt("File '%s' already exists in QA",name) )
     info.files[name] = {path = path, content = nil, order = fileOrder } 

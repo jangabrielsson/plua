@@ -26,6 +26,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin: 4px;
+            overflow: hidden; /* Prevent container from growing */
         }
 
         .quickapp-header {
@@ -43,6 +44,31 @@
         .quickapp-status {
             font-size: 12px;
             opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 10px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .refresh-button:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .refresh-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         .quickapp-content {
@@ -50,6 +76,8 @@
             display: flex;
             flex-direction: column;
             background: white;
+            min-height: 0; /* Allow flex child to shrink */
+            overflow: hidden; /* Prevent growing beyond container */
         }
 
         /* Tab navigation styles */
@@ -88,6 +116,7 @@
             display: none;
             padding: 16px;
             overflow-y: auto;
+            min-height: 0; /* Allow flex child to shrink below content size */
         }
 
         .tab-content.active {
@@ -103,6 +132,8 @@
             font-family: monospace;
             font-size: 12px;
             background: #f8f9fa;
+            overflow-y: auto;
+            min-height: 0; /* Allow flex child to shrink */
         }
 
         .tab-content.debug-tab {
@@ -393,7 +424,9 @@
     <div class="quickapp-container">
         <div class="quickapp-header">
             <div class="quickapp-title">QuickApp <span id="qa-id">Loading...</span></div>
-            <div class="quickapp-status" id="status">Connecting...</div>
+            <div class="quickapp-status" id="status">Connecting...
+                <button class="refresh-button" id="refresh-ui-btn" onclick="window.quickAppUI?.manualRefreshUI()" title="Refresh UI">↻</button>
+            </div>
         </div>
         
         <div class="quickapp-content">
@@ -428,8 +461,40 @@
                 this.elements = {};
                 this.currentTab = 'ui';
                 
+                // Connection health tracking
+                this.lastPongTime = 0;
+                this.lastPingTime = 0;
+                this.pingTimeoutId = null;
+                this.currentStatus = 'Loading...';
+                this.hasLoadedUIBefore = false; // Track if we've loaded UI to preserve state during reconnects
+                
+                // Force cleanup of any existing state when window is reused
+                this.forceCleanup();
+                
                 this.init();
                 this.setupTabs();
+            }
+            
+            forceCleanup() {
+                // Clean up any existing WebSocket connections that might be lingering
+                if (window.previousWebSocket) {
+                    try {
+                        window.previousWebSocket.onclose = null;
+                        window.previousWebSocket.close();
+                    } catch (e) {
+                        // Ignore errors from cleaning up old connections
+                    }
+                    window.previousWebSocket = null;
+                }
+                
+                // Clear any existing intervals
+                if (window.qaHealthCheckInterval) {
+                    clearInterval(window.qaHealthCheckInterval);
+                    window.qaHealthCheckInterval = null;
+                }
+                
+                // Reset connection attempts
+                this.wsConnectionAttempts = 0;
             }
             
             getQueryParam(name) {
@@ -446,11 +511,14 @@
                 document.getElementById('qa-id').textContent = this.qaId;
                 
                 try {
+                    // Connect WebSocket FIRST for real-time updates
+                    this.connectWebSocket();
+                    
+                    // Set up window visibility handlers for reconnection
+                    this.setupWindowVisibilityHandlers();
+                    
                     // Load QuickApp definition
                     await this.loadQuickApp();
-                    
-                    // Connect WebSocket for real-time updates
-                    this.connectWebSocket();
                     
                     // Set up desktop event handler
                     window.handleDesktopEvent = this.handleDesktopEvent.bind(this);
@@ -473,74 +541,19 @@
                 this.updateStatus('Loading QuickApp...');
                 
                 try {
-                    // Get the real QuickApp definition from the Lua runtime with proper serialization
-                    const response = await fetch(`${this.apiBase}/plua/execute`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            code: `
-                                local qa = _PY.get_quickapp(${this.qaId})
-                                if qa then
-                                    -- Clean the data to remove functions and make it JSON serializable
-                                    local cleanQA = {
-                                        device = {},
-                                        UI = {}
-                                    }
-                                    
-                                    -- Copy device info safely
-                                    if qa.device then
-                                        for k, v in pairs(qa.device) do
-                                            if type(v) ~= "function" then
-                                                cleanQA.device[k] = v
-                                            end
-                                        end
-                                    end
-                                    
-                                    -- Copy UI structure safely
-                                    if qa.UI then
-                                        for i, row in ipairs(qa.UI) do
-                                            if type(row) == "table" then
-                                                if row.type then
-                                                    -- Single element
-                                                    local cleanElement = {}
-                                                    for k, v in pairs(row) do
-                                                        if type(v) ~= "function" then
-                                                            cleanElement[k] = v
-                                                        end
-                                                    end
-                                                    table.insert(cleanQA.UI, cleanElement)
-                                                else
-                                                    -- Array of elements
-                                                    local cleanRow = {}
-                                                    for j, element in ipairs(row) do
-                                                        local cleanElement = {}
-                                                        for k, v in pairs(element) do
-                                                            if type(v) ~= "function" then
-                                                                cleanElement[k] = v
-                                                            end
-                                                        end
-                                                        table.insert(cleanRow, cleanElement)
-                                                    end
-                                                    table.insert(cleanQA.UI, cleanRow)
-                                                end
-                                            end
-                                        end
-                                    end
-                                    
-                                    return json.encode(cleanQA)
-                                else
-                                    return nil
-                                end
-                            ` 
-                        })
+                    // Use the REST API endpoint to get QuickApp info directly
+                    const response = await fetch(`${this.apiBase}/plua/quickApp/${this.qaId}/info`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
                     });
                     
-                    const result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
                     
-                    if (result.success && result.result) {
-                        // Parse the JSON string returned from Lua
-                        const quickAppData = JSON.parse(result.result);
-                        
+                    const quickAppData = await response.json();
+                    
+                    if (quickAppData && quickAppData.device) {
                         const quickApp = {
                             id: parseInt(this.qaId),
                             name: quickAppData.device?.name || `QuickApp ${this.qaId}`,
@@ -557,6 +570,70 @@
                 } catch (error) {
                     this.showError(`Failed to load QuickApp: ${error.message}`);
                 }
+            }
+            
+            refreshUIDataSafely() {
+                // Only refresh UI if we have a confirmed healthy connection
+                if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+                    this.debug('🔄 Cannot refresh UI: no healthy WebSocket connection');
+                    return;
+                }
+                
+                // Check if server is responsive before trying to load
+                try {
+                    this.websocket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+                    this.lastPingTime = Date.now();
+                    
+                    // Only load UI if ping is successful
+                    setTimeout(() => {
+                        if (this.lastPongTime >= this.lastPingTime) {
+                            this.debug('🔄 Connection confirmed healthy, refreshing UI data');
+                            this.loadQuickApp().catch(error => {
+                                this.debug('❌ Failed to refresh UI data:', error);
+                                // Don't show error to user, preserve existing UI
+                            });
+                        } else {
+                            this.debug('🔄 Connection ping failed, not refreshing UI');
+                        }
+                    }, 1000);
+                    
+                } catch (error) {
+                    this.debug('🔄 Cannot ping connection, not refreshing UI:', error);
+                }
+            }
+            
+            manualRefreshUI() {
+                this.debug('🔄 Manual UI refresh requested');
+                const refreshButton = document.getElementById('refresh-ui-btn');
+                
+                // Disable button during refresh
+                if (refreshButton) {
+                    refreshButton.disabled = true;
+                    refreshButton.textContent = '⟳';
+                }
+                
+                // Force reconnect if not connected
+                if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+                    this.debug('🔄 No connection, attempting to reconnect...');
+                    this.updateStatus('Reconnecting...');
+                    this.connectWebSocket();
+                } else {
+                    // Force refresh UI data
+                    this.loadQuickApp().then(() => {
+                        this.debug('✅ Manual UI refresh completed');
+                    }).catch(error => {
+                        this.debug('❌ Manual UI refresh failed:', error);
+                        this.showError(`Failed to refresh: ${error.message}`);
+                    });
+                }
+                
+                // Re-enable button after a delay
+                setTimeout(() => {
+                    if (refreshButton) {
+                        refreshButton.disabled = false;
+                        refreshButton.textContent = '↻';
+                    }
+                }, 2000);
             }
             
             renderUI(quickApp) {
@@ -599,7 +676,8 @@
                         this.currentTab = targetTab;
                         
                         // Load tab-specific content if needed
-                        if (targetTab === 'device' && !this.deviceInfoLoaded) {
+                        if (targetTab === 'device') {
+                            // Always refresh device info when tab is selected
                             this.loadDeviceInfo();
                         }
                     });
@@ -611,45 +689,57 @@
                 deviceContent.innerHTML = '<div class="loading">Loading device information...</div>';
                 
                 try {
-                    // Get device information from the API
-                    const response = await fetch(`${this.apiBase}/plua/execute`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            code: `
-                                local qa = _PY.get_quickapp(${this.qaId})
-                                if qa and qa.device then
-                                    local cleanDevice = {}
-                                    for k, v in pairs(qa.device) do
-                                        if type(v) ~= "function" then
-                                            cleanDevice[k] = v
-                                        end
-                                    end
-                                    return json.encode(cleanDevice)
-                                else
-                                    return json.encode({error = "Device not found"})
-                                end
-                            `
-                        })
+                    // Get device information from the REST API
+                    const response = await fetch(`${this.apiBase}/plua/quickApp/${this.qaId}/info`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
                     });
                     
-                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
                     
-                    if (data.success && data.result) {
-                        const deviceInfo = JSON.parse(data.result);
-                        if (deviceInfo.error) {
-                            deviceContent.innerHTML = `<div class="error">${deviceInfo.error}</div>`;
-                        } else {
-                            deviceContent.innerHTML = `
-                                <div class="device-info">
-                                    <h4>Device Information</h4>
-                                    <pre>${JSON.stringify(deviceInfo, null, 2)}</pre>
-                                </div>
-                            `;
-                            this.deviceInfoLoaded = true;
-                        }
+                    const quickAppData = await response.json();
+                    
+                    if (quickAppData && quickAppData.device) {
+                        // Format the device data with better structure and key properties first
+                        const device = quickAppData.device;
+                        const timestamp = new Date().toLocaleTimeString();
+                        
+                        // Key properties to show first
+                        const keyProperties = ['id', 'name', 'type', 'baseType', 'visible', 'enabled', 'interfaces', 'properties'];
+                        
+                        let keyPropsHtml = '';
+                        keyProperties.forEach(prop => {
+                            if (device[prop] !== undefined) {
+                                let value = device[prop];
+                                // Format complex objects nicely
+                                if (typeof value === 'object' && value !== null) {
+                                    value = JSON.stringify(value, null, 2);
+                                    keyPropsHtml += `<div style="margin-bottom: 8px;"><strong>${prop}:</strong><pre style="margin: 4px 0; padding: 8px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; font-size: 11px;">${value}</pre></div>`;
+                                } else {
+                                    keyPropsHtml += `<div style="margin-bottom: 4px;"><strong>${prop}:</strong> ${value}</div>`;
+                                }
+                            }
+                        });
+                        
+                        deviceContent.innerHTML = `
+                            <div style="position: sticky; top: -16px; background: #f8f9fa; padding: 12px 0 8px 0; border-bottom: 1px solid #e1e5e9; margin: -16px -16px 12px -16px; padding-left: 16px; padding-right: 16px;">
+                                <h4 style="margin: 0;">Device Information (Updated: ${timestamp})</h4>
+                            </div>
+                            
+                            <div style="margin-bottom: 16px;">
+                                <h5 style="margin: 0 0 8px 0; color: #333;">Key Properties:</h5>
+                                ${keyPropsHtml}
+                            </div>
+                            
+                            <div>
+                                <h5 style="margin: 0 0 8px 0; color: #333;">Complete Device Structure:</h5>
+                                <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; background: white; padding: 12px; border: 1px solid #e9ecef; border-radius: 4px; font-size: 11px; line-height: 1.4;">${JSON.stringify(device, null, 2)}</pre>
+                            </div>
+                        `;
                     } else {
-                        deviceContent.innerHTML = '<div class="error">Failed to load device information</div>';
+                        deviceContent.innerHTML = '<div class="error">Device not found</div>';
                     }
                 } catch (error) {
                     deviceContent.innerHTML = `<div class="error">Error loading device info: ${error.message}</div>`;
@@ -988,37 +1078,255 @@
             }
             
             connectWebSocket() {
+                // Update status to show we're connecting
+                this.updateStatus('Connecting...');
+                
+                // Force close any existing WebSocket connections
+                if (this.websocket) {
+                    this.debug('🔄 Closing existing WebSocket connection');
+                    this.websocket.onopen = null;
+                    this.websocket.onmessage = null;
+                    this.websocket.onclose = null;
+                    this.websocket.onerror = null;
+                    try {
+                        this.websocket.close();
+                    } catch (e) {
+                        this.debug('Error closing WebSocket:', e);
+                    }
+                    this.websocket = null;
+                }
+                
+                // Store reference for cleanup
+                if (window.previousWebSocket) {
+                    try {
+                        window.previousWebSocket.close();
+                    } catch (e) {
+                        // Ignore
+                    }
+                }
+                
                 const wsUrl = this.apiBase.replace('http', 'ws') + '/ws';
+                this.debug(`🔌 Connecting to WebSocket: ${wsUrl} (attempt ${(this.wsConnectionAttempts || 0) + 1})`);
+                
                 this.websocket = new WebSocket(wsUrl);
+                window.previousWebSocket = this.websocket; // Store for cleanup
+                this.wsConnectionAttempts = (this.wsConnectionAttempts || 0) + 1;
                 
                 this.websocket.onopen = () => {
-                    this.debug('WebSocket connected');
+                    this.debug('✅ WebSocket connected successfully');
                     this.updateStatus('Connected');
+                    this.wsConnectionAttempts = 0; // Reset on successful connection
+                    
+                    // Only refresh UI data on first connection or if explicitly requested
+                    // This preserves the UI state when reconnecting during development
+                    if (!this.hasLoadedUIBefore) {
+                        this.debug('🔄 First connection: Loading QuickApp UI...');
+                        this.loadQuickApp().catch(error => {
+                            this.debug('❌ Failed to load UI data on first connection:', error);
+                        });
+                        this.hasLoadedUIBefore = true;
+                    } else {
+                        this.debug('🔄 Reconnected: UI state preserved for debugging');
+                    }
+                    
+                    // Immediately test the connection to make sure server is responsive
+                    setTimeout(() => {
+                        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                            try {
+                                this.websocket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+                                this.lastPingTime = Date.now();
+                                this.debug('🏓 Connection test ping sent');
+                            } catch (error) {
+                                this.debug('❌ Connection test ping failed:', error);
+                            }
+                        }
+                    }, 500); // Test connection after 500ms
                 };
                 
                 this.websocket.onmessage = (event) => {
                     try {
                         const message = JSON.parse(event.data);
+                        this.debug('📨 WebSocket message received:', message);
                         this.handleWebSocketMessage(message);
                     } catch (error) {
-                        this.debug('WebSocket message error:', error.message);
+                        this.debug('❌ WebSocket message error:', error.message);
                     }
                 };
                 
-                this.websocket.onclose = () => {
-                    this.debug('WebSocket disconnected');
+                this.websocket.onclose = (event) => {
+                    this.debug(`❌ WebSocket disconnected (code: ${event.code}, reason: ${event.reason})`);
                     this.updateStatus('Disconnected');
-                    // Attempt to reconnect after 5 seconds
-                    setTimeout(() => this.connectWebSocket(), 5000);
+                    this.websocket = null;
+                    
+                    // More conservative reconnection for development workflows
+                    // Only auto-reconnect on unexpected disconnections, not when server is intentionally stopped
+                    if (event.code !== 1000 && event.code !== 1001 && this.wsConnectionAttempts < 5) {
+                        this.debug(`🔄 Will attempt reconnection in 10 seconds (attempt ${this.wsConnectionAttempts})`);
+                        this.updateStatus('Reconnecting in 10s...');
+                        setTimeout(() => this.connectWebSocket(), 10000); // Longer delay for less aggressive reconnection
+                    } else {
+                        this.debug('🔄 Not auto-reconnecting: server appears to be intentionally stopped or max attempts reached');
+                        this.updateStatus('Disconnected (use window focus to reconnect)');
+                    }
                 };
                 
                 this.websocket.onerror = (error) => {
-                    this.debug('WebSocket error:', error);
+                    this.debug('❌ WebSocket error:', error);
+                    this.updateStatus('Connection Error');
                 };
             }
             
+            setupWindowVisibilityHandlers() {
+                // Handle page visibility changes (tab focus/blur)
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) {
+                        this.debug('🔍 Page became visible, checking WebSocket health');
+                        this.checkWebSocketHealth();
+                    }
+                });
+                
+                // Handle window focus (when Safari window comes to front)
+                window.addEventListener('focus', () => {
+                    this.debug('🔍 Window gained focus, forcing reconnection check');
+                    this.forceReconnectionCheck();
+                });
+                
+                // Handle visibility change (when tab becomes visible)
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) {
+                        this.debug('👁️ Document became visible, forcing reconnection check');
+                        this.forceReconnectionCheck();
+                    }
+                });
+                
+                // Set up simple ping/pong health check every 5 seconds
+                this.healthCheckInterval = setInterval(() => {
+                    this.simplePingCheck();
+                }, 5000);
+                
+                // Store globally for cleanup
+                window.qaHealthCheckInterval = this.healthCheckInterval;
+                
+                // Clean up on page unload
+                window.addEventListener('beforeunload', () => {
+                    this.cleanup();
+                });
+            }
+            
+            cleanup() {
+                if (this.healthCheckInterval) {
+                    clearInterval(this.healthCheckInterval);
+                    this.healthCheckInterval = null;
+                }
+                
+                if (this.pingTimeoutId) {
+                    clearTimeout(this.pingTimeoutId);
+                    this.pingTimeoutId = null;
+                }
+                
+                // Clear global intervals too
+                if (window.qaHealthCheckInterval) {
+                    clearInterval(window.qaHealthCheckInterval);
+                    window.qaHealthCheckInterval = null;
+                }
+                
+                if (this.websocket) {
+                    this.websocket.onopen = null;
+                    this.websocket.onmessage = null;
+                    this.websocket.onclose = null;
+                    this.websocket.onerror = null;
+                    try {
+                        this.websocket.close();
+                    } catch (e) {
+                        // Ignore close errors
+                    }
+                    this.websocket = null;
+                }
+                
+                // Clean up global reference
+                if (window.previousWebSocket) {
+                    try {
+                        window.previousWebSocket.close();
+                    } catch (e) {
+                        // Ignore
+                    }
+                    window.previousWebSocket = null;
+                }
+            }
+            
+            simplePingCheck() {
+                // If no WebSocket or not open, try to reconnect
+                if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+                    this.debug('🏥 No WebSocket connection, attempting to reconnect');
+                    this.updateStatus('Disconnected');
+                    this.connectWebSocket();
+                    return;
+                }
+                
+                // Send ping and set up timeout for response
+                try {
+                    this.websocket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+                    this.lastPingTime = Date.now();
+                    this.debug('🏓 Ping sent');
+                    
+                    // If no pong received within 8 seconds, close WebSocket and reconnect
+                    this.pingTimeoutId = setTimeout(() => {
+                        if (this.lastPongTime < this.lastPingTime) {
+                            this.debug('🏥 Ping timeout - closing WebSocket and reconnecting');
+                            if (this.websocket) {
+                                this.websocket.close();
+                            }
+                            this.updateStatus('Disconnected');
+                            this.connectWebSocket();
+                        }
+                    }, 8000);
+                    
+                } catch (error) {
+                    this.debug('🏥 Ping failed, reconnecting:', error);
+                    this.updateStatus('Disconnected');
+                    this.connectWebSocket();
+                }
+            }
+            
+            forceReconnectionCheck() {
+                this.debug('🔄 Force reconnection check triggered');
+                
+                // Only try to refresh UI data if we have a healthy connection
+                if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                    this.refreshUIDataSafely();
+                } else {
+                    // No connection, try to reconnect
+                    this.debug('🔄 No WebSocket connection, forcing reconnect');
+                    this.updateStatus('Disconnected');
+                    this.connectWebSocket();
+                }
+            }
+            
             handleWebSocketMessage(message) {
-                this.debug('WebSocket message:', message);
+                // Log if window is not focused to help debug the background update issue
+                const windowFocused = document.hasFocus();
+                const pageVisible = !document.hidden;
+                this.debug(`WebSocket message (focused: ${windowFocused}, visible: ${pageVisible}):`, message);
+                
+                // Handle ping/pong for health checks
+                if (message.type === 'ping') {
+                    // Respond to server ping
+                    this.websocket.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+                    return;
+                }
+                
+                if (message.type === 'pong') {
+                    this.debug('🏓 Pong received - connection healthy');
+                    this.lastPongTime = Date.now();
+                    
+                    // Clear ping timeout since we got a response
+                    if (this.pingTimeoutId) {
+                        clearTimeout(this.pingTimeoutId);
+                        this.pingTimeoutId = null;
+                    }
+                    
+                    return;
+                }
                 
                 if (message.type === 'ui_update' && message.qa_id === parseInt(this.qaId)) {
                     this.handleUIUpdate(message.data);
@@ -1026,7 +1334,7 @@
                 
                 // Handle granular view updates
                 if (message.type === 'view_update' && message.qa_id === parseInt(this.qaId)) {
-                    this.handleViewUpdate(message.element_id, message.property, message.value);
+                    this.handleViewUpdate(message.element_id, message.property_name, message.value);
                 }
                 
                 // Handle window control commands
@@ -1078,12 +1386,15 @@
                     case 'label':
                         if (property === 'text') {
                             elementContainer.innerHTML = value;
+                            // Force DOM update for background windows
+                            this.forceDOMUpdate(elementContainer);
                         }
                         break;
                         
                     case 'button':
                         if (property === 'text') {
                             elementContainer.textContent = value;
+                            this.forceDOMUpdate(elementContainer);
                         }
                         break;
                         
@@ -1093,7 +1404,11 @@
                             const valueDisplay = elementContainer.querySelector('.qa-slider-value');
                             if (slider) {
                                 slider.value = value;
-                                if (valueDisplay) valueDisplay.textContent = value;
+                                if (valueDisplay) {
+                                    valueDisplay.textContent = value;
+                                    this.forceDOMUpdate(valueDisplay);
+                                }
+                                this.forceDOMUpdate(slider);
                             }
                         }
                         break;
@@ -1107,6 +1422,7 @@
                             } else {
                                 button.className = 'qa-ui-button qa-ui-switch-btn qa-switch qa-ui-switch-btn-off';
                             }
+                            this.forceDOMUpdate(button);
                         }
                         break;
                         
@@ -1115,6 +1431,7 @@
                             const select = elementContainer.querySelector('select');
                             if (select) {
                                 select.value = value;
+                                this.forceDOMUpdate(select);
                             }
                         } else if (property === 'options') {
                             const select = elementContainer.querySelector('select');
@@ -1126,6 +1443,7 @@
                                     optionElement.textContent = option.text || option;
                                     select.appendChild(optionElement);
                                 });
+                                this.forceDOMUpdate(select);
                             }
                         }
                         break;
@@ -1149,7 +1467,9 @@
                                 } else {
                                     displayText.textContent = `${selectedValues.length} selected`;
                                 }
+                                this.forceDOMUpdate(displayText);
                             }
+                            this.forceDOMUpdate(elementContainer);
                         } else if (property === 'options') {
                             const dropdownList = elementContainer.querySelector('.qa-ui-multidrop-list');
                             if (dropdownList && Array.isArray(value)) {
@@ -1163,12 +1483,29 @@
                                     optionLabel.appendChild(document.createTextNode(option.text || option));
                                     dropdownList.appendChild(optionLabel);
                                 });
+                                this.forceDOMUpdate(dropdownList);
                             }
                         }
                         break;
                         
                     default:
                         this.debug(`Unknown element type: ${elementType}`);
+                }
+            }
+            
+            forceDOMUpdate(element) {
+                // Force DOM update for background windows using a simple but effective approach
+                try {
+                    // Force a repaint by briefly changing and restoring the opacity
+                    const originalOpacity = element.style.opacity;
+                    element.style.opacity = '0.999';
+                    // Use setTimeout instead of requestAnimationFrame for better background window support
+                    setTimeout(() => {
+                        element.style.opacity = originalOpacity || '';
+                    }, 1);
+                } catch (error) {
+                    // If forcing DOM update fails, just continue
+                    this.debug('Failed to force DOM update:', error);
                 }
             }
             
@@ -1220,7 +1557,9 @@
             }
             
             updateStatus(status) {
+                this.currentStatus = status;
                 document.getElementById('status').textContent = status;
+                this.debug(`📊 Status updated: ${status}`);
             }
             
             showError(message) {
@@ -1258,7 +1597,7 @@
         
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new QuickAppDesktopUI();
+            window.quickAppUI = new QuickAppDesktopUI();
         });
     </script>
 </body>

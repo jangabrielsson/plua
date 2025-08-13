@@ -57,6 +57,32 @@ local function arrayifyFqa(fqa)
   return fqa
 end
 
+-- Screen dimension and QuickApp window functions
+local function getScreenDimension()
+  local dims = _PY.get_screen_dimensions()
+  if dims then
+    return dims.width, dims.height
+  else
+    return 1920, 1080  -- Fallback
+  end
+end
+
+local function createQuickAppWindow(qaId, title, width, height, x, y)
+  title = title or fmt("QuickApp %s", qaId)
+  width = width or 800
+  height = height or 600
+  x = x or 100
+  y = y or 100
+  
+  local success = _PY.open_quickapp_window(qaId, title, width, height, x, y)
+  if success then
+    Emu:DEBUG(fmt("Created QuickApp window for QA %s: %s (%dx%d at %d,%d)", qaId, title, width, height, x, y))
+  else
+    Emu:WARNING(fmt("Failed to create QuickApp window for QA %s", qaId))
+  end
+  return success
+end
+
 local function uploadFQA(fqa)
   assert(type(fqa) == "table", "fqa must be a table")
   assert(fqa.name, "fqa must have a name")
@@ -472,5 +498,8 @@ Emu.lib.downloadFQA = downloadFQA
 Emu.lib.unpackFQAAux = unpackFQAAux
 Emu.lib.saveProject = saveProject
 Emu.lib.updateQA = updateQA
+Emu.lib.updateFile = updateFile
+Emu.lib.getScreenDimension = getScreenDimension
+Emu.lib.createQuickAppWindow = createQuickAppWindow
 Emu.lib.updateFile = updateFile
 Emu.lib.updateQAparts = updateQAparts

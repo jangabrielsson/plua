@@ -8,43 +8,45 @@ function net.HTTPClient()
   -- url is string
   -- options = { options = { method = "get", headers = {}, data = "...", timeout = 10000 }, success = function(response) end, error = function(status) end }
   function self:request(url, options)
-    -- Create the request table for http_request_async
-    local request_table = {
-      url = url,
+    -- Extract options for call_http
+    local call_options = {
       method = options.options and options.options.method or "GET",
       headers = options.options and options.options.headers or {},
-      body = options.options and options.options.data or nil,
-      timeout = options.options and options.options.timeout or 30,
-      checkCertificate = options.options and options.options.checkCertificate
+      data = options.options and options.options.data or nil,
+      timeout = options.options and options.options.timeout or 30
     }
     
-    -- Create a callback function that will handle the response
-    local callback = function(response)
-      if response.error then
+    -- Create a callback function that adapts call_http response to net.HTTPClient format
+    local callback = function(err, response)
+      if err then
         -- Call error callback if provided
         if options.error then
-          -- For timeout errors, pass "timeout" string. For other errors, pass the error message or status code
-          local error_param = response.error:lower() == "timeout" and "timeout" or (response.error or response.code or 0)
-          local success, err = pcall(options.error, error_param)
+          -- For timeout errors, pass "timeout" string. For other errors, pass the error message
+          local error_param = err:lower():find("timeout") and "timeout" or err
+          local success, callback_err = pcall(options.error, error_param)
           if not success then
-            print("Error in HTTP error callback: " .. tostring(err))
+            print("Error in HTTP error callback: " .. tostring(callback_err))
           end
         end
       else
         -- Call success callback if provided
         if options.success then
-          local res = { status = response.code, data = response.body }
-          local success, err = pcall(options.success, res)
+          -- Adapt call_http response format to net.HTTPClient format
+          local res = { 
+            status = response.status, 
+            data = response.text  -- call_http uses 'text', net.HTTPClient expects 'data'
+          }
+          local success, callback_err = pcall(options.success, res)
           if not success then
-            print("Error in HTTP success callback: " .. tostring(err))
+            print("Error in HTTP success callback: " .. tostring(callback_err))
           end
         end
       end
     end
     
-    -- Make the async HTTP request
+    -- Use our existing call_http function
     local callback_id = _PY.registerCallback(callback)
-    _PY.http_request_async(request_table, callback_id)
+    _PY.call_http(url, call_options, callback_id)
   end
   return self
 end
@@ -231,15 +233,33 @@ end
 -- opts = { success = function(data) end, error = function(err) end }
 function net.UDPSocket(opts)
   local opts = opts or {}
-  local self = { opts = opts, socket = nil }
+  local self = { opts = opts, socket = nil, ready = false, pending_operations = {} }
 
   -- Create UDP socket automatically when constructor is called
   local function createSocket()
     local callback = function(result)
       if result.success then
         self.socket = result.socket_id
+        self.ready = true
+        _PY.print("UDP socket created with ID: " .. tostring(result.socket_id))
+        
+        -- Process any pending operations
+        for _, operation in ipairs(self.pending_operations) do
+          operation()
+        end
+        self.pending_operations = {}
       else
         print("Error creating UDP socket: " .. tostring(result.message))
+        self.ready = false
+        
+        -- Fail any pending operations
+        for _, operation in ipairs(self.pending_operations) do
+          -- Call with error
+          if operation.error then
+            operation.error("Socket creation failed: " .. tostring(result.message))
+          end
+        end
+        self.pending_operations = {}
       end
     end
     local callback_id = _PY.registerCallback(callback)
@@ -251,74 +271,94 @@ function net.UDPSocket(opts)
 
   function self:sendTo(data, ip, port, opts)
     local opts = opts or {}
-    if not self.socket then
-      if opts.error then
-        local success, err_msg = pcall(opts.error, "Not connected")
-        if not success then
-          print("Error in UDP sendTo error callback: " .. tostring(err_msg))
-        end
-      end
-      return
-    end
     
-    -- Create a callback function that will handle the send result
-    local callback = function(result)
-      if result.error then
+    local function doSend()
+      if not self.socket then
         if opts.error then
-          local success, err_msg = pcall(opts.error, result.error)
+          local success, err_msg = pcall(opts.error, "Not connected")
           if not success then
             print("Error in UDP sendTo error callback: " .. tostring(err_msg))
           end
         end
         return
       end
-      if opts.success then
-        local success, err_msg = pcall(opts.success)
-        if not success then
-          print("Error in UDP sendTo success callback: " .. tostring(err_msg))
+      
+      -- Create a callback function that will handle the send result
+      local callback = function(result)
+        if not result.success then
+          if opts.error then
+            local success, err_msg = pcall(opts.error, result.error)
+            if not success then
+              print("Error in UDP sendTo error callback: " .. tostring(err_msg))
+            end
+          end
+          return
+        end
+        if opts.success then
+          local success, err_msg = pcall(opts.success)
+          if not success then
+            print("Error in UDP sendTo success callback: " .. tostring(err_msg))
+          end
         end
       end
+      
+      -- Register the callback and send the data
+      local callback_id = _PY.registerCallback(callback)
+      _PY.udp_send_to(self.socket, data, ip, port, callback_id)
     end
     
-    -- Register the callback and send the data
-    local callback_id = _PY.registerCallback(callback)
-    _PY.udp_send_to(self.socket, data, ip, port, callback_id)
+    if self.ready then
+      doSend()
+    else
+      -- Queue the operation for when socket is ready
+      table.insert(self.pending_operations, doSend)
+    end
   end
 
   function self:receive(opts)
     local opts = opts or {}
-    if not self.socket then
-      if opts.error then
-        local success, err_msg = pcall(opts.error, "Not connected")
-        if not success then
-          print("Error in UDP receive error callback: " .. tostring(err_msg))
-        end
-      end
-      return
-    end
     
-    -- Create a callback function that will handle the receive result
-    local callback = function(result)
-      if result.error then
+    local function doReceive()
+      if not self.socket then
         if opts.error then
-          local success, err_msg = pcall(opts.error, result.error)
+          local success, err_msg = pcall(opts.error, "Not connected")
           if not success then
             print("Error in UDP receive error callback: " .. tostring(err_msg))
           end
         end
         return
       end
-      if opts.success then
-        local success, err_msg = pcall(opts.success, result.data, result.ip, result.port)
-        if not success then
-          print("Error in UDP receive success callback: " .. tostring(err_msg))
+      
+      -- Create a callback function that will handle the receive result
+      local callback = function(result)
+        if not result.success then
+          if opts.error then
+            local success, err_msg = pcall(opts.error, result.error)
+            if not success then
+              print("Error in UDP receive error callback: " .. tostring(err_msg))
+            end
+          end
+          return
+        end
+        if opts.success then
+          local success, err_msg = pcall(opts.success, result.data, result.ip, result.port)
+          if not success then
+            print("Error in UDP receive success callback: " .. tostring(err_msg))
+          end
         end
       end
+      
+      -- Register the callback and start receiving
+      local callback_id = _PY.registerCallback(callback)
+      _PY.udp_receive(self.socket, callback_id)
     end
     
-    -- Register the callback and start receiving
-    local callback_id = _PY.registerCallback(callback)
-    _PY.udp_receive(self.socket, callback_id)
+    if self.ready then
+      doReceive()
+    else
+      -- Queue the operation for when socket is ready
+      table.insert(self.pending_operations, doReceive)
+    end
   end
 
   -- Convenience method that delegates to sendTo for compatibility
@@ -330,6 +370,7 @@ function net.UDPSocket(opts)
     if self.socket then
       _PY.udp_close(self.socket)
       self.socket = nil
+      self.ready = false
     end
   end
 
@@ -554,9 +595,7 @@ function net.WebSocketClient(options)
       
       -- Clean up persistent callback if we have it
       if self.callback_id then
-        -- Manually clean up the persistent callback
-        _PY._callback_registry[self.callback_id] = nil
-        _PY._persistent_callbacks[self.callback_id] = nil
+        _PY.clearRegisteredCallback(self.callback_id)
         self.callback_id = nil
       end
     end
@@ -573,15 +612,16 @@ function net.WebSocketClientTls(options)
 end
 
 -- WebSocket Server implementation
-function net.WebSocketServer(options)
+function net.WebSocketServer(options,system)
   local self = {
     server_id = nil,
     running = false,
     clients = {},
     callbacks = {},
+    system = system or false,
     options = options or {}
   }
-  
+
   setmetatable(self, { __tostring = function(_) return "WebSocketServer object: "..tostring(self.server_id) end })
   
   -- Start the WebSocket server
@@ -650,7 +690,8 @@ function net.WebSocketServer(options)
     end
     
     -- Register the callback and start the server
-    local callback_id = _PY.registerCallback(server_callback, true)  -- persistent
+    local system = self.system or false
+    local callback_id = _PY.registerCallback(server_callback, true, system)  -- persistent
     self.callback_id = callback_id
     
     _PY.websocket_server_start(self.server_id, host, port, callback_id)
@@ -768,148 +809,200 @@ net.MQTTConnectReturnCode = {
   NOT_AUTHORIZED = 5
 }
 
--- MQTT Client class (object-oriented, Fibaro style)
-local MQTTClient = {}
-MQTTClient.__index = MQTTClient
+-- MQTT Client namespace
+net.Client = {}
 
-function net.MQTTClient()
-  local self = setmetatable({}, MQTTClient)
-  self.client_id = nil
-  self.connected = false
-  self.event_listeners = {}
-  return self
-end
-
-function MQTTClient:connect(uri, options)
-  self.uri = uri
-  self.options = options or {}
+-- Main MQTT Client creation function (Fibaro style)
+function net.Client.connect(uri, options)
+  local self = {
+    client_id = nil,
+    connected = false,
+    event_listeners = {},
+    callback_id = nil,
+    event_callback_ids = {}
+  }
+  
+  -- Connect to MQTT broker
+  local options = options or {}
   local callback = nil
   if options and options.callback then
     callback = options.callback
     options.callback = nil -- Remove from options so not sent to Python
   end
-  local callback_id = callback and _PY.registerCallback(callback) or nil
-  self.client_id = _PY.mqtt_client_connect(uri, self.options, callback_id)
-end
-
-function MQTTClient:disconnect(options)
-  if not self.client_id then
-    return
-  end
+  local callback_id = callback and _PY.registerCallback(callback, true) or nil  -- true = persistent for multiple events
+  self.callback_id = callback_id  -- Store for cleanup
+  self.client_id = _PY.mqtt_client_connect(uri, options, callback_id)
   
-  options = options or {}
-  
-  local callback = nil
-  if options.callback then
-    callback = function(error_code)
-      options.callback(error_code)
+  -- Disconnect method
+  function self:disconnect(options)
+    if not self.client_id then
+      return
+    end
+    
+    options = options or {}
+    
+    local callback = nil
+    if options.callback then
+      callback = function(error_code)
+        options.callback(error_code)
+      end
+    end
+    
+    local callback_id = callback and _PY.registerCallback(callback) or nil
+    _PY.mqtt_client_disconnect(self.client_id, callback_id)
+    
+    -- Clean up persistent callback if we have it
+    if self.callback_id then
+      _PY.clearRegisteredCallback(self.callback_id)
+      self.callback_id = nil
     end
   end
-  
-  local callback_id = callback and _PY.registerCallback(callback) or nil
-  _PY.mqtt_client_disconnect(self.client_id, options, callback_id)
-end
 
-function MQTTClient:subscribe(topics, options)
-  if not self.client_id then
-    return nil
-  end
-  
-  options = options or {}
-  
-  local callback = nil
-  if options.callback then
-    callback = function(error_code)
-      options.callback(error_code)
+  -- Subscribe method
+  function self:subscribe(topics, options)
+    if not self.client_id then
+      return nil
     end
-  end
-  
-  local callback_id = callback and _PY.registerCallback(callback) or nil
-  return _PY.mqtt_client_subscribe(self.client_id, topics, options, callback_id)
-end
-
-function MQTTClient:unsubscribe(topics, options)
-  if not self.client_id then
-    return nil
-  end
-  
-  options = options or {}
-  
-  local callback = nil
-  if options.callback then
-    callback = function(error_code)
-      options.callback(error_code)
+    
+    options = options or {}
+    
+    local callback = nil
+    if options.callback then
+      callback = function(error_code)
+        options.callback(error_code)
+      end
     end
+    
+    local callback_id = callback and _PY.registerCallback(callback) or nil
+    return _PY.mqtt_client_subscribe(self.client_id, topics, options, callback_id)
   end
-  
-  local callback_id = callback and _PY.registerCallback(callback) or nil
-  return _PY.mqtt_client_unsubscribe(self.client_id, topics, options, callback_id)
-end
 
-function MQTTClient:publish(topic, payload, options)
-  if not self.client_id then
-    return nil
-  end
-  
-  options = options or {}
-  
-  local callback = nil
-  if options.callback then
-    callback = function(error_code)
-      options.callback(error_code)
+  -- Unsubscribe method
+  function self:unsubscribe(topics, options)
+    if not self.client_id then
+      return nil
     end
-  end
-  
-  local callback_id = callback and _PY.registerCallback(callback) or nil
-  return _PY.mqtt_client_publish(self.client_id, topic, payload, options, callback_id)
-end
-
-function MQTTClient:addEventListener(event_name, callback)
-  if not self.client_id or not callback then
-    return
-  end
-  
-  -- Store the callback locally
-  self.event_listeners[event_name] = callback
-  
-  -- Create wrapper callback for Python
-  local wrapper_callback = function(event_data)
-    if self.event_listeners[event_name] then
-      self.event_listeners[event_name](event_data)
+    
+    options = options or {}
+    
+    local callback = nil
+    if options.callback then
+      callback = function(error_code)
+        options.callback(error_code)
+      end
     end
+    
+    local callback_id = callback and _PY.registerCallback(callback) or nil
+    return _PY.mqtt_client_unsubscribe(self.client_id, topics, options, callback_id)
+  end
+
+  -- Publish method
+  function self:publish(topic, payload, options)
+    if not self.client_id then
+      return nil
+    end
+    
+    options = options or {}
+    
+    local callback = nil
+    if options.callback then
+      callback = function(error_code)
+        options.callback(error_code)
+      end
+    end
+    
+    local callback_id = callback and _PY.registerCallback(callback) or nil
+    return _PY.mqtt_client_publish(self.client_id, topic, payload, options, callback_id)
+  end
+
+  -- Add event listener (EventTarget API)
+  function self:addEventListener(event_name, callback)
+    if not self.client_id or not callback then
+      return
+    end
+    
+    -- Store the callback locally
+    self.event_listeners[event_name] = callback
+    
+    -- Create wrapper callback for Python
+    local wrapper_callback = function(event_data)
+      if self.event_listeners[event_name] then
+        self.event_listeners[event_name](event_data)
+      end
+    end
+    
+    local callback_id = _PY.registerCallback(wrapper_callback, true)  -- true = persistent for multiple events
+    self.event_callback_ids[event_name] = callback_id  -- Store for cleanup
+    _PY.mqtt_client_add_event_listener(self.client_id, event_name, callback_id)
+  end
+
+  -- Remove event listener
+  function self:removeEventListener(event_name)
+    if not self.client_id then
+      return
+    end
+    
+    -- Remove local callback
+    self.event_listeners[event_name] = nil
+    
+    -- Clean up persistent callback
+    if self.event_callback_ids and self.event_callback_ids[event_name] then
+      _PY.clearRegisteredCallback(self.event_callback_ids[event_name])
+      self.event_callback_ids[event_name] = nil
+    end
+    
+    -- Remove from Python side
+    _PY.mqtt_client_remove_event_listener(self.client_id, event_name)
+  end
+
+  -- Check if connected
+  function self:isConnected()
+    if not self.client_id then
+      return false
+    end
+    
+    return _PY.mqtt_client_is_connected(self.client_id)
+  end
+
+  -- Get client info
+  function self:getInfo()
+    if not self.client_id then
+      return nil
+    end
+    
+    return _PY.mqtt_client_get_info(self.client_id)
   end
   
-  local callback_id = _PY.registerCallback(wrapper_callback)
-  _PY.mqtt_client_add_event_listener(self.client_id, event_name, callback_id)
+  return self
 end
 
-function MQTTClient:removeEventListener(event_name)
-  if not self.client_id then
-    return
+-- Legacy support: Keep the old MQTTClient for backward compatibility
+function net.MQTTClient()
+  local self = setmetatable({}, {})
+  
+  function self:connect(uri, options)
+    -- Delegate to the new implementation
+    local client = net.Client.connect(uri, options)
+    -- Copy methods to self for backward compatibility
+    for k, v in pairs(client) do
+      if type(v) == "function" then
+        self[k] = v
+      else
+        self[k] = v
+      end
+    end
+    return self
   end
   
-  -- Remove local callback
-  self.event_listeners[event_name] = nil
-  
-  -- Remove from Python side
-  _PY.mqtt_client_remove_event_listener(self.client_id, event_name)
-end
-
-function MQTTClient:isConnected()
-  if not self.client_id then
-    return false
-  end
-  
-  return _PY.mqtt_client_is_connected(self.client_id)
-end
-
-function MQTTClient:getInfo()
-  if not self.client_id then
-    return nil
-  end
-  
-  return _PY.mqtt_client_get_info(self.client_id)
+  return self
 end
 
 -- Return the net module for require()
+-- Also create mqtt alias for Fibaro compatibility
+mqtt = {
+  Client = net.Client,
+  QoS = net.QoS,
+  MQTTConnectReturnCode = net.MQTTConnectReturnCode
+}
+
 return net

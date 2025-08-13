@@ -1,12 +1,12 @@
 """
-plua - Python-Lua async runtime with timer support
+EPLua - Python Lua Engine with Async Timer Support
 """
 
-__version__ = "1.1.6"
-__author__ = "Jan Gabrielsson"
-__email__ = "jan@gabrielsson.com"
+from .engine import LuaEngine
+from .timers import AsyncTimerManager
+from .lua_bindings import export_to_lua, python_to_lua_table
+# Import remaining core modules
+# from . import web_server
 
-from .interpreter import LuaInterpreter
-from .runtime import LuaAsyncRuntime
-
-__all__ = ["LuaInterpreter", "LuaAsyncRuntime"]
+__version__ = "1.2.0"
+__all__ = ["LuaEngine", "AsyncTimerManager", "export_to_lua", "python_to_lua_table"]

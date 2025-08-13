@@ -1,66 +1,33 @@
-# plua Documentation
+# EPLua Documentation
 
-Welcome to the plua documentation! This directory contains comprehensive guides for both users and developers.
+Welcome to the EPLua documentation! This directory contains comprehensive documentation for the EPLua project.
 
-## 📚 User Documentation
+## Main Documentation
 
-### Getting Started
-- [Main README](../README.md) - Project overview, installation, and basic usage
-- [Web REPL HTML Examples](WEB_REPL_HTML_EXAMPLES.md) - HTML rendering examples for the web interface
+- **[PYfunctions.md](PYfunctions.md)** - Complete reference for all `_PY.*` functions available in EPLua
 
-### API Documentation
-- [REST API Usage](api/API_USAGE.md) - Complete REST API reference and examples
+## User APIs Documentation
 
-### Examples
-- [Examples Directory](../examples/) - Practical Lua examples and use cases
+EPLua provides user-friendly Lua modules that wrap the low-level `_PY.*` functions:
 
-## 🔧 Developer Documentation
+- **[examples/lua/README_WINDOWS.md](../examples/lua/README_WINDOWS.md)** - Windows/GUI module for creating HTML interfaces
+- **[examples/lua/README_JSON.md](../examples/lua/README_JSON.md)** - JSON encoding/decoding module
+- **[NETWORK_MODULES.md](NETWORK_MODULES.md)** - HTTP, WebSocket, MQTT, TCP, UDP modules
+- **[LUAFILESYSTEM.md](LUAFILESYSTEM.md)** - File system operations (LuaFileSystem compatible)
 
-### Development Progress
-- [Development Documentation](dev/) - Internal docs, progress tracking, and implementation details
+## Development Documentation
 
-### Contributing
-- [Development Setup](../README.md#development) - How to set up a development environment
-- [Code Structure](dev/) - Understanding the codebase architecture
+The `dev/` directory contains documentation for developers and contributors:
 
-## 📁 Directory Structure
+- **[GUI_LAUNCHER.md](dev/GUI_LAUNCHER.md)** - GUI launcher implementation details
+- **[GUI_TEST_RESULTS.md](dev/GUI_TEST_RESULTS.md)** - GUI testing results and compatibility notes
+- **[GUI_USAGE.md](dev/GUI_USAGE.md)** - GUI usage patterns and examples
+- **[HTML_WINDOW_STATUS.md](dev/HTML_WINDOW_STATUS.md)** - HTML window rendering status and implementation
+- **[PROJECT_STATUS.md](dev/PROJECT_STATUS.md)** - Overall project status and roadmap
+- **[WEB_SERVER.md](dev/WEB_SERVER.md)** - Web server implementation and API details
 
-```
-docs/
-├── README.md                    # This file - documentation index
-├── WEB_REPL_HTML_EXAMPLES.md   # User guide for web REPL HTML features
-├── api/                        # API documentation
-│   └── API_USAGE.md            # REST API reference
-└── dev/                        # Developer documentation
-    ├── DEBUG_MESSAGES_FIXED.md
-    ├── FUNCTIONALITY_VERIFIED.md
-    ├── IMPLEMENTATION_COMPLETE.md
-    ├── ISRUNNING_HOOK_DOCS.md
-    ├── PRINT_CAPTURE_COMPLETE.md
-    ├── REPL_USAGE.md
-    └── TIMER_FUNCTIONALITY_FIXED.md
-```
+## Getting Started
 
-## 🚀 Quick Links
+For basic usage, start with the main [README.md](../README.md) in the project root, then refer to [PYfunctions.md](PYfunctions.md) for the complete function reference.
 
-- **For End Users**: Start with the [main README](../README.md) and [Web REPL examples](WEB_REPL_HTML_EXAMPLES.md)
-- **For API Users**: Check out [REST API documentation](api/API_USAGE.md)
-- **For Developers**: Browse the [development docs](dev/) for implementation details and progress tracking
-
-## 📖 Documentation Conventions
-
-- **User Documentation**: Files intended for plua end-users (Lua developers, scripters)
-- **API Documentation**: REST API reference, endpoints, examples
-- **Developer Documentation**: Internal implementation details, progress tracking, development notes
-
-## 🔄 Documentation Updates
-
-This documentation is maintained alongside the plua codebase. When adding new features or making changes:
-
-1. Update user-facing docs for new features
-2. Add API documentation for new endpoints
-3. Track implementation progress in `docs/dev/`
-
----
-
-For the most up-to-date information, always refer to the [main README](../README.md) and the latest code in the repository.
+For examples and test scripts, see the [examples/](../examples/) directory in the project root.

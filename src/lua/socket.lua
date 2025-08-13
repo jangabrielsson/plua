@@ -1,5 +1,7 @@
 local fmt = string.format
-local _DEBUG = false  -- Enable debug to trace MobDebug communication from VS Code
+
+ -- Enable debug to trace MobDebug communication from VS Code -- Enable debug to trace MobDebug communication from VS Code
+local _DEBUG = false
 _PY = _PY or {}
 
 -- Use synchronous functions directly for MobDebug compatibility
@@ -164,7 +166,7 @@ function socket.tcp()
 end
 
 -- Synchronous HTTP call function
-function socket.http_call(method, url, headers, payload)
+socket.http_call = function(method, url, headers, payload)
   debug("Making HTTP call:", method, url)
   
   local success, status_code, response_body, error_message = http_call_sync(method, url, headers, payload)

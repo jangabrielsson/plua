@@ -337,24 +337,28 @@ def init_quickapp_project() -> None:
 def get_vscode_launch_config() -> Dict[str, Any]:
     """Get VS Code launch configuration for plua projects"""
     config_path = get_static_file('vscode_launch_config.json')
-    config_content = config_path.read_text()
+    with open(config_path, 'r') as f:
+        config_content = f.read()
     return json.loads(config_content)
 
 
 def get_vscode_tasks_config() -> Dict[str, Any]:
     """Get VS Code tasks configuration for HC3 integration"""
     config_path = get_static_file('vscode_tasks_config.json')
-    config_content = config_path.read_text()
+    with open(config_path, 'r') as f:
+        config_content = f.read()
     return json.loads(config_content)
 
 
 def get_basic_quickapp_template() -> str:
     """Get the basic QuickApp template content"""
     template_path = get_static_file('basic_quickapp_template.lua')
-    return template_path.read_text()
+    with open(template_path, 'r') as f:
+        return f.read()
 
 
 def get_project_config() -> str:
     """Get the .project file configuration for HC3"""
     config_path = get_static_file('project_config.json')
-    return config_path.read_text()
+    with open(config_path, 'r') as f:
+        return f.read()

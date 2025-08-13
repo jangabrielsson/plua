@@ -1,340 +1,272 @@
+#!/usr/bin/env python3
 """
-Interactive REPL for plua
-Provides a Lua-like interactive prompt with access to plua features
+EPLua REPL Client
+
+A command-line REPL client that connects to the EPLua telnet server
+and provides a rich interactive experience with history, completion,
+and proper input handling using prompt_toolkit.
 """
 
-import asyncio
-import traceback
-import sys
+import socket
 import threading
-import queue
-from typing import Optional
-from .runtime import LuaAsyncRuntime
+import time
+import os
+from pathlib import Path
+
+try:
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.history import FileHistory
+    from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+    from prompt_toolkit.completion import WordCompleter
+    from prompt_toolkit.styles import Style
+    PROMPT_TOOLKIT_AVAILABLE = True
+except ImportError:
+    PROMPT_TOOLKIT_AVAILABLE = False
+    print("Warning: prompt_toolkit not available, falling back to basic input")
 
 
-class PluaREPL:
-    """Interactive REPL for plua with async support"""
-
-    def __init__(self, runtime):
-        self.runtime = runtime
-        self.debug = runtime.config.get('debug', False)
-        self.running = True
-        self.repl_task = None
-        self.input_queue = queue.Queue()
-        self.input_thread = None
-
-    async def initialize(self):
-        """Initialize the runtime and start callback loop"""
-        # Check if runtime is already initialized (for interactive mode)
-        if not hasattr(self.runtime, '_initialized') or not self.runtime._initialized:
-            self.runtime.initialize_lua()
-            await self.runtime.start_callback_loop()
-            self.runtime._initialized = True
-
-        # Set debug mode
-        if self.debug:
-            self.runtime.interpreter.set_debug_mode(True)
-
-    def show_welcome(self):
-        """Show welcome message for the REPL"""
-        from . import __version__
-        import lupa
-
+class EPLuaREPL:
+    """Interactive REPL client for EPLua with enhanced UI"""
+    
+    def __init__(self, host: str = 'localhost', port: int = 8023):
+        self.host = host
+        self.port = port
+        self.socket = None
+        self.running = False
+        self.history_file = Path.home() / '.eplua_history'
+        self.output_buffer = []
+        self.setup_prompt_toolkit()
+    
+    def setup_prompt_toolkit(self):
+        """Setup prompt_toolkit session with history and completion"""
+        if not PROMPT_TOOLKIT_AVAILABLE:
+            return
+        
+        # Create word completer for common Lua commands
+        lua_completer = WordCompleter([
+            'print', 'local', 'function', 'if', 'then', 'else', 'end',
+            'for', 'while', 'do', 'repeat', 'until', 'break', 'return',
+            'true', 'false', 'nil', 'and', 'or', 'not', 'in',
+            '_PY.get_time', '_PY.sleep', 'timer.setTimeout', 'timer.setInterval',
+            'exit', 'quit', 'help', 'clear'
+        ], ignore_case=True)
+        
+        # Setup history
         try:
-            lua = lupa.LuaRuntime()
-            lua_version = lua.eval('_VERSION')
+            history = FileHistory(str(self.history_file))
         except Exception:
-            lua_version = "Lua (version unknown)"
-
-        print(f"Plua v{__version__} Interactive REPL")
-        print(f"Running {lua_version} with async runtime support")
-        print()
-        print("Quick start:")
-        print("  help()                           - Show available commands")
-        print("  print('Hello, plua!')           - Basic Lua")
-        print("  json.encode({name='test'})       - JSON encoding")
-        print("  net.HTTPClient()                 - Create HTTP client")
-        print("  setTimeout(function() print('Hi!') end, 2000) - Async timer")
-        print()
-        print("Type 'exit()' or press Ctrl+D to quit")
-        print()
-
-    def show_help(self):
-        """Show REPL help"""
-        print("Plua REPL Commands:")
-        print("  exit()          - Exit the REPL")
-        print("  help()          - Show this help")
-        print("  state()         - Show runtime state")
-        print("  clear()         - Clear screen")
-        print("  debug(true/false) - Toggle debug mode")
-        print()
-        print("Lua functions available:")
-        print("  setTimeout(fn, ms) - Schedule function execution")
-        print("  clearTimeout(id)   - Cancel scheduled timer")
-        print("  json.encode(obj)   - Convert to JSON")
-        print("  json.decode(str)   - Parse JSON")
-        print("  net.HTTPClient()   - Create HTTP client")
-        print("  net.HTTPServer()   - Create HTTP server")
-        print("  _PY.*             - Python integration functions")
-        print()
-        print("Tips:")
-        print("  - Use Ctrl+C to cancel input, Ctrl+D to exit")
-        print("  - Variables persist throughout the session")
-        print("  - Async operations run in the background")
-        print()
-
-    def show_state(self):
-        """Show current runtime state"""
+            history = None
+        
+        # Create prompt session
+        self.session = PromptSession(
+            history=history,
+            auto_suggest=AutoSuggestFromHistory(),
+            completer=lua_completer,
+            complete_while_typing=True,
+            enable_history_search=True,
+            complete_in_thread=True,
+        )
+        
+        # Setup styling
+        self.style = Style.from_dict({
+            'prompt': 'ansicyan bold',
+            'output': 'ansigreen',
+            'error': 'ansired',
+            'info': 'ansiyellow',
+        })
+    
+    def connect(self) -> bool:
+        """Connect to the EPLua telnet server"""
         try:
-            state = self.runtime.interpreter.get_runtime_state()
-            print("Runtime state:")
-            print(f"  Active timers: {state['active_timers']}")
-            print(f"  Pending callbacks: {state['pending_callbacks']}")
-            print(f"  Total tasks: {state['total_tasks']}")
-
-            # Get asyncio task info
-            tasks = [t for t in asyncio.all_tasks() if not t.done()]
-            print(f"  Asyncio tasks: {len(tasks)}")
-            for task in tasks:
-                name = task.get_name() if hasattr(task, 'get_name') else "unnamed"
-                print(f"    - {name}")
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.connect((self.host, self.port))
+            return True
         except Exception as e:
-            print(f"Error getting state: {e}")
-
-    def execute_lua_statement(self, statement: str) -> bool:
-        """
-        Execute a Lua statement and return True if successful
-        Handles special REPL commands
-        """
-        statement = statement.strip()
-
-        if not statement:
-            return True
-
-        # Handle special REPL commands
-        if statement in ['exit()', 'quit()']:
-            self.running = False
-            return True
-        elif statement in ['help()']:
-            self.show_help()
-            return True
-        elif statement in ['state()']:
-            self.show_state()
-            return True
-        elif statement in ['clear()']:
-            # Clear screen
-            print('\033[2J\033[H', end='')
-            return True
-        elif statement.startswith('debug('):
-            try:
-                # Simple debug toggle
-                if 'true' in statement:
-                    self.debug = True
-                    self.runtime.interpreter.set_debug_mode(True)
-                    print("Debug mode enabled")
-                elif 'false' in statement:
-                    self.debug = False
-                    self.runtime.interpreter.set_debug_mode(False)
-                    print("Debug mode disabled")
-                else:
-                    print(f"Debug mode: {'enabled' if self.debug else 'disabled'}")
-            except Exception as e:
-                print(f"Error toggling debug: {e}")
-            return True
-
-        # Try to execute as Lua code
-        try:
-            lua = self.runtime.interpreter.get_lua_runtime()
-            if not lua:
-                print("Error: Lua runtime not available")
-                return False
-
-            # Try to execute as expression first (for immediate results)
-            try:
-                # Wrap in return to get the result
-                expr_code = f"return {statement}"
-                result = lua.execute(expr_code)
-                if result is not None:
-                    print(result)
-            except Exception:
-                # If expression fails, try as statement
-                lua.execute(statement)
-
-            return True
-
-        except Exception as e:
-            print(f"Lua error: {e}")
-            if self.debug:
-                traceback.print_exc()
+            print(f"Failed to connect to {self.host}:{self.port}: {e}")
             return False
-
-    def _input_thread_worker(self):
-        """Worker thread for reading input"""
-        while self.running:
+    
+    def receive_messages(self):
+        """Receive and display messages from the server"""
+        while self.running and self.socket:
             try:
-                if not sys.stdin.isatty():
-                    # Non-interactive mode, exit immediately
-                    self.input_queue.put(None)
+                data = self.socket.recv(1024)
+                if not data:
                     break
-                    
-                line = input("plua> ")
-                self.input_queue.put(line)
-            except EOFError:
-                self.input_queue.put(None)
-                break
-            except KeyboardInterrupt:
-                # This won't actually work in the thread, but let's try
-                self.input_queue.put("")
-                continue
-            except:
-                # Thread is being terminated
-                break
-
-    async def read_input(self) -> Optional[str]:
-        """Read input from user, handling Ctrl+C gracefully"""
-        # Start input thread if not already running
-        if self.input_thread is None or not self.input_thread.is_alive():
-            self.input_thread = threading.Thread(target=self._input_thread_worker, daemon=True)
-            self.input_thread.start()
-        
-        # Poll the queue with timeout to allow cancellation
-        while self.running:
-            # Check for shutdown signal from signal handler
-            import sys
-            if hasattr(sys, '_plua_shutdown_requested') and sys._plua_shutdown_requested:
-                return None  # This will cause REPL to exit
-                
-            try:
-                # Check queue with short timeout to remain responsive
-                try:
-                    line = self.input_queue.get(timeout=0.1)
-                    return line
-                except queue.Empty:
-                    # No input yet, continue polling
-                    await asyncio.sleep(0.01)
-                    continue
-            except Exception:
-                return None
-        
-        return None
-
-    async def repl_loop(self):
-        """Main REPL loop"""
-        while self.running:
-            try:
-                line = await self.read_input()
-
-                if line is None:  # EOF (Ctrl+D)
-                    print("\nGoodbye!")
-                    break
-
-                if line == "":  # Empty line or Ctrl+C
-                    continue
-
-                # Execute the statement
-                self.execute_lua_statement(line)
-
-            except KeyboardInterrupt:
-                print("\nUse exit() or Ctrl+D to quit")
-                continue
-            except asyncio.CancelledError:
-                # Handle graceful cancellation
-                print("\nREPL interrupted")
+                message = data.decode('utf-8')
+                if message.strip():
+                    # Store output for display
+                    self.output_buffer.append(message.rstrip())
+                    # Print output without extra newlines
+                    # For prompt_toolkit, we need to be careful about newlines
+                    if PROMPT_TOOLKIT_AVAILABLE:
+                        # Use sys.stdout directly to avoid prompt_toolkit interference
+                        import sys
+                        sys.stdout.write(message)
+                        sys.stdout.flush()
+                    else:
+                        print(message, end='', flush=True)
+            except (socket.error, OSError) as e:
+                # Socket errors are expected when connection is closed
+                if self.running:
+                    print(f"\nConnection closed: {e}")
                 break
             except Exception as e:
-                print(f"REPL error: {e}")
-                if self.debug:
-                    traceback.print_exc()
-
-    async def start(self):
-        """Start the REPL"""
-        try:
-            # Initialize runtime
-            await self.initialize()
-
-            # Show welcome message
-            self.show_welcome()
-
-            # Start REPL loop
-            self.repl_task = asyncio.create_task(self.repl_loop(), name="repl_loop")
-            await self.repl_task
-
-        except asyncio.CancelledError:
-            print("\nREPL cancelled")
-            raise
-        except KeyboardInterrupt:
-            print("\nREPL interrupted")
-            if self.repl_task and not self.repl_task.done():
-                self.repl_task.cancel()
-        finally:
-            # Clean shutdown with timeout protection
+                print(f"[DEBUG] Unexpected error: {e}")
+                break
+        
+        if self.running:
+            print("\nConnection lost")
             self.running = False
-            
-            # Clean up input thread with timeout
-            if self.input_thread and self.input_thread.is_alive():
-                # Give the thread a chance to exit naturally
-                self.input_thread.join(timeout=0.5)
-            
-            # Stop runtime with timeout protection
-            if hasattr(self.runtime, 'stop'):
-                try:
-                    import signal
-                    import threading
-                    import time
-                    
-                    stop_completed = threading.Event()
-                    
-                    def stop_runtime():
-                        try:
-                            self.runtime.stop()
-                            stop_completed.set()
-                        except Exception as e:
-                            print(f"Runtime stop error: {e}")
-                            stop_completed.set()
-                    
-                    # Start stop in separate thread
-                    stop_thread = threading.Thread(target=stop_runtime, daemon=True)
-                    stop_thread.start()
-                    
-                    # Wait for stop to complete with timeout
-                    if not stop_completed.wait(timeout=1.5):  # 1.5 second timeout
-                        # Force exit silently if timeout
-                        import os
-                        os._exit(0)
-                        
-                except Exception as e:
-                    # Force exit silently on error
-                    import os
-                    os._exit(0)
-
-
-async def run_repl(runtime=None):
-    """Main function to run the REPL, optionally with API server"""
-    # Name the main task
-    current_task = asyncio.current_task()
-    if current_task:
-        api_config = runtime.config.get('api_config')
-        current_task.set_name("repl_api_main" if api_config else "repl_main")
-
-    if runtime is None:
-        # from .runtime import LuaAsyncRuntime
-        runtime = LuaAsyncRuntime()
-    repl = PluaREPL(runtime)
-    api_task = None
-    api_config = runtime.config.get('api_config')
-    if api_config:
-        from .api_server import PlUA2APIServer
-        print(f"API server on {api_config['host']}:{api_config['port']}")
-        print(f"WebUI on http://127.0.0.1:{api_config['port']}/web")
-        api_server = PlUA2APIServer(repl.runtime, api_config['host'], api_config['port'])
-        api_task = asyncio.create_task(api_server.start_server(), name="api_server")
-        print()
-    try:
-        await repl.start()
-    finally:
-        if api_task:
-            api_task.cancel()
+    
+    def send_command(self, command: str):
+        """Send a command to the server"""
+        if self.socket and self.running:
             try:
-                await api_task
-            except asyncio.CancelledError:
+                self.socket.send(f"{command}\n".encode('utf-8'))
+            except Exception as e:
+                print(f"Error sending command: {e}")
+                self.running = False
+    
+    def get_prompt_text(self) -> str:
+        """Get the prompt text with optional status indicators"""
+        status = "🟢" if self.running and self.socket else "🔴"
+        return f"{status} eplua> "
+    
+    def run(self):
+        """Run the interactive REPL with enhanced UI"""
+        if not self.connect():
+            return
+        
+        self.running = True
+        
+        # Start receiver thread
+        receiver = threading.Thread(target=self.receive_messages, daemon=True)
+        receiver.start()
+        
+        # Wait for welcome message from server
+        time.sleep(0.5)
+        
+        # Server already sends welcome message, so we just show additional info
+        print("Type 'help' for available commands")
+        print("Use Ctrl+C to interrupt, Ctrl+D to exit\n")
+        
+        try:
+            while self.running:
+                try:
+                    # Get input with enhanced prompt
+                    if PROMPT_TOOLKIT_AVAILABLE:
+                        command = self.session.prompt(
+                            self.get_prompt_text(),
+                            style=self.style
+                        )
+                    else:
+                        command = input(self.get_prompt_text())
+                    
+                    if not command.strip():
+                        continue
+                    
+                    if command.lower() in ['exit', 'quit']:
+                        # Send exit command that will trigger full shutdown
+                        self.send_command("exit")
+                        break
+                    
+                    if command.lower() == 'help':
+                        self.show_help()
+                        continue
+                    
+                    if command.lower() == 'clear':
+                        os.system('clear' if os.name != 'nt' else 'cls')
+                        continue
+                    
+                    if command.lower() == 'history':
+                        self.show_history()
+                        continue
+                    
+                    # Send command to server
+                    self.send_command(command)
+                    
+                except EOFError:
+                    break
+                except KeyboardInterrupt:
+                    print("\nUse 'exit' or 'quit' to disconnect, or continue typing...")
+                    continue
+                    
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            self.cleanup()
+    
+    def show_help(self):
+        """Show help information"""
+        help_text = """
+Available commands:
+  help     - Show this help message
+  clear    - Clear the screen
+  history  - Show command history
+  exit     - Exit the REPL
+  quit     - Exit the REPL
+
+Lua commands:
+  Any valid Lua code can be executed directly
+  Examples:
+    print("Hello, World!")
+    local x = 10
+    print(x * 2)
+    _PY.get_time()
+    timer.setTimeout(1000, function() print("Timeout!") end)
+
+Features:
+  - Command history (use ↑/↓ arrows)
+  - Auto-completion (Tab key)
+  - Multi-line editing
+  - Syntax highlighting
+        """
+        print(help_text)
+    
+    def show_history(self):
+        """Show recent command history"""
+        if PROMPT_TOOLKIT_AVAILABLE and hasattr(self.session, 'history'):
+            print("\nRecent commands:")
+            try:
+                # Get recent history items
+                history_items = list(self.session.history.load_history_strings())
+                for i, item in enumerate(history_items[-10:], 1):  # Last 10 items
+                    print(f"  {i:2d}. {item}")
+            except Exception:
+                print("  History not available")
+        else:
+            print("History not available")
+        print()
+    
+    def cleanup(self):
+        """Clean up resources"""
+        self.running = False
+        if self.socket:
+            try:
+                self.socket.close()
+            except Exception:
                 pass
+        print("\n👋 Disconnected from EPLua")
+
+
+def main():
+    """Main entry point for the REPL client"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="EPLua Interactive REPL Client")
+    parser.add_argument("--host", default="localhost", help="Telnet server host (default: localhost)")
+    parser.add_argument("--port", type=int, default=8023, help="Telnet server port (default: 8023)")
+    
+    args = parser.parse_args()
+    
+    if not PROMPT_TOOLKIT_AVAILABLE:
+        print("Note: Install prompt_toolkit for enhanced features:")
+        print("  pip install prompt_toolkit")
+        print()
+    
+    repl = EPLuaREPL(args.host, args.port)
+    repl.run()
+
+
+if __name__ == "__main__":
+    main() 

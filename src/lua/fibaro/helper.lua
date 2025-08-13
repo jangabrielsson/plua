@@ -58,7 +58,7 @@ local client = nil
 local server = nil
 local cb = nil
 function startServer(helperId,wsurl)
-  server = net.WebSocketServer(false)
+  server = net.WebSocketServer(false,true)
   local host,port = Emu.config.IPAddress,PORT
   --Emu:INFO("Starting helper server on",host,port)
   server:start(host, port, {

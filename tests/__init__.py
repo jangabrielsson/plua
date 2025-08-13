@@ -1,3 +1,1 @@
-"""
-Tests for plua package
-"""
+# Tests for EPLua project

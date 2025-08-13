@@ -1,805 +1,308 @@
-# plua
+<p align="center">
+    <img src="docs/Plua.png" alt="PLua Logo" width="320"/>
+</p>
 
-<div align="center">
-  <img src="docs/Plua.png" alt="plua logo" width="200"/>
-</div>
+# PLua - Lua Runtime with Fibaro Home Automation Support
 
-Python-Lua async runtime with timer support 
+PLua is a powerful Lua interpreter built on Python that provides **native Fibaro Home Center 3 (HC3) QuickApp development and emulation**. Whether you're developing QuickApps for Fibaro home automation or just need a robust Lua runtime with async capabilities, PLua has you covered.
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jangabrielsson/plua) [![Tutorial: Async Python-Lua Integration](https://img.shields.io/badge/Tutorial-Code2Tutorial-blue)](https://code2tutorial.com/tutorial/4003e87c-fee7-4a5c-be38-036472745c34/index.md)
-## Table of Contents
+## 🏠 Why PLua for Fibaro Development?
 
-- [Overview](#overview)
-- [Features](#features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [VSCode integration](#vscode-integration)
-- [Examples](#examples)
-- [📚 Documentation](#-documentation)
-  - [Lua API Documentation](#lua-api-documentation)
-  - [Fibaro HC3 Integration](#fibaro-hc3-integration)
-  - [Plua Development](#plua-development)
-  - [Quick Links](#quick-links)
-- [Development](#development)
-- [Architecture](#architecture)
-- [License](#license)
-- [Requirements](#requirements)
+- **🚀 QuickApp Development**: Full Fibaro SDK emulation with real QuickApp lifecycle
+- **🖥️ Desktop UI**: Native desktop windows for QuickApp interfaces  
+- **🔄 Live Development**: Hot reload, debugging, and instant testing
+- **📡 Real-time APIs**: HTTP, WebSocket, TCP, UDP, and MQTT support
+- **🎯 VS Code Integration**: Full debugging, tasks, and deployment tools
+- **⚡ Fast Iteration**: No need to upload to HC3 for every test
 
-## Overview
+## 🛠️ Installation
 
-plua is a Python package that provides an async runtime environment for executing Lua scripts with JavaScript-like timer functionality. It bridges Python's asyncio with Lua's coroutines, allowing for sophisticated async programming patterns.
+### Prerequisites
+- Python 3.8+ 
+- macOS, Linux, or Windows
 
-## Features
-
-- **Interactive REPL**: Lua-like interactive prompt with plua features
-- **JavaScript-like timers**: `setTimeout()`, `setInterval()`, `clearTimeout()`, `clearInterval()` in Lua
-- **Async/await bridge**: Python asyncio integrated with Lua coroutines  
-- **Context safety**: All Lua execution happens in the same Python context
-- **Timer management**: Named asyncio tasks with cancellation support
-- **Built-in REST API**: Automatic web server with REPL interface on port 8888
-- **Network support**: HTTP client/server, WebSocket, TCP/UDP socket support
-- **JSON support**: Built-in JSON encoding/decoding in Lua
-- **Fibaro HC3 API**: Complete Home Center 3 API emulation with 267+ endpoints
-- **MobDebug support**: Remote debugging with IDE integration
-- **Coroutine support**: Full Lua coroutine functionality with yielding
-- **Multi-platform executables**: Standalone binaries for Linux, Windows, macOS
-
-## Installation
-
-### For End Users (Recommended)
-
+### Quick Install
 ```bash
-# Install plua globally (includes the 'plua' command)
-pip install plua
-
-# Verify installation
-plua --version
-
-# Start the interactive REPL
-plua
-
-# Run a Lua script
-plua myscript.lua
+git clone https://github.com/jangabrielsson/eplua.git
+cd eplua
+./run.sh --version  # This will set up the virtual environment automatically
 ```
 
-After installation, the `plua` command will be available system-wide in your terminal/command prompt.
-
-### Alternative: Standalone Executables (TBD)
-
-For users who prefer not to install Python dependencies, standalone executables are available:
-
+### Manual Setup
 ```bash
-# Download from GitHub Releases
-# https://github.com/jangabrielsson/plua/releases
-
-# Windows: plua-windows.exe
-# macOS Intel: plua-macos-intel  
-# macOS ARM: plua-macos-arm
-# Linux: plua-linux
-
-# Make executable and run (macOS/Linux)
-chmod +x plua-linux
-./plua-linux --version
-
-# Windows: just run the .exe
-plua-windows.exe --version
-```
-
-These executables include everything needed and don't require Python installation.
-
-### For Developers
-
-```bash
-# Clone and install in development mode
-git clone https://github.com/jangabrielsson/plua
-cd plua
+# Clone and set up virtual environment
+git clone https://github.com/jangabrielsson/eplua.git
+cd eplua
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
-
-# Install with development dependencies for testing/building
-pip install -e ".[dev]"
 ```
 
-### Troubleshooting Installation
+## 🚀 Quick Start
 
-#### Command Not Found (Windows)
-If `plua` command is not recognized after installation on Windows:
-
-1. **Check if pip installed to user directory:**
-   ```cmd
-   # Find where pip installed plua
-   pip show -f plua
-   
-   # Check if Python Scripts directory is in PATH
-   python -m site --user-base
-   ```
-
-2. **Add Python Scripts to PATH:**
-   - Add `%APPDATA%\Python\Python3X\Scripts` to your PATH environment variable
-   - Or use the full path: `python -m plua` instead of just `plua`
-
-3. **Alternative installation methods:**
-   ```cmd
-   # Install system-wide (may require admin privileges)
-   pip install --system plua
-   
-   # Force reinstall to ensure all dependencies are installed
-   pip install --force-reinstall plua
-   
-   # Or use python -m to run without PATH issues
-   python -m plua --version
-   python -m plua script.lua
-   ```
-
-#### Missing Dependencies Error
-If you get `ModuleNotFoundError` (e.g., "No module named 'aiomqtt'"):
-
+### 1. Create a New QuickApp Project
 ```bash
-# Force reinstall with all dependencies
-pip install --force-reinstall plua
+# Initialize a new QuickApp project with scaffolding
+./run.sh --init-qa
 
-# Or install dependencies manually if needed
-pip install aiomqtt>=2.0.0
+# Choose from 42 device templates:
+# [1] Basic QuickApp - Simple starter template
+# [2] Binary Switch - On/Off switch with actions  
+# [3] Multilevel Switch - Dimmer/level control
+# [4] Temperature Sensor - Temperature measurement
+# ... and many more!
 ```
 
-#### FileNotFoundError on Windows
-If you get `FileNotFoundError: [Errno 2] No such file or directory: 'src/plua/fibaro_api_models.py'`:
+This creates a complete project structure:
+```
+my-quickapp/
+├── .vscode/
+│   ├── launch.json    # F5 debugging configuration
+│   └── tasks.json     # HC3 upload/sync tasks
+├── .project           # HC3 deployment config
+└── main.lua          # Your QuickApp code
+```
 
-This was a bug in versions 1.0.57-1.0.59. Update to the latest version:
-
+### 2. Develop and Test Locally
 ```bash
-pip install --upgrade plua
+# Run your QuickApp with full Fibaro SDK
+./run.sh --fibaro main.lua
+
+# With desktop UI window (if your QA has --%%desktop:true)
+./run.sh --fibaro main.lua
+
+# Run for specific duration
+./run.sh --fibaro main.lua --run-for 30  # 30 seconds minimum
 ```
 
-#### Missing init.lua Error
-If you get `FileNotFoundError: init.lua not found at: ...`:
-
-This was a packaging issue in versions 1.0.57-1.0.68 where Lua files weren't included or couldn't be found properly. Update to the latest version:
-
+### 3. VS Code Integration
 ```bash
-pip install --upgrade plua
+# Open project in VS Code
+code .
+
+# Press F5 to run/debug your QuickApp
+# Use Ctrl+Shift+P -> "Tasks: Run Task" for HC3 operations:
+# - "QA, upload current file as QA to HC3"
+# - "QA, update QA (defined in .project)"
+# - "QA, update single file (part of .project)"
 ```
 
-If you still get this error after updating to v1.0.69+, please run the command again to see detailed debug output and report the issue on GitHub.
+## 📱 QuickApp Development
 
-#### Command Not Found (macOS/Linux)
-```bash
-# Check installation location
-pip show plua
+### Basic QuickApp Structure
+```lua
+--%%name:My Temperature Sensor
+--%%type:com.fibaro.temperatureSensor  
+--%%u:{label="temp", text="--°C"}
 
-# Add pip's bin directory to PATH if needed
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-
-# Or use python -m
-python -m plua --version
-```
-
-## Quick Start
-
-### Command Line Usage
-
-```bash
-# Interactive REPL (no file specified)
-plua
-
-# Run a Lua file directly (API server starts automatically on port 8888)
-plua script.lua
-
-# Run without API server
-plua --noapi script.lua
-
-# Run with time limit
-plua --duration 10 script.lua
-
-# Custom API server settings
-plua --api-port 9000 script.lua              # Custom port
-plua --api-host 127.0.0.1 script.lua         # Custom host
-plua --api-port 9000 --api-host 0.0.0.0 script.lua  # Custom host and port
-
-# Run inline Lua code
-plua -e 'print("Hello from Lua")'
-plua -e 'print("start")' -e 'x=42' -e 'print(x)'     # Multiple -e fragments
-plua -e 'print("setup")' script.lua                  # Combine -e and file
-
-# Fibaro HC3 API support
-plua --fibaro script.lua
-
-# Note: For real HC3 device integration, setup a .env file with your HC3 credentials
-# See HC3 Configuration section below for details
-
-# Debugging support
-plua --debugger script.lua                           # Enable MobDebug
-plua --debugger --debug script.lua                   # Verbose debug logging
-plua --debugger --debugger-host 192.168.1.100 script.lua  # Remote debugger
-
-# Utility commands
-plua --cleanup-port                                   # Clean up stuck API port
-plua --version                                        # Show version
-plua --init-quickapp                                  # Create QuickApp scaffolding in current dir
-```
-
-**Note for Fibaro HC3 Users:** If you plan to connect to a real Fibaro Home Center 3 device, you'll need to configure a `.env` file with your HC3 credentials. See the [HC3 Configuration with .env File](#hc3-configuration-with-env-file) section for detailed setup instructions.
-
-### Interactive REPL
-
-plua provides an interactive REPL (Read-Eval-Print Loop) when no Lua file is specified:
-
-```bash
-$ plua
-Plua v1.0.54 Interactive REPL
-Running Lua 5.4 with async runtime support
-
-Quick start:
-  help()                           - Show available commands
-  print('Hello, plua!')           - Basic Lua
-  json.encode({name='test'})       - JSON encoding
-  setTimeout(function() print('Hi!') end, 2000) - Async timer
-
-Type 'exit()' or press Ctrl+D to quit
-
-plua> print("Hello, world!")
-Hello, world!
-plua> x = 42
-plua> x + 10
-52
-plua> client = net.HTTPClient()
-plua> setTimeout(function() print("Timer fired!") end, 2000)
-plua> -- Timer fires after 2 seconds
-Timer fired!
-plua> exit()
-Goodbye!
-```
-
-The REPL supports:
-- All plua features (timers, JSON, networking)
-- Built-in `json` and `net` modules (no require needed)
-- Persistent variables and functions
-- Background async operations
-- Built-in help and state inspection
-- Error recovery
-
-### Python API Usage
-
-```python
-import asyncio
-from plua import LuaAsyncRuntime
-
-async def main():
-    runtime = LuaAsyncRuntime()
+function QuickApp:onInit()
+    self:debug("Temperature sensor started")
+    self:updateView("temp", "text", "22.5°C")
     
-    script = """
-    print("Starting...")
-    setTimeout(function() 
-        print("Timer 1 fired!")
-        setTimeout(function() print("Timer 2 fired!") end, 500)
-    end, 1000)
-    """
-    
-    await runtime.start(script=script, duration=5)
-
-asyncio.run(main())
+    -- Simulate temperature readings
+    fibaro.setInterval(5000, function()
+        local temp = math.random(180, 250) / 10  -- 18.0-25.0°C
+        self:updateView("temp", "text", temp .. "°C")
+        self:updateProperty("value", temp)
+    end)
+end
 ```
 
-### REST API Server
-
-plua includes a built-in REST API server that **starts automatically by default** on port 8888:
-
-```bash
-# API server starts automatically
-plua script.lua
-
-# Disable API server  
-plua --noapi script.lua
-
-# Custom API server settings
-plua --api-port 9000 script.lua
-plua --api-host 127.0.0.1 --api-port 8877 script.lua
-
-# Access the web REPL interface
-# Open browser to: http://localhost:8888/static/plua_main_page.html
-```
-
-#### API Endpoints
-
-- `GET /` - API information and available endpoints
-- `GET /static/plua_main_page.html` - Web-based REPL interface  
-- `POST /plua/execute` - Execute Lua code remotely
-- `GET /plua/status` - Get runtime status
-- `GET /plua/info` - Get API and runtime information
-- `GET /docs` - Swagger/OpenAPI documentation (if Fibaro API enabled)
-
-#### Web REPL
-
-The web REPL provides a modern browser-based interface for plua:
-
-- **HTML Rendering**: Supports HTML tags in output for colored and formatted text
-- **Real-time Execution**: Share interpreter state with local REPL
-- **Timer Support**: Background timers work seamlessly
-- **Modern UI**: Responsive design with syntax highlighting
-
-Example HTML output in web REPL:
+### UI Elements
+EPLua supports all standard Fibaro UI elements:
 ```lua
-print("<font color='red'>Red text</font>")
-print("<b>Bold text</b> | <i>Italic text</i>")
-print("<span style='background-color: yellow;'>Highlighted</span>")
+--%%u:{button="btn1", text="Turn On", onReleased="turnOn"}
+--%%u:{slider="level", min="0", max="100", onChanged="setLevel"}  
+--%%u:{switch="toggle", text="Auto Mode", onToggled="setAuto"}
+--%%u:{label="status", text="Ready"}
 ```
 
-#### Remote Code Execution
+### Desktop Windows
+Add `--%%desktop:true` to automatically open desktop UI windows:
+```lua
+--%%name:My Smart Light
+--%%desktop:true
+--%%u:{button="on", text="ON", onReleased="turnOn"}
+```
 
+## 🎛️ Interactive Development
+
+### REPL (Read-Eval-Print Loop)
 ```bash
-# Execute Lua code via API
-curl -X POST http://localhost:8888/plua/execute \
-  -H 'Content-Type: application/json' \
-  -d '{"code":"return 2 + 2", "timeout": 10.0}'
+# Start interactive Lua session
+./run.sh -i
+
+# With Fibaro SDK loaded
+./run.sh -i --fibaro
 ```
 
-Response:
-```json
-{
-  "success": true,
-  "result": 4,
-  "output": "",
-  "error": null,
-  "execution_time_ms": 0.123,
-  "request_id": "uuid-here"
-}
+In the REPL:
+```lua
+> print("Hello from PLua!")
+Hello from PLua!
+
+> fibaro.debug("Testing Fibaro API")
+[DEBUG] Testing Fibaro API
+
+> local qa = fibaro.createQuickApp(555)
+> qa:debug("QuickApp created!")
 ```
 
-The API server and local REPL share the same Lua interpreter instance, so:
-- Variables persist between API calls and REPL commands
-- Timers set via API continue running in the background
-- State is shared seamlessly between web and terminal interfaces
-
-**QuickApp Development Quick Start:**  
-See [docs/lua/QuickAppDevelopmentQuickStart.md](docs/lua/QuickAppDevelopmentQuickStart.md) for a step-by-step guide to developing Fibaro QuickApps with plua.
-
-### QuickApp Project Scaffolding
-
-Plua provides a built-in scaffolding tool to quickly create new QuickApp projects with proper structure and configuration:
-
+### Telnet Server
+PLua includes a multi-session telnet server for remote development:
 ```bash
-# Create a new directory and initialize QuickApp project
-mkdir my_project && cd my_project
-plua --init-quickapp
+# Start with telnet server (default port 8023)
+./run.sh --fibaro --telnet-port 8023 main.lua
 
-# Or initialize in current directory
-plua --init-quickapp
-
-# This creates:
-# ├── main.lua              # Main QuickApp code (from template)
-# ├── .vscode/               # VS Code configuration
-# │   ├── launch.json        # Debug configurations
-# │   └── tasks.json         # Build/upload tasks
-# ├── .project              # VS Code task configuration  
-# └── .env.example          # HC3 connection template (if template includes it)
+# Connect from another terminal
+telnet localhost 8023
 ```
 
-The scaffolding creates:
-- **main.lua**: A complete QuickApp template with `onInit()` and example methods
-- **.vscode/**: Full VS Code integration with debug and upload tasks
-- **.project**: Configuration for VS Code tasks (upload, update, download)
-- **.env.example**: Template for HC3 connection credentials (template-dependent)
+## 🌐 Network & API Support
 
-The tool offers 42+ different QuickApp templates including sensors, switches, thermostats, and more. After scaffolding, configure your HC3 connection by creating a `.env` file with your credentials. The VS Code tasks will then allow you to upload and manage your QuickApp directly on your HC3 device.
-
-## VSCode integration
-Setup launch tasks in .vscode/launch.json
-The executable is either `plua` if installed and accesible globally,
-or if running from the plua repo, `${workspaceFolder}/run.sh`
-
-Running current lua file, with or without Fibaro support loaded.
-```json
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "plua: Run Current Lua file with Debugger", 
-            "type": "luaMobDebug",
-            "request": "launch",
-            "workingDirectory": "${workspaceFolder}",
-            "sourceBasePath": "${workspaceFolder}",
-            "listenPort": 8172,
-            "listenPublicly": false,
-            "stopOnEntry": false,
-            "sourceEncoding": "UTF-8",
-            "executable": "plua",
-            "arguments": [
-                "--debugger",
-                "--debugger-host",
-                "localhost",
-                "--debugger-port",
-                "8172",
-                "${file}"
-            ]
-        },
-        {
-            "name": "plua: Run Current Fibaro file with Debugger", 
-            "type": "luaMobDebug",
-            "request": "launch",
-            "workingDirectory": "${workspaceFolder}",
-            "sourceBasePath": "${workspaceFolder}",
-            "listenPort": 8172,
-            "listenPublicly": false,
-            "stopOnEntry": false,
-            "sourceEncoding": "UTF-8",
-            "executable": "plua",
-            "arguments": [
-                "--debugger",
-                "--debugger-host",
-                "localhost",
-                "--debugger-port",
-                "8172",
-                "--fibaro",
-                "${file}"
-            ]
-        }
-    ]
-}
-```
-[More information in VSCode integration chapter](docs/lua/VSCodeintegration.md)
-## Examples
-
-### Timer Functions
+PLua provides comprehensive networking capabilities:
 
 ```lua
--- Set a timer (JavaScript-like)
-local timer_id = setTimeout(function() 
-    print("This runs after 1 second") 
-end, 1000)
-
--- Set an interval timer
-local interval_id = setInterval(function()
-    print("This repeats every 2 seconds")
-end, 2000)
-
--- Cancel timers
-clearTimeout(timer_id)
-clearInterval(interval_id)
-
--- Sleep (yields current coroutine)
-sleep(500)  -- Sleep for 500ms
-```
-
-### Built-in Modules
-
-```lua
--- JSON support (no require needed)
-local data = {name = "test", value = 42}
-local json_str = json.encode(data)
-local parsed = json.decode(json_str)
-
--- HTTP client
-local client = net.HTTPClient()
-client:get("https://api.github.com/users/octocat", function(response)
-    print("Status:", response.status)
-    print("Body:", response.body)
-end)
-
--- WebSocket client
-local ws = net.WebSocketClient()
-ws:connect("wss://echo.websocket.org/", {
-    on_message = function(message)
-        print("Received:", message)
+-- HTTP requests (async)
+http.request("https://api.example.com/data", {
+    method = "GET",
+    success = function(response)
+        print("Response:", response.data)
     end
 })
+
+-- WebSocket connections
+local ws = websocket.connect("ws://localhost:8080")
+ws:send("Hello WebSocket!")
+
+-- MQTT client
+local mqtt = require("mqtt")
+mqtt.connect("broker.hivemq.com", 1883)
+
+-- TCP/UDP sockets
+local tcp = require("tcp")
+local client = tcp.connect("127.0.0.1", 8080)
 ```
 
-### HTTP Client with Timers
-
-```lua
-local client = net.HTTPClient()
-
--- Make HTTP request with timer fallback
-local timer_id = setTimeout(function()
-    print("Request timeout!")
-end, 5000)
-
-client:get("https://httpbin.org/delay/2", function(response)
-    clearTimeout(timer_id)
-    print("Response status:", response.status)
-    print("Response time was acceptable")
-end)
-```
-
-### Interval Timer with Cancellation
-
-```lua
-local count = 0
-local interval_id = setInterval(function()
-    count = count + 1
-    print("Ping", count)
-    
-    if count >= 5 then
-        print("Stopping interval")
-        clearInterval(interval_id)
-    end
-end, 1000)
-```
-
-### Coroutines with Async Operations
-
-```lua
-local function asyncFunction()
-    print("Start")
-    local co = coroutine.running()
-    
-    setTimeout(function() 
-        coroutine.resume(co, "result") 
-    end, 1000)
-    
-    local result = coroutine.yield()
-    print("Got result:", result)
-end
-
-coroutine.wrap(asyncFunction)()
-
--- More complex async task
-local function asyncTask()
-    print("Task starting...")
-    
-    -- Simulate async work
-    local co = coroutine.running()
-    setTimeout(function() 
-        coroutine.resume(co, "async result") 
-    end, 2000)
-    
-    local result = coroutine.yield()
-    print("Task completed with:", result)
-end
-
-coroutine.wrap(asyncTask)()
-```
-
-### Fibaro HC3 API Integration
-
-Enable Fibaro API support by running with the `--fibaro` flag:
+## 🔧 Command Line Options
 
 ```bash
-# Run with Fibaro API support
-plua --fibaro script.lua
+./run.sh [script.lua] [options]
+
+Positional Arguments:
+  script              Lua script file to run (optional)
+
+Options:
+  -h, --help          Show help message and exit
+  -v, --version       Show version information
+  --init-qa           Initialize a new QuickApp project
+  -e, --eval EVAL     Execute Lua code fragments
+  -i, --interactive   Start interactive Lua REPL
+  --loglevel LEVEL    Set logging level (debug, info, warning, error)
+  -o, --offline       Run in offline mode (disable HC3 connections)
+  --desktop [BOOL]    Override desktop UI mode for QuickApp windows (true/false)
+  --nodebugger        Disable Lua debugger support
+  --fibaro            Enable Fibaro HC3 emulation mode
+  -l                  Ignored, for Lua CLI compatibility
+  --header HEADER     Add header string (can be used multiple times)
+  -a, --args ARGS     Add argument string to pass to the script
+  --api-port PORT     Port for FastAPI server (default: 8080)
+  --api-host HOST     Host for FastAPI server (default: localhost)
+  --telnet-port PORT  Port for telnet server (default: 8023)
+  --no-api            Disable FastAPI server
+  --run-for N         Run script for specified seconds then terminate:
+                      N > 0: Run at least N seconds or until no callbacks
+                      N = 0: Run indefinitely (until killed)
+                      N < 0: Run exactly |N| seconds
 ```
 
-#### Basic Fibaro API Usage
+## 📂 Project Examples
 
-```lua
--- Use standard Fibaro API functions
-fibaro.call(123, "turnOn")
-local value = fibaro.getValue(456, "value") 
-fibaro.sleep(1000)
-
--- Get device information
-local devices = api.get("/devices")
-for _, device in ipairs(devices) do
-    print("Device:", device.name, "ID:", device.id)
-end
-```
-
-#### QuickApp Development
-
-```lua
--- QuickApp class example
-function QuickApp:onInit()
-    self:debug("QuickApp started")
-    self:updateProperty("value", 42)
-    
-    -- Set up timer for periodic updates
-    setInterval(function()
-        local newValue = math.random(1, 100)
-        self:updateProperty("value", newValue)
-        self:debug("Updated value to:", newValue)
-    end, 5000)
-end
-
-function QuickApp:turnOn()
-    self:updateProperty("value", 100)
-    self:debug("Device turned on")
-end
-
-function QuickApp:turnOff()
-    self:updateProperty("value", 0)
-    self:debug("Device turned off")
-end
-```
-
-#### Generated API Endpoints
-
-The Fibaro API endpoints are auto-generated from official Swagger/OpenAPI specifications:
-
+Check out the `examples/` directory:
 ```bash
-# Regenerate Fibaro API endpoints and models
-python src/plua/generate_typed_fibaro_api.py
+# Fibaro QuickApp examples
+ls examples/fibaro/
 
-# Start server with Fibaro API
-plua --api-port 8888 --fibaro
+# Basic Lua examples  
+ls examples/lua/
 
-# Test an endpoint
-curl -X GET "http://localhost:8888/devices" -H "accept: application/json"
+# Python integration examples
+ls examples/python/
 ```
 
-Features include:
-- **Complete Coverage**: All major Fibaro HC3 API endpoints
-- **Type Safety**: Full Pydantic validation for request/response data
-- **Swagger Documentation**: Auto-generated API docs at `/docs`
-- **Lua Integration**: All calls delegate to `_PY.fibaro_api_hook(method, path, data)`
-- **Easy Testing**: Use web interface or curl to test endpoints
+## 🔍 Debugging & Development
 
-#### HC3 Configuration with .env File
+### VS Code Debugging
+1. Set breakpoints in your Lua code
+2. Press F5 to start debugging
+3. Use watch variables, call stack, and step through code
 
-To connect plua to a real Fibaro Home Center 3 device, create a `.env` file with your HC3 credentials. plua searches for `.env` files in the following order:
-
-1. **Current directory** (project-specific): `./.env`
-2. **Home directory** (user-global): `~/.env` 
-
-Recommended to put it in home directory so it is accessible from all development directories.
-
-```bash
-# Option 1: Project-specific .env (recommended for development)
-cd /path/to/your/fibaro/project
-cat > .env << EOF
-HC3_URL=https://192.168.1.100
-HC3_USER=admin
-HC3_PASSWORD=your_password_here
-EOF
-
-# Option 2: User-global .env (works from any directory)
-cat > ~/.env << EOF
-HC3_URL=https://192.168.1.100
-HC3_USER=admin
-HC3_PASSWORD=your_password_here
-EOF
-```
-
-Example `.env` file:
-```env
-# Fibaro HC3 Connection Settings
-HC3_URL=https://192.168.1.100
-HC3_USER=admin
-HC3_PASSWORD=mySecretPassword123
-
-# Optional: Add other environment variables your scripts might need
-DEBUG=true
-LOG_LEVEL=info
-```
-
-**Usage Examples:**
-```bash
-# Works from any directory if you have ~/.env configured
-cd /any/directory
-plua --fibaro my_script.lua
-
-# Works from project directory with local .env
-cd /my/fibaro/project
-plua --fibaro script.lua   # Uses ./env (takes precedence over ~/.env)
-```
-
-**Usage in Lua Scripts:**
+### Logging and Debug Output
 ```lua
--- Access environment variables in your Lua code
-local hc3_url = os.getenv("HC3_URL")
-local debug_mode = os.getenv("DEBUG") == "true"
-
--- Environment variables are automatically loaded by the Fibaro emulator
--- when you use --fibaro flag
+-- Different log levels
+self:debug("Debug message")
+self:trace("Trace message") 
+fibaro.debug("Global debug")
+print("Console output")
 ```
 
-## Architecture
+### Live UI Updates
+```lua
+-- Update UI elements in real-time
+self:updateView("label1", "text", "New text")
+self:updateView("slider1", "value", 75)
 
-### Components
+-- Updates immediately appear in desktop windows
+```
 
-- **`LuaInterpreter`**: Manages Lua runtime and script execution
-- **`LuaAsyncRuntime`**: Handles asyncio integration and timer management
-- **Timer System**: Maps Lua timer calls to Python asyncio tasks
-- **Callback Loop**: Executes Lua callbacks in the correct context
+## 🏗️ Advanced Features
 
-### Flow
+### Multiple QuickApps
+Run several QuickApps simultaneously:
+```bash
+./run.sh --fibaro qa1.lua qa2.lua qa3.lua
+```
 
-1. Lua calls `setTimeout(callback, delay)`
-2. Python creates an asyncio task that waits for `delay`
-3. When timer fires, Python queues the callback ID
-4. Callback loop executes the Lua callback in the same context
-5. Lua coroutines can yield and be resumed by timers
+### Custom Device Types
+PLua supports all Fibaro device types and interfaces:
+- Binary switches, multilevel switches
+- Sensors (temperature, humidity, motion, etc.)  
+- HVAC systems and thermostats
+- Security devices and detectors
+- Media players and controllers
+
+### WebSocket API
+Real-time communication with running QuickApps:
+```javascript
+// Connect to running PLua instance
+const ws = new WebSocket('ws://localhost:8000/ws');
+ws.send(JSON.stringify({type: 'lua_code', code: 'print("Hello")'}));
+```
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the `docs/` directory:
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and internals
+- [docs/](docs/) - Detailed documentation and guides
+- [examples/](examples/) - Code examples and templates
 
+## 🤝 Contributing
 
-### Plua Development
-- **[Web REPL HTML Examples](docs/WEB_REPL_HTML_EXAMPLES.md)** - HTML rendering guide for web interface
-- **[REST API Documentation](docs/api/README.md)** - Complete API reference and examples
-- **[Developer Documentation](docs/dev/README.md)** - Implementation details and development guides
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality  
+4. Ensure all tests pass
+5. Submit a pull request
 
-### Lua API Documentation
+## 📄 License
 
-Detailed Lua API documentation is available in `docs/lua/`:
+MIT License - see [LICENSE](LICENSE) for details.
 
-- **[Lua API Overview](docs/lua/README.md)** - Complete Lua API reference
-- **[plua Core API](docs/lua/Plua.md)** - Timer functions and core plua features
-- **[Timer System](docs/lua/Timers.md)** - setTimeout, setInterval, and timer management
-- **[HTTP Client](docs/lua/HTTPClient.md)** - HTTP requests and client functionality
-- **[WebSocket Client](docs/lua/WebSocket.md)** - WebSocket connections and messaging
-- **[TCP Socket](docs/lua/TCPSocket.md)** - TCP client/server functionality
-- **[UDP Socket](docs/lua/UDPSocket.md)** - UDP client/server functionality
+## 🆘 Support
 
-### Fibaro HC3 Integration
+- **Issues**: [GitHub Issues](https://github.com/jangabrielsson/eplua/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/jangabrielsson/eplua/discussions)
+- **Documentation**: [docs/](docs/) directory
 
-- **[QuickApp Development Quick Start](docs/lua/QuickAppDevelopmentQuickStart.md)** - Complete guide to get started with QuickApp development
-- **[Fibaro API Overview](docs/lua/Fibaro.md)** - Fibaro HC3 API integration and functions
-- **[QuickApp Development](docs/lua/QuickApp.md)** - QuickApp class and development patterns
-- **[QuickApp Emulator](docs/lua/EmulatorQA.md)** - Local QuickApp development with header directives
-- **[VS Code Integration](docs/lua/VSCodeintegration.md)** - IDE setup and debugging
+---
 
-### Quick Links
-- 🚀 **Getting Started**: This README
-- 🌐 **Web Interface**: [Web REPL Examples](docs/WEB_REPL_HTML_EXAMPLES.md)
-- 📡 **API Integration**: [REST API Docs](docs/api/README.md)
-- 🔧 **Contributing**: [Developer Docs](docs/dev/README.md)
-- 📖 **Lua API**: [Lua Documentation](docs/lua/README.md)
-
-## Development
-
-### Setup Development Environment
-
-```bash
-# Clone and setup
-git clone https://github.com/jangabrielsson/plua
-cd plua
-pip install -e ".[dev]"
-
-# Setup HC3 credentials (optional, for Fibaro integration)
-cp .env.example .env
-# Edit .env with your HC3 credentials
-
-# Install GitHub CLI for releases
-brew install gh
-gh auth login
-```
-
-### Run Tests
-
-```bash
-pytest
-```
-
-### Code Formatting
-
-```bash
-black src/ tests/
-```
-
-### Type Checking
-
-```bash
-mypy src/
-```
-
-### Creating Releases
-
-The project uses automated GitHub Releases with PyPI publishing and executable building:
-
-```bash
-# Quick patch release (1.0.54 → 1.0.55)
-./scripts/create-release.sh patch
-
-# Interactive release (choose patch/minor/major)  
-./scripts/create-release.sh
-
-# Custom version
-./scripts/create-release.sh "2.0.0" "Major release with breaking changes"
-```
-
-Each release automatically:
-- Publishes to PyPI
-- Builds executables for Linux, Windows, macOS (Intel + ARM)
-- Attaches binaries to GitHub release
-- Updates documentation
-
-## License
-
-MIT License
-
-## Requirements
-
-- Python 3.8+
-- lupa (Python-Lua bridge)
-- asyncio (built-in)
+**Happy QuickApp Development! 🏠✨**

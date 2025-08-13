@@ -24,8 +24,11 @@ def build_nuitka():
     """Build plua using Nuitka for optimal performance"""
     
     project_root = Path(__file__).parent
-    src_path = project_root / "src"
-    static_path = project_root.parent / "static"
+    scripts_dir = project_root
+    # Go up one level to get to the actual project root
+    actual_project_root = project_root.parent
+    src_path = actual_project_root / "src"
+    static_path = src_path / "plua" / "static"  # Correct path to static files
     lua_path = src_path / "lua"
     
     # Ensure Nuitka is installed
@@ -89,15 +92,16 @@ def build_nuitka():
     print(f"Command: {' '.join(cmd)}")
     
     try:
-        result = subprocess.run(cmd, check=True, cwd=project_root)
+        result = subprocess.run(cmd, check=True, cwd=scripts_dir)
         
         # Find the created executable
-        dist_dir = project_root / "dist"
+        dist_dir = scripts_dir / "dist"
         
         if sys.platform == "darwin":
             # On macOS with --mode=app, Nuitka creates an .app bundle
-            executable_path = dist_dir / "plua.app" / "Contents" / "MacOS" / "plua"
-            app_bundle_path = dist_dir / "plua.app"
+            # The actual name is based on the input file, not --output-filename
+            executable_path = dist_dir / "build_main_standalone.app" / "Contents" / "MacOS" / "plua"
+            app_bundle_path = dist_dir / "build_main_standalone.app"
         else:
             # On other platforms with --onefile, creates a single executable
             executable_name = "plua.exe" if sys.platform == "win32" else "plua"

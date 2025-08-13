@@ -19,5 +19,5 @@ function QuickApp:onInit()
 end
 
 function QuickApp:pass(str)
-  print("Already have a potato")
+  print("Got my potato back!")
 end

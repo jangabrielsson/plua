@@ -1,6 +1,6 @@
 {
     "id": 5555,
     "files": {
-        "main": "/Users/jangabrielsson/Documents/dev/plua/examples/fibaro/QA_basic.lua"
+        "main": "examples/fibaro/QA_basic.lua"
     }
 }

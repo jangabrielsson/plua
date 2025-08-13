@@ -7,11 +7,7 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 from typing import Dict, Any
-try:
-    from importlib.resources import files
-except ImportError:
-    # Fallback for Python < 3.9
-    from importlib_resources import files
+from .path_utils import get_static_file
 
 
 def init_quickapp_project() -> None:
@@ -340,25 +336,25 @@ def init_quickapp_project() -> None:
 
 def get_vscode_launch_config() -> Dict[str, Any]:
     """Get VS Code launch configuration for plua projects"""
-    static_files = files('plua') / 'static'
-    config_content = (static_files / 'vscode_launch_config.json').read_text()
+    config_path = get_static_file('vscode_launch_config.json')
+    config_content = config_path.read_text()
     return json.loads(config_content)
 
 
 def get_vscode_tasks_config() -> Dict[str, Any]:
     """Get VS Code tasks configuration for HC3 integration"""
-    static_files = files('plua') / 'static'
-    config_content = (static_files / 'vscode_tasks_config.json').read_text()
+    config_path = get_static_file('vscode_tasks_config.json')
+    config_content = config_path.read_text()
     return json.loads(config_content)
 
 
 def get_basic_quickapp_template() -> str:
     """Get the basic QuickApp template content"""
-    static_files = files('plua') / 'static'
-    return (static_files / 'basic_quickapp_template.lua').read_text()
+    template_path = get_static_file('basic_quickapp_template.lua')
+    return template_path.read_text()
 
 
 def get_project_config() -> str:
     """Get the .project file configuration for HC3"""
-    static_files = files('plua') / 'static'
-    return (static_files / 'project_config.json').read_text()
+    config_path = get_static_file('project_config.json')
+    return config_path.read_text()

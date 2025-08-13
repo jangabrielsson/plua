@@ -47,6 +47,10 @@ dev = [
     "black>=22.0",
     "flake8>=5.0",
     "mypy>=1.0",
+    "nuitka>=2.7.0",  # For building standalone executables
+]
+build = [
+    "nuitka>=2.7.0",  # For creating standalone executables
 ]
 
 [project.scripts]

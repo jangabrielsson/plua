@@ -129,7 +129,10 @@ def display_startup_greeting(config: Dict[str, Any]):
     # Use colored print for startup greeting
     print(f"{CYAN}{BOLD}🚀 PLua version {plua_version}{RESET}")
     print(f"{GREEN}Python:{python_version}{RESET}, {BLUE}Lua:{lua_version}{RESET}")
-    print(f"{YELLOW}API:{api_port}{RESET}, {MAGENTA}Telnet:{telnet_port}{RESET}")
+    if config['telnet']:
+        print(f"{YELLOW}API:{api_port}{RESET}, {MAGENTA}Telnet:{telnet_port}{RESET}")
+    else:
+        print(f"{YELLOW}API:{api_port}{RESET}")
 
 
 def safe_print(message, fallback_message=None):
@@ -243,10 +246,8 @@ def run_engine(
                             config=config
                         )
                         
-                        # Give process a moment to start
-                        await asyncio.sleep(0.5)
-                        
-                        # Connect process to engine via IPC
+                        # Set up IPC connections immediately (no blocking wait)
+                        # FastAPI process will queue requests until it's ready
                         def lua_executor(code: str, timeout: float = 30.0):
                             """Thread-safe Lua executor for FastAPI process"""
                             try:
@@ -482,7 +483,7 @@ def run_telnet_server(config: Dict[str, Any]):
     # Use the main engine architecture but start telnet server
     logger.info("Starting PLua with telnet server mode")
     run_engine(
-        script_path=None,
+        script_paths=None,
         fragments=None,
         config=config,
         interactive=False,  # We don't want stdin/stdout REPL
@@ -659,6 +660,7 @@ def main():
     config["api_enabled"] = not args.no_api
     config["api_host"] = args.api_host
     config["api_port"] = args.api_port
+    config["telnet"] = args.telnet
     config["telnet_port"] = args.telnet_port
     config["runFor"] = args.run_for
     config["args"] = args.args

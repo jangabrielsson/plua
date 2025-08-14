@@ -2,7 +2,7 @@
 -- Demonstrates PLua Python TCP server extension and Lua client with bidirectional communication
 --%%name:QA_tcp_server
 
-local server = net.EchoServer("127.0.0.1", 8766,false)
+local server = net.TCPEchoServer('127.0.0.1',8766)
 
 function QuickApp:onInit()
   self:debug("onInit")

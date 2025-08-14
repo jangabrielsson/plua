@@ -4,7 +4,7 @@ Tests for the LuaEngine class.
 
 import asyncio
 import pytest
-from eplua import LuaEngine
+from plua import LuaEngine
 
 
 class TestLuaEngine:

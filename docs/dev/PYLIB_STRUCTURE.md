@@ -6,7 +6,7 @@ This document outlines how the PyLib FFI system is structured for future PyPI pa
 
 ```
 src/
-├── eplua/                 # Core EPLua package
+├── plua/                 # Core PLua package
 │   ├── __init__.py
 │   ├── engine.py          # Lua runtime engine
 │   ├── lua_bindings.py    # Python-Lua bridge
@@ -14,7 +14,7 @@ src/
 │   ├── cli.py            # Command-line interface
 │   └── ...               # Other core modules
 │
-└── pylib/                 # FFI Libraries (bundled with EPLua)
+└── pylib/                 # FFI Libraries (bundled with PLua)
     ├── __init__.py
     ├── README.md
     ├── filesystem.py      # luafilesystem compatible
@@ -30,7 +30,7 @@ src/
 When published to PyPI, the package will have this structure:
 
 ```
-eplua/
+plua/
 ├── __init__.py
 ├── engine.py
 ├── lua_bindings.py
@@ -49,16 +49,16 @@ eplua/
 
 ## Installation and Usage
 
-### Installing EPLua
+### Installing PLua
 
 ```bash
-pip install eplua
+pip install plua
 ```
 
 ### Using Built-in Libraries
 
 ```lua
--- All these libraries come bundled with EPLua
+-- All these libraries come bundled with PLua
 local fs = _PY.loadPythonModule("filesystem")
 local http = _PY.loadPythonModule("http_client")
 local tcp = _PY.loadPythonModule("tcp_client")
@@ -82,12 +82,12 @@ local net = require("net")          -- Uses tcp/udp/websocket/mqtt
 
 The `loadPythonModule()` function searches for modules in this order:
 
-1. **PyLib directory** (`eplua.pylib.module_name`)
-   - Bundled FFI libraries that come with EPLua
-   - Always available after `pip install eplua`
+1. **PyLib directory** (`plua.pylib.module_name`)
+   - Bundled FFI libraries that come with PLua
+   - Always available after `pip install plua`
 
-2. **EPLua package** (`eplua.module_name`)
-   - Core EPLua modules and extensions
+2. **PLua package** (`plua.module_name`)
+   - Core PLua modules and extensions
    - Legacy compatibility with existing code
 
 3. **Standard Python modules** (`module_name`)
@@ -96,7 +96,7 @@ The `loadPythonModule()` function searches for modules in this order:
 
 ## Adding Custom Libraries
 
-Users can extend EPLua with custom libraries in several ways:
+Users can extend PLua with custom libraries in several ways:
 
 ### 1. Project-local PyLib
 
@@ -111,7 +111,7 @@ my_project/
 
 ```python
 # pylib/my_custom.py
-from eplua.lua_bindings import export_to_lua
+from plua.lua_bindings import export_to_lua
 
 @export_to_lua("my_function")
 def my_function(data):
@@ -129,7 +129,7 @@ print(custom.my_function("hello"))
 Install libraries in user directory:
 
 ```
-~/.eplua/pylib/
+~/.plua/pylib/
 └── user_library.py
 ```
 
@@ -138,8 +138,8 @@ Install libraries in user directory:
 Create separate Python packages:
 
 ```bash
-pip install eplua-extensions-database
-pip install eplua-extensions-graphics
+pip install plua-extensions-database
+pip install plua-extensions-graphics
 ```
 
 ## PyPI Package Configuration
@@ -148,12 +148,12 @@ The `pyproject.toml` is configured to include the PyLib directory:
 
 ```toml
 [project]
-name = "eplua"
+name = "plua"
 version = "0.1.0"
 description = "Lua scripting with Python FFI libraries"
 
 [project.scripts]
-eplua = "eplua.cli:main"
+plua = "plua.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -162,24 +162,24 @@ where = ["src"]
 "" = "src"
 ```
 
-This ensures that both `eplua/` and `pylib/` are included in the wheel.
+This ensures that both `plua/` and `pylib/` are included in the wheel.
 
 ## Development and Testing
 
 ### Running from Source
 
 ```bash
-git clone https://github.com/yourname/eplua
-cd eplua
+git clone https://github.com/yourname/plua
+cd plua
 pip install -e .
-eplua examples/lua/demo.lua
+plua examples/lua/demo.lua
 ```
 
 ### Adding New PyLib Modules
 
 1. Create module in `src/pylib/new_module.py`
 2. Use `@export_to_lua()` decorators
-3. Import from `eplua.lua_bindings`
+3. Import from `plua.lua_bindings`
 4. Add to `src/pylib/__init__.py`
 5. Test with `_PY.loadPythonModule("new_module")`
 
@@ -188,7 +188,7 @@ eplua examples/lua/demo.lua
 ```python
 # src/pylib/database.py
 import sqlite3
-from eplua.lua_bindings import export_to_lua, python_to_lua_table
+from plua.lua_bindings import export_to_lua, python_to_lua_table
 
 @export_to_lua("db_open")
 def db_open(filename):
@@ -208,14 +208,14 @@ def db_query(connection, sql):
 Users could create and publish extension packages:
 
 ```bash
-# eplua-database extension
-pip install eplua-database
+# plua-database extension
+pip install plua-database
 
-# eplua-graphics extension  
-pip install eplua-graphics
+# plua-graphics extension  
+pip install plua-graphics
 
-# eplua-ai extension
-pip install eplua-ai
+# plua-ai extension
+pip install plua-ai
 ```
 
 ### Auto-discovery
@@ -224,17 +224,17 @@ Future versions could auto-discover extension packages:
 
 ```lua
 -- Auto-load from installed extension packages
-local db = _PY.loadPythonModule("database")    -- from eplua-database
-local gfx = _PY.loadPythonModule("graphics")   -- from eplua-graphics
-local ai = _PY.loadPythonModule("ai")          -- from eplua-ai
+local db = _PY.loadPythonModule("database")    -- from plua-database
+local gfx = _PY.loadPythonModule("graphics")   -- from plua-graphics
+local ai = _PY.loadPythonModule("ai")          -- from plua-ai
 ```
 
 ## Benefits for PyPI Distribution
 
-1. **Self-contained**: All FFI libraries bundled with EPLua
+1. **Self-contained**: All FFI libraries bundled with PLua
 2. **Dependency management**: pip handles Python dependencies
-3. **Version control**: PyPI versioning for EPLua + libraries
-4. **Easy installation**: Single `pip install eplua` command
+3. **Version control**: PyPI versioning for PLua + libraries
+4. **Easy installation**: Single `pip install plua` command
 5. **Extensible**: Users can add custom libraries
 6. **Professional**: Standard Python packaging practices
 
@@ -255,4 +255,4 @@ local lfs = require("lfs")
 local attrs = lfs.attributes("file.txt")
 ```
 
-This structure provides a clean, professional foundation for EPLua's future as a PyPI package while maintaining backward compatibility and enabling powerful extensibility.
+This structure provides a clean, professional foundation for PLua's future as a PyPI package while maintaining backward compatibility and enabling powerful extensibility.

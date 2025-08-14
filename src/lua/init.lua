@@ -1,5 +1,5 @@
 -- _PY is a bridge table with functions used to communicate between Lua and Python.
--- It is initialized in the EPLua engine and provides access to timer functions.
+-- It is initialized in the PLua engine and provides access to timer functions.
 local _PY = _PY or {}
 local _print = print
 
@@ -49,11 +49,14 @@ local callbackID = 0
 -- Register a callback and return its ID
 function _PY.registerCallback(callback, persistent, system)
   callbackID = callbackID + 1
+  persistent = persistent or false
+  system = system or false
+  --print("REG CB", tostring(callbackID), tostring(callback), persistent, system)
   callbacks[callbackID] = { 
     type = "callback", 
     callback = callback,
-    system = system or false,
-    persistent = persistent or false  -- Default to non-persistent
+    system = system,
+    persistent = persistent -- Default to non-persistent
   }
   return callbackID
 end
@@ -155,6 +158,8 @@ function _PY.getRunningIntervalsCount()
   end
   return count
 end
+
+function _PY.get_callbacks_count() return _PY.getPendingCallbackCount(),_PY.getRunningIntervalsCount() end
 
 local function Error(str)
   return setmetatable({}, {

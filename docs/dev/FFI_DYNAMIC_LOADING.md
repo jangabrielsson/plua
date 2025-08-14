@@ -147,7 +147,7 @@ funcs.my_function()
 
 ```python
 # my_custom_module.py
-from eplua.lua_bindings import export_to_lua
+from plua.lua_bindings import export_to_lua
 
 @export_to_lua("my_function")
 def my_function(arg1, arg2):
@@ -163,7 +163,7 @@ def process_data(data_table):
 ### 2. Import in Extensions
 
 ```python
-# Add to src/eplua/extensions.py
+# Add to src/plua/extensions.py
 from . import my_custom_module
 ```
 

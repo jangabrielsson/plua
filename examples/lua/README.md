@@ -35,11 +35,6 @@ These examples demonstrate EPLua's **user-friendly APIs** for end users writing 
 - `net.TCPSocket()` - TCP connections
 - `net.UDPSocket()` - UDP datagrams
 
-### Legacy Windows Module (⚠️ HTML-dependent)
-- `windows.createWindow()` - Create HTML-capable windows (requires CEF)
-- `windows.isAvailable()` - Check GUI availability
-- `windows.htmlSupported()` - Check HTML rendering support
-
 ### Utility Modules
 - `json.encode()` / `json.decode()` - JSON processing
 - `lfs.*` - File system operations (LuaFileSystem compatible)

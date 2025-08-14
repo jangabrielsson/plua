@@ -1,1 +1,1 @@
-# Tests for EPLua project
+# Tests for PLua project

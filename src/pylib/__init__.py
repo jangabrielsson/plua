@@ -1,7 +1,7 @@
-# PyLib - EPLua FFI Libraries Package
+# PyLib - PLua FFI Libraries Package
 """
 This package contains Python libraries that can be dynamically loaded from Lua 
-using the FFI-like interface provided by EPLua.
+using the FFI-like interface provided by PLua.
 
 Each module in this package should use @export_to_lua() decorators to expose
 functions that can be called from Lua scripts.

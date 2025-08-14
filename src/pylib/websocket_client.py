@@ -1,5 +1,5 @@
 """
-WebSocket functionality for EPLua.
+WebSocket functionality for PLua.
 
 This module provides WebSocket client and server capabilities that can be called from Lua scripts.
 Features:

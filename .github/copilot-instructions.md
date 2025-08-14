@@ -1,6 +1,6 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
-# EPLua Project Instructions
+# PLua Project Instructions
 
 This is a Lua interpreter written in Python that uses Lupa as the Lua runtime, with async timer functionality and special support for Fibaro home automation systems.
 
@@ -10,33 +10,33 @@ This is a Lua interpreter written in Python that uses Lupa as the Lua runtime, w
 - **Lua Bindings**: Bridge between Lua and Python functionality
 - **Network Modules**: Modular network functionality (http.py, tcp.py, udp.py, websocket.py, mqtt.py)
 - **Fibaro SDK**: Special support for Fibaro home automation API and SDK
-- **FastAPI Server**: HTTP API endpoints for eplua and Fibaro functionality
+- **FastAPI Server**: HTTP API endpoints for plua and Fibaro functionality
 - **Telnet Server**: Multi-session telnet server for interactive Lua scripting
 
-## Running EPLua:
-- **Virtual Environment**: Runs in `.venv`, use `./run.sh` script to start eplua
-- **Command Line**: `./run.sh [script.lua] [options]` - passes arguments to eplua
+## Running PLua:
+- **Virtual Environment**: Runs in `.venv`, use `./run.sh` script to start plua
+- **Command Line**: `./run.sh [script.lua] [options]` - passes arguments to plua
 - **VS Code Integration**: Usually run from VS Code, starts Lua debugger by default
 - **Terminal Testing**: Use `--nodebugger` flag to avoid debugger warnings when testing from terminal
 - **Fibaro Support**: Use `--fibaro` flag to load Fibaro SDK and API functionality
 
 ## Execution Control:
-EPLua provides fine-grained control over script execution lifetime:
+PLua provides fine-grained control over script execution lifetime:
 - **Default Behavior**: `--run-for 1` (runs for at least 1 second or until no active timers/callbacks)
 - **Infinite Run**: `--run-for 0` (runs without terminating, needs to be killed)
 - **Conditional Run**: `--run-for x` (x > 0) runs for at least x seconds or until no active timers/callbacks
 - **Fixed Duration**: `--run-for x` (x < 0) runs for exactly abs(x) seconds, even with active timers/callbacks
 
 ## Server Functionality:
-- **FastAPI Endpoints**: HTTP API for eplua and Fibaro operations (some still under development)
+- **FastAPI Endpoints**: HTTP API for plua and Fibaro operations (some still under development)
 - **Lua Code Execution**: Endpoint to execute arbitrary Lua code remotely
 - **Telnet Interface**: Multiple concurrent telnet sessions for interactive Lua scripting
 
 ## Fibaro QuickApps (QAs):
-When running with `--fibaro` support, eplua executes Lua code that defines "QuickApps" (QAs):
+When running with `--fibaro` support, plua executes Lua code that defines "QuickApps" (QAs):
 - **QuickApp Structure**: A QA is a Lua object with methods and an optional UI
 - **Example File**: See `examples/fibaro/QA_basic.lua` for a minimal QuickApp example
-- **Multiple QAs**: eplua can start one or several QAs simultaneously
+- **Multiple QAs**: plua can start one or several QAs simultaneously
 - **Unique IDs**: Each QA gets a unique numeric ID at startup (e.g., 5555)
 
 ## QuickApp UI Definition:
@@ -72,7 +72,7 @@ UI elements are defined using `--%%u:` headers in the Lua/QA file:
 - **Device Table**: Contains QA metadata (name, type, properties, etc.)
 
 ## QuickApp Window Management Functions:
-EPLua provides Python functions (exported to Lua) for managing QuickApp desktop windows:
+PLua provides Python functions (exported to Lua) for managing QuickApp desktop windows:
 
 ### Screen and Window Functions:
 - **`_PY.get_screen_dimensions()`** - Returns screen dimensions as `{width=number, height=number, primary=boolean}`

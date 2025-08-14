@@ -4,14 +4,14 @@
 
 ### 1. Modular Network Architecture
 - **Refactored** `old_code/network.py` into modular components:
-  - `src/eplua/http.py` - HTTP client functionality
-  - `src/eplua/tcp.py` - TCP client/server functionality  
-  - `src/eplua/udp.py` - UDP client functionality
-  - `src/eplua/websocket.py` - WebSocket client/server functionality
-  - `src/eplua/mqtt.py` - MQTT module (placeholder)
+  - `src/plua/http.py` - HTTP client functionality
+  - `src/plua/tcp.py` - TCP client/server functionality  
+  - `src/plua/udp.py` - UDP client functionality
+  - `src/plua/websocket.py` - WebSocket client/server functionality
+  - `src/plua/mqtt.py` - MQTT module (placeholder)
 
 ### 2. Async TCP Implementation
-**Implemented in `src/eplua/tcp.py`:**
+**Implemented in `src/plua/tcp.py`:**
 - ✅ `tcp_connect(host, port, callback)` - Async TCP client connection
 - ✅ `tcp_read(connection_id, callback)` - Read data from connection
 - ✅ `tcp_read_until(connection_id, delimiter, callback)` - Read until delimiter
@@ -22,7 +22,7 @@
 - ✅ `tcp_server_stop(server_id)` - Stop server
 
 ### 3. Async UDP Implementation
-**Implemented in `src/eplua/udp.py`:**
+**Implemented in `src/plua/udp.py`:**
 - ✅ `udp_create_socket(callback)` - Create UDP socket with custom protocol
 - ✅ `udp_send_to(socket_id, data, host, port, callback)` - Send UDP data
 - ✅ `udp_receive(socket_id, callback)` - Receive UDP data asynchronously
@@ -31,7 +31,7 @@
 - ✅ **Custom UDPProtocol** class for handling incoming datagrams
 
 ### 4. Async WebSocket Implementation
-**Implemented in `src/eplua/websocket.py`:**
+**Implemented in `src/plua/websocket.py`:**
 - ✅ `websocket_connect(url, callback_id, headers)` - Connect to WebSocket server (ws/wss)
 - ✅ `websocket_send(conn_id, data, callback)` - Send WebSocket data
 - ✅ `websocket_close(conn_id, callback)` - Close WebSocket connection
@@ -56,8 +56,8 @@
 
 ### 6. Function Registration
 **Updated registration in:**
-- ✅ `src/eplua/__init__.py` - Import all network modules
-- ✅ `src/eplua/extensions.py` - Load all network functions
+- ✅ `src/plua/__init__.py` - Import all network modules
+- ✅ `src/plua/extensions.py` - Load all network functions
 - ✅ **27 total network functions** properly exported to Lua:
   - 13 TCP functions
   - 5 UDP functions  

@@ -641,7 +641,9 @@ end
 
 function Emulator:getRefreshStates(last) return _PY.getEvents(last) end
 
-function Emulator:refreshEvent(typ,data) _PY.add_event(json.encode({type=typ,data=data})) end
+function Emulator:refreshEvent(typ,data) 
+  _PY.addEventFromLua(json.encode({type=typ,data=data})) 
+end
 
 local headerKeys = {}
 function headerKeys.name(str,info) info.name = str end

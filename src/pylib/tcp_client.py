@@ -1,5 +1,5 @@
 """
-TCP functionality for EPLua.
+TCP functionality for PLua.
 
 This module provides TCP socket capabilities that can be called from Lua scripts.
 Supports async TCP client connections, TCP servers, and connection management.

@@ -1,5 +1,5 @@
 """
-Filesystem operations for EPLua.
+Filesystem operations for PLua.
 
 This module provides luafilesystem-compatible functionality using Python's standard library.
 All functions are designed to be called from Lua scripts via the _PY interface.

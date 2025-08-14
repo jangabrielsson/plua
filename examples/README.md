@@ -1,4 +1,4 @@
-# EPLua Examples
+# PLua Examples
 
 This directory contains examples organized by usage pattern:
 
@@ -48,7 +48,7 @@ Examples showing how to:
 
 ```bash
 # Run end-user examples
-python -m src.eplua.cli examples/lua/getting_started.lua
+python -m src.plua.cli examples/lua/getting_started.lua
 
 # Run Python integration examples
 python examples/python/basic_usage.py
@@ -70,12 +70,12 @@ Comprehensive demonstration of HTTP networking capabilities:
 - Custom headers and JSON data
 - Async request handling
 
-**Run with:** `eplua examples/network_demo.lua`
+**Run with:** `plua examples/network_demo.lua`
 
 ### `network_example.lua`
 Detailed network testing with request tracking and error handling.
 
-**Run with:** `eplua examples/network_example.lua`
+**Run with:** `plua examples/network_example.lua`
 
 ## Lua Examples (`lua/`)
 
@@ -86,12 +86,12 @@ Basic introduction to EPLua features including:
 - File operations
 - Math utilities
 
-**Run with:** `eplua examples/lua/getting_started.lua`
+**Run with:** `plua examples/lua/getting_started.lua`
 
 ### `basic_example.lua`
 Shows timer functionality and coroutine-based waiting patterns.
 
-**Run with:** `eplua examples/lua/basic_example.lua`
+**Run with:** `plua examples/lua/basic_example.lua`
 
 ### `comprehensive_test_final.lua`
 Complete test of all EPLua functionality including:
@@ -101,7 +101,7 @@ Complete test of all EPLua functionality including:
 - System information
 - JSON parsing
 
-**Run with:** `eplua examples/lua/comprehensive_test_final.lua`
+**Run with:** `plua examples/lua/comprehensive_test_final.lua`
 
 ## Python Examples (`python/`)
 
@@ -172,7 +172,7 @@ These are implemented in Lua and built on top of the Python functions:
 
 2. **Run a simple example:**
    ```bash
-   eplua examples/lua/getting_started.lua
+   plua examples/lua/getting_started.lua
    ```
 
 3. **Create your own extensions:**

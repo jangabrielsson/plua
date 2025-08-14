@@ -1,6 +1,6 @@
 # Web Server Extension
 
-The EPLua web server extension provides a FastAPI-based HTTP server that can be controlled from Lua scripts. The server runs in a separate thread and communicates with the main Lua engine through the thread-safe callback system.
+The PLua web server extension provides a FastAPI-based HTTP server that can be controlled from Lua scripts. The server runs in a separate thread and communicates with the main Lua engine through the thread-safe callback system.
 
 ## Features
 
@@ -164,7 +164,7 @@ curl http://127.0.0.1:8000/engine/callbacks
 
 ## Integration with Other Features
 
-The web server integrates seamlessly with all EPLua features:
+The web server integrates seamlessly with all PLua features:
 
 - **Timers**: Active timers show up in status endpoints
 - **HTTP Requests**: Network operations are tracked

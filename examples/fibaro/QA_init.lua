@@ -1,9 +1,9 @@
---%%name=Init
---%% debug=http:true
---%%offline=true
---%%state=true
---%%webui=true
---%%conceal=token:"<put you HASS api token here>"
+--%%name:Init
+--%% debug:http=true
+--%%offline:true
+--%%state:true
+--%%desktop:true
+--%%conceal:token="<put you HASS api token here>"
 
 function QuickApp:onInit()
 

@@ -1,4 +1,4 @@
-# EPLua Architecture
+# PLua Architecture
 
 EPLua is a Python-based Lua execution engine with native UI support, async timers, Fibaro QuickApp emulation, and multiple communication interfaces. This document describes the system architecture, threading model, and component interactions.
 
@@ -71,7 +71,7 @@ graph TB
 
 ## Component Details
 
-### 1. Lua Engine (`src/eplua/engine.py`)
+### 1. Lua Engine (`src/plua/engine.py`)
 
 The core execution engine that runs Lua scripts with Python integration:
 
@@ -104,7 +104,7 @@ graph LR
 - Thread-safe script execution
 - Queue-based communication between threads
 
-### 2. GUI System (`src/eplua/gui_bridge.py`, `src/eplua/gui.py`)
+### 2. GUI System (`src/plua/gui_bridge.py`, `src/plua/gui.py`)
 
 Native tkinter-based UI with thread-safe communication:
 
@@ -141,7 +141,7 @@ graph TB
 - Event-driven UI updates
 - Queue-based command processing
 
-### 3. QuickApp System (`src/eplua/static/quickapp_ui.html`, `src/eplua/fastapi_process.py`)
+### 3. QuickApp System (`src/plua/static/quickapp_ui.html`, `src/plua/fastapi_process.py`)
 
 Browser-based Fibaro QuickApp emulation with real-time WebSocket updates:
 
@@ -194,7 +194,7 @@ graph TB
 - **Focus Detection**: Automatic reconnection check on window focus
 - **Manual Refresh**: Developer-controlled UI refresh button
 
-### 4. Web Server (`src/eplua/fastapi_process.py`, `src/eplua/web_server.py`)
+### 4. Web Server (`src/plua/fastapi_process.py`, `src/plua/web_server.py`)
 
 FastAPI-based HTTP API with WebSocket support for remote control and QuickApp emulation:
 
@@ -248,7 +248,7 @@ graph LR
 - QuickApp API endpoints for Fibaro emulation
 - IPC queue for cross-process communication
 
-### 5. Telnet Server (`src/eplua/lua_bindings.py`)
+### 5. Telnet Server (`src/plua/lua_bindings.py`)
 
 Async telnet server for interactive REPL access:
 
@@ -289,7 +289,7 @@ graph TB
 - Integrated with Lua print system
 - Automatic stdout fallback
 
-### 6. REPL Client (`src/eplua/repl.py`)
+### 6. REPL Client (`src/plua/repl.py`)
 
 Enhanced command-line interface with advanced features:
 

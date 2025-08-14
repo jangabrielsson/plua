@@ -4,7 +4,7 @@ Tests for the AsyncTimerManager class.
 
 import asyncio
 import pytest
-from eplua.timers import AsyncTimerManager
+from plua.timers import AsyncTimerManager
 
 
 class TestAsyncTimerManager:

@@ -583,7 +583,6 @@ class LuaBindings:
         def client_print(client_id: int, message: str) -> None:
             """Send output to specific client(s) or stdout"""
             import asyncio
-            # print(f"CP {client_id}: {message}", flush=True)
             if client_id == 0 or client_id is None:
                 # Print to stdout
                 print(message, flush=True)
@@ -652,159 +651,182 @@ class LuaBindings:
                             pass
                         self.telnet_clients.remove((reader, writer))
         
-        # Refresh states polling and event queue functions
+        # Refresh states polling and event queue functions (HC3 compatible)
         
-        @export_to_lua("start_refresh_states_polling")
-        def start_refresh_states_polling(url: str, interval_seconds: float = 1.0) -> bool:
-            """Start background polling for refresh states"""
+        # Initialize global state for refresh states
+        if not hasattr(self, '_refresh_thread'):
+            self._refresh_thread = None
+        if not hasattr(self, '_refresh_running'):
+            self._refresh_running = False
+        if not hasattr(self, '_events'):
+            from collections import deque
+            self._events = deque(maxlen=1000)  # MAX_EVENTS = 1000
+        if not hasattr(self, '_event_count'):
+            self._event_count = 0
+        if not hasattr(self, '_events_lock'):
+            import threading
+            self._events_lock = threading.Lock()
+        
+        def _convert_lua_table(lua_table):
+            """Convert Lua table to Python dict"""
+            if isinstance(lua_table, dict):
+                return lua_table
+            elif hasattr(lua_table, 'items'):
+                return dict(lua_table.items())
+            else:
+                return {}
+        
+        @export_to_lua("pollRefreshStates")
+        def pollRefreshStates(start: int, url: str, options: Any) -> dict:
+            """Start polling refresh states in a background thread (HC3 compatible)"""
             import threading
             import time
             import requests
-            from typing import Dict, Any
+            import sys
+            # Stop existing thread if running
+            if self._refresh_running and self._refresh_thread:
+                self._refresh_running = False
+                self._refresh_thread.join(timeout=1)
             
-            try:
-                def poll_refresh_states():
-                    """Background thread function for polling refresh states"""
-                    while getattr(threading.current_thread(), "running", True):
-                        try:
-                            # Make the HTTP request
-                            response = requests.get(url, timeout=5)
-                            if response.status_code == 200:
-                                data = response.json()
-                                
-                                # Convert Python data to Lua-compatible format
-                                lua_data = python_to_lua_table(data)
-                                
-                                # Send result to Lua via thread-safe callback
-                                self.engine.execute_script_from_thread(
-                                    f"if _G.onRefreshStatesUpdate then _G.onRefreshStatesUpdate({lua_data}) end"
-                                )
-                            
-                        except Exception as e:
-                            # Log error and continue polling
-                            print(f"Refresh states polling error: {e}")
-                        
-                        # Sleep for the specified interval
-                        time.sleep(interval_seconds)
+            # Convert Lua options to Python dict
+            options_dict = _convert_lua_table(options)
+            
+            def refresh_runner():
+                last, retries = start, 0
+                self._refresh_running = True
                 
-                # Create and start the polling thread
-                thread = threading.Thread(target=poll_refresh_states, daemon=True)
-                thread.running = True
-                thread.start()
-                
-                # Store thread reference for later cleanup
-                if not hasattr(self, 'refresh_states_thread'):
-                    self.refresh_states_thread = thread
-                
-                return True
-                
-            except Exception as e:
-                print(f"Failed to start refresh states polling: {e}")
-                return False
-        
-        @export_to_lua("stop_refresh_states_polling")
-        def stop_refresh_states_polling() -> bool:
-            """Stop background polling for refresh states"""
-            try:
-                if hasattr(self, 'refresh_states_thread') and self.refresh_states_thread:
-                    # Signal thread to stop
-                    self.refresh_states_thread.running = False
-                    self.refresh_states_thread.join(timeout=2.0)
-                    self.refresh_states_thread = None
-                    return True
-                return False
-            except Exception as e:
-                print(f"Failed to stop refresh states polling: {e}")
-                return False
-        
-        @export_to_lua("init_event_queue")
-        def init_event_queue() -> bool:
-            """Initialize the global event queue"""
-            try:
-                import queue
-                
-                if not hasattr(self, 'event_queue'):
-                    self.event_queue = queue.Queue()
-                return True
-                
-            except Exception as e:
-                print(f"Failed to initialize event queue: {e}")
-                return False
-        
-        @export_to_lua("add_event")
-        def add_event(event_data: Any) -> bool:
-            """Add an event to the global event queue"""
-            try:
-                # Initialize queue if not exists
-                if not hasattr(self, 'event_queue'):
-                    init_event_queue()
-                
-                # Convert to Lua-compatible format before storing
-                lua_event = python_to_lua_table(event_data)
-                self.event_queue.put(lua_event)
-                return True
-                
-            except Exception as e:
-                print(f"Failed to add event to queue: {e}")
-                return False
-        
-        @export_to_lua("get_events")
-        def get_events(max_events: int = 10) -> Any:
-            """Get events from the global event queue (non-blocking)"""
-            try:
-                import queue
-                
-                if not hasattr(self, 'event_queue'):
-                    init_event_queue()
-                    return python_to_lua_table([])
-                
-                events = []
-                q = self.event_queue
-                
-                # Get up to max_events from the queue
-                for _ in range(max_events):
+                while self._refresh_running:
                     try:
-                        event = q.get_nowait()
-                        events.append(event)
-                    except queue.Empty:
-                        break
-                
-                return python_to_lua_table(events)
-                
-            except Exception as e:
-                print(f"Failed to get events from queue: {e}")
-                return python_to_lua_table([])
-        
-        @export_to_lua("get_event_count")
-        def get_event_count() -> int:
-            """Get the current number of events in the queue"""
-            try:
-                if hasattr(self, 'event_queue'):
-                    return self.event_queue.qsize()
-                return 0
-                
-            except Exception as e:
-                print(f"Failed to get event count: {e}")
-                return 0
-        
-        @export_to_lua("clear_events")
-        def clear_events() -> bool:
-            """Clear all events from the global event queue"""
-            try:
-                if hasattr(self, 'event_queue'):
-                    q = self.event_queue
-                    # Clear the queue
-                    while not q.empty():
-                        try:
-                            q.get_nowait()
-                        except:
+                        nurl = url + str(last) + "&lang=en&rand=7784634785"
+                        resp = requests.get(nurl, headers=options_dict.get('headers', {}), timeout=30)
+                        if resp.status_code == 200:
+                            retries = 0
+                            data = resp.json()
+                            last = data.get('last', last)
+                            
+                            if data.get('events'):
+                                for event in data['events']:
+                                    # Use addEvent function directly with dict for efficiency
+                                    addEvent(event)
+                        
+                        elif resp.status_code == 401:
+                            logger.error("HC3 credentials error")
+                            logger.error("Exiting refreshStates loop")
                             break
+                    
+                    except requests.exceptions.Timeout:
+                        pass
+                    except requests.exceptions.ConnectionError:
+                        retries += 1
+                        if retries > 5:
+                            logger.error(f"Connection error: {nurl}")
+                            logger.error("Exiting refreshStates loop")
+                            break
+                    except Exception as e:
+                        logger.error(f"Error: {e} {nurl}")
+
+                    # Sleep between requests
+                    time.sleep(1)
+                
+                self._refresh_running = False
+            
+            # Start the thread
+            self._refresh_thread = threading.Thread(target=refresh_runner, daemon=True)
+            self._refresh_thread.start()
+            
+            return {"status": "started", "thread_id": self._refresh_thread.ident}
+        
+        @export_to_lua("addEvent")
+        def addEvent(event: Any) -> dict:
+            """Add an event to the event queue - accepts dict only (HC3 compatible)"""
+            import json
+            try:
+                with self._events_lock:
+                    self._event_count += 1
+                    event_with_counter = {'last': self._event_count, 'event': event}
+                    self._events.append(event_with_counter)
+                
+                # Call _PY.newRefreshStatesEvent if it exists (for Lua event hooks)
+                try:
+                    if hasattr(self.engine._lua.globals(), '_PY') and hasattr(self.engine._lua.globals()['_PY'], 'newRefreshStatesEvent'):
+                        if isinstance(event, str):
+                            self.engine._lua.globals()['_PY']['newRefreshStatesEvent'](event)
+                        else:
+                            self.engine._lua.globals()['_PY']['newRefreshStatesEvent'](json.dumps(event))
+                except Exception as e:
+                    # Silently ignore errors in event hook - don't break the queue
+                    pass
+                
+                return {"status": "added", "event_count": self._event_count}
+            except Exception as e:
+                logger.error(f"Error adding event: {e}")
+                return {"status": "error", "error": str(e)}
+        
+        @export_to_lua("addEventFromLua")
+        def addEventFromLua(event_json: str) -> dict:
+            """Add an event to the event queue from Lua (JSON string input)"""
+            import json
+            try:
+                event = json.loads(event_json)
+                return addEvent(event)
+            except Exception as e:
+                logger.error(f"Error parsing event JSON: {e}")
+                return {"status": "error", "error": str(e)}
+        
+        @export_to_lua("getEvents")
+        def getEvents(counter: int = 0) -> dict:
+            """Get events since the given counter (HC3 compatible)"""
+            import time
+            from datetime import datetime
+            
+            with self._events_lock:
+                events = list(self._events)  # Copy to avoid race conditions
+                count = events[-1]['last'] if events else 0
+                evs = [e['event'] for e in events if e['last'] > counter]
+            
+            ts = datetime.now().timestamp()
+            tsm = time.time()
+            
+            res = {
+                'status': 'IDLE',
+                'events': evs,
+                'changes': [],
+                'timestamp': ts,
+                'timestampMillis': tsm,
+                'date': datetime.fromtimestamp(ts).strftime('%H:%M | %d.%m.%Y'),
+                'last': count
+            }
+            
+            # Return as Lua table directly
+            return python_to_lua_table(res)
+        
+        @export_to_lua("stopRefreshStates")
+        def stopRefreshStates() -> bool:
+            """Stop refresh states polling (HC3 compatible)"""
+            try:
+                if self._refresh_running and self._refresh_thread:
+                    self._refresh_running = False
+                    self._refresh_thread.join(timeout=2.0)
+                    self._refresh_thread = None
                     return True
                 return False
-                
             except Exception as e:
-                print(f"Failed to clear event queue: {e}")
+                logger.error(f"Error stopping refresh states: {e}")
                 return False
+        
+        @export_to_lua("getRefreshStatesStatus")
+        def getRefreshStatesStatus() -> dict:
+            """Get refresh states polling status (HC3 compatible)"""
+            try:
+                if self._refresh_thread and self._refresh_running:
+                    return {
+                        'running': self._refresh_thread.is_alive() if self._refresh_thread else False,
+                        'thread_id': self._refresh_thread.ident if self._refresh_thread else None
+                    }
+                return {'running': False}
+            except Exception as e:
+                logger.error(f"Error getting refresh states status: {e}", file=sys.stderr)
+                return {'running': False, 'error': str(e)}
         
     def get_all_bindings(self) -> Dict[str, Any]:
         """
@@ -815,25 +837,3 @@ class LuaBindings:
         """
         return get_exported_functions()
         
-    def create_timer_bindings(self) -> Dict[str, Callable]:
-        """
-        Legacy method for timer bindings (deprecated, use get_all_bindings).
-        """
-        bindings = get_exported_functions()
-        return {
-            "set_timeout": bindings["set_timeout"],
-            "clear_timeout": bindings["clear_timeout"], 
-            "get_timer_count": bindings["get_timer_count"],
-        }
-        
-    def create_engine_bindings(self) -> Dict[str, Callable]:
-        """
-        Legacy method for engine bindings (deprecated, use get_all_bindings).
-        """
-        bindings = get_exported_functions()
-        return {
-            "print": bindings["print"],
-            "log": bindings["log"],
-            "get_time": bindings["get_time"],
-            "sleep": bindings["sleep"],
-        }

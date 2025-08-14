@@ -113,7 +113,7 @@ def display_startup_greeting(config: Dict[str, Any]):
     
     api_port = config.get("api_port", 8080)
     telnet_port = config.get("telnet_port", 8023)
-    eplua_version = get_version()
+    plua_version = get_version()
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     
     # ANSI color codes
@@ -126,7 +126,7 @@ def display_startup_greeting(config: Dict[str, Any]):
     BOLD = "\033[1m"
     
     # Use colored print for startup greeting
-    print(f"{CYAN}{BOLD}🚀 PLua version {eplua_version}{RESET}")
+    print(f"{CYAN}{BOLD}🚀 PLua version {plua_version}{RESET}")
     print(f"{GREEN}Python:{python_version}{RESET}, {BLUE}Lua:{lua_version}{RESET}")
     print(f"{YELLOW}API:{api_port}{RESET}, {MAGENTA}Telnet:{telnet_port}{RESET}")
 

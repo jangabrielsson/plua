@@ -23,16 +23,16 @@ PLua is a powerful Lua interpreter built on Python that provides **native Fibaro
 
 ### Quick Install
 ```bash
-git clone https://github.com/jangabrielsson/eplua.git
-cd eplua
+git clone https://github.com/jangabrielsson/Plua.git
+cd plua
 ./run.sh --version  # This will set up the virtual environment automatically
 ```
 
 ### Manual Setup
 ```bash
 # Clone and set up virtual environment
-git clone https://github.com/jangabrielsson/eplua.git
-cd eplua
+git clone https://github.com/jangabrielsson/plua.git
+cd plua
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
@@ -109,7 +109,7 @@ end
 ```
 
 ### UI Elements
-EPLua supports all standard Fibaro UI elements:
+PLua supports all standard Fibaro UI elements:
 ```lua
 --%%u:{button="btn1", text="Turn On", onReleased="turnOn"}
 --%%u:{slider="level", min="0", max="100", onChanged="setLevel"}  
@@ -299,8 +299,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/jangabrielsson/eplua/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/jangabrielsson/eplua/discussions)
+- **Issues**: [GitHub Issues](https://github.com/jangabrielsson/plua/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/jangabrielsson/plua/discussions)
 - **Documentation**: [docs/](docs/) directory
 
 ---

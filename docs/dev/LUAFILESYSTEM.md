@@ -16,7 +16,7 @@ local lfs = require("lfs")
 
 ## Minimal _PY Functions Implemented
 
-The following minimal set of Python functions in `src/eplua/filesystem.py` provides complete lfs compatibility:
+The following minimal set of Python functions in `src/plua/filesystem.py` provides complete lfs compatibility:
 
 ### Core File Operations
 - **`fs_attributes(filepath, request_name)`** - Get file attributes (stat information)

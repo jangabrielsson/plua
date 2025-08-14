@@ -1,4 +1,4 @@
-# PyLib - EPLua FFI Libraries
+# PyLib - PLua FFI Libraries
 
 This directory contains Python libraries that can be dynamically loaded from Lua using the FFI-like interface.
 
@@ -10,7 +10,7 @@ This directory contains Python libraries that can be dynamically loaded from Lua
 
 ## Bundled Libraries
 
-These libraries come with the EPLua package:
+These libraries come with the PLua package:
 
 - **filesystem.py** - File system operations (luafilesystem compatible)
 - **http_client.py** - HTTP requests and responses

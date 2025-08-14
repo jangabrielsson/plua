@@ -34,7 +34,8 @@ function net.HTTPClient()
           -- Adapt call_http response format to net.HTTPClient format
           local res = { 
             status = response.status, 
-            data = response.text  -- call_http uses 'text', net.HTTPClient expects 'data'
+            data = response.text,  -- call_http uses 'text', net.HTTPClient expects 'data'
+            headers = response.headers  -- Include headers in the response
           }
           local success, callback_err = pcall(options.success, res)
           if not success then
@@ -411,28 +412,42 @@ function net.TCPServer()
     end
     
     -- Register the connection callback and start the server
-    local callback_id = _PY.registerCallback(connection_callback)
-    _PY.tcp_server_start(self.server, host, port, callback_id)
+    self.callback_id = _PY.registerCallback(connection_callback,true)
+    _PY.tcp_server_start(self.server, host, port, self.callback_id)
   end
-  
+
   function self:stop()
-    if self.server then
-      -- Create a callback function that will handle the stop result
-      local callback = function(result)
-        if not result.success then
-          print("Error stopping TCP server: " .. tostring(result.message))
-        else
-          print("TCP Server stopped successfully")
-        end
-      end
-      
-      -- Register the callback and stop the server
-      local callback_id = _PY.registerCallback(callback)
-      _PY.tcp_server_stop(self.server, callback_id)
-      self.server = nil
-    end
+    _PY.tcp_server_stop(self.server,self.callback_id)
+    _PY.clearRegisteredCallback(self.callback_id)
   end
-  
+
+  return self
+end
+
+function net.TCPEchoServer(host,port, system)
+  local self = net.TCPServer()
+  self:start(host,port,function(client_socket, client_ip, client_port)
+    print("Client connected:", client_ip, client_port)
+    
+    local function echo()
+      -- Read data from the client
+      client_socket:read({
+        success = function(data)
+          if not data or data == "" then return end
+          -- Echo received data back to the client
+          client_socket:send(data, {
+            success = function()
+              echo()  -- Continue echoing
+            end,
+            error = function(err)
+              print("Error sending tcp echo:", err)
+            end
+          })
+        end
+      })
+    end
+    echo()
+  end)
   return self
 end
 
@@ -449,14 +464,15 @@ function net.HTTPServer()
     
     -- Create a callback function that will handle HTTP requests
     local request_callback = function(request)
-      local data, status_code = nil, 404
+      local data, status_code, response_headers = nil, 404, nil
       
-      -- Call the user's callback with method, path, and payload
+      -- Call the user's callback with method, path, payload, and headers
       if callback then
-        local success, result_data, result_status = pcall(callback, request.method, request.path, request.body)
+        local success, result_data, result_status, result_headers = pcall(callback, request.method, request.path, request.body, request.headers)
         if success then
           data = result_data or '{"error": "No data returned"}'
           status_code = result_status or 200
+          response_headers = result_headers
         else
           print("Error in HTTP server request callback: " .. tostring(result_data))
           -- Send error response
@@ -476,16 +492,17 @@ function net.HTTPServer()
       end
       
       -- Send the response back via Python
-      _PY.http_server_respond(request.request_id, data, status_code, "application/json")
+      _PY.http_server_respond(request.request_id, data, status_code, "application/json", response_headers)
     end
     
     -- Register the request callback and start the server (persistent callback for multiple requests)
-    local callback_id = _PY.registerCallback(request_callback, true)  -- true = persistent
-    _PY.http_server_start(self.server, host, port, callback_id)
+    self.callback_id = _PY.registerCallback(request_callback, true)  -- true = persistent
+    _PY.http_server_start(self.server, host, port, self.callback_id)
   end
   
   function self:stop()
     if self.server then
+      _PY.clearRegisteredCallback(self.callback_id)
       -- Create a callback function that will handle the stop result
       local callback = function(result)
         if not result.success then
@@ -761,7 +778,7 @@ end
 -- WebSocket Echo Server utility function
 function net.WebSocketEchoServer(host, port, debugFlag)
   
-  local server = net.WebSocketServer()
+  local server = net.WebSocketServer(nil,true)
   
   local function debug(...) 
     if debugFlag then print("[EchWS] "..tostring(server.server_id), string.format(...)) end

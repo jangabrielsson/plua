@@ -1,5 +1,5 @@
 """
-Example module showing how to extend EPLua with custom functions using decorators.
+Example module showing how to extend PLua with custom functions using decorators.
 """
 
 import os
@@ -49,7 +49,7 @@ def load_python_module(module_name: str) -> Dict[str, Any]:
 
     Search order:
     1. src/pylib/ directory (bundled FFI libraries)
-    2. eplua package modules
+    2. plua package modules
     3. Standard Python modules
 
     Args:
@@ -75,7 +75,7 @@ def load_python_module(module_name: str) -> Dict[str, Any]:
         import_attempts = [
             # 1. Try pylib directory first (bundled FFI libraries)
             f"pylib.{module_name}",
-            # 2. Try eplua package modules
+            # 2. Try plua package modules
             f"plua.{module_name}",
             # 3. Try as direct module name
             module_name
@@ -411,7 +411,7 @@ def open_quickapp_window(qa_id: int, title: str, width: int = 800, height: int =
         # Get the engine to determine the web server port
         engine = get_global_engine()
         if not engine:
-            logging.error("EPLua engine not available for QuickApp window")
+            logging.error("PLua engine not available for QuickApp window")
             return False
             
         # Try to get the server port from the engine config
@@ -528,7 +528,7 @@ def broadcast_view_update(qa_id: int, element_id: str, property_name: str, value
         # Get the engine
         engine = get_global_engine()
         if not engine:
-            logging.debug("EPLua engine not available for broadcast")
+            logging.debug("PLua engine not available for broadcast")
             return True  # Don't fail, just skip broadcasting
         
         # Check if API manager is available (multi-process mode)

@@ -1,7 +1,7 @@
 @echo off
 REM EPLua runner script for Windows
 
-echo 🚀 EPLua - Native UI System
+echo 🚀 PLua - Native UI System
 echo ============================
 
 REM Set PYTHONPATH to include src directory
@@ -16,4 +16,4 @@ if exist ".venv\Scripts\activate.bat" (
 )
 
 REM Run with Python module syntax, passing all arguments
-python -m eplua.cli %*
+python -m plua.cli %*

@@ -75,9 +75,9 @@ The EPLua network functionality has been reorganized into separate modules for b
 The original `network.py` file has been renamed to `http.py` to better reflect its specific functionality. All HTTP-related code remains in this module, and the imports have been updated throughout the codebase.
 
 ### Changed Files:
-- `src/eplua/network.py` → `src/eplua/http.py`
-- `src/eplua/__init__.py` (updated import)
-- `src/eplua/extensions.py` (updated import)
+- `src/plua/network.py` → `src/plua/http.py`
+- `src/plua/__init__.py` (updated import)
+- `src/plua/extensions.py` (updated import)
 
 ## Usage Examples
 

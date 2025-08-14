@@ -22,8 +22,12 @@ setbreakpoint = function(_,_) end,
 done = function() end 
 }
 
+local argv = _PY.config.argv or ""
+local vscode = argv:match("lua%-mobdebug") and argv:match("vscode") or false -- only turn on mobdebug for VSCode
+-- ToDo, make this more robust, by only guessing if we have no debugger flag.
+
 -- Only try to start mobdebug if debugger is enabled in config
-if config.debugger then 
+if config.debugger and vscode then 
   local success, mobdebug = pcall(require, 'mobdebug')
   if success then
     if config.debugger_logging then mobdebug.logging(true) end
@@ -203,7 +207,7 @@ function _PY.mainLuaFile(filenames)
 end
 
 function _PY.luaFragment(str) 
-  if str:match("mobdebug") then return nil end
+  if str:match("mobdebug") then return nil end -- ignore loading of mobdebug
   local func, err = load(str)
   if not func then
     error("Error loading Lua fragment: " .. err)

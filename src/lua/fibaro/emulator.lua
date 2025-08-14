@@ -454,7 +454,7 @@ function Emulator:loadMainFile(filenames,greet)
   end
 
   if greet and not _PY.config.nogreet then
-    _print(self.lib.log.colorStr("yellow",fmt("Fibaro support, %s, (%.4fs)",
+    _print(self.lib.log.colorStr("orange",fmt("Fibaro support, %s, (%.4fs)",
     self.offline and "offline" or "online",
     self.lib.millitime()-self.config.startTime)
   )

@@ -455,6 +455,7 @@ def run_engine(
                         logger.info("All operations completed - shutting down")
 
             except KeyboardInterrupt:
+                print("\n👋 Goodbye!")
                 logger.info("Interrupted by user")
             except Exception as e:
                 logger.error(f"Engine error: {e}")
@@ -470,6 +471,7 @@ def run_engine(
         try:
             asyncio.run(engine_main())
         except KeyboardInterrupt:
+            print("\n👋 Goodbye!")
             logger.info("Interrupted by user")
 
     except ImportError as e:
@@ -519,6 +521,7 @@ def run_async_repl(engine):
     try:
         asyncio.run(repl_main())
     except KeyboardInterrupt:
+        print("\n👋 Goodbye!")
         logger.info("REPL interrupted")
     except Exception as e:
         logger.error(f"REPL error: {e}")
@@ -536,7 +539,7 @@ def main():
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    
+
     parser = argparse.ArgumentParser(
         description="PLua - Python Lua Engine with Web UI"
     )
@@ -666,6 +669,8 @@ def main():
     config["args"] = args.args
     config["scripts"] = args.scripts or []
     config["startTime"] = startTime
+    # Store the full CLI command line as a string
+    config["argv"] = " ".join([repr(arg) if " " in arg else arg for arg in sys.argv])
 
     # Display startup greeting for all modes (unless suppressed)
     if not args.nogreet:

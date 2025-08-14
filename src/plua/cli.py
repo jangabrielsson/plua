@@ -169,8 +169,8 @@ def get_config():
         "isWindows": sys.platform == "win32",
         "isMacOS": sys.platform == "darwin",
         "isLinux": sys.platform.startswith("linux"),
-        "enginePath": str(Path(__file__).parent.parent).replace("\\", "\\\\"),
-        "luaLibPath": str(Path(__file__).parent.parent / "lua").replace("\\", "\\\\"),
+        "enginePath": str(Path(__file__).parent.parent).replace("\\", "/"),
+        "luaLibPath": str(Path(__file__).parent.parent / "lua").replace("\\", "/"),
     }
     return config
 
@@ -389,8 +389,9 @@ def run_engine(
                 # Run scripts or fragments if specified
                 if script_paths:
                     logger.info(f"Running {len(script_paths)} Lua script(s)...")
-                    # Create Lua array syntax for all script paths
-                    lua_array = "{" + ", ".join(f'"{path}"' for path in script_paths) + "}"
+                    # Create Lua array syntax for all script paths (normalize paths for Lua)
+                    normalized_paths = [path.replace("\\", "/") for path in script_paths]
+                    lua_array = "{" + ", ".join(f'"{path}"' for path in normalized_paths) + "}"
                     await engine.run_script(
                         f'_PY.mainLuaFile({lua_array})', "scripts_execution"
                     )

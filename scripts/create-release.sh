@@ -7,14 +7,8 @@ set -e
 
 # Colors for output
 RED='\033[0;31m'
-GREEN='\033[    print_success "✅ Release v$new_version created successfully!"
-    print_status "🔗 Release URL: https://github.com/jangabrielsson/plua/releases/tag/v$new_version"
-    print_status "🔄 GitHub Actions will automatically:"
-    print_status "   📦 Publish to PyPI using stored API token"
-    print_status "🎉 PyPI package will be available at: https://pypi.org/project/plua/$new_version/"
-    echo
-    print_status "� Note: Executable building is currently disabled"
-    print_status "   To enable: manually trigger 'Build Executables' workflow with force_build=yes"ELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
@@ -180,12 +174,12 @@ main() {
     
     print_success "✅ Release v$new_version created successfully!"
     print_status "� Release URL: https://github.com/jangabrielsson/plua/releases/tag/v$new_version"
-    echo
-    print_status "📦 To publish to PyPI manually:"
-    print_status "   1. pip install build twine"
-    print_status "   2. python -m build"
-    print_status "   3. python -m twine upload dist/plua-$new_version*"
+    print_status "�🔄 GitHub Actions will automatically:"
+    print_status "   📦 Publish to PyPI using stored API token"
     print_status "🎉 PyPI package will be available at: https://pypi.org/project/plua/$new_version/"
+    echo
+    print_status "💡 Note: Executable building is currently disabled"
+    print_status "   To enable: manually trigger 'Build Executables' workflow with force_build=yes"
 }
 
 # Run main function with all arguments

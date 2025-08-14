@@ -105,8 +105,8 @@ class LuaEngine:
                 "isMacOS": sys.platform == "darwin",
                 "isLinux": sys.platform.startswith("linux"),
                 "pythonVersion": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-                "enginePath": str(Path(__file__).parent.parent).replace("\\", "\\\\"),
-                "luaLibPath": str(Path(__file__).parent.parent / "lua").replace("\\", "\\\\"),
+                "enginePath": str(Path(__file__).parent.parent).replace("\\", "/"),
+                "luaLibPath": str(Path(__file__).parent.parent / "lua").replace("\\", "/"),
                 "offline": False,
             }
 

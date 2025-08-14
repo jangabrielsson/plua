@@ -3,7 +3,6 @@ _PY = _PY or {}
 _PY.mobdebug.on()
 _PY.mobdebug.coro()
 -- Global table with fibaro functions.
-print("Fibaro API support")
 
 local Emulator = require('fibaro.emulator')
 local Emu = Emulator()
@@ -12,10 +11,10 @@ fibaro.plua = Emu
 api = Emu.api
 
 -- Override the default hook with Fibaro preprocessing
-function _PY.mainLuaFile(filename)
+function _PY.mainLuaFile(filenames)
     require('mobdebug').on()
     xpcall(function()
-        Emu:loadMainFile(filename)
+        Emu:loadMainFile(filenames,"greet")
     end,function(err)
         print(err)
         print(debug.traceback())

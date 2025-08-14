@@ -275,6 +275,14 @@ class LuaBindings:
             }
             return python_to_lua_table(info)
             
+        @export_to_lua("getConfig")
+        def get_config() -> Any:
+            """Get the current engine configuration as Lua table."""
+            if self.engine and hasattr(self.engine, 'config') and self.engine.config:
+                return python_to_lua_table(self.engine.config)
+            else:
+                return python_to_lua_table({})
+        
         # Additional utility functions
         @export_to_lua("math_add")
         def math_add(a: float, b: float) -> float:
@@ -441,6 +449,125 @@ class LuaBindings:
             
             # Return default value if not found
             return default
+        
+        @export_to_lua("start_repl")
+        def start_repl():
+            """Start async REPL that reads from stdin and writes to stdout"""
+            import asyncio
+            import sys
+            
+            # Check if REPL is already running
+            if hasattr(self, 'repl_running') and self.repl_running:
+                return "REPL already running"
+            
+            # Initialize REPL state
+            self.repl_running = False
+            self.repl_task = None
+            
+            async def repl_loop():
+                """Main async REPL loop with prompt_toolkit"""
+                try:
+                    # Try to import prompt_toolkit for enhanced REPL
+                    try:
+                        from prompt_toolkit import PromptSession
+                        from prompt_toolkit.shortcuts import print_formatted_text
+                        from prompt_toolkit.formatted_text import HTML
+                        has_prompt_toolkit = True
+                    except ImportError:
+                        has_prompt_toolkit = False
+                        logger.warning("prompt_toolkit not available, using basic input")
+                    
+                    if has_prompt_toolkit:
+                        session = PromptSession()
+                        print_formatted_text(HTML('<ansigreen>🚀 PLua Interactive REPL</ansigreen>'))
+                        print_formatted_text(HTML('<ansicyan>Type Lua commands and press Enter to execute</ansicyan>'))
+                        print_formatted_text(HTML('<ansicyan>Type "exit" or "quit" to stop, Ctrl+C to interrupt</ansicyan>'))
+                    else:
+                        print("🚀 PLua Interactive REPL")
+                        print("Type Lua commands and press Enter to execute")
+                        print("Type 'exit' or 'quit' to stop, Ctrl+C to interrupt")
+                    
+                    self.repl_running = True
+                    
+                    while self.repl_running:
+                        try:
+                            if has_prompt_toolkit:
+                                # Use prompt_toolkit for better user experience
+                                command = await session.prompt_async('lua> ')
+                            else:
+                                # Fallback to basic input
+                                print('lua> ', end='', flush=True)
+                                command = await asyncio.get_event_loop().run_in_executor(None, input)
+                            
+                            command = command.strip()
+                            if not command:
+                                continue
+                            
+                            # Handle exit commands
+                            if command.lower() in ['exit', 'quit']:
+                                print("👋 Goodbye!")
+                                self.repl_running = False
+                                break
+                            
+                            # Execute Lua command
+                            try:
+                                lua_globals = self.engine._lua.globals()
+                                if "_PY" in lua_globals and "clientExecute" in lua_globals["_PY"]:
+                                    # Use clientId=0 for stdout output
+                                    lua_globals["_PY"]["clientExecute"](0, command)
+                                else:
+                                    # Fallback: execute directly in Lua and print result
+                                    result = self.engine._lua.execute(command)
+                                    if result is not None:
+                                        print(f"=> {result}")
+                            except Exception as e:
+                                print(f"Error: {e}")
+                            
+                        except (EOFError, KeyboardInterrupt):
+                            print("\n👋 Goodbye!")
+                            self.repl_running = False
+                            break
+                        except Exception as e:
+                            logger.error(f"[REPL] Error: {e}")
+                            break
+                            
+                except Exception as e:
+                    logger.error(f"[REPL] Fatal error: {e}")
+                finally:
+                    self.repl_running = False
+                    logger.info("[REPL] Stopped")
+            
+            # Start REPL as an asyncio task
+            if not self.repl_running:
+                self.repl_running = True  # Set to True before starting task
+                loop = asyncio.get_event_loop()
+                self.repl_task = loop.create_task(repl_loop())
+                logger.info("[REPL] Started on stdin/stdout")
+                return "REPL started on stdin/stdout"
+            else:
+                return "REPL already running"
+        
+        @export_to_lua("stop_repl")
+        def stop_repl():
+            """Stop the async REPL"""
+            if hasattr(self, 'repl_running') and self.repl_running:
+                self.repl_running = False
+                if hasattr(self, 'repl_task') and self.repl_task:
+                    try:
+                        self.repl_task.cancel()
+                    except Exception:
+                        pass
+                return "REPL stopped"
+            else:
+                return "REPL not running"
+        
+        @export_to_lua("get_repl_status")
+        def get_repl_status():
+            """Get REPL status"""
+            if hasattr(self, 'repl_running') and self.repl_running:
+                return "Running on stdin/stdout"
+            else:
+                return "Not running"
         
         @export_to_lua("start_telnet_server")
         def start_telnet_server(port=8023):

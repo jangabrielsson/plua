@@ -26,6 +26,7 @@ local function installHelper()
   return helper
 end
 
+print("HELPER LOADED")
 local helperId = nil
 
 local connection = nil

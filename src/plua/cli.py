@@ -176,9 +176,11 @@ def get_config():
 
 
 def run_engine(
-    script_path: Optional[str] = None,
+    script_paths: list = None,
     fragments: list = None,
     config: Dict[str, Any] = None,
+    interactive: bool = False,
+    telnet_mode: bool = False,
 ):
     """Run Lua engine in main thread"""
     try:
@@ -201,9 +203,12 @@ def run_engine(
                 # Start Lua environment and bindings
                 await engine.start()
                 
-                # Start telnet server for REPL access
-                telnet_port = config.get("telnet_port", 8023)
-                await engine.run_script(f'_PY.start_telnet_server({telnet_port})', "telnet_server_start")
+                # Start telnet server if telnet mode is requested
+                if telnet_mode:
+                    telnet_port = config.get("telnet_port", 8023)
+                    await engine.run_script(f'_PY.start_telnet_server({telnet_port})', "telnet_server_start")
+                    logger.info(f"Telnet server started on localhost:{telnet_port}")
+                    logger.info("You can connect with: telnet localhost 8023")
                 
                 # Start FastAPI server process if enabled
                 if config.get("api_enabled", True):
@@ -381,18 +386,41 @@ def run_engine(
                         logger.warning(f"Failed to start FastAPI server process: {e}")
                         logger.info("Continuing without API server...")
 
-                if script_path:
+                # Run scripts or fragments if specified
+                if script_paths:
+                    logger.info(f"Running {len(script_paths)} Lua script(s)...")
+                    # Create Lua array syntax for all script paths
+                    lua_array = "{" + ", ".join(f'"{path}"' for path in script_paths) + "}"
                     await engine.run_script(
-                        f'_PY.mainLuaFile("{script_path}")', script_path
+                        f'_PY.mainLuaFile({lua_array})', "scripts_execution"
                     )
-                elif fragments:
+                if fragments:
                     logger.info("Running Lua fragments...")
                     for i, fragment in enumerate(fragments):
                         await engine.run_script(
                             f"_PY.luaFragment({repr(fragment)})", f"fragment_{i}"
                         )
-                else:
-                    logger.info("Starting interactive mode")
+
+                # If interactive mode requested, start REPL
+                if interactive:
+                    logger.info("Async REPL started. Type 'exit' or press Ctrl+C to quit.")
+                    # Start the asyncio REPL using the existing engine
+                    await engine.run_script('_PY.start_repl()', "async_repl_start")
+                    
+                    # Keep the engine running while REPL is active
+                    while True:
+                        # Check if REPL is still running
+                        try:
+                            result = await engine.run_script('return _PY.get_repl_status()', "repl_status_check")
+                            if "not running" in str(result).lower():
+                                break
+                        except Exception:
+                            # If we can't check status, assume REPL is still running
+                            pass
+                        await asyncio.sleep(0.5)  # Check every 500ms
+                    
+                    logger.info("Interactive REPL ended")
+                    return  # Exit after REPL ends
                 
                 # Keep the engine running if there are active operations (timers, callbacks, etc.)
                 if engine.has_active_operations():
@@ -400,42 +428,31 @@ def run_engine(
                     while engine.has_active_operations():
                         await asyncio.sleep(1)
                     logger.info("All operations completed, shutting down")
-                elif not script_path and not fragments:
-                    # Interactive mode - keep running indefinitely
+                elif not script_paths and not fragments and not interactive and not telnet_mode:
+                    # No scripts, no fragments, no interactive, no telnet - keep running indefinitely
+                    logger.info("No script specified, starting idle mode")
+                    while True:
+                        await asyncio.sleep(1)
+                elif telnet_mode:
+                    # Telnet mode - keep running indefinitely for remote access
+                    logger.info("Telnet mode active. Engine will run until terminated.")
                     while True:
                         await asyncio.sleep(1)
                 else:
-                    # Script completed - check for active operations with timeout
-                    logger.debug("Script completed, checking for active operations")
+                    # Scripts completed - check for active operations with timeout
+                    logger.debug("Scripts completed, checking for active operations")
                     await asyncio.sleep(0.5)  # Brief grace period for cleanup
                     
                     if not engine.has_active_operations():
-                        logger.info("No active operations detected - forcing clean shutdown")
-                        # Force immediate termination - bypass any hanging background processes
-                        import os
-                        import sys
-                        sys.stdout.flush()
-                        sys.stderr.flush()
-                        os._exit(0)
+                        logger.info("No active operations detected - shutting down")
                     else:
                         logger.info("Active operations detected, will keep running")
                         while engine.has_active_operations():
                             await asyncio.sleep(1)
-                        logger.info("All operations completed - forcing shutdown")
-                        import os
-                        import sys
-                        sys.stdout.flush()
-                        sys.stderr.flush()
-                        os._exit(0)
+                        logger.info("All operations completed - shutting down")
 
             except KeyboardInterrupt:
                 logger.info("Interrupted by user")
-                # Force clean exit without asyncio traceback
-                import os
-                import sys
-                sys.stdout.flush()
-                sys.stderr.flush()
-                os._exit(0)
             except Exception as e:
                 logger.error(f"Engine error: {e}")
             finally:
@@ -451,12 +468,6 @@ def run_engine(
             asyncio.run(engine_main())
         except KeyboardInterrupt:
             logger.info("Interrupted by user")
-            # Force clean exit without asyncio traceback
-            import os
-            import sys
-            sys.stdout.flush()
-            sys.stderr.flush()
-            os._exit(0)
 
     except ImportError as e:
         logger.error(f"Import error: {e}")
@@ -465,7 +476,7 @@ def run_engine(
 
 
 def run_script_with_config(
-    script_path: Optional[str] = None, 
+    script_paths: list = None, 
     fragments: list = None, 
     config: Dict[str, Any] = None,
     force_no_gui: bool = False
@@ -499,60 +510,49 @@ def run_script_with_config(
     setup_stub_functions()
 
     # Run engine in main thread
-    run_engine(script_path, fragments, config)
+    run_engine(script_paths, fragments, config)
 
 
-def run_interactive_repl(config: Dict[str, Any]):
-    """Start interactive REPL mode by spawning a REPL client process"""
+def run_telnet_server(config: Dict[str, Any]):
+    """Start telnet server mode using the main engine architecture"""
+    # Use the main engine architecture but start telnet server
+    logger.info("Starting PLua with telnet server mode")
+    run_engine(
+        script_path=None,
+        fragments=None,
+        config=config,
+        interactive=False,  # We don't want stdin/stdout REPL
+        telnet_mode=True    # We want telnet server
+    )
+
+
+def run_async_repl(engine):
+    """Start async REPL mode using the existing engine"""
+    import asyncio
+    
+    async def repl_main():
+        """Start the REPL using the existing engine"""
+        try:
+            # Start the asyncio REPL using the existing engine
+            await engine.run_script('_PY.start_repl()', "async_repl_start")
+            
+            # Keep the engine running while REPL is active
+            # The REPL will handle all interaction directly on stdin/stdout
+            while True:
+                # Check if REPL is still running
+                result = await engine.run_script('return _PY.get_repl_status()', "repl_status_check")
+                if "not running" in str(result).lower():
+                    break
+                await asyncio.sleep(0.5)  # Check every 500ms
+                
+        except KeyboardInterrupt:
+            # Stop the REPL gracefully
+            await engine.run_script('_PY.stop_repl()', "async_repl_stop")
+            logger.info("REPL stopped")
+    
+    # Run the REPL
     try:
-        # Start the engine in interactive mode (similar to regular script execution)
-        async def start_repl_engine():
-            from plua.engine import LuaEngine
-            
-            engine = LuaEngine(config=config)
-            
-            try:
-                # Display startup greeting
-                display_startup_greeting(config)
-                
-                # Start engine
-                await engine.start()
-                
-                # Start telnet server for REPL access
-                telnet_port = config.get("telnet_port", 8023)
-                await engine.run_script(f'_PY.start_telnet_server({telnet_port})', "telnet_server_start")
-                
-                # Give telnet server a moment to start
-                await asyncio.sleep(0.5)
-                
-                # Now spawn the REPL client process
-                logger.info("Starting REPL client...")
-                logger.info(f"Connecting to telnet server on localhost:{telnet_port}...")
-
-                # Find the repl.py file
-                repl_path = Path(__file__).parent / "repl.py"
-                if not repl_path.exists():
-                    logger.error("REPL client not found")
-                    return
-
-                # Spawn the REPL client process with the configured port
-                import subprocess
-                # Start REPL client in background 
-                subprocess.Popen([sys.executable, str(repl_path), "--port", str(telnet_port)])
-                
-                # Keep the engine running indefinitely for REPL access
-                logger.info("REPL mode active. Engine will run until terminated.")
-                while True:
-                    await asyncio.sleep(1)
-                    
-            except KeyboardInterrupt:
-                logger.info("REPL interrupted by user")
-            finally:
-                await engine.stop()
-                
-        # Run the async engine
-        asyncio.run(start_repl_engine())
-
+        asyncio.run(repl_main())
     except KeyboardInterrupt:
         logger.info("REPL interrupted")
     except Exception as e:
@@ -581,13 +581,16 @@ def main():
         "--init-qa", action="store_true", help="Initialize a new QuickApp project"
     )
     parser.add_argument(
-        "script", nargs="?", help="Lua script file to run (optional)"
+        "scripts", nargs="*", help="Lua script files to run (optional, multiple files allowed)"
     )
     parser.add_argument(
         "-e", "--eval", action="append", help="Execute Lua code fragments"
     )
     parser.add_argument(
-        "-i", "--interactive", action="store_true", help="Start REPL mode"
+        "-i", "--interactive", action="store_true", help="Start interactive REPL mode (stdin/stdout with prompt_toolkit)"
+    )
+    parser.add_argument(
+        "--telnet", action="store_true", help="Start telnet server for remote REPL access"
     )
     parser.add_argument(
         "--loglevel",
@@ -613,6 +616,11 @@ def main():
         "--nodebugger",
         action="store_true",
         help="Disable Lua debugger support",
+    )
+    parser.add_argument(
+        "--nogreet",
+        action="store_true",
+        help="Suppress startup greeting message",
     )
     parser.add_argument(
         "--fibaro",
@@ -680,6 +688,7 @@ def main():
     config["offline"] = args.offline
     config["desktop"] = args.desktop
     config["debugger"] = not args.nodebugger
+    config["nogreet"] = args.nogreet
     config["fibaro"] = args.fibaro
     config["headers"] = args.header or []
     config["api_enabled"] = not args.no_api
@@ -688,14 +697,29 @@ def main():
     config["telnet_port"] = args.telnet_port
     config["runFor"] = args.run_for
     config["args"] = args.args
+    config["scripts"] = args.scripts or []
+
+    # Display startup greeting for all modes (unless suppressed)
+    if not args.nogreet:
+        display_startup_greeting(config)
 
     if args.interactive:
-        run_interactive_repl(config)
-    else:
-        run_script_with_config(
-            script_path=args.script,
+        # Interactive mode with main engine
+        logger.info("Starting PLua with interactive mode")
+        run_engine(
+            script_paths=args.scripts,
             fragments=args.eval,
             config=config,
+            interactive=True
+        )
+    elif args.telnet:
+        run_telnet_server(config)
+    else:
+        run_engine(
+            script_paths=args.scripts,
+            fragments=args.eval,
+            config=config,
+            interactive=False
         )
 
 

@@ -11,7 +11,8 @@ This is a Lua interpreter written in Python that uses Lupa as the Lua runtime, w
 - **Network Modules**: Modular network functionality (http.py, tcp.py, udp.py, websocket.py, mqtt.py)
 - **Fibaro SDK**: Special support for Fibaro home automation API and SDK
 - **FastAPI Server**: HTTP API endpoints for plua and Fibaro functionality
-- **Telnet Server**: Multi-session telnet server for interactive Lua scripting
+- **Interactive REPL**: Asyncio-based REPL using prompt_toolkit for stdin/stdout interaction (via `-i/--interactive`)
+- **Telnet Server**: Multi-session telnet server for remote interactive Lua scripting (via `--telnet`)
 
 ## Running PLua:
 - **Virtual Environment**: Runs in `.venv`, use `./run.sh` script to start plua
@@ -30,7 +31,8 @@ PLua provides fine-grained control over script execution lifetime:
 ## Server Functionality:
 - **FastAPI Endpoints**: HTTP API for plua and Fibaro operations (some still under development)
 - **Lua Code Execution**: Endpoint to execute arbitrary Lua code remotely
-- **Telnet Interface**: Multiple concurrent telnet sessions for interactive Lua scripting
+- **Interactive REPL**: Primary interactive mode using asyncio and prompt_toolkit on stdin/stdout
+- **Telnet Interface**: Optional telnet server for multiple concurrent remote sessions
 
 ## Fibaro QuickApps (QAs):
 When running with `--fibaro` support, plua executes Lua code that defines "QuickApps" (QAs):

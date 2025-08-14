@@ -65,7 +65,7 @@ function Emulator:__init()
   }
   self.lib.userTime = os.time
   self.lib.userDate = os.date
-  
+
   self.EVENT = {}
   self.debugFlag = false
   
@@ -266,6 +266,7 @@ function Emulator:createUI(UI) -- Move to ui.lua ?
 end
 
 local deviceTypes = nil
+local proxylib = nil
 
 function Emulator:createInfoFromContent(filename,content,extraHeaders)
   local info = {}
@@ -278,11 +279,11 @@ function Emulator:createInfoFromContent(filename,content,extraHeaders)
     self:WARNING("Offline mode, proxy disabled")
   end
   if not headers.offline then
-    loadLib("helper",self)
+    if not self.lib.startHelper then loadLib("helper",self) end
     self.lib.startHelper()
   end
   if headers.proxy then
-    local proxylib = loadLib("proxy",self)
+    if proxylib == nil then proxylib = loadLib("proxy",self) end
     info = proxylib.existingProxy(headers.name or "myQA",headers)
     if not info then
       info = proxylib.createProxy(headers)
@@ -423,7 +424,8 @@ function Emulator:installQuickAppFile(path,extraHeaders)
   return info
 end
 
-function Emulator:loadMainFile(filename)
+function Emulator:loadMainFile(filenames,greet)
+  local filename = filenames[1] -- our main file
   local args = _PY.config.args or ""
   if args:starts("task") then return self:runTask(filename,args) end
   local extraHeaders = self.config.headers
@@ -451,11 +453,19 @@ function Emulator:loadMainFile(filename)
     end
   end
 
+  if greet and not _PY.config.nogreet then
+    _print(self.lib.log.colorStr("yellow",fmt("Fibaro support, %s",
+    self.offline and "offline" or "online")
+  )
+  )
+  end
+
   self:loadQA(info)
   
   self:registerDevice(info)
   
   self:startQA(info.device.id)
+  for i=2, #filenames do self.lib.loadQA(filenames[i]) end
 end
 
 local stdLua = { 

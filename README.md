@@ -129,7 +129,7 @@ Add `--%%desktop:true` to automatically open desktop UI windows:
 
 ### REPL (Read-Eval-Print Loop)
 ```bash
-# Start interactive Lua session
+# Start interactive Lua session (recommended)
 ./run.sh -i
 
 # With Fibaro SDK loaded
@@ -148,11 +148,14 @@ Hello from PLua!
 > qa:debug("QuickApp created!")
 ```
 
-### Telnet Server
+### Telnet Server (for remote access)
 PLua includes a multi-session telnet server for remote development:
 ```bash
-# Start with telnet server (default port 8023)
-./run.sh --fibaro --telnet-port 8023 main.lua
+# Start with telnet server (port 8023)
+./run.sh --telnet script.lua
+
+# Or start just the telnet server
+./run.sh --telnet
 
 # Connect from another terminal
 telnet localhost 8023
@@ -197,7 +200,8 @@ Options:
   -v, --version       Show version information
   --init-qa           Initialize a new QuickApp project
   -e, --eval EVAL     Execute Lua code fragments
-  -i, --interactive   Start interactive Lua REPL
+  -i, --interactive   Start interactive Lua REPL (stdin/stdout with prompt_toolkit)
+  --telnet            Start telnet server for remote REPL access
   --loglevel LEVEL    Set logging level (debug, info, warning, error)
   -o, --offline       Run in offline mode (disable HC3 connections)
   --desktop [BOOL]    Override desktop UI mode for QuickApp windows (true/false)

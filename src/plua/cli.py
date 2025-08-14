@@ -5,6 +5,7 @@ import io
 import os
 import subprocess
 import logging
+import time 
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -243,7 +244,7 @@ def run_engine(
                         )
                         
                         # Give process a moment to start
-                        await asyncio.sleep(1.0)
+                        await asyncio.sleep(0.5)
                         
                         # Connect process to engine via IPC
                         def lua_executor(code: str, timeout: float = 30.0):
@@ -476,44 +477,6 @@ def run_engine(
         logger.error(f"Unexpected error: {e}")
 
 
-def run_script_with_config(
-    script_paths: list = None, 
-    fragments: list = None, 
-    config: Dict[str, Any] = None,
-    force_no_gui: bool = False
-):
-    """Main entry point for running scripts"""
-    
-    config = config or get_config()
-    
-    # Display startup greeting with version information
-    display_startup_greeting(config)
-
-    # Setup basic stub UI functions (for compatibility)
-    def setup_stub_functions():
-        """Setup stub UI functions when web UI is not yet implemented"""
-        from plua.lua_bindings import export_to_lua
-
-        @export_to_lua("gui_available")
-        def gui_available() -> bool:
-            return False
-
-        @export_to_lua("isNativeUIAvailable") 
-        def is_native_ui_available() -> bool:
-            return False
-
-        @export_to_lua("createNativeWindow")
-        def create_native_window(
-            title: str, width: int = 400, height: int = 300
-        ) -> str:
-            return "ERROR: Web UI not yet implemented"
-
-    setup_stub_functions()
-
-    # Run engine in main thread
-    run_engine(script_paths, fragments, config)
-
-
 def run_telnet_server(config: Dict[str, Any]):
     """Start telnet server mode using the main engine architecture"""
     # Use the main engine architecture but start telnet server
@@ -562,6 +525,7 @@ def run_async_repl(engine):
 
 def main():
     """Main CLI entry point"""
+    startTime = time.time()
     # Suppress multiprocessing resource tracker warnings
     import os
     os.environ["PYTHONWARNINGS"] = "ignore::UserWarning:multiprocessing.resource_tracker"
@@ -699,6 +663,7 @@ def main():
     config["runFor"] = args.run_for
     config["args"] = args.args
     config["scripts"] = args.scripts or []
+    config["startTime"] = startTime
 
     # Display startup greeting for all modes (unless suppressed)
     if not args.nogreet:

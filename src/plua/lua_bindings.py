@@ -1,5 +1,5 @@
 """
-Lua-Python bindings for the EPLua engine.
+Lua-Python bindings for the PLua engine.
 
 This module provides the bridge between Lua scripts and Python functionality,
 specifically for timer operations and other engine features.
@@ -228,7 +228,7 @@ class LuaBindings:
         
         @export_to_lua("os.exit")
         def os_exit(code: int = 0) -> None:
-            """Exit the EPLua process with the specified exit code"""
+            """Exit the PLua process with the specified exit code"""
             import os
             os._exit(code)  # Use _exit to avoid cleanup issues
             
@@ -586,7 +586,7 @@ class LuaBindings:
                 
                 try:
                     # Send welcome message (user-friendly, no mention of telnet)
-                    welcome_msg = "🚀 EPLua Interactive REPL\nType Lua commands and press Enter to execute\nType 'exit' or 'quit' to disconnect\n"
+                    welcome_msg = "🚀 PLua Interactive REPL\nType Lua commands and press Enter to execute\nType 'exit' or 'quit' to disconnect\n"
                     writer.write(welcome_msg.encode('utf-8'))
                     await writer.drain()
                     
@@ -605,7 +605,7 @@ class LuaBindings:
                             if command.lower() in ['exit', 'quit']:
                                 writer.write("👋 Goodbye!\n".encode('utf-8'))
                                 await writer.drain()
-                                # Exit the entire EPLua process
+                                # Exit the entire PLua process
                                 import os
                                 os._exit(0)
                                 break

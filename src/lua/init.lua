@@ -167,7 +167,7 @@ local function Error(str)
   })
 end
 
-local function doError(str) error(Error(str)) end
+local function doError(str,n) error(Error(str),n or nil) end
 
 function _PY.mainLuaFile(filenames)
   for _,filename in ipairs(filenames or {}) do
@@ -180,12 +180,17 @@ function _PY.mainLuaFile(filenames)
     local function loadAndRun()
       local func, err = load(content, filename)
       if not func then
-        doError(err)
+        local msg = err:match("(:%d+: .*)") or err
+        print("Error: Reading Lua file:", filename..msg)
+        os.exit()
       else
-        local status, err = pcall(func)
-        if not status then
-          doError(err)
-        end
+        xpcall(func,function(err)
+          local file,msg = err:match('"(.-)"%](.*)')
+          local msg = file and (file..msg) or err
+          print("Error: Running Lua file:", msg)
+          _print(debug.traceback("..while running "..filename,1))
+          os.exit()
+        end)
       end
     end
     local co = coroutine.create(loadAndRun) -- Always run in a coroutine

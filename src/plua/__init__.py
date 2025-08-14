@@ -1,5 +1,5 @@
 """
-EPLua - Python Lua Engine with Async Timer Support
+PLua - Python Lua Engine with Async Timer Support
 """
 
 from .engine import LuaEngine

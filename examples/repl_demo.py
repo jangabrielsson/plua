@@ -1,27 +1,40 @@
 #!/usr/bin/env python3
 """
-EPLua Interactive REPL Demo
+PLua Interactive REPL Demo
 
-This script demonstrates how to use the new interactive REPL functionality.
-Run this script to start an interactive EPLua session.
+This script demonstrates how to use PLua's interactive REPL functionality.
+PLua provides two interactive modes:
+1. Interactive mode (-i): Direct stdin/stdout REPL with prompt_toolkit
+2. Telnet mode (--telnet): Multi-session telnet server for remote access
 """
+
+import subprocess
+import sys
+import time
+from pathlib import Path
 
 
 def main():
     """Demo the interactive REPL"""
-    print("🚀 EPLua Interactive REPL Demo")
+    print("🚀 PLua Interactive REPL Demo")
     print("=" * 40)
     print()
-    print("This demo will:")
-    print("1. Start the EPLua engine with telnet server")
-    print("2. Launch the interactive REPL client")
-    print("3. Allow you to execute Lua commands interactively")
+    print("PLua provides two interactive modes:")
     print()
-    print("Available commands in the REPL:")
+    print("1. Interactive Mode (-i):")
+    print("   - Direct stdin/stdout REPL")
+    print("   - Rich prompt_toolkit interface")
+    print("   - Command history and completion")
+    print("   - Usage: plua -i")
+    print()
+    print("2. Telnet Mode (--telnet):")
+    print("   - Multi-session telnet server")
+    print("   - Remote access via telnet clients")
+    print("   - Usage: plua --telnet")
+    print()
+    print("Available commands in both REPLs:")
     print("  help     - Show help information")
-    print("  clear    - Clear the screen")
     print("  exit     - Exit the REPL")
-    print("  quit     - Exit the REPL")
     print()
     print("Lua examples you can try:")
     print("  print('Hello, World!')")
@@ -30,13 +43,42 @@ def main():
     print("  timer.setTimeout(1000, function() print('Timeout!') end)")
     print()
     
-    input("Press Enter to start the interactive REPL...")
+    # Determine plua executable path
+    project_root = Path(__file__).parent.parent
+    plua_script = project_root / "run.sh"
     
-    # Start the interactive REPL
+    if not plua_script.exists():
+        print("❌ PLua run script not found. Please run from project root.")
+        return
+    
+    print("Choose demo mode:")
+    print("1. Interactive mode (-i)")
+    print("2. Telnet mode (--telnet)")
+    print("0. Exit")
+    
     try:
-        # Import and run the REPL
-        from src.eplua.cli import run_interactive_repl
-        run_interactive_repl()
+        choice = input("\nEnter choice (0-2): ").strip()
+        
+        if choice == "0":
+            print("👋 Demo cancelled")
+            return
+        elif choice == "1":
+            print("\n🚀 Starting PLua in interactive mode...")
+            print("Type 'exit' to quit the REPL")
+            print("-" * 40)
+            subprocess.run([str(plua_script), "-i"], cwd=project_root)
+        elif choice == "2":
+            print("\n🚀 Starting PLua telnet server...")
+            print("Connect with: telnet localhost 8023")
+            print("Press Ctrl+C to stop the server")
+            print("-" * 40)
+            try:
+                subprocess.run([str(plua_script), "--telnet"], cwd=project_root)
+            except KeyboardInterrupt:
+                print("\n🛑 Telnet server stopped")
+        else:
+            print("❌ Invalid choice")
+            
     except KeyboardInterrupt:
         print("\n👋 Demo terminated by user")
     except Exception as e:

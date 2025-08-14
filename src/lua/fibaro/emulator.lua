@@ -454,8 +454,9 @@ function Emulator:loadMainFile(filenames,greet)
   end
 
   if greet and not _PY.config.nogreet then
-    _print(self.lib.log.colorStr("yellow",fmt("Fibaro support, %s",
-    self.offline and "offline" or "online")
+    _print(self.lib.log.colorStr("yellow",fmt("Fibaro support, %s, (%.4fs)",
+    self.offline and "offline" or "online",
+    self.lib.millitime()-self.config.startTime)
   )
   )
   end
@@ -554,22 +555,14 @@ function Emulator:updateView(id,data,noUpdate)
   local info = self.DIR[id]
   local elm = info.UImap[data.componentName or ""]
   if elm then
-    --print("  Found UI element:", data.componentName)
     if viewProps[data.propertyName] then
-      --print("  Updating property:", data.propertyName, "to:", data.newValue)
       viewProps[data.propertyName](elm,data)
-      --print("broadcast_ui_update",data.componentName)
       if not noUpdate then 
-        -- Send granular UI update with specific element data (if function available)
-        --print("  🔄 Calling _PY.broadcast_view_update...")
         if _PY.broadcast_view_update then
           local success = _PY.broadcast_view_update(id, data.componentName, data.propertyName, data.newValue)
-          --print("  📡 Broadcast result:", success)
         else
-          --print("  ❌ _PY.broadcast_view_update not available")
         end
       else
-        --print("  ⏭️  Skipping broadcast (noUpdate=true)")
       end
     else
       self:DEBUG("Unknown view property: " .. data.propertyName)
@@ -613,6 +606,11 @@ if res.status == 401 or res.status == 403  then
   self:ERROR("HC3 Authentication failed: " .. res.status.." ".. (res.status_text or ""))
   self:INFO("Please check your HC3 credentials in the .env or ~/.env file") 
   self.INFO("Terminating emulator due to authentication failure, and to avoid lock out of HC3")
+  os.exit()
+end
+if res.error and not (res.status and res.json) then
+  self:ERROR("HC3 call failed: " .. res.error)
+  self:INFO("Please check your HC3 connection")
   os.exit()
 end
 return nil, res.status, res.status_text

@@ -1,9 +1,8 @@
 """
-Window Manager for EPLua - External Browser Window Management
+Window Manager for PLua - External Browser Window Management
 
-This module provides functionality to create and manage external web browser windows
-for the EPLua UI system. It replaces the previous Tkinter-based UI with browser windows
-that can display web content from URLs.
+This module provides window management functionality specifically designed
+for the PLua UI system. It replaces the previous Tkinter-based UI with browser windows
 """
 
 import platform
@@ -39,7 +38,7 @@ class BrowserWindow:
 
 
 class WindowManager:
-    """Manages external browser windows for EPLua UI."""
+    """Manages external browser windows for PLua UI."""
     
     def __init__(self):
         self.windows: Dict[str, BrowserWindow] = {}

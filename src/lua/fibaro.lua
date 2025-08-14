@@ -12,7 +12,8 @@ api = Emu.api
 
 -- Override the default hook with Fibaro preprocessing
 function _PY.mainLuaFile(filenames)
-    require('mobdebug').on()
+    _PY.mobdebug.on()
+    --_print("mainLuaFile",_PY.milli_time()-_PY.config.startTime)
     xpcall(function()
         Emu:loadMainFile(filenames,"greet")
     end,function(err)

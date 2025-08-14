@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "plua"
-version = "1.2.0"
+version = "1.1.99"
 description = "Python project using Lupa to run Lua scripts with async timer functionality"
 authors = [{name = "Jan Gabrielsson", email = "jan@gabrielsson.com"}]
 license = "MIT"
@@ -12,7 +12,6 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     "lupa>=2.0",
-    "asyncio",
     "aiohttp>=3.8.0",
     "aiomqtt>=2.0.0",  # MQTT client support
     "fastapi>=0.100.0",

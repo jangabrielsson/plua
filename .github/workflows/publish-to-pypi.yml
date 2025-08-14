@@ -1,0 +1,75 @@
+name: Publish Python Package to PyPI
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        # Remove 'v' prefix if present (e.g., v1.0.54 -> 1.0.54)
+        VERSION=${GITHUB_REF#refs/tags/}
+        VERSION=${VERSION#v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+    
+    - name: Update version in files
+      run: |
+        VERSION="${{ steps.get_version.outputs.version }}"
+        # Update __init__.py
+        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" src/plua/__init__.py
+        # Update pyproject.toml
+        sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        echo "Updated version to: $VERSION"
+        grep "__version__" src/plua/__init__.py
+        grep "version = " pyproject.toml
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check if version exists on PyPI
+      id: check_version
+      run: |
+        VERSION="${{ steps.get_version.outputs.version }}"
+        echo "Checking if version $VERSION exists on PyPI..."
+        
+        # Use PyPI JSON API to check if version exists
+        if curl -s "https://pypi.org/pypi/plua/$VERSION/json" | grep -q '"version"'; then
+          echo "Version $VERSION already exists on PyPI"
+          echo "skip_upload=true" >> $GITHUB_OUTPUT
+        else
+          echo "Version $VERSION does not exist on PyPI"
+          echo "skip_upload=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Publish package to PyPI
+      if: steps.check_version.outputs.skip_upload == 'false'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        verbose: true
+    
+    - name: Skip upload - version exists
+      if: steps.check_version.outputs.skip_upload == 'true'
+      run: |
+        echo "Skipping upload: version ${{ steps.get_version.outputs.version }} already exists on PyPI"

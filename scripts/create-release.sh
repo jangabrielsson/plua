@@ -7,8 +7,14 @@ set -e
 
 # Colors for output
 RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+GREEN='\033[    print_success "✅ Release v$new_version created successfully!"
+    print_status "🔗 Release URL: https://github.com/jangabrielsson/plua/releases/tag/v$new_version"
+    print_status "🔄 GitHub Actions will automatically:"
+    print_status "   📦 Publish to PyPI using stored API token"
+    print_status "🎉 PyPI package will be available at: https://pypi.org/project/plua/$new_version/"
+    echo
+    print_status "� Note: Executable building is currently disabled"
+    print_status "   To enable: manually trigger 'Build Executables' workflow with force_build=yes"ELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
@@ -149,9 +155,14 @@ main() {
     sed -i.bak "s/__version__ = \".*\"/__version__ = \"$new_version\"/" src/plua/__init__.py
     rm src/plua/__init__.py.bak
     
+    # Update version in pyproject.toml
+    print_status "Updating version in pyproject.toml..."
+    sed -i.bak "s/version = \".*\"/version = \"$new_version\"/" pyproject.toml
+    rm pyproject.toml.bak
+    
     # Commit the version change
     print_status "Committing version update..."
-    git add src/plua/__init__.py
+    git add src/plua/__init__.py pyproject.toml
     git commit -m "Bump version to $new_version"
     
     # Create and push tag
@@ -168,8 +179,12 @@ main() {
         --verify-tag
     
     print_success "✅ Release v$new_version created successfully!"
-    print_status "🔄 GitHub Actions will automatically publish to PyPI"
-    print_status "📦 Check the Actions tab: https://github.com/jangabrielsson/plua/actions"
+    print_status "� Release URL: https://github.com/jangabrielsson/plua/releases/tag/v$new_version"
+    echo
+    print_status "📦 To publish to PyPI manually:"
+    print_status "   1. pip install build twine"
+    print_status "   2. python -m build"
+    print_status "   3. python -m twine upload dist/plua-$new_version*"
     print_status "🎉 PyPI package will be available at: https://pypi.org/project/plua/$new_version/"
 }
 

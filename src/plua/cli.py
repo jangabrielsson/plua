@@ -3,6 +3,7 @@ import sys
 import argparse
 import io
 import os
+import platform
 import subprocess
 import logging
 import time 
@@ -211,6 +212,7 @@ def get_config():
         "enginePath": str(Path(__file__).parent.parent).replace("\\", "/"),
         "luaLibPath": str(Path(__file__).parent.parent / "lua").replace("\\", "/"),
         "environment": detect_environment(),
+        "tempdir": os.path.join(os.path.expanduser("~"), "tmp") if platform.system() != "Windows" else os.environ.get("TEMP", "C:\\temp"),
     }
     return config
 
@@ -712,7 +714,8 @@ def main():
     if not args.nogreet:
         display_startup_greeting(config)
 
-    if args.interactive:
+    implicit_interactive = args.scripts == [] and args.telnet == False and args.eval is None
+    if args.interactive or implicit_interactive:
         # Interactive mode with main engine
         logger.info("Starting PLua with interactive mode")
         run_engine(

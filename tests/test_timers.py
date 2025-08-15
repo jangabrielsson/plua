@@ -46,37 +46,31 @@ class TestAsyncTimerManager:
         await manager.stop()
         
     @pytest.mark.asyncio
-    async def test_set_interval(self):
-        """Test setInterval functionality."""
+    async def test_clear_timer(self):
+        """Test clearing specific timers."""
         manager = AsyncTimerManager()
         await manager.start()
         
         fired = []
         
         def callback():
-            fired.append(len(fired) + 1)
+            fired.append(True)
             
-        timer_id = manager.set_interval(50, callback)
-        assert timer_id is not None
+        timer_id = manager.set_timeout(1000, callback)  # Long timeout
         
-        # Wait for multiple fires
-        await asyncio.sleep(0.15)
-        
-        # Should have fired multiple times
-        assert len(fired) >= 2
-        
-        # Timer should still exist
-        assert manager.get_timer_count() == 1
-        
-        # Clear the timer
+        # Clear before it fires
         cleared = manager.clear_timer(timer_id)
         assert cleared is True
-        assert manager.get_timer_count() == 0
+        
+        # Wait to ensure it doesn't fire
+        await asyncio.sleep(0.1)
+        assert len(fired) == 0
+        
+        # Clearing non-existent timer should return False
+        cleared = manager.clear_timer("non-existent")
+        assert cleared is False
         
         await manager.stop()
-        
-    @pytest.mark.asyncio
-    async def test_clear_timer(self):
         """Test clearing specific timers."""
         manager = AsyncTimerManager()
         await manager.start()
@@ -115,23 +109,22 @@ class TestAsyncTimerManager:
                 fired[timer_name] = fired.get(timer_name, 0) + 1
             return callback
             
-        # Create multiple timers
+        # Create multiple timers (only setTimeout since setInterval is in Lua)
         timer1 = manager.set_timeout(30, make_callback("timer1"))
         timer2 = manager.set_timeout(60, make_callback("timer2"))
-        timer3 = manager.set_interval(40, make_callback("timer3"))
+        timer3 = manager.set_timeout(90, make_callback("timer3"))
         
         assert manager.get_timer_count() == 3
         
         # Wait for timers to fire
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.12)
         
         # Check results
-        assert fired.get("timer1", 0) == 1  # Timeout fired once
-        assert fired.get("timer2", 0) == 1  # Timeout fired once
-        assert fired.get("timer3", 0) >= 2  # Interval fired multiple times
+        assert fired.get("timer1", 0) == 1  # 30ms timeout fired
+        assert fired.get("timer2", 0) == 1  # 60ms timeout fired  
+        assert fired.get("timer3", 0) == 1  # 90ms timeout fired
         
-        # Clear all timers
-        await manager.clear_all_timers()
+        # All timers should be cleaned up after firing
         assert manager.get_timer_count() == 0
         
         await manager.stop()
@@ -151,10 +144,9 @@ class TestAsyncTimerManager:
         info = manager.get_timer_info(timer_id)
         assert info is not None
         assert info["timer_id"] == timer_id
-        assert info["interval"] == 1.0  # 1000ms = 1s
-        assert info["repeating"] is False
+        assert info["delay"] == 1.0  # 1000ms = 1s
+        assert info["running"] is True
         assert "created_at" in info
-        assert "running" in info
         
         # Non-existent timer should return None
         info = manager.get_timer_info("non-existent")

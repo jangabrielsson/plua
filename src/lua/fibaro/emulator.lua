@@ -150,7 +150,7 @@ local tileX, tileY = 20,20
 function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   _G["QA"..qa.id] = qa
   local info = self.DIR[qa.id]
-  local openWindow -- = _PY.config.runtime_config and _PY.config.runtime_config.desktop
+  local openWindow = self.config.desktop
   if openWindow == nil then openWindow = info.headers and info.headers.desktop end
   if openWindow then
     local dim = self.lib.getScreenDimension()
@@ -163,14 +163,12 @@ end
 
 function Emulator:getQuickApps()
   local quickApps = {}
-  self:DEBUG("Getting QuickApps, DIR contents:")
   for id, info in pairs(self.DIR) do
     self:DEBUG("  ID: " .. tostring(id) .. ", has UI: " .. tostring(info.UI ~= nil))
     if info.UI then
       quickApps[#quickApps + 1] = { UI = info.UI, device = info.device }
     end
   end
-  self:DEBUG("Returning " .. #quickApps .. " QuickApps")
   return quickApps
 end
 
@@ -412,13 +410,15 @@ function Emulator:saveQA(fname,id)
   self:INFO("Saved QA to",fname)
 end
 
-function Emulator:installQuickAppFile(path,extraHeaders)
+function Emulator:installQuickAppFile(path,options)
+  options = options or {}
+  local extraHeaders = options.headers or {}
   local file = io.open(path, "r")
   assert(file, "Failed to open file: " .. path)
   local content = file:read("*all")
   file:close()
   local info = self:createInfoFromContent(path,content,extraHeaders)
-  self:loadQA(info)
+  self:loadQA(info,options.env or {})
   self:registerDevice(info)
   self:startQA(info.device.id)
   return info
@@ -480,7 +480,7 @@ local stdLua = {
   "print",
 }
 
-function Emulator:loadQA(info)
+function Emulator:loadQA(info,envAdds)
   -- Load and execute included files + main file
   local env = { 
     fibaro = { plua = self }, net = net, json = json, api = self.api, 
@@ -488,6 +488,7 @@ function Emulator:loadQA(info)
       __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
     }
   for _,name in ipairs(stdLua) do env[name] = _G[name] end
+  for k,v in pairs(envAdds or {}) do env[k] = v end
   
   info.env = env
   env._G = env

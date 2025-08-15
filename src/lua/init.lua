@@ -185,36 +185,41 @@ function _PY.mainfileResolver(filename)
   return filename
 end
 
+local function loadAndRun(filename)
+  local f = io.open(filename, "r")
+  if not f then
+    error("Could not open file: " .. filename)
+  end
+  local content = f:read("*a")
+  f:close()
+  local function loadAndRun()
+    local func, err = load(content, filename)
+    if not func then
+      local msg = err:match("(:%d+: .*)") or err
+      print("Error: Reading Lua file:", filename..msg)
+      os.exit()
+    else
+      xpcall(func,function(err)
+        local file,msg = err:match('"(.-)"%](.*)')
+        local msg = file and (file..msg) or err
+        print("Error: Running Lua file:", msg)
+        _print(debug.traceback("..while running "..filename,1))
+        os.exit()
+      end)
+    end
+  end
+  local co = coroutine.create(loadAndRun) -- Always run in a coroutine
+  local ok, err = coroutine.resume(co)
+  if not ok then
+    _print(err)
+    _print(debug.traceback(co, "..while running "..filename))
+  end
+end
+
 function _PY.mainLuaFile(filenames)
   for _,filename in ipairs(filenames or {}) do
-    local f = io.open(filename, "r")
-    if not f then
-      error("Could not open file: " .. filename)
-    end
-    local content = f:read("*a")
-    f:close()
-    local function loadAndRun()
-      local func, err = load(content, filename)
-      if not func then
-        local msg = err:match("(:%d+: .*)") or err
-        print("Error: Reading Lua file:", filename..msg)
-        os.exit()
-      else
-        xpcall(func,function(err)
-          local file,msg = err:match('"(.-)"%](.*)')
-          local msg = file and (file..msg) or err
-          print("Error: Running Lua file:", msg)
-          _print(debug.traceback("..while running "..filename,1))
-          os.exit()
-        end)
-      end
-    end
-    local co = coroutine.create(loadAndRun) -- Always run in a coroutine
-    local ok, err = coroutine.resume(co)
-    if not ok then
-      _print(err)
-      _print(debug.traceback(co, "..while running "..filename))
-    end
+    -- ToDo, we could be smart here and check if it looks like a QuickApp file?
+    loadAndRun(filename)
   end
 end
 

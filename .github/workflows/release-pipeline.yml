@@ -63,9 +63,10 @@ jobs:
         echo "Current directory: $(pwd)"
         echo "Files in scripts directory:"
         ls -la
-        echo "Checking if build_main_standalone.py exists:"
-        ls -la build_main_standalone.py
-        python build_nuitka.py
+        echo "Checking if build scripts exist:"
+        ls -la build_*.py
+        # Use CI-optimized build script
+        python build_nuitka_ci.py
       shell: bash
     
     - name: Prepare release artifacts

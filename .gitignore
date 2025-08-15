@@ -241,7 +241,6 @@ fibaro_api_docs/
 *.log
 *.backup
 test.env
-run.sh
 !PluaHelper.fqa
 *.fqa
 

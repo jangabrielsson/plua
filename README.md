@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="docs/Plua.png" alt="PLua Logo" width="320"/>
+    <img src="https://raw.githubusercontent.com/jangabrielsson/plua/main/docs/Plua.png" alt="PLua Logo" width="320"/>
 </p>
 
 # PLua - Lua Runtime with Fibaro Home Automation Support

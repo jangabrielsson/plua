@@ -32,18 +32,41 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.13'
+        python-version: '3.11'
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
-        pip install nuitka
+        pip install -e .[build]
+        
+    - name: Install platform-specific dependencies
+      run: |
+        # Install platform-specific requirements for Nuitka
+        if [ "${{ matrix.platform }}" = "linux" ]; then
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ ccache
+        elif [ "${{ matrix.platform }}" = "macos" ]; then
+          # macOS should have Xcode command line tools available
+          echo "Using macOS system compiler"
+        elif [ "${{ matrix.platform }}" = "windows" ]; then
+          # Windows should use MSVC
+          echo "Using Windows MSVC compiler"
+        fi
+      shell: bash
     
     - name: Build with Nuitka
       run: |
         cd scripts
+        echo "Building for platform: ${{ matrix.platform }}-${{ matrix.arch }}"
+        echo "Python version: $(python --version)"
+        echo "Nuitka version: $(python -m nuitka --version)"
+        echo "Current directory: $(pwd)"
+        echo "Files in scripts directory:"
+        ls -la
+        echo "Checking if build_main_standalone.py exists:"
+        ls -la build_main_standalone.py
         python build_nuitka.py
+      shell: bash
     
     - name: Prepare release artifacts
       shell: bash

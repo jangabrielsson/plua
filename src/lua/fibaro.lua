@@ -11,7 +11,9 @@ fibaro.plua = Emu
 api = Emu.api
 
 -- Override the default hook with Fibaro preprocessing
+
 function _PY.mainLuaFile(filenames)
+    filenames[1] =  _PY.mainfileResolver(filenames[1])
     _PY.mobdebug.on()
     --_print("mainLuaFile",_PY.milli_time()-_PY.config.startTime)
     xpcall(function()

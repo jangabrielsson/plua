@@ -37,7 +37,7 @@ local function init(colors)
   
   local COLORMAP = ANSICOLORMAP
   
-  if not Emu.config.isZerobrane then 
+  if not Emu.config.environment == 'zerobrane' then 
     ANSICOLORMAP.orange=nil 
     ANSICOLORMAP = setmetatable(ANSICOLORMAP, {__index=colors}) 
   end -- Set metatable to allow adding extra colors

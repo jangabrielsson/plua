@@ -454,7 +454,8 @@ function Emulator:loadMainFile(filenames,greet)
   end
 
   if greet and not _PY.config.nogreet then
-    _print(self.lib.log.colorStr("orange",fmt("Fibaro support, %s, (%.4fs)",
+    local color = _PY.config.environment == 'zerobrane' and "yellow" or "orange"
+    _print(self.lib.log.colorStr(color,fmt("Fibaro support, %s, (%.4fs)",
     self.offline and "offline" or "online",
     self.lib.millitime()-self.config.startTime)
   )
@@ -482,7 +483,7 @@ local stdLua = {
 function Emulator:loadQA(info)
   -- Load and execute included files + main file
   local env = { 
-    fibaro = { plua = self }, net = net, json = json, api = self.api,
+    fibaro = { plua = self }, net = net, json = json, api = self.api, 
       os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
       __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
     }

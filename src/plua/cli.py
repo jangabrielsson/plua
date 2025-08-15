@@ -67,6 +67,23 @@ def setup_unicode_output():
 setup_unicode_output()
 
 
+def detect_environment():
+    """Detect the environment PLua is running in based on command line arguments"""
+    # Get the full command line as a string
+    argv_str = " ".join(sys.argv)
+    
+    # Check for VS Code environment
+    if "vscode" in argv_str and "lua-mobdebug" in argv_str:
+        return "vscode"
+    
+    # Check for ZeroBrane Studio environment
+    if "io.stdout:setvbuf('no')" in argv_str:
+        return "zerobrane"
+    
+    # Default to terminal
+    return "terminal"
+
+
 def get_version():
     """Get PLua version from __init__.py or pyproject.toml"""
     try:
@@ -126,14 +143,23 @@ def display_startup_greeting(config: Dict[str, Any]):
     plua_version = get_version()
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     
-    # ANSI color codes
-    CYAN = "\033[96m"
-    GREEN = "\033[92m" 
-    YELLOW = "\033[93m"
-    BLUE = "\033[94m"
-    MAGENTA = "\033[95m"
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
+    if config['environment'] == 'zerobrane':
+        CYAN = "\033[36;1m"
+        GREEN = "\033[32m" 
+        YELLOW = "\033[33;1m"
+        BLUE = "\033[36m"
+        MAGENTA = "\033[35;1m"
+        RESET = "\033[0m"
+        BOLD = ""
+    else:
+        # ANSI color codes
+        CYAN = "\033[96m"
+        GREEN = "\033[92m" 
+        YELLOW = "\033[93m"
+        BLUE = "\033[94m"
+        MAGENTA = "\033[95m"
+        RESET = "\033[0m"
+        BOLD = "\033[1m"
     
     # Use colored print for startup greeting
     print(f"{CYAN}{BOLD}🚀 PLua version {plua_version}{RESET}")
@@ -184,6 +210,7 @@ def get_config():
         "isLinux": sys.platform.startswith("linux"),
         "enginePath": str(Path(__file__).parent.parent).replace("\\", "/"),
         "luaLibPath": str(Path(__file__).parent.parent / "lua").replace("\\", "/"),
+        "environment": detect_environment(),
     }
     return config
 

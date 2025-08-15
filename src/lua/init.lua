@@ -173,6 +173,18 @@ end
 
 local function doError(str,n) error(Error(str),n or nil) end
 
+function _PY.mainfileResolver(filename)
+  if not filename:match("%.lua$") or filename:match("%.fqa") then
+    local f = io.open(filename, "r")
+    if not f then return filename end
+    local content = f:read("*a")
+    f:close()
+    local file = content:match("%[%[(.-)%]%]") or filename
+    return file
+  end
+  return filename
+end
+
 function _PY.mainLuaFile(filenames)
   for _,filename in ipairs(filenames or {}) do
     local f = io.open(filename, "r")
@@ -420,7 +432,7 @@ function _PY.threadRequest(id, script, isJson)
     net = require("net")
     require("timers")
     os.getenv = _PY.dotgetenv
-    if config.fibaro then
+    if config.fibaro or config.environment=='zerobrane' then
       require("fibaro")
     end
     

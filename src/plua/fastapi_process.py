@@ -66,12 +66,26 @@ def create_fastapi_app(request_queue: multiprocessing.Queue, response_queue: mul
     
     # Mount static files for QuickApp UI
     import os
-    static_dir = os.path.join(os.path.dirname(__file__), "static")
-    if os.path.exists(static_dir):
+    import sys
+    
+    # Find static directory - handle both development and Nuitka builds
+    static_dir = None
+    possible_paths = [
+        os.path.join(os.path.dirname(__file__), "static"),  # Development mode
+        os.path.join(os.path.dirname(sys.executable), "static"),  # Nuitka build
+        os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "static"),  # Alternative Nuitka path
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            static_dir = path
+            break
+    
+    if static_dir and os.path.exists(static_dir):
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
         logger.info(f"📁 Static files mounted from: {static_dir}")
     else:
-        logger.warning(f"⚠️ Static directory not found: {static_dir}")
+        logger.warning(f"⚠️ Static directory not found. Tried: {possible_paths}")
     
     # Server statistics
     start_time = time.time()

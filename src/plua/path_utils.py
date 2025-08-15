@@ -6,6 +6,7 @@ used by the PLua framework.
 """
 
 import os
+import sys
 
 
 def get_static_file(filename: str) -> str:
@@ -21,14 +22,18 @@ def get_static_file(filename: str) -> str:
     Raises:
         FileNotFoundError: If the static file doesn't exist
     """
-    # Get the directory containing this module
-    module_dir = os.path.dirname(__file__)
+    # Find static directory - handle both development and Nuitka builds
+    possible_base_dirs = [
+        os.path.dirname(__file__),  # Development mode
+        os.path.dirname(sys.executable),  # Nuitka build
+        os.path.dirname(os.path.abspath(sys.argv[0])),  # Alternative Nuitka path
+    ]
     
-    # Construct path to static file
-    static_path = os.path.join(module_dir, "static", filename)
+    for base_dir in possible_base_dirs:
+        static_path = os.path.join(base_dir, "static", filename)
+        if os.path.exists(static_path):
+            return static_path
     
-    # Verify the file exists
-    if not os.path.exists(static_path):
-        raise FileNotFoundError(f"Static file not found: {filename}")
-    
-    return static_path
+    # If not found, raise error with all tried paths
+    tried_paths = [os.path.join(base_dir, "static", filename) for base_dir in possible_base_dirs]
+    raise FileNotFoundError(f"Static file not found: {filename}. Tried: {tried_paths}")

@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-Build script for creating a single-file plua executable using Nuitka
+Build script for creating a single-file plua executable usin        # Try a different approach - be more conservative and let Nuitka auto-detect
+        "--follow-stdlib",
+        # Force include warnings using package directive
+        "--include-package=warnings",
+        # Only absolutely essential modules
+        "--include-module=threading",
+        "--include-module=subprocess",a
 
 Prerequisites:
     pip install nuitka
@@ -30,47 +36,110 @@ def build_nuitka():
     src_path = actual_project_root / "src"
     static_path = src_path / "plua" / "static"  # Correct path to static files
     lua_path = src_path / "lua"
+    pylib_path = src_path / "pylib"
     
     # Ensure Nuitka is installed
     try:
-        # Get version through subprocess since nuitka module doesn't have __version__
-        cmd = [sys.executable, "-m", "nuitka", "--version"]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        version = result.stdout.strip().split('\n')[0]
-        print(f"[OK] Using Nuitka version: {version}")
-    except ImportError:
-        print("[ERROR] Nuitka not found. Install with: pip install nuitka")
+        # Test nuitka version with visible output for debugging
+        result = subprocess.run([sys.executable, "-m", "nuitka", "--version"], 
+                              capture_output=True, text=True, check=True)
+        print("[OK] Nuitka is available")
+        print(f"[DEBUG] Nuitka version: {result.stdout.split()[0]}")
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Nuitka command failed: {e}")
+        print(f"[DEBUG] stderr: {e.stderr}")
         sys.exit(1)
-    except subprocess.CalledProcessError:
-        print("[ERROR] Nuitka installation appears corrupted")
+    except FileNotFoundError:
+        print("[ERROR] Python or Nuitka command not found")
         sys.exit(1)
     
     # Dynamically include all Lua files
     data_file_args = []
+    lua_file_count = 0
     for file in lua_path.glob("**/*"):
         if file.is_file():
             rel_path = file.relative_to(lua_path)
             data_file_args.append(f"--include-data-file={file}=lua/{rel_path}")
+            lua_file_count += 1
+    
+    # Dynamically include all PyLib files  
+    pylib_file_count = 0
+    for file in pylib_path.glob("**/*"):
+        if file.is_file() and file.suffix == '.py':
+            rel_path = file.relative_to(pylib_path)
+            data_file_args.append(f"--include-data-file={file}=pylib/{rel_path}")
+            pylib_file_count += 1
+    
+    print(f"[INFO] Including {lua_file_count} Lua files from src/lua/")
+    print(f"[INFO] Including {pylib_file_count} PyLib files from src/pylib/")
+    print(f"[INFO] Including static files from {static_path}")
+    
+    # Find and force include the warnings module as a data file
+    warnings_source = None
+    try:
+        import warnings
+        warnings_source = warnings.__file__
+        print(f"[INFO] Found warnings module at: {warnings_source}")
+    except ImportError:
+        print("[WARN] Could not locate warnings module for inclusion")
     
     # Build command base
-    cmd = [
+    cmd_parts = [
         sys.executable, "-m", "nuitka",
         "--assume-yes-for-downloads",   # Auto-download dependencies
         "--lto=yes",                   # Link-time optimization
         f"--include-data-dir={static_path}=static",  # Web UI files
         # Lua files included individually below
         *data_file_args,
+    ]
+    
+    # Force include warnings.py as data file for proper module availability
+    if warnings_source:
+        cmd_parts.append(f"--include-data-file={warnings_source}=warnings.py")
+        print(f"[INFO] Force including warnings.py as data file")
+    
+    cmd_parts.extend([
         # Include packages that might not be auto-detected
         "--include-package=lupa",
         "--include-package=aiohttp",
-        "--include-package=fastapi",
+        "--include-package=fastapi", 
         "--include-package=uvicorn",
         "--include-package=psutil",
         "--include-package=httpx",
+        "--include-package=websockets",
+        "--include-package=aiomqtt",
+        "--include-package=requests",
+        # Try a minimal approach - let Nuitka auto-detect most things
+        "--follow-stdlib",
+        # Include the plua package explicitly
+        "--include-package=plua",
+        "--include-package=pylib",
         "--output-dir=dist",
         "--output-filename=plua",
         "build_main_standalone.py"
-    ]
+    ])
+    
+    cmd = cmd_parts
+    
+    # Add tomllib/tomli conditionally based on Python version
+    if sys.version_info >= (3, 11):
+        # Python 3.11+ has built-in tomllib, but it might not be auto-detected
+        cmd.insert(-1, "--include-package=tomllib")
+    else:
+        # Older Python versions need tomli package
+        try:
+            import tomli
+            cmd.insert(-1, "--include-package=tomli")
+        except ImportError:
+            print("[WARN] tomli not available for Python < 3.11, some features may not work")
+    
+    # Check if tomli is actually installed before including it
+    try:
+        import tomli
+        if "--include-package=tomli" not in cmd:
+            cmd.insert(-1, "--include-package=tomli")
+    except ImportError:
+        pass
     
     # Add platform-specific mode flags and UPX handling
     if sys.platform == "darwin":

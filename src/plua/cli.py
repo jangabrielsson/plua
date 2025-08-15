@@ -568,9 +568,14 @@ def run_async_repl(engine):
 def main():
     """Main CLI entry point"""
     startTime = time.time()
-    # Suppress multiprocessing resource tracker warnings
+    # Suppress multiprocessing resource tracker warnings (only if warnings module is available)
     import os
-    os.environ["PYTHONWARNINGS"] = "ignore::UserWarning:multiprocessing.resource_tracker"
+    try:
+        import warnings
+        os.environ["PYTHONWARNINGS"] = "ignore::UserWarning:multiprocessing.resource_tracker"
+    except ImportError:
+        # warnings module not available (e.g., in Nuitka build), skip warning suppression
+        pass
     
     # Set up basic logging first (will be updated with user preference later)
     logging.basicConfig(

@@ -57,7 +57,7 @@ function testFile(file)
   end
   for _,t in ipairs(lt.tests) do
     if t.func then
-      if t.isAsync then testAsync(t) else testSync(t) end
+      if t.isAsync then testAsync(t) else testAsync(t) end
     end
   end
 end

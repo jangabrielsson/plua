@@ -68,8 +68,17 @@ setup_unicode_output()
 
 
 def get_version():
-    """Get PLua version from pyproject.toml"""
+    """Get PLua version from __init__.py or pyproject.toml"""
     try:
+        # First try to get version from the installed package
+        try:
+            import plua
+            if hasattr(plua, '__version__'):
+                return plua.__version__
+        except ImportError:
+            pass
+        
+        # Fallback: try to get from development environment
         if tomllib is None:
             # Fallback: try to parse manually if tomllib is not available
             current_dir = Path(__file__).parent

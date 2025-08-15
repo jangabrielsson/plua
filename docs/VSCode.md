@@ -197,11 +197,6 @@ If you're working with the PLua source code (using `./run.sh`):
 Tasks enable easy HC3 QuickApp management. Create `.vscode/tasks.json`:
 
 ```json
-## 📋 Tasks Configuration (tasks.json)
-
-Tasks enable easy HC3 QuickApp management. Create `.vscode/tasks.json`:
-
-```json
 {
     "version": "2.0.0",
     "tasks": [

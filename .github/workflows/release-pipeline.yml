@@ -1,22 +1,13 @@
 name: Release Pipeline
 
-# DISABLED - Executable building temporarily disabled
-# on:
-#   release:
-#     types: [published]
-
 on:
-  workflow_dispatch:  # Only allow manual trigger
-    inputs:
-      force_build:
-        description: 'Force build executables (set to "yes" to enable)'
-        required: true
-        default: 'no'
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   # Job 1: Build executables
   build-executables:
-    if: github.event.inputs.force_build == 'yes'
     strategy:
       matrix:
         include:
@@ -41,7 +32,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.13'
     
     - name: Install dependencies
       run: |
@@ -65,11 +56,24 @@ jobs:
           EXT=""
         fi
         
-        # Package Nuitka build
-        if [ -f "scripts/plua.dist/plua${EXT}" ]; then
-          cp "scripts/plua.dist/plua${EXT}" "release-artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}${EXT}"
-        elif [ -f "scripts/plua${EXT}" ]; then
-          cp "scripts/plua${EXT}" "release-artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}${EXT}"
+        # Package Nuitka build from correct output locations
+        if [ "${{ matrix.platform }}" = "macos" ]; then
+          # macOS creates .app bundles
+          if [ -d "scripts/dist/build_main_standalone.app" ]; then
+            # Create a zip file of the app bundle for macOS
+            cd scripts/dist
+            zip -r "../../release-artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}.app.zip" "build_main_standalone.app"
+            cd ../..
+            # Also extract just the executable for convenience
+            if [ -f "scripts/dist/build_main_standalone.app/Contents/MacOS/plua" ]; then
+              cp "scripts/dist/build_main_standalone.app/Contents/MacOS/plua" "release-artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}${EXT}"
+            fi
+          fi
+        else
+          # Linux/Windows create single files
+          if [ -f "scripts/dist/plua${EXT}" ]; then
+            cp "scripts/dist/plua${EXT}" "release-artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}${EXT}"
+          fi
         fi
         
         ls -la release-artifacts/
@@ -105,8 +109,8 @@ jobs:
           Download the appropriate executable for your platform:
           - **Linux**: `plua-linux-x86_64`
           - **Windows**: `plua-windows-x86_64.exe` 
-          - **macOS Intel**: `plua-macos-x86_64`
-          - **macOS Apple Silicon**: `plua-macos-arm64`
+          - **macOS Intel**: `plua-macos-x86_64` or `plua-macos-x86_64.app.zip` (app bundle)
+          - **macOS Apple Silicon**: `plua-macos-arm64` or `plua-macos-arm64.app.zip` (app bundle)
           
           All executables are optimized builds compiled with Nuitka.
           

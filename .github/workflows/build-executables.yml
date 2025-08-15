@@ -1,22 +1,12 @@
 name: Build Executables
 
-# DISABLED - Executable building temporarily disabled
-# on:
-#   release:
-#     types: [published]
-#   workflow_dispatch:  # Allow manual trigger
-
 on:
-  workflow_dispatch:  # Only allow manual trigger
-    inputs:
-      force_build:
-        description: 'Force build executables (set to "yes" to enable)'
-        required: true
-        default: 'no'
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   build-executables:
-    if: github.event.inputs.force_build == 'yes'
     strategy:
       matrix:
         include:
@@ -41,7 +31,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.13'
     
     - name: Install dependencies
       run: |
@@ -59,18 +49,29 @@ jobs:
       run: |
         mkdir -p artifacts
         
-        # Find built executables
+        # Find built executables from Nuitka
         if [ "${{ matrix.platform }}" = "windows" ]; then
           EXT=".exe"
         else
           EXT=""
         fi
         
-        # Nuitka output  
-        if [ -f "scripts/plua.dist/plua${EXT}" ]; then
-          cp "scripts/plua.dist/plua${EXT}" "artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}${EXT}"
-        elif [ -f "scripts/plua${EXT}" ]; then
-          cp "scripts/plua${EXT}" "artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}${EXT}"
+        # Check for different possible Nuitka output locations
+        if [ "${{ matrix.platform }}" = "macos" ]; then
+          # macOS creates .app bundles
+          if [ -d "scripts/dist/build_main_standalone.app" ]; then
+            # Copy the entire app bundle for macOS
+            cp -r "scripts/dist/build_main_standalone.app" "artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}.app"
+            # Also extract just the executable for convenience
+            if [ -f "scripts/dist/build_main_standalone.app/Contents/MacOS/plua" ]; then
+              cp "scripts/dist/build_main_standalone.app/Contents/MacOS/plua" "artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}${EXT}"
+            fi
+          fi
+        else
+          # Linux/Windows create single files
+          if [ -f "scripts/dist/plua${EXT}" ]; then
+            cp "scripts/dist/plua${EXT}" "artifacts/plua-${{ matrix.platform }}-${{ matrix.arch }}${EXT}"
+          fi
         fi
         
         # List what we built

@@ -21,16 +21,19 @@ PLua is a powerful Lua interpreter built on Python that provides **native Fibaro
 - Python 3.8+ 
 - macOS, Linux, or Windows
 
-### Quick Install
+### Quick Install (Recommended)
 ```bash
-git clone https://github.com/jangabrielsson/Plua.git
-cd plua
-./run.sh --version  # This will set up the virtual environment automatically
+# Install PLua via pip
+pip install plua
+
+# Verify installation
+plua --version
 ```
 
-### Manual Setup
+### Development Setup
+If you want to contribute or work with the latest development version:
 ```bash
-# Clone and set up virtual environment
+# Clone and set up for development
 git clone https://github.com/jangabrielsson/plua.git
 cd plua
 python -m venv .venv
@@ -43,7 +46,7 @@ pip install -e .
 ### 1. Create a New QuickApp Project
 ```bash
 # Initialize a new QuickApp project with scaffolding
-./run.sh --init-qa
+plua --init-qa
 
 # Choose from 42 device templates:
 # [1] Basic QuickApp - Simple starter template
@@ -66,13 +69,13 @@ my-quickapp/
 ### 2. Develop and Test Locally
 ```bash
 # Run your QuickApp with full Fibaro SDK
-./run.sh --fibaro main.lua
+plua --fibaro main.lua
 
 # With desktop UI window (if your QA has --%%desktop:true)
-./run.sh --fibaro main.lua
+plua --fibaro main.lua
 
 # Run for specific duration
-./run.sh --fibaro main.lua --run-for 30  # 30 seconds minimum
+plua --fibaro main.lua --run-for 30  # 30 seconds minimum
 ```
 
 ### 3. VS Code Integration
@@ -130,10 +133,10 @@ Add `--%%desktop:true` to automatically open desktop UI windows:
 ### REPL (Read-Eval-Print Loop)
 ```bash
 # Start interactive Lua session (recommended)
-./run.sh -i
+plua -i
 
 # With Fibaro SDK loaded
-./run.sh -i --fibaro
+plua -i --fibaro
 ```
 
 In the REPL:
@@ -152,10 +155,10 @@ Hello from PLua!
 PLua includes a multi-session telnet server for remote development:
 ```bash
 # Start with telnet server (port 8023)
-./run.sh --telnet script.lua
+plua --telnet script.lua
 
 # Or start just the telnet server
-./run.sh --telnet
+plua --telnet
 
 # Connect from another terminal
 telnet localhost 8023
@@ -190,7 +193,7 @@ local client = tcp.connect("127.0.0.1", 8080)
 ## 🔧 Command Line Options
 
 ```bash
-./run.sh [script.lua] [options]
+plua [script.lua] [options]
 
 Positional Arguments:
   script              Lua script file to run (optional)
@@ -264,7 +267,7 @@ self:updateView("slider1", "value", 75)
 ### Multiple QuickApps
 Run several QuickApps simultaneously:
 ```bash
-./run.sh --fibaro qa1.lua qa2.lua qa3.lua
+plua --fibaro qa1.lua qa2.lua qa3.lua
 ```
 
 ### Custom Device Types
@@ -275,16 +278,10 @@ PLua supports all Fibaro device types and interfaces:
 - Security devices and detectors
 - Media players and controllers
 
-### WebSocket API
-Real-time communication with running QuickApps:
-```javascript
-// Connect to running PLua instance
-const ws = new WebSocket('ws://localhost:8000/ws');
-ws.send(JSON.stringify({type: 'lua_code', code: 'print("Hello")'}));
-```
-
 ## 📚 Documentation
-
+- [docs/QuickApp.md](docs/QuickApp.md) - QuickApp coding quickstart
+- [docs/VSCode.md](docs/VSCode.md) - VSCode setup
+- [docs/Zerobrane.md](docs/Zerobrane.md) - Zerobrane setup
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and internals
 - [docs/](docs/) - Detailed documentation and guides
 - [examples/](examples/) - Code examples and templates

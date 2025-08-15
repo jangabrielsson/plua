@@ -2,46 +2,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Plua: Close All QuickApp Windows",
-      "type": "shell",
-      "group": "build",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "echo": false,
-        "close": false,
-        "reveal": "silent",
-        "revealProblems": "never",
-        "focus": false,
-        "panel": "shared",
-        "clear": false,
-        "showReuseMessage": false
-      },
-      "problemMatcher": [],
-      "windows": {
-        "command": "cmd",
-        "args": [
-          "/c",
-          "if exist \"${workspaceFolder}\\.venv\\Scripts\\python.exe\" (\"${workspaceFolder}\\.venv\\Scripts\\python.exe\" -m plua --close-windows) else (python -m plua --close-windows)"
-        ]
-      },
-      "osx": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
-        ]
-      },
-      "linux": {
-        "command": "bash",
-        "args": [
-          "-c",
-          "if [ -f '${workspaceFolder}/.venv/bin/python' ]; then '${workspaceFolder}/.venv/bin/python' -m plua --close-windows; else python -m plua --close-windows; fi"
-        ]
-      }
-    },
-    {
       "label": "Plua, upload current file as QA to HC3",
       "type": "shell",
       "command": "plua",

@@ -2,51 +2,50 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "QA, upload current file as QA to HC3",
+      "label": "Plua, upload current file as QA to HC3",
       "type": "shell",
-      "command": "lua",
+      "command": "plua",
       "args": [
-        "-e",
-        "\"require('hc3emu2')\"",
+        "--fibaro",
+        "-a",
         "uploadQA",
         "${relativeFile}"
       ],
       "group": "build"
     },
     {
-      "label": "QA, update single file (part of .project)",
+      "label": "Plua, update single file (part of .project)",
       "type": "shell",
-      "command": "lua",
+      "command": "plua",
       "args": [
-        "-e",
-        "\"require('hc3emu2')\"",
+        "--fibaro",
+        "-a",
         "updateFile",
         "${relativeFile}"
       ],
       "group": "build"
     },
     {
-      "label": "QA, update QA (defined in .project)",
+      "label": "Plua, update QA (defined in .project)",
       "type": "shell",
-      "command": "lua",
+      "command": "plua",
       "args": [
-        "-e",
-        "\"require('hc3emu2')\"",
+        "--fibaro",
         "updateQA",
+        "-a",
         "${relativeFile}"
       ],
       "group": "build"
     },
     {
-      "label": "QA, Download and unpack from HC3",
+      "label": "Plua, Download and unpack from HC3",
       "type": "shell",
-      "command": "lua",
+      "command": "plua",
       "args": [
-        "-e",
-        "\"require('hc3emu2')\"",
-        "downloadQA",
-        "${input:QA_id}",
-        "${input:path_id}"
+        "--fibaro",
+        "-a",
+        "downloadQA ${input:QA_id}:${input:path_id}",
+        "dummy.lua"
       ],
       "group": "build"
     }
@@ -84,6 +83,27 @@
           "defaultPath": "client/env/dev.env"
         }
       }
+    },
+    {
+      "type": "pickString",
+      "id": "versionBumpType",
+      "description": "Select version bump type",
+      "options": [
+        "patch",
+        "minor",
+        "major"
+      ],
+      "default": "patch"
+    },
+    {
+      "type": "promptString",
+      "id": "customVersion",
+      "description": "Enter custom version (e.g., 1.2.3) or leave empty for auto-bump"
+    },
+    {
+      "type": "promptString",
+      "id": "releaseNotes",
+      "description": "Enter release notes for this version"
     }
   ]
 }

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "plua"
-version = "1.2.8"
+version = "1.2.9"
 description = "Python project using Lupa to run Lua scripts with async timer functionality"
 authors = [{name = "Jan Gabrielsson", email = "jan@gabrielsson.com"}]
 license = "MIT"

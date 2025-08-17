@@ -230,7 +230,11 @@ class LuaBindings:
         def os_exit(code: int = 0) -> None:
             """Exit the PLua process with the specified exit code"""
             import os
-            os._exit(code)  # Use _exit to avoid cleanup issues
+            import sys
+            
+            # Simple approach: just exit and let the system handle cleanup
+            # On Windows, multiprocessing might complain but that's after we've exited
+            sys.exit(code)
             
         @export_to_lua("get_platform")
         def get_platform() -> Any:

@@ -13,7 +13,7 @@ api = Emu.api
 -- Override the default hook with Fibaro preprocessing
 
 function _PY.mainLuaFile(filenames)
-    if _PY.config.tool then Emu:runTool(table.unpack(_PY.config.scripts)) os.exit() end
+    if _PY.config.tool then return Emu:runTool(table.unpack(_PY.config.scripts)) end
     filenames[1] =  _PY.mainfileResolver(filenames[1])
     _PY.mobdebug.on()
     --_print("mainLuaFile",_PY.milli_time()-_PY.config.startTime)

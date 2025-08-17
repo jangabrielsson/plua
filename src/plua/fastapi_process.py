@@ -8,10 +8,25 @@ import asyncio
 import json
 import logging
 import multiprocessing
+import platform
 import queue
 import time
 import uuid
 from typing import Dict, Any, Optional
+
+# Set multiprocessing start method for Windows to avoid spawn issues
+if platform.system() == "Windows":
+    try:
+        # Try to use fork method if available, otherwise stick with spawn
+        import sys
+        if hasattr(sys, 'set_int_max_str_digits'):  # Python 3.11+
+            # Use a more aggressive approach - disable multiprocessing entirely on Windows
+            # and fall back to threading for better exit handling
+            multiprocessing.set_start_method('spawn', force=True)
+        else:
+            multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass  # Method already set
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -466,6 +481,17 @@ def create_fastapi_app(request_queue: multiprocessing.Queue, response_queue: mul
 
 def run_fastapi_server(request_queue: multiprocessing.Queue, response_queue: multiprocessing.Queue, broadcast_queue: multiprocessing.Queue, config: Dict[str, Any]):
     """Run the FastAPI server in a separate process"""
+    import sys
+    import os
+    
+    # On Windows, suppress stderr to avoid multiprocessing spawn errors
+    if platform.system() == "Windows":
+        try:
+            # Redirect stderr to null to suppress spawn errors
+            sys.stderr = open(os.devnull, 'w')
+        except Exception:
+            pass
+    
     # Set up logging for the server process
     logging.basicConfig(
         level=logging.INFO,
@@ -479,12 +505,23 @@ def run_fastapi_server(request_queue: multiprocessing.Queue, response_queue: mul
         # Create the FastAPI app
         app = create_fastapi_app(request_queue, response_queue, broadcast_queue, config)
         
+        # Determine uvicorn log level based on PLua config
+        plua_log_level = config.get("loglevel", "INFO").upper()
+        if plua_log_level in ["CRITICAL", "ERROR"]:
+            uvicorn_log_level = "error"
+        elif plua_log_level == "WARNING":
+            uvicorn_log_level = "warning"  
+        elif plua_log_level == "INFO":
+            uvicorn_log_level = "error"  # Hide uvicorn startup messages unless explicitly requested
+        else:  # DEBUG
+            uvicorn_log_level = "info"
+        
         # Run with uvicorn
         uvicorn.run(
             app,
             host=config.get("host", "localhost"),
             port=config.get("port", 8080),
-            log_level="warning",
+            log_level=uvicorn_log_level,
             access_log=False
         )
         
@@ -540,13 +577,61 @@ class FastAPIProcessManager:
             
         logger.info(f"Starting FastAPI server process on {self.host}:{self.port}")
         
-        # Start the server process
-        self.server_process = multiprocessing.Process(
-            target=run_fastapi_server,
-            args=(self.request_queue, self.response_queue, self.broadcast_queue, self.config),
-            daemon=True
-        )
-        self.server_process.start()
+        # Start the server process with Windows-specific handling
+        if platform.system() == "Windows":
+            # On Windows, use threading instead of multiprocessing to avoid spawn issues
+            import threading
+            import asyncio
+            
+            def run_in_thread():
+                # Create new event loop for this thread
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    # Create the FastAPI app
+                    app = create_fastapi_app(self.request_queue, self.response_queue, self.broadcast_queue, self.config)
+                    
+                    # Determine uvicorn log level based on PLua config
+                    plua_log_level = self.config.get("loglevel", "INFO").upper()
+                    if plua_log_level in ["CRITICAL", "ERROR"]:
+                        uvicorn_log_level = "error"
+                    elif plua_log_level == "WARNING":
+                        uvicorn_log_level = "warning"  
+                    elif plua_log_level == "INFO":
+                        uvicorn_log_level = "error"  # Hide uvicorn startup messages unless explicitly requested
+                    else:  # DEBUG
+                        uvicorn_log_level = "info"
+                    
+                    # Run with uvicorn
+                    import uvicorn
+                    uvicorn.run(
+                        app,
+                        host=self.host,
+                        port=self.port,
+                        log_level=uvicorn_log_level,
+                        access_log=False
+                    )
+                except Exception as e:
+                    logger.error(f"FastAPI thread error: {e}")
+                finally:
+                    loop.close()
+            
+            # Start FastAPI in a daemon thread on Windows
+            self.server_thread = threading.Thread(target=run_in_thread, daemon=True)
+            self.server_thread.start()
+            self.server_process = None  # No process on Windows, using thread
+            logger.info("FastAPI started in thread mode on Windows")
+        else:
+            # Unix/Linux - use multiprocessing as before
+            self.server_process = multiprocessing.Process(
+                target=run_fastapi_server,
+                args=(self.request_queue, self.response_queue, self.broadcast_queue, self.config),
+                daemon=True
+            )
+            self.server_process.start()
+            logger.info(f"FastAPI process started with PID {self.server_process.pid}")
+        
         self.running = True
         
         # Start IPC message handler in a thread
@@ -554,23 +639,29 @@ class FastAPIProcessManager:
         self.ipc_thread = threading.Thread(target=self._handle_ipc_messages, daemon=True)
         self.ipc_thread.start()
         
-        logger.info(f"FastAPI process started with PID {self.server_process.pid}")
+        logger.info("FastAPI server started successfully")
         
     def stop(self):
-        """Stop the FastAPI server process"""
+        """Stop the FastAPI server process/thread"""
         if not self.running:
             return
             
-        logger.info("Stopping FastAPI server process...")
+        logger.info("Stopping FastAPI server...")
         self.running = False
         
-        if self.server_process and self.server_process.is_alive():
-            self.server_process.terminate()
-            self.server_process.join(timeout=5)
-            
-            if self.server_process.is_alive():
-                logger.warning("Force killing FastAPI process")
-                self.server_process.kill()
+        if platform.system() == "Windows":
+            # On Windows, we're using threading - daemon threads will die with main process
+            if hasattr(self, 'server_thread') and self.server_thread.is_alive():
+                logger.info("FastAPI thread will terminate with main process")
+        else:
+            # Unix/Linux - stop the process
+            if self.server_process and self.server_process.is_alive():
+                self.server_process.terminate()
+                self.server_process.join(timeout=5)
+                
+                if self.server_process.is_alive():
+                    logger.warning("Force killing FastAPI process")
+                    self.server_process.kill()
                 
         logger.info("FastAPI server process stopped")
         
@@ -718,8 +809,13 @@ class FastAPIProcessManager:
             return False
         
     def is_running(self) -> bool:
-        """Check if the FastAPI process is running"""
-        return self.running and self.server_process and self.server_process.is_alive()
+        """Check if the FastAPI process/thread is running"""
+        if platform.system() == "Windows":
+            # On Windows, check thread instead of process
+            return self.running and hasattr(self, 'server_thread') and self.server_thread.is_alive()
+        else:
+            # Unix/Linux - check process
+            return self.running and self.server_process and self.server_process.is_alive()
 
 
 # Global process manager instance

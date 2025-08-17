@@ -1,4 +1,5 @@
 #!/usr/binimport asyncio
+import atexit
 import sys
 import argparse
 import io
@@ -258,20 +259,104 @@ def run_engine(
                     try:
                         # Kill any existing process using the API port
                         api_port = config.get("api_port", 8080)
+                        
+                        def cleanup_port_windows(port):
+                            """Windows-specific port cleanup with minimal delays"""
+                            import time
+                            max_retries = 2
+                            
+                            for attempt in range(max_retries):
+                                try:
+                                    # Use netstat to find processes using the specific port
+                                    result = subprocess.run(
+                                        ["netstat", "-ano", "-p", "TCP"], 
+                                        capture_output=True, 
+                                        text=True, 
+                                        check=False
+                                    )
+                                    
+                                    if result.returncode == 0 and result.stdout:
+                                        killed_any = False
+                                        lines = result.stdout.split('\n')
+                                        
+                                        for line in lines:
+                                            # Look for lines with our specific port in LISTENING state
+                                            if "LISTENING" in line and f":{port} " in line:
+                                                parts = line.split()
+                                                if len(parts) >= 5:
+                                                    pid = parts[-1]
+                                                    if pid.isdigit() and pid != "0":
+                                                        logger.info(f"Killing process {pid} using port {port}")
+                                                        kill_result = subprocess.run(
+                                                            ["taskkill", "/F", "/PID", pid], 
+                                                            capture_output=True,
+                                                            check=False
+                                                        )
+                                                        if kill_result.returncode == 0:
+                                                            killed_any = True
+                                        
+                                        if killed_any:
+                                            # Minimal wait for port release - just 100ms
+                                            time.sleep(0.1)
+                                            
+                                            # Quick check if port is still in use
+                                            check_result = subprocess.run(
+                                                ["netstat", "-ano", "-p", "TCP"], 
+                                                capture_output=True, 
+                                                text=True, 
+                                                check=False
+                                            )
+                                            
+                                            if check_result.returncode == 0:
+                                                still_used = any(
+                                                    "LISTENING" in line and f":{port} " in line 
+                                                    for line in check_result.stdout.split('\n')
+                                                )
+                                                if not still_used:
+                                                    logger.info(f"Port {port} successfully cleaned up")
+                                                    return True
+                                        else:
+                                            # No processes found using the port
+                                            return True
+                                            
+                                except Exception as e:
+                                    logger.debug(f"Port cleanup attempt {attempt + 1} failed: {e}")
+                                    
+                                if attempt < max_retries - 1:
+                                    # Very short retry delay - just 200ms
+                                    time.sleep(0.2)
+                            
+                            return False
+                        
+                        def cleanup_port_unix(port):
+                            """Unix/Linux/macOS port cleanup"""
+                            try:
+                                result = subprocess.run(
+                                    ["lsof", "-ti", f":{port}"], 
+                                    capture_output=True, 
+                                    text=True, 
+                                    check=False
+                                )
+                                if result.stdout.strip():
+                                    pids = result.stdout.strip().split('\n')
+                                    for pid in pids:
+                                        if pid:
+                                            subprocess.run(["kill", "-9", pid], check=False)
+                                    return True
+                                return True
+                            except Exception:
+                                return False
+                        
                         try:
-                            import subprocess
-                            # Find processes using the port
-                            result = subprocess.run(
-                                ["lsof", "-ti", f":{api_port}"], 
-                                capture_output=True, 
-                                text=True, 
-                                check=False
-                            )
-                            if result.stdout.strip():
-                                pids = result.stdout.strip().split('\n')
-                                for pid in pids:
-                                    if pid:
-                                        subprocess.run(["kill", "-9", pid], check=False)
+                            # Platform-specific port cleanup
+                            if platform.system() == "Windows":
+                                success = cleanup_port_windows(api_port)
+                                if not success:
+                                    logger.warning(f"Could not fully clean up port {api_port}, but continuing...")
+                            else:
+                                success = cleanup_port_unix(api_port)
+                                if not success:
+                                    logger.warning(f"Could not clean up port {api_port}, but continuing...")
                         except Exception as e:
                             # Port cleanup failed, but continue anyway
                             logger.warning(f"Port cleanup failed: {e}")
@@ -284,6 +369,17 @@ def run_engine(
                             port=api_port,
                             config=config
                         )
+                        
+                        # Register cleanup handler for proper process termination
+                        def cleanup_fastapi():
+                            try:
+                                if api_manager and api_manager.is_running():
+                                    logger.info("Cleaning up FastAPI process on exit")
+                                    api_manager.stop()
+                            except Exception as e:
+                                logger.debug(f"Error during FastAPI cleanup: {e}")
+                        
+                        atexit.register(cleanup_fastapi)
                         
                         # Set up IPC connections immediately (no blocking wait)
                         # FastAPI process will queue requests until it's ready

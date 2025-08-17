@@ -860,10 +860,8 @@ function Emulator:runTool(tool,...)
     for name,t in pairs(tools) do
       _print(name,":",t.doc)
       _print("  ",t.usage)
-    end
-    return
-  end
-  if tools[tool] then 
+    end 
+  elseif tools[tool] then 
     local stat,err = pcall(tools[tool].fun,self,...)
     if not stat then 
       self:ERROR("Tool error",tool,err)
@@ -871,7 +869,7 @@ function Emulator:runTool(tool,...)
   else
     self:ERROR("Unknown tool: "..tool)
   end
-  os.exit()
+  --os.exit()
 end
 
 return Emulator

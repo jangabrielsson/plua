@@ -148,6 +148,17 @@ def build_nuitka():
         print("[INFO] macOS detected: Using --mode=app for Foundation framework compatibility")
         # Skip UPX on macOS as it often fails with native frameworks
         print("[INFO] Skipping UPX compression on macOS due to framework compatibility issues")
+    elif sys.platform == "win32":
+        cmd.insert(3, "--onefile")  # Single executable file for Windows
+        # Exclude multiprocessing on Windows since we use threading instead
+        cmd.insert(4, "--nofollow-import-to=multiprocessing")
+        print("[INFO] Windows detected: Excluding multiprocessing module (using threading instead)")
+        # Add UPX compression for Windows if available
+        if shutil.which("upx"):
+            cmd.insert(5, "--enable-plugin=upx")
+            print("[INFO] UPX compression enabled")
+        else:
+            print("[WARN] UPX not found, skipping compression")
     else:
         cmd.insert(3, "--onefile")  # Single executable file for other platforms
         # Add UPX compression for other platforms if available

@@ -7,16 +7,26 @@ This eliminates asyncio event loop conflicts and provides a stable web server
 import asyncio
 import json
 import logging
-import multiprocessing
 import platform
 import queue
 import time
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
+
+# Platform-specific imports
+if platform.system() == "Windows":
+    # On Windows, use threading queues since we use threading instead of multiprocessing
+    QueueType = queue.Queue
+else:
+    # On Unix/Linux, use multiprocessing queues
+    import multiprocessing
+    QueueType = multiprocessing.Queue
 
 # Set multiprocessing start method for Windows to avoid spawn issues
 if platform.system() == "Windows":
     try:
+        # Import multiprocessing only if needed for configuration
+        import multiprocessing
         # Try to use fork method if available, otherwise stick with spawn
         import sys
         if hasattr(sys, 'set_int_max_str_digits'):  # Python 3.11+
@@ -61,7 +71,7 @@ class IPCMessage(BaseModel):
     timestamp: float
 
 
-def create_fastapi_app(request_queue: multiprocessing.Queue, response_queue: multiprocessing.Queue, broadcast_queue: multiprocessing.Queue, config: Dict[str, Any]) -> FastAPI:
+def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'], response_queue: Union[queue.Queue, 'multiprocessing.Queue'], broadcast_queue: Union[queue.Queue, 'multiprocessing.Queue'], config: Dict[str, Any]) -> FastAPI:
     """Create the FastAPI application with IPC communication"""
     
     app = FastAPI(
@@ -479,7 +489,7 @@ def create_fastapi_app(request_queue: multiprocessing.Queue, response_queue: mul
     return app
 
 
-def run_fastapi_server(request_queue: multiprocessing.Queue, response_queue: multiprocessing.Queue, broadcast_queue: multiprocessing.Queue, config: Dict[str, Any]):
+def run_fastapi_server(request_queue: Union[queue.Queue, 'multiprocessing.Queue'], response_queue: Union[queue.Queue, 'multiprocessing.Queue'], broadcast_queue: Union[queue.Queue, 'multiprocessing.Queue'], config: Dict[str, Any]):
     """Run the FastAPI server in a separate process"""
     import sys
     import os
@@ -541,9 +551,9 @@ class FastAPIProcessManager:
         self.config.update({"host": host, "port": port})
         
         # IPC queues
-        self.request_queue = multiprocessing.Queue()
-        self.response_queue = multiprocessing.Queue()
-        self.broadcast_queue = multiprocessing.Queue()  # Separate queue for WebSocket broadcasts
+        self.request_queue = QueueType()
+        self.response_queue = QueueType()
+        self.broadcast_queue = QueueType()  # Separate queue for WebSocket broadcasts
         
         # Process management
         self.server_process: Optional[multiprocessing.Process] = None

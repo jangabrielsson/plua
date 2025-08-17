@@ -610,8 +610,7 @@ function Emulator:HC3_CALL(method, path, data)
       ["Content-Type"] = "application/json",
       ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
     }
-  }
-)
+  })
 
 if res.ok then
   if tonumber(res.status) and res.status >= 200 and res.status < 300 then

@@ -59,48 +59,6 @@
       "id": "path_id",
       "description": "path where to store the QA",
       "default": "dev"
-    },
-    {
-      "type": "promptString",
-      "id": "QA_name",
-      "description": "'.' for open file, or QA path name",
-      "default": "."
-    },
-    {
-      "id": "pickEnvFile",
-      "type": "command",
-      "command": "launch-file-picker.pick",
-      "args": {
-        "options": {
-          "title": "pick env file",
-          "path": ".",
-          "filterExt": ".env"
-        },
-        "output": {
-          "defaultPath": "client/env/dev.env"
-        }
-      }
-    },
-    {
-      "type": "pickString",
-      "id": "versionBumpType",
-      "description": "Select version bump type",
-      "options": [
-        "patch",
-        "minor",
-        "major"
-      ],
-      "default": "patch"
-    },
-    {
-      "type": "promptString",
-      "id": "customVersion",
-      "description": "Enter custom version (e.g., 1.2.3) or leave empty for auto-bump"
-    },
-    {
-      "type": "promptString",
-      "id": "releaseNotes",
-      "description": "Enter release notes for this version"
     }
   ]
 }

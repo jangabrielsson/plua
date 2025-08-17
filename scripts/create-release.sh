@@ -7,8 +7,13 @@ set -e
 
 # Colors for output
 RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+GREEN='\033[    print_success "✅ Release v$new_version created successfully!"
+    print_status "🔗 Release URL: https://github.com/jangabrielsson/plua/releases/tag/v$new_version"
+    print_status "🔄 GitHub Actions will automatically:"
+    print_status "   📦 Publish to PyPI using stored API token"
+    print_status "   🔨 Build executables for Linux, Windows, and macOS"
+    print_status "🎉 PyPI package will be available at: https://pypi.org/project/plua/$new_version/"
+    echoELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 

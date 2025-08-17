@@ -67,6 +67,7 @@ function Emulator:__init()
   self.lib.userDate = os.date
 
   self.EVENT = {}
+  setmetatable(self.EVENT, { __newindex = function(t,k,v) rawset(t,k, t[k] or {}) table.insert(t[k],v) end })
   self.debugFlag = false
   
   local api = {}
@@ -129,6 +130,15 @@ function Emulator:__init()
   local localPluaConf = loadLuaFile(_PY.config.cwd.._PY.config.fileSeparator..".plua")
   local homePluaConf =loadLuaFile(_PY.config.homedir.._PY.config.fileSeparator..".plua/config.lua")
   pluaConf = table.merge(homePluaConf,localPluaConf)
+end
+
+function Emulator:post(event)
+  local typ = event.type
+  local styp = "_"..typ
+  for _,f in ipairs(self.EVENT[styp] or {}) do f(event,self) end
+  setTimeout(function()
+    for _,f in ipairs(self.EVENT[typ] or {}) do f(event,self) end
+  end,0)
 end
 
 function Emulator:DEBUG(...) if self.debugFlag then print(...) end end
@@ -426,8 +436,6 @@ end
 
 function Emulator:loadMainFile(filenames,greet)
   local filename = filenames[1] -- our main file
-  local args = _PY.config.args or ""
-  if args:starts("task") then return self:runTask(filename,args) end
   local extraHeaders = self.config.headers
   local info = self:createInfoFromFile(filename,extraHeaders)
   if _PY.config.debug == true then self.debugFlag = true end
@@ -482,13 +490,14 @@ local stdLua = {
 
 function Emulator:loadQA(info,envAdds)
   -- Load and execute included files + main file
+  envAdds = envAdds or {}
   local env = { 
     fibaro = { plua = self }, net = net, json = json, api = self.api, 
       os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
       __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
     }
   for _,name in ipairs(stdLua) do env[name] = _G[name] end
-  for k,v in pairs(envAdds or {}) do env[k] = v end
+  for k,v in pairs(envAdds) do env[k] = v end
   
   info.env = env
   env._G = env
@@ -498,6 +507,7 @@ function Emulator:loadQA(info,envAdds)
   loadfile(libpath.."quickapp.lua","t",env)()
   env.__TAG = info.device.name:upper()..info.device.id
   env.plugin.mainDeviceId = info.device.id
+  self:post({ type = "qaEnvSetup", info = info})
   local fileEntries = {}
   local n = 0; for _,_ in pairs(info.files) do n=n+1 end
   for name,f in pairs(info.files) do fileEntries[f.order or n] = f; f.name = name end
@@ -533,12 +543,14 @@ function Emulator:startQA(id)
   end
 
   --env.setTimeout(function()
+  coroutine.wraptest = coroutine.wraptest
+  if coroutine.wraptest then return coroutine.wraptest(func,info) end
     coroutine.wrapdebug(func, function(err,tb)
       err = err:match(":(%d+: .*)")
       print("Error in QA " .. id .. ": " .. tostring(err))
       print(tb)
     end)() 
-  --end, 200)
+  --end, 0)
 end
 
 local viewProps = {}
@@ -592,6 +604,8 @@ function Emulator:HC3_CALL(method, path, data)
     url = url,
     data = data,
     headers = {
+      ['X-Fibaro-Version'] = '2',
+      ['Accept-language'] = 'en',
       ["User-Agent"] = "plua/0.1.0",
       ["Content-Type"] = "application/json",
       ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
@@ -779,33 +793,76 @@ local function getFQA(self,fname)
   return self.lib.getFQA(info.device.id)
 end
 
-function Emulator:runTask(file,str)
-  local cmd, args = str:match("task ([%w_]+)%s*(.*)")
+local tools = {
+  uploadQA = {
+    doc = "Upload QuickApp to HC3",
+    usage = "plua -t uploadQA <filename>",
+    fun = function(self,file)
+      self:INFO("Uploading QA",file)
+      local fqa = getFQA(self,file)
+      local dev,code = self.lib.uploadFQA(fqa)
+      if dev then
+      else
+        self:ERROR("Upload failed",code)
+      end
+    end
+  },
+  updateFile = {
+    doc = "Update QuickApp file on QA on HC3, need to have .project file",
+    usage = "plua -t updateFile <filename>",
+    fun = function(self,file) 
+      self.lib.updateFile(file) 
+      self:INFO("Updated file",file)
+    end
+  },
+  updateQA = {
+    doc = "Update QuickApp on HC3, need to have .project file",
+    usage = "plua -t updateQA <filename>",
+    fun = function(self,file)
+      self.lib.updateQA(file)
+      self:INFO("Updated QA",file)
+    end
+  },
+  downloadQA = {
+    doc = "Download QuickApp from HC3 and unpack it to lua files",
+    usage = "plua -t downloadQA <id> [<path>]",
+    fun = function(self,id,path)
+      id = tonumber(id)
+      path = path or "./"
+      path = path:sub(#path) == "/" and path or path.."/"
+      assert(id,"id must be number")
+      self:INFO("Downloading QA",id,"to",path)
+      local name = self.lib.downloadFQA(id,path)
+      self:INFO("Downloaded QA",name)
+    end
+  },
+  packQA = {
+    doc = "Pack lua QuickApp file into a .fqa file",
+    usage = "plua -t packQA <filename>",
+    fun = function(self,file)
+      local fqa = getFQA(self,file)
+      self:INFO("Packing QA",file)
+      _print(json.encodeFast(fqa))
+    end
+  }
 
-  if cmd == "uploadQA" then             -- uploadQA <filename>
-    self:INFO("Uploading QA",file)
-    local fqa = getFQA(self,file)
-    self.lib.uploadFQA(fqa)
+}
 
-  elseif cmd == "updateFile" then        -- updateFile <filename>
-    self.lib.updateFile(file)
-
-  elseif cmd == "updateQA" then          -- updateQA <filename>
-    self:INFO("Not implemented: Updating QA",file)
-    self.lib.updateQA(file)
-
-  elseif cmd == "downloadQA" then        -- downloadQA <id>:<path>
-    local id,path = args:match("^([^:]+):(.*)$")
-    self:INFO("Downloading QA",id,"to",path)
-    self.lib.downloadFQA(id,path)
-
-  elseif cmd == "packQA" then             -- packQA <filename>
-    local fqa = getFQA(self,file)
-    self:INFO("Packing QA",file)
-    _print(json.encodeFast(fqa))
-
+function Emulator:runTool(tool,...)
+  if tool == 'help' then
+    for name,t in pairs(tools) do
+      _print(name,":",t.doc)
+      _print("  ",t.usage)
+    end
+    return
+  end
+  if tools[tool] then 
+    local stat,err = pcall(tools[tool].fun,self,...)
+    if not stat then 
+      self:ERROR("Tool error",tool,err)
+    end
   else
-    self:ERROR("Unknown task: "..cmd)
+    self:ERROR("Unknown tool: "..tool)
   end
   return false
 end

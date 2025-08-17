@@ -46,6 +46,24 @@
         "${relativeFile}"
       ],
       "listenPublicly": true
-    }
+    },
+    {
+      "name": "Plua: Test tool",
+      "type": "luaMobDebug",
+      "request": "launch",
+      "workingDirectory": "${workspaceFolder}",
+      "sourceBasePath": "${workspaceFolder}",
+      "listenPort": 8172,
+      "stopOnEntry": false,
+      "sourceEncoding": "UTF-8",
+      "interpreter": "./run.sh",
+      "arguments": [
+        "--tool",
+        "downloadQA",
+        "3908",
+        "test/"
+      ],
+      "listenPublicly": true
+    },
   ]
 }

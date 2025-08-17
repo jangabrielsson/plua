@@ -119,7 +119,7 @@ async def _perform_http_request(url: str, options: Dict[str, Any], callback_id: 
                     logger.error(f"Error calling HTTP callback {callback_id}: {e}")
                     
     except asyncio.TimeoutError:
-        logger.error(f"HTTP request timeout for {url}")
+        # logger.error(f"HTTP request timeout for {url}")
         error_message = f'Request to {url} timed out after {timeout} seconds'
         try:
             engine._lua.globals()["_PY"]["timerExpired"](callback_id, error_message, None)
@@ -127,7 +127,7 @@ async def _perform_http_request(url: str, options: Dict[str, Any], callback_id: 
             logger.error(f"Error calling HTTP timeout callback {callback_id}: {e}")
             
     except Exception as e:
-        logger.error(f"HTTP request error for {url}: {e}")
+        # logger.error(f"HTTP request error for {url}: {e}")
         try:
             engine._lua.globals()["_PY"]["timerExpired"](callback_id, str(e), None)
         except Exception as e:
@@ -189,10 +189,8 @@ def http_request_sync(options: Any) -> Any:
         return python_to_lua_table(result)
         
     except requests.RequestException as e:
-        logger.error(f"Sync HTTP request error: {e}")
         return python_to_lua_table({'error': str(e)})
     except Exception as e:
-        logger.error(f"Sync HTTP request unexpected error: {e}")
         return python_to_lua_table({'error': str(e)})
 
 

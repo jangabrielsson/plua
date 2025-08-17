@@ -5,11 +5,14 @@ local _print = print
 
 -- Use config for cross-platform paths
 local config = _PY.config or {}
-local fileSep = config.fileSeparator or "/"
 local luaLibPath = config.luaLibPath or "src/lua"
+config.tempdir = os.tmpname():gsub("\\", "/")
+if not config.tempdir:match("/$") then
+  config.tempdir = config.tempdir .. "/"
+end
 
 -- Build platform-appropriate path
-local initpath = luaLibPath .. fileSep .. "?.lua;"
+local initpath = luaLibPath .. "/" .. "?.lua;"
 local current_path = package.path
 package.path = initpath .. current_path
 
@@ -217,6 +220,11 @@ local function loadAndRun(filename)
 end
 
 function _PY.mainLuaFile(filenames)
+  if _PY.config.tool then 
+    require("fibaro")
+    _PY.mainLuaFile(filenames)
+    return
+  end
   for _,filename in ipairs(filenames or {}) do
     -- ToDo, we could be smart here and check if it looks like a QuickApp file?
     loadAndRun(filename)
@@ -437,11 +445,13 @@ function _PY.threadRequest(id, script, isJson)
     net = require("net")
     require("timers")
     os.getenv = _PY.dotgetenv
+
+    if _PY.config.diagnostic then require("diagnostic") os.exit() end
+
     if config.fibaro or config.environment=='zerobrane' then
       require("fibaro")
     end
-    
-    
+
     --------------------------------- Test functions ---------------------------------
     -- Test functions for JSON function calling
     function greet(name)

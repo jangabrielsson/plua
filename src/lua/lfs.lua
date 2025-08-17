@@ -9,12 +9,12 @@ local fs_module = nil
 
 local function ensure_filesystem_loaded()
   if not fs_module then
-    print("Loading filesystem module dynamically...")
+    --print("Loading filesystem module dynamically...")
     fs_module = _PY.loadPythonModule("filesystem")
     if fs_module.error then
       error("Failed to load filesystem module: " .. fs_module.error)
     end
-    print("Filesystem module loaded successfully!")
+    --print("Filesystem module loaded successfully!")
   end
   return fs_module
 end

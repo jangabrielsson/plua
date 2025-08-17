@@ -6,8 +6,7 @@
       "type": "shell",
       "command": "plua",
       "args": [
-        "--fibaro",
-        "-a",
+        "--tool",
         "uploadQA",
         "${relativeFile}"
       ],
@@ -18,8 +17,7 @@
       "type": "shell",
       "command": "plua",
       "args": [
-        "--fibaro",
-        "-a",
+        "--tool",
         "updateFile",
         "${relativeFile}"
       ],
@@ -30,9 +28,8 @@
       "type": "shell",
       "command": "plua",
       "args": [
-        "--fibaro",
+        "--tool",
         "updateQA",
-        "-a",
         "${relativeFile}"
       ],
       "group": "build"
@@ -42,10 +39,10 @@
       "type": "shell",
       "command": "plua",
       "args": [
-        "--fibaro",
-        "-a",
-        "downloadQA ${input:QA_id}:${input:path_id}",
-        "dummy.lua"
+        "--tool",
+        "downloadQA",
+        "${input:QA_id}",
+        "${input:path_id}",
       ],
       "group": "build"
     }

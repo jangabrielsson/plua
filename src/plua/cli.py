@@ -212,7 +212,8 @@ def get_config():
         "enginePath": str(Path(__file__).parent.parent).replace("\\", "/"),
         "luaLibPath": str(Path(__file__).parent.parent / "lua").replace("\\", "/"),
         "environment": detect_environment(),
-        "tempdir": os.path.join(os.path.expanduser("~"), "tmp") if platform.system() != "Windows" else os.environ.get("TEMP", "C:\\temp"),
+        # Set temdir in lua
+        # "tempdir": os.path.join(os.path.expanduser("~"), "tmp") if platform.system() != "Windows" else os.environ.get("TEMP", "C:\\temp"),
     }
     return config
 
@@ -625,6 +626,11 @@ def main():
         default=None
     )
     parser.add_argument(
+        "-t", "--tool",
+        action="store_true",
+        help="Run tool, [help, downloadQA, uploadQA, updateFile, updateQA]"
+    )
+    parser.add_argument(
         "--nodebugger",
         action="store_true",
         help="Disable Lua debugger support",
@@ -640,6 +646,11 @@ def main():
         help="Enable Fibaro HC3 emulation mode",
     )
     parser.add_argument(
+        "--diagnostic",
+        action="store_true",
+        help="Run diagnostic tests",
+    )
+    parser.add_argument(
         "-l",
         help="Ignored, for Lua CLI compatibility",
     )
@@ -647,10 +658,6 @@ def main():
         "--header",
         action="append",
         help="Add header string (can be used multiple times)",
-    )
-    parser.add_argument(
-        "-a", "--args",
-        help="Add argument string to pass to the script",
     )
     parser.add_argument(
         "--api-port",
@@ -709,9 +716,10 @@ def main():
     config["telnet"] = args.telnet
     config["telnet_port"] = args.telnet_port
     config["runFor"] = args.run_for
-    config["args"] = args.args
     config["scripts"] = args.scripts or []
+    config["tool"] = args.tool
     config["startTime"] = startTime
+    config["diagnostic"] = args.diagnostic or False
     # Store the full CLI command line as a string
     config["argv"] = " ".join([repr(arg) if " " in arg else arg for arg in sys.argv])
 

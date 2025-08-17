@@ -424,10 +424,10 @@ function net.TCPServer()
   return self
 end
 
-function net.TCPEchoServer(host,port, system)
+function net.TCPEchoServer(host,port, system, nodebug)
   local self = net.TCPServer()
   self:start(host,port,function(client_socket, client_ip, client_port)
-    print("Client connected:", client_ip, client_port)
+    if not nodebug then print("Client connected:", client_ip, client_port) end
     
     local function echo()
       -- Read data from the client

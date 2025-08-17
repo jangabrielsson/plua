@@ -798,6 +798,8 @@ local tools = {
     doc = "Upload QuickApp to HC3",
     usage = "plua -t uploadQA <filename>",
     fun = function(self,file)
+      file = tostring(file)
+      assert(_PY.file_exists(file),"File don't exist:"..tostring(file))
       self:INFO("Uploading QA",file)
       local fqa = getFQA(self,file)
       local dev,code = self.lib.uploadFQA(fqa)
@@ -810,7 +812,9 @@ local tools = {
   updateFile = {
     doc = "Update QuickApp file on QA on HC3, need to have .project file",
     usage = "plua -t updateFile <filename>",
-    fun = function(self,file) 
+    fun = function(self,file)
+      file = tostring(file)
+      assert(_PY.file_exists(file),"File don't exist:"..tostring(file))
       self.lib.updateFile(file) 
       self:INFO("Updated file",file)
     end
@@ -819,6 +823,8 @@ local tools = {
     doc = "Update QuickApp on HC3, need to have .project file",
     usage = "plua -t updateQA <filename>",
     fun = function(self,file)
+      file = tostring(file)
+      assert(_PY.file_exists(file),"File don't exist:"..tostring(file))
       self.lib.updateQA(file)
       self:INFO("Updated QA",file)
     end
@@ -830,6 +836,7 @@ local tools = {
       id = tonumber(id)
       path = path or "./"
       path = path:sub(#path) == "/" and path or path.."/"
+      assert(_PY.file_exists(path),"path must exist")
       assert(id,"id must be number")
       self:INFO("Downloading QA",id,"to",path)
       local name = self.lib.downloadFQA(id,path)
@@ -864,7 +871,7 @@ function Emulator:runTool(tool,...)
   else
     self:ERROR("Unknown tool: "..tool)
   end
-  return false
+  os.exit()
 end
 
 return Emulator

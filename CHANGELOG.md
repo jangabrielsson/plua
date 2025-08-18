@@ -1,6 +1,11 @@
-# Changelog [v1.2.15] - 2025-08-18
+# Changelog
 
-### Features
+All notable changes to this project will be documented in this file.
+
+## [v1.2.16] - 2025-08-18
+
+Fixed launch.json with correct options
+
 - ✨ **Feature**: Add automatic changelog generation and update release notes options
 All notable changes to this project will be documented in this file.
 

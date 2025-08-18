@@ -1,12 +1,11 @@
-# Changelog
+# Changelog [v1.2.15] - 2025-08-18
 
+### Features
+- ✨ **Feature**: Add automatic changelog generation and update release notes options
 All notable changes to this project will be documented in this file.
 
 ## [v1.2.15] - 2025-08-18
 
-
-
-[0;34m[INFO][0m Generating release notes from commits since v1.2.14...
 #### Commits since v1.2.14:
 
 - ✨ **Feature**: Add automatic changelog generation and update release notes options

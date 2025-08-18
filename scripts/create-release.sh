@@ -48,7 +48,8 @@ generate_release_notes() {
     echo
     
     if [[ -n "$last_tag" ]]; then
-        print_status "Generating release notes from commits since $last_tag..."
+        # Print status to stderr so it doesn't get captured in the output
+        print_status "Generating release notes from commits since $last_tag..." >&2
         echo "### Commits since $last_tag:"
         echo
         # Get commits since last tag, format them nicely

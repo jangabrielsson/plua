@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.18] - 2025-08-18
+
+
+
+#### Commits since v1.2.17:
+
+- ✨ **Feature**: implement backup tool for HC3 with support for QuickApps, Scenes, and more
+
+
+
 ## [v1.2.17] - 2025-08-18
 
 

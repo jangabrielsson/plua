@@ -25,11 +25,25 @@ local function setup()
   lfs.mkdir(path.."profiles")
   lfs.mkdir(path.."alarmPartitions")
   lfs.mkdir(path.."location")
+  lfs.mkdir(path.."older")
 end
 
-local function backup(path,filename,modification) -- backup a backup file
+local function backup(filename,fpath) -- backup a backup file
+  local err
+  local stat,content = pcall(Emu.lib.readFile,fpath)
+  stat,err = pcall(Emu.lib.writeFile,filename,content)
 end
 
+local function DATE(t)
+  return os.date("%Y_%m_%d_%H_%M_%S_", t)
+end
+
+
+local function TIME(fpath)
+  local stat = lfs.attributes(fpath)
+  return stat and stat.modification or os.time()
+end
+  
 local function backupQuickApps()
   setup()
   Emu:INFO("======== Quick Apps ================")
@@ -41,7 +55,7 @@ local function backupQuickApps()
     local attr = lfs.attributes(fpath)
     if attr == nil or attr.modification < d.modified then
       n = n+1
-      if attr then backup("quickApps",fpath, attr.modification) end
+      if attr then backup(path.."/older/"..DATE(attr.modification)..name, fpath) end
       local fqa,err = Emu.api.get("/quickApp/export/"..d.id)
       Emu:INFO("🗄️ Backing up",fpath)
       Emu.lib.writeFile(fpath,json.encodeFast(fqa))
@@ -62,7 +76,7 @@ local function backupScenes()
     local attr = lfs.attributes(fpath)
     if attr == nil or attr.modification < d.updated then
       n = n+1
-      if attr then backup("scenes",fpath, attr.modification) end
+      if attr then backup(path.."/older/"..DATE(attr.modification)..name, fpath) end
       Emu:INFO("🗄️ Backing up",fpath)
       Emu.lib.writeFile(fpath,json.encode(d))
       lfs.touch(fpath, d.updated, d.updated) -- Use lfs to set the timestamps
@@ -81,6 +95,7 @@ local function backupGlobalVars()
     local fpath = path.."globalVars/"..name
     local attr = lfs.attributes(fpath)
     if attr == nil or attr.modification < d.modified then
+      if attr then backup(path.."/older/"..DATE(attr.modification)..name, fpath) end
       n = n+1
       Emu:INFO("🗄️ Backing up",fpath)
       Emu.lib.writeFile(fpath,json.encode(d))
@@ -108,6 +123,7 @@ local function backupClimate()
     local name = fmt("%s_%d.clim",d.name,d.id)
     local fpath = path.."climate/"..name
     if not equalContent(d,fpath) then
+      backup(path.."/older/"..DATE(TIME(fpath))..name, fpath)
       n = n+1
       Emu:INFO("🗄️ Backing up",fpath)
       Emu.lib.writeFile(fpath,json.encode(d))
@@ -125,6 +141,7 @@ local function backupSprinklers()
     local name = fmt("%s_%d.sprinkler",d.name,d.id)
     local fpath = path.."sprinklers/"..name
     if not equalContent(d,fpath) then
+      backup(path.."/older/"..DATE(TIME(fpath))..name, fpath)
       n = n+1
       Emu:INFO("🗄️ Backing up",fpath)
       Emu.lib.writeFile(fpath,json.encode(d))
@@ -160,6 +177,7 @@ local function backupLocation()
     local fpath = path.."location/"..name
     local attr = lfs.attributes(fpath)
     if attr == nil or attr.modification < d.modified then
+      if attr then backup(path.."/older/"..DATE(attr.modification)..name, fpath) end
       n = n+1
       Emu:INFO("🗄️ Backing up",fpath)
       Emu.lib.writeFile(fpath,json.encode(d))
@@ -178,6 +196,7 @@ local function backupProfiles()
     local name = fmt("%s_%d.prof",d.name,d.id)
     local fpath = path.."profiles/"..name
     if not equalContent(d,fpath) then
+      backup(path.."/older/"..DATE(TIME(fpath))..name, fpath)
       n = n+1
       Emu:INFO("🗄️ Backing up",fpath)
       Emu.lib.writeFile(fpath,json.encode(d))
@@ -196,6 +215,7 @@ local function backupAlarmPartitions()
     local name = fmt("%s_%d.alarm",d.name,d.id)
     local fpath = path.."alarmPartitions/"..name
     if not equalContent(d,fpath) then
+      backup(path.."/older/"..DATE(TIME(fpath))..name, fpath)
       n = n+1
       Emu:INFO("🗄️ Backing up",fpath)
       Emu.lib.writeFile(fpath,json.encode(d))

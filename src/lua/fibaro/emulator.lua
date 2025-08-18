@@ -42,9 +42,6 @@ function Emulator:__init()
     self.config.hc3_creds = _PY.base64_encode(self.config.hc3_user..":"..self.config.hc3_password)
   end
   self.config.IPAddress = _PY.config.host_ip
-  local environment = _PY.get_system_info().environment
-  self.config.cwd = environment.cwd
-  self.config.homedir = environment.home
   self.config.headers = _PY.python_2_lua_table(_PY.config.headers)
   if _PY.config.webport then
     self.config.webport = _PY.config.webport

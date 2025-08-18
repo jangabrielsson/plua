@@ -69,6 +69,13 @@ def setup_unicode_output():
 setup_unicode_output()
 
 
+def ensure_plua_directory():
+    """Ensure ~/.plua directory exists for configuration and state files"""
+    plua_dir = os.path.expanduser("~/.plua")
+    os.makedirs(plua_dir, exist_ok=True)
+    return plua_dir
+
+
 def detect_environment():
     """Detect the environment PLua is running in based on command line arguments"""
     # Get the full command line as a string
@@ -673,6 +680,9 @@ def main():
     except ImportError:
         # warnings module not available (e.g., in Nuitka build), skip warning suppression
         pass
+    
+    # Ensure ~/.plua directory exists early
+    ensure_plua_directory()
     
     # Set up basic logging first (will be updated with user preference later)
     logging.basicConfig(

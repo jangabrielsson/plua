@@ -54,6 +54,24 @@ end
 json = require('json')
 local callbacks = {}
 local callbackID = 0
+local userFuns = {}
+
+local environment = _PY.get_system_info().environment
+_PY.config.cwd = environment.cwd
+_PY.config.homedir = environment.home
+
+local f = io.open(_PY.config.homedir .. "/.plua/user_funs.lua", "r")
+if f then
+  local code = f:read("*all")
+  f:close()
+  local l,err = load(code)
+  if not l then _print("Error loading user_funs.lua:", err)
+  else
+    local ok, res = pcall(l)
+    if not ok then _print("Error executing user_funs.lua:", res)
+    else userFuns = res end
+  end
+end
 
 -- Register a callback and return its ID
 function _PY.registerCallback(callback, persistent, system)

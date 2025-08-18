@@ -266,9 +266,9 @@ class LuaBindings:
                     "python_version": platform.python_version()
                 },
                 "environment": {
-                    "cwd": os.getcwd(),
+                    "cwd": os.getcwd().replace("\\", "/"),
                     "user": os.environ.get("USER", "unknown"),
-                    "home": os.environ.get("HOME", "unknown"),
+                    "home": os.environ.get("HOME", "unknown").replace("\\", "/"),
                     "path_separator": os.pathsep,
                     "line_separator": os.linesep
                 },

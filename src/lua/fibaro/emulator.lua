@@ -3,7 +3,7 @@ local mobdebug = require("mobdebug")
 _PY.mobdebug.on()
 local class = require("class")
 json = require("json")
-require("fibaro.json")
+require("json")
 local fpath = package.searchpath("fibaro", package.path) or ""
 fpath = fpath:sub(1,-(#"fibaro.lua"+1))
 local libpath = fpath.."fibaro".._PY.config.fileSeparator

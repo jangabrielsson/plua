@@ -78,8 +78,9 @@ end
 
 local logStr = function(...) 
   local b = {} 
+  local formatOutput = fibaro.plua.formatOutput or tostring
   for _,e in ipairs({...}) do 
-    b[#b+1]=tostring(e) 
+    b[#b+1]=formatOutput(e)
   end 
   return table.concat(b," ")
 end

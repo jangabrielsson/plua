@@ -57,3 +57,5 @@ _PY.getQuickapp = function(id)
     end
     return Emu:getQuickApp(id)
 end
+
+return Emu

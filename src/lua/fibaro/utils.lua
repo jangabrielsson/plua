@@ -109,19 +109,6 @@ local typeColor = {
 -- @param tag - The tag for the debug message.
 -- @param msg - The message string.
 -- @param typ - The type of message (e.g., "DEBUG", "ERROR").
--- local function __fibaro_add_debug_message(tag, msg, typ, nohtml)
---   tag = tag or "PLUA"
---   local time = ""
---   if Emu.shortTime then
---     time = tostring(Emu.lib.userDate("[%H:%M:%S]"))
---   else
---     time = tostring(Emu.lib.userDate("[%d.%m.%Y][%H:%M:%S]"))
---   end
---   local typStr = fmt("<font color='%s'>%-7s</font>", typeColor[typ], typ)
---   msg = fmt("<font color='grey89'>%s[%s][%s]: %s</font>", time, typStr, tag, msg)
---   _print(msg)
--- end
-
 local function __fibaro_add_debug_message(tag, msg, typ, nohtml)
   tag = tag or "PLUA"
   Emu.lib.log.debugOutput(tag, msg, typ)

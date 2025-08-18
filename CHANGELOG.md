@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.17] - 2025-08-18
+
+
+
+#### Commits since v1.2.16:
+
+- ✨ **Feature**: add sorting to tools and enhance pack/unpack functionality feat(tools): refactor getFQA and add info2FQA for improved structure handling refactor: remove obsolete test_nuitka.lua script
+- 📝 Loads ~/.plua/user_funs.lua if available
+
+
+
 ## [v1.2.16] - 2025-08-18
 
 Fixed launch.json with correct options

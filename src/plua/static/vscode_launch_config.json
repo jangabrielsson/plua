@@ -13,7 +13,6 @@
       "sourceEncoding": "UTF-8",
       "executable": "plua",
       "arguments": [
-        "--debugger",
         "${file}"
       ]
     },
@@ -29,8 +28,9 @@
       "sourceEncoding": "UTF-8",
       "executable": "plua",
       "arguments": [
-        "--debugger",
         "--fibaro",
+       "--run-for",
+        "60",
         "${file}"
       ]
     }

@@ -59,7 +59,8 @@
       "interpreter": "./run.sh",
       "arguments": [
         "--tool",
-        "help"
+        "backup",
+        "backup/"
       ],
       "listenPublicly": true
     },

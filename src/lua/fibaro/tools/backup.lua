@@ -50,7 +50,8 @@ local function backupQuickApps()
   local n = 0
   local fqas = Emu.api.hc3.get("/devices?interface=quickApp")
   for _,d in ipairs(fqas) do
-    local name = fmt("%s_%d.fqa",d.name,d.id)
+    local encrypted = d.properties.encrypted
+    local name = fmt("%s_%d.fqa%s",d.name,d.id,encrypted and "x" or "")
     local fpath = path.."quickApps/"..name
     local attr = lfs.attributes(fpath)
     if attr == nil or attr.modification < d.modified then

@@ -7,6 +7,7 @@ specifically for timer operations and other engine features.
 
 import logging
 from typing import Any, Callable, Dict, Optional
+import os
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -288,11 +289,11 @@ class LuaBindings:
                 return python_to_lua_table({})
         
         # Additional utility functions
-        @export_to_lua("math_add")
-        def math_add(a: float, b: float) -> float:
-            """Add two numbers."""
-            return a + b
-            
+        @export_to_lua("utime")
+        def utime(file: str, creation: int, mod: int) -> float:
+            """Update the access and modification times of a file."""
+            return os.utime(file, (creation, mod))
+
         @export_to_lua("random_number")
         def random_number(min_val: float = 0, max_val: float = 1) -> float:
             """Generate a random number between min_val and max_val."""

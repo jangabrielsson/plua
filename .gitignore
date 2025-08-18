@@ -267,3 +267,5 @@ local_settings.py
 # Network debugging files
 debug_*.txt
 network_*.log
+
+backup/

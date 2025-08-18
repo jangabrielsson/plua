@@ -59,9 +59,7 @@
       "interpreter": "./run.sh",
       "arguments": [
         "--tool",
-        "downloadQA",
-        "3908",
-        "test/"
+        "help"
       ],
       "listenPublicly": true
     },

@@ -59,10 +59,11 @@ function Emulator:__init()
     base64Encode = _PY.base64_encode,
     base64Decode = _PY.base64_decode,
     mobdebug = _PY.mobdebug,
+    utime = _PY.utime,
   }
   self.lib.userTime = os.time
   self.lib.userDate = os.date
-
+  
   self.EVENT = {}
   setmetatable(self.EVENT, { __newindex = function(t,k,v) rawset(t,k, t[k] or {}) table.insert(t[k],v) end })
   self.debugFlag = false
@@ -102,7 +103,7 @@ function Emulator:__init()
   function restricted.put(path, data) return cr('put',path,data) end
   function restricted.delete(path) return cr('delete',path) end
   self.api.hc3.restricted = restricted
-
+  
   local orgTime,orgDate,timeOffset = os.time,os.date,0
   
   local function round(x) return math.floor(x+0.5) end
@@ -112,18 +113,18 @@ function Emulator:__init()
   local function userDate(a, b) 
     return b == nil and orgDate(a, userTime()) or orgDate(a, round(b)) 
   end
-
+  
   local function getTimeOffset() return timeOffset end
   local function setTimeOffset(offs) timeOffset = offs end
   self.lib.userTime = userTime
   self.lib.userDate = userDate
   function self:setTimeOffset(offs) setTimeOffset(offs) end
-
+  
   loadLib("utils",self)
   loadLib("fibaro_api",self)
   loadLib("tools",self)
   self.lib.ui = loadLib("ui",self)
-
+  
   local localPluaConf = loadLuaFile(_PY.config.cwd.._PY.config.fileSeparator..".plua")
   local homePluaConf =loadLuaFile(_PY.config.homedir.._PY.config.fileSeparator..".plua/config.lua")
   pluaConf = table.merge(homePluaConf,localPluaConf)
@@ -457,22 +458,22 @@ function Emulator:loadMainFile(filenames,greet)
       self:DEBUG("Time offset set to", self.lib.userDate("%c"))
     end
   end
-
+  
   if greet and not _PY.config.nogreet then
     local color = _PY.config.environment == 'zerobrane' and "yellow" or "orange"
     _print(self.lib.log.colorStr(color,fmt("Fibaro support, %s, (%.4fs)",
     self.offline and "offline" or "online",
     self.lib.millitime()-self.config.startTime)
   )
-  )
-  end
+)
+end
 
-  self:loadQA(info)
-  
-  self:registerDevice(info)
-  
-  self:startQA(info.device.id)
-  for i=2, #filenames do self.lib.loadQA(filenames[i]) end
+self:loadQA(info)
+
+self:registerDevice(info)
+
+self:startQA(info.device.id)
+for i=2, #filenames do self.lib.loadQA(filenames[i]) end
 end
 
 local stdLua = { 
@@ -490,9 +491,9 @@ function Emulator:loadQA(info,envAdds)
   envAdds = envAdds or {}
   local env = { 
     fibaro = { plua = self }, net = net, json = json, api = self.api, 
-      os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
-      __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
-    }
+    os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
+    __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
+  }
   for _,name in ipairs(stdLua) do env[name] = _G[name] end
   for k,v in pairs(envAdds) do env[k] = v end
   
@@ -538,15 +539,15 @@ function Emulator:startQA(id)
       env.quickApp = env.QuickApp(info.device)
     end
   end
-
+  
   --env.setTimeout(function()
   coroutine.wraptest = coroutine.wraptest
   if coroutine.wraptest then return coroutine.wraptest(func,info) end
-    coroutine.wrapdebug(func, function(err,tb)
-      err = err:match(":(%d+: .*)")
-      print("Error in QA " .. id .. ": " .. tostring(err))
-      print(tb)
-    end)() 
+  coroutine.wrapdebug(func, function(err,tb)
+    err = err:match(":(%d+: .*)")
+    print("Error in QA " .. id .. ": " .. tostring(err))
+    print(tb)
+  end)() 
   --end, 0)
 end
 
@@ -608,24 +609,24 @@ function Emulator:HC3_CALL(method, path, data)
       ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
     }
   })
-
-if res.ok then
-  if tonumber(res.status) and res.status >= 200 and res.status < 300 then
-    return res.json, res.status
+  
+  if res.ok then
+    if tonumber(res.status) and res.status >= 200 and res.status < 300 then
+      return res.json, res.status
+    end
   end
-end
-if res.status == 401 or res.status == 403  then
-  self:ERROR("HC3 Authentication failed: " .. res.status.." ".. (res.status_text or ""))
-  self:INFO("Please check your HC3 credentials in the .env or ~/.env file") 
-  self.INFO("Terminating emulator due to authentication failure, and to avoid lock out of HC3")
-  os.exit()
-end
-if res.error and not (res.status and res.json) then
-  self:ERROR("HC3 call failed: " .. res.error)
-  self:INFO("Please check your HC3 connection")
-  os.exit()
-end
-return nil, res.status, res.status_text
+  if res.status == 401 or res.status == 403  then
+    self:ERROR("HC3 Authentication failed: " .. res.status.." ".. (res.status_text or ""))
+    self:INFO("Please check your HC3 credentials in the .env or ~/.env file") 
+    self.INFO("Terminating emulator due to authentication failure, and to avoid lock out of HC3")
+    os.exit()
+  end
+  if res.error and not (res.status and res.json) then
+    self:ERROR("HC3 call failed: " .. res.error)
+    self:INFO("Please check your HC3 connection")
+    os.exit()
+  end
+  return nil, res.status, res.status_text
 end
 
 function Emulator:API_CALL(method, path, data)
@@ -753,7 +754,7 @@ function Emulator:processHeaders(filename,content,extraHeaders)
   local code = "\n"..content
   local eod = code:find("\n%-[%-]+ENDOFHEADERS") -- Embedded headers
   if eod then code = code:sub(1,eod-1) end
-
+  
   if code:match("%-%-%%%%name=") then code = compatHeaders(code) end
   code:gsub("\n%-%-%%%%([%w_]-):([^\n]*)",function(key,str) 
     str = str:match("^%s*(.-)%s*$") or str
@@ -793,7 +794,7 @@ local tools = {
   uploadQA = {
     sort = 1,
     doc = "Upload QuickApp to HC3",
-    usage = "plua -t uploadQA <filename>",
+    usage = ">plua -t uploadQA <filename>",
     fun = function(self,file)
       file = tostring(file)
       assert(_PY.file_exists(file),"File don't exist:"..tostring(file))
@@ -809,7 +810,7 @@ local tools = {
   updateFile = {
     sort = 3,
     doc = "Update QuickApp file on QA on HC3, need to have .project file",
-    usage = "plua -t updateFile <filename>",
+    usage = ">plua -t updateFile <filename>",
     fun = function(self,file)
       file = tostring(file)
       assert(_PY.file_exists(file),"File don't exist:"..tostring(file))
@@ -820,7 +821,7 @@ local tools = {
   updateQA = {
     sort = 4,
     doc = "Update QuickApp on HC3, need to have .project file",
-    usage = "plua -t updateQA <filename>",
+    usage = ">plua -t updateQA <filename>",
     fun = function(self,file)
       file = tostring(file)
       assert(_PY.file_exists(file),"File don't exist:"..tostring(file))
@@ -831,7 +832,7 @@ local tools = {
   downloadQA = {
     sort = 2,
     doc = "Download QuickApp from HC3 and unpack it to lua files",
-    usage = "plua -t downloadQA <id> [<dest dir>]",
+    usage = ">plua -t downloadQA <id> [<dest dir>]",
     fun = function(self,id,path)
       id = tonumber(id)
       path = path or "./"
@@ -846,7 +847,7 @@ local tools = {
   pack = {
     sort = 5,
     doc = "Pack lua QuickApp file into a .fqa file",
-    usage = "plua -t pack <qa filename> [<fqa filename>]",
+    usage = ">plua -t pack <qa filename> [<fqa filename>]",
     fun = function(self,file,name)
       assert(_PY.file_exists(file),"file doesn't exist")
       if not name then name = file:gsub("%.lua$","")..".fqa" end
@@ -859,7 +860,7 @@ local tools = {
   unpack = {
     sort = 6,
     doc = "Unpack fqa file to lua files",
-    usage = "plua -t unpack <fqa filename> [<dest dir>]",
+    usage = ">plua -t unpack <fqa filename> [<dest dir>]",
     fun = function(self,file,path)
       path = path or "./"
       path = path:sub(#path) == "/" and path or path.."/"
@@ -871,16 +872,43 @@ local tools = {
       self:INFO("Unpacked QA",file,"to",r)
     end
   }
-
 }
+
+local function loadExtraTools()
+  local n = 0; for _,_ in pairs(tools) do n=n+1 end
+  local lfs = require("lfs")
+  local toolsPath = libpath.."tools/"
+  for file in lfs.dir(toolsPath) do
+    if file ~= "." and file ~= ".." then
+      if file:match("%.lua$") then
+        local toolName = file:sub(1,-5) -- Remove .lua
+        if not tools[toolName] then
+          local f = io.open(toolsPath..file,"r")
+          if f then
+            local code = f:read("*a")
+            f:close()
+            local t = load(code,toolsPath..file)(Emulator)
+            if t and t.fun then
+              n = n+1
+              tools[toolName] = { sort=n, doc=t.doc, usage=t.usage, fun=t.fun }
+            end
+          end
+        end
+      end
+    end
+  end
+end
 
 function Emulator:runTool(tool,...)
   if tool == 'help' then
+    loadExtraTools()
     local r = {} for k,v in pairs(tools) do r[#r+1] = {sort=v.sort,name=k,doc=v.doc,usage=v.usage} end
     table.sort(r,function(a,b) return a.sort < b.sort end)
+    _print("=========== Available tools: ===================")
     for _,t in pairs(r) do
       _print(t.name,":",t.doc)
       _print("  ",t.usage)
+      _print()
     end 
   elseif tools[tool] then 
     local stat,err = pcall(tools[tool].fun,self,...)
@@ -888,7 +916,16 @@ function Emulator:runTool(tool,...)
       self:ERROR("Tool error",tool,err)
     end
   else
-    self:ERROR("Unknown tool: "..tool)
+    local fname = libpath.."tools/"..tool..".lua"
+    local f = io.open(fname,"r")
+    if f then
+      local code = f:read("*a")
+      f:close()
+      local t = load(code,fname)(self,...)
+      t.fun(self,...)
+    else
+      self:ERROR("Unknown tool: "..tool)
+    end
   end
   --os.exit()
 end

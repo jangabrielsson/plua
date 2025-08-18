@@ -286,6 +286,7 @@ PLua supports all Fibaro device types and interfaces:
 - [QuickApp internals](docs/tutorials/README.md) - Some QuickApp implementation deep dives
 - [docs/](docs/) - Detailed documentation and guides
 - [examples/](examples/) - Code examples and templates
+- [CHANGELOG.md](CHANGELOG.md) - Release notes and version history
 
 ## 🤝 Contributing
 

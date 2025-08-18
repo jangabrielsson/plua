@@ -34,6 +34,68 @@ get_current_version() {
     grep "__version__" src/plua/__init__.py | sed 's/.*"\(.*\)".*/\1/'
 }
 
+# Get the last release tag
+get_last_release_tag() {
+    git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1
+}
+
+# Generate release notes from git commits since last release
+generate_release_notes() {
+    local last_tag=$(get_last_release_tag)
+    local version=$1
+    
+    echo "## Changes in v$version"
+    echo
+    
+    if [[ -n "$last_tag" ]]; then
+        print_status "Generating release notes from commits since $last_tag..."
+        echo "### Commits since $last_tag:"
+        echo
+        # Get commits since last tag, format them nicely
+        git log --oneline --no-merges "${last_tag}..HEAD" | while read -r commit; do
+            # Extract commit hash and message
+            hash=$(echo "$commit" | cut -d' ' -f1)
+            message=$(echo "$commit" | cut -d' ' -f2-)
+            
+            # Categorize commits based on conventional commit patterns
+            if [[ "$message" =~ ^feat(\(.*\))?:\ (.+) ]]; then
+                echo "- ✨ **Feature**: ${message#feat*: }"
+            elif [[ "$message" =~ ^fix(\(.*\))?:\ (.+) ]]; then
+                echo "- 🐛 **Fix**: ${message#fix*: }"
+            elif [[ "$message" =~ ^docs(\(.*\))?:\ (.+) ]]; then
+                echo "- 📚 **Docs**: ${message#docs*: }"
+            elif [[ "$message" =~ ^style(\(.*\))?:\ (.+) ]]; then
+                echo "- 💄 **Style**: ${message#style*: }"
+            elif [[ "$message" =~ ^refactor(\(.*\))?:\ (.+) ]]; then
+                echo "- ♻️ **Refactor**: ${message#refactor*: }"
+            elif [[ "$message" =~ ^test(\(.*\))?:\ (.+) ]]; then
+                echo "- 🧪 **Test**: ${message#test*: }"
+            elif [[ "$message" =~ ^chore(\(.*\))?:\ (.+) ]]; then
+                echo "- 🔧 **Chore**: ${message#chore*: }"
+            elif [[ "$message" =~ ^perf(\(.*\))?:\ (.+) ]]; then
+                echo "- ⚡ **Performance**: ${message#perf*: }"
+            elif [[ "$message" =~ ^ci(\(.*\))?:\ (.+) ]]; then
+                echo "- 👷 **CI**: ${message#ci*: }"
+            elif [[ "$message" =~ ^build(\(.*\))?:\ (.+) ]]; then
+                echo "- 🏗️ **Build**: ${message#build*: }"
+            else
+                echo "- 📝 $message"
+            fi
+        done
+    else
+        echo "### All commits (no previous release found):"
+        echo
+        git log --oneline --no-merges | while read -r commit; do
+            message=$(echo "$commit" | cut -d' ' -f2-)
+            echo "- 📝 $message"
+        done
+    fi
+    
+    echo
+    echo "---"
+    echo "*Generated automatically from git commits*"
+}
+
 # Bump version based on type
 bump_version() {
     local current_version=$1
@@ -124,8 +186,40 @@ main() {
     if [[ -n "$2" ]]; then
         release_notes="$2"
     else
-        print_status "Enter release notes (press Ctrl+D when done):"
-        release_notes=$(cat)
+        echo
+        echo "Release notes options:"
+        echo "1) Auto-generate from git commits since last release"
+        echo "2) Enter custom release notes"
+        echo "3) Use simple default message"
+        echo
+        read -p "Choice (1-3): " notes_choice
+        
+        case $notes_choice in
+            1)
+                print_status "Generating release notes from git commits..."
+                release_notes=$(generate_release_notes "$new_version")
+                echo
+                print_status "Generated release notes:"
+                echo "$release_notes"
+                echo
+                read -p "Use these release notes? (Y/n): " use_generated
+                if [[ "$use_generated" == "n" || "$use_generated" == "N" ]]; then
+                    print_status "Enter custom release notes (press Ctrl+D when done):"
+                    release_notes=$(cat)
+                fi
+                ;;
+            2)
+                print_status "Enter custom release notes (press Ctrl+D when done):"
+                release_notes=$(cat)
+                ;;
+            3)
+                release_notes="Release version $new_version"
+                ;;
+            *)
+                print_warning "Invalid choice, using auto-generated notes"
+                release_notes=$(generate_release_notes "$new_version")
+                ;;
+        esac
     fi
     
     if [[ -z "$release_notes" ]]; then
@@ -154,9 +248,41 @@ main() {
     sed -i.bak "s/version = \".*\"/version = \"$new_version\"/" pyproject.toml
     rm pyproject.toml.bak
     
-    # Commit the version change
-    print_status "Committing version update..."
-    git add src/plua/__init__.py pyproject.toml
+    # Update or create CHANGELOG.md
+    print_status "Updating CHANGELOG.md..."
+    if [[ ! -f "CHANGELOG.md" ]]; then
+        echo "# Changelog" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+    fi
+    
+    # Prepare changelog entry
+    changelog_entry="## [v$new_version] - $(date +%Y-%m-%d)"
+    
+    # Create temporary file with new changelog entry
+    temp_changelog=$(mktemp)
+    echo "# Changelog" > "$temp_changelog"
+    echo "" >> "$temp_changelog"
+    echo "All notable changes to this project will be documented in this file." >> "$temp_changelog"
+    echo "" >> "$temp_changelog"
+    echo "$changelog_entry" >> "$temp_changelog"
+    echo "" >> "$temp_changelog"
+    
+    # Add the release notes to changelog (convert from markdown to simpler format)
+    echo "$release_notes" | sed 's/^## Changes in v[0-9.]*$//' | sed 's/^### /#### /' | sed '/^---$/,$d' >> "$temp_changelog"
+    echo "" >> "$temp_changelog"
+    
+    # Append existing changelog content (skip the header)
+    if [[ -f "CHANGELOG.md" ]]; then
+        tail -n +4 CHANGELOG.md | grep -v "^## \[v$new_version\]" >> "$temp_changelog" 2>/dev/null || true
+    fi
+    
+    mv "$temp_changelog" CHANGELOG.md
+    
+    # Commit the version change and changelog
+    print_status "Committing version update and changelog..."
+    git add src/plua/__init__.py pyproject.toml CHANGELOG.md
     git commit -m "Bump version to $new_version"
     
     # Create and push tag
@@ -178,6 +304,8 @@ main() {
     print_status "   📦 Publish to PyPI using stored API token"
     print_status "   🔨 Build executables for Linux, Windows, and macOS"
     print_status "🎉 PyPI package will be available at: https://pypi.org/project/plua/$new_version/"
+    print_status "📝 Updated CHANGELOG.md with release notes"
+    print_status "💡 Note: PyPI description comes from README.md, not release notes"
     echo
 }
 

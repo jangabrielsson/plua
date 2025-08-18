@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.19] - 2025-08-18
+
+
+
+#### Commits since v1.2.18:
+
+- ✨ **Feature**: update backup tool to include encrypted quickApp filenames
+- ✨ **Feature**: enhance backup functionality to include older versions of files
+
+
+
 ## [v1.2.18] - 2025-08-18
 
 

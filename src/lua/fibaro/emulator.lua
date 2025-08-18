@@ -791,6 +791,7 @@ end
 
 local tools = {
   uploadQA = {
+    sort = 1,
     doc = "Upload QuickApp to HC3",
     usage = "plua -t uploadQA <filename>",
     fun = function(self,file)
@@ -806,6 +807,7 @@ local tools = {
     end
   },
   updateFile = {
+    sort = 3,
     doc = "Update QuickApp file on QA on HC3, need to have .project file",
     usage = "plua -t updateFile <filename>",
     fun = function(self,file)
@@ -816,6 +818,7 @@ local tools = {
     end
   },
   updateQA = {
+    sort = 4,
     doc = "Update QuickApp on HC3, need to have .project file",
     usage = "plua -t updateQA <filename>",
     fun = function(self,file)
@@ -826,8 +829,9 @@ local tools = {
     end
   },
   downloadQA = {
+    sort = 2,
     doc = "Download QuickApp from HC3 and unpack it to lua files",
-    usage = "plua -t downloadQA <id> [<path>]",
+    usage = "plua -t downloadQA <id> [<dest dir>]",
     fun = function(self,id,path)
       id = tonumber(id)
       path = path or "./"
@@ -839,13 +843,32 @@ local tools = {
       self:INFO("Downloaded QA",name)
     end
   },
-  packQA = {
+  pack = {
+    sort = 5,
     doc = "Pack lua QuickApp file into a .fqa file",
-    usage = "plua -t packQA <filename>",
-    fun = function(self,file)
-      local fqa = getFQA(self,file)
-      self:INFO("Packing QA",file)
-      _print(json.encodeFast(fqa))
+    usage = "plua -t pack <qa filename> [<fqa filename>]",
+    fun = function(self,file,name)
+      assert(_PY.file_exists(file),"file doesn't exist")
+      if not name then name = file:gsub("%.lua$","")..".fqa" end
+      local code = self.lib.readFile(file)
+      local fqa = self.lib.luaToFQA(code)
+      self.lib.writeFile(name,json.encodeFast(fqa))
+      self:INFO("Packed QA",file,"to",name)
+    end
+  },
+  unpack = {
+    sort = 6,
+    doc = "Unpack fqa file to lua files",
+    usage = "plua -t unpack <fqa filename> [<dest dir>]",
+    fun = function(self,file,path)
+      path = path or "./"
+      path = path:sub(#path) == "/" and path or path.."/"
+      assert(_PY.file_exists(path),"path must exist")
+      assert(_PY.file_exists(file),"file doesn't exist")
+      local fqa = self.lib.readFile(file)
+      fqa = json.decode(fqa)
+      local r = self.lib.unpackFQAAux(nil,fqa,path)
+      self:INFO("Unpacked QA",file,"to",r)
     end
   }
 
@@ -853,8 +876,10 @@ local tools = {
 
 function Emulator:runTool(tool,...)
   if tool == 'help' then
-    for name,t in pairs(tools) do
-      _print(name,":",t.doc)
+    local r = {} for k,v in pairs(tools) do r[#r+1] = {sort=v.sort,name=k,doc=v.doc,usage=v.usage} end
+    table.sort(r,function(a,b) return a.sort < b.sort end)
+    for _,t in pairs(r) do
+      _print(t.name,":",t.doc)
       _print("  ",t.usage)
     end 
   elseif tools[tool] then 

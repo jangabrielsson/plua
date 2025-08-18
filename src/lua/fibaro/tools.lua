@@ -104,12 +104,10 @@ local function uploadFQA(fqa)
   return res,code
 end
 
-local function getFQA(id) -- Creates FQA structure from installed QA
-  local dev = Emu.DIR[id]
-  assert(dev,"QuickApp not found, ID"..tostring(id))
-  local struct = dev.device
+local function info2FQA(info)
+  local struct = info.device
   local files = {}
-  for name,f in pairs(dev.files) do
+  for name,f in pairs(info.files) do
     if f.content == nil then f.content = Emu.lib.readFile(f.path) end
     files[#files+1] = {name=name, isMain=name=='main', isOpen=false, type='lua', content=f.content}
   end
@@ -134,6 +132,12 @@ local function getFQA(id) -- Creates FQA structure from installed QA
     files = files
   }
   return arrayifyFqa(struct)
+end
+
+local function getFQA(id) -- Creates FQA structure from installed QA
+  local dev = Emu.DIR[id]
+  assert(dev,"QuickApp not found, ID"..tostring(id))
+  return info2FQA(dev)
 end
 
 local function saveQA(id,fileName) -- Save installed QA to disk as .fqa  //Move to QA class
@@ -488,6 +492,11 @@ local function updateFile(fname)
   end
 end
 
+local function luaToFQA(code)
+    local info = Emu:createInfoFromContent("",code)
+    return info2FQA(info)
+end
+
 Emu.lib.createTempName = createTempName
 Emu.lib.findFirstLine = findFirstLine
 Emu.lib.loadQAString = loadQAString
@@ -504,3 +513,5 @@ Emu.lib.getScreenDimension = getScreenDimension
 Emu.lib.createQuickAppWindow = createQuickAppWindow
 Emu.lib.updateFile = updateFile
 Emu.lib.updateQAparts = updateQAparts
+Emu.lib.info2FQA = info2FQA
+Emu.lib.luaToFQA = luaToFQA

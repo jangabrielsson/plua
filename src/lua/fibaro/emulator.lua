@@ -595,20 +595,46 @@ function Emulator:HC3_CALL(method, path, data)
     self:INFO("Please see https://github.com/jangabrielsson/plua/blob/main/README.md for instructions")
     os.exit()
   end
-  local url = self.config.hc3_url.."/api"..path
-  if type(data) == 'table' then data = json.encode(data) end
-  local res = _PY.http_request_sync({
-    method = method, 
-    url = url,
-    data = data,
-    headers = {
-      ['X-Fibaro-Version'] = '2',
-      ['Accept-language'] = 'en',
-      ["User-Agent"] = "plua/0.1.0",
-      ["Content-Type"] = "application/json",
-      ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
-    }
-  })
+  
+  local function makeRequest()
+    local url = self.config.hc3_url.."/api"..path
+    if type(data) == 'table' then data = json.encode(data) end
+    return _PY.http_request_sync({
+      method = method, 
+      url = url,
+      data = data,
+      headers = {
+        ['X-Fibaro-Version'] = '2',
+        ['Accept-language'] = 'en',
+        ["User-Agent"] = "plua/0.1.0",
+        ["Content-Type"] = "application/json",
+        ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
+      }
+    })
+  end
+  
+  -- First attempt
+  local res = makeRequest()
+  
+  -- If request failed with connection error, try to wake the device
+  if res.error and (res.error:find("Connection") or res.error:find("timeout") or res.error:find("refused")) then
+    self:DEBUG("Connection failed, attempting to wake HC3 device...")
+    
+    -- Extract hostname/IP from HC3 URL
+    local host = self.config.hc3_url:match("https?://([^:/]+)")
+    if host and _PY.wake_network_device then
+      local wakeResult = _PY.wake_network_device(host, 3.0)
+      if wakeResult then
+        self:DEBUG("Wake attempt successful, retrying HC3 call...")
+        -- Wait a moment for the device to fully wake up
+        _PY.py_sleep(1000) -- 1 second
+        -- Retry the request
+        res = makeRequest()
+      else
+        self:DEBUG("Wake attempt failed or device didn't respond")
+      end
+    end
+  end
   
   if res.ok then
     if tonumber(res.status) and res.status >= 200 and res.status < 300 then
@@ -921,7 +947,7 @@ function Emulator:runTool(tool,...)
     if f then
       local code = f:read("*a")
       f:close()
-      local t = load(code,fname)(self,...)
+      local t = load(code,fname)()
       t.fun(self,...)
     else
       self:ERROR("Unknown tool: "..tool)

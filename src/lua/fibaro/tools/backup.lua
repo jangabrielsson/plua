@@ -1,32 +1,7 @@
-local Emu,path = ...
 local fmt = string.format
+local Emu
 
 local lfs = require("lfs")
-
-local hasSetup = false
-local function setup()
-  if hasSetup then return end
-  hasSetup = true
-  local now = os.time()
-  
-  path = tostring(path)
-  path = path:gsub("\\","/") -- Normalize path separators
-  path = path:sub(#path) == "/" and path or path.."/"
-  if not lfs.attributes(path) then
-    error("Backup directory don't exist")
-  end
-  
-  lfs.mkdir(path.."quickApps")
-  lfs.mkdir(path.."scenes")
-  lfs.mkdir(path.."globalVars")
-  lfs.mkdir(path.."climate")
-  lfs.mkdir(path.."sprinklers")
-  -- lfs.mkdir(path.."humidity")
-  lfs.mkdir(path.."profiles")
-  lfs.mkdir(path.."alarmPartitions")
-  lfs.mkdir(path.."location")
-  lfs.mkdir(path.."older")
-end
 
 local function backup(filename,fpath) -- backup a backup file
   local err
@@ -38,14 +13,12 @@ local function DATE(t)
   return os.date("%Y_%m_%d_%H_%M_%S_", t)
 end
 
-
 local function TIME(fpath)
   local stat = lfs.attributes(fpath)
   return stat and stat.modification or os.time()
 end
   
-local function backupQuickApps()
-  setup()
+local function backupQuickApps(path,now)
   Emu:INFO("======== Quick Apps ================")
   local n = 0
   local fqas = Emu.api.hc3.get("/devices?interface=quickApp")
@@ -66,8 +39,7 @@ local function backupQuickApps()
   Emu:INFO(fmt("🗄️ Backed up %d quickApps", n))
 end
 
-local function backupScenes()
-  setup()
+local function backupScenes(path,now)
   Emu:INFO("======== Scenes ====================")
   local n = 0
   local scenes = Emu.api.hc3.get("/scenes")
@@ -86,8 +58,7 @@ local function backupScenes()
   Emu:INFO(fmt("🗄️ Backed up %d scenes", n))
 end
 
-local function backupGlobalVars()
-  setup()
+local function backupGlobalVars(path,now)
   Emu:INFO("======== Global Vars ===============")
   local n = 0
   local gvars = Emu.api.hc3.get("/globalVariables")
@@ -115,8 +86,7 @@ local function equalContent(tab,filename)
   return table.equal(tab,t2)
 end
 
-local function backupClimate()
-  setup()
+local function backupClimate(path,now)
   Emu:INFO("======== Climate ===================")
   local n = 0
   local climates = Emu.api.hc3.get("/panels/climate")
@@ -133,8 +103,7 @@ local function backupClimate()
   Emu:INFO(fmt("🗄️ Backed up %d climates", n))
 end
 
-local function backupSprinklers()
-  setup()
+local function backupSprinklers(path,now)
   Emu:INFO("======== Sprinklers ================")
   local n = 0
   local sprinklers = Emu.api.hc3.get("/panels/sprinklers")
@@ -168,8 +137,7 @@ end
 --   Emu:INFO(fmt("🗄️ Backed up %d humidity", n))
 -- end
 
-local function backupLocation()
-  setup()
+local function backupLocation(path,now)
   Emu:INFO("======== Location ==================")
   local n = 0
   local locations = Emu.api.hc3.get("/panels/location")
@@ -188,8 +156,7 @@ local function backupLocation()
   Emu:INFO(fmt("🗄️ Backed up %d locations", n))
 end
 
-local function backupProfiles()
-  setup()
+local function backupProfiles(path,now)
   Emu:INFO("======== Profiles ==================")
   local n = 0
   local profiles = Emu.api.hc3.get("/profiles")
@@ -207,8 +174,7 @@ local function backupProfiles()
   Emu:INFO(fmt("🗄️ Backed up %d profiles", n))
 end
 
-local function backupAlarmPartitions()
-  setup()
+local function backupAlarmPartitions(path,now)
   Emu:INFO("======== Alarm Partitions ==========")
   local n = 0
   local partitions = Emu.api.hc3.get("/alarms/v1/partitions")
@@ -230,15 +196,35 @@ return {
   sort = -1,
   doc = "Backup tool for HC3. Backs up QuickApps, Scenes, Global Variables, Climate, Sprinklers, Profiles, Alarms, and Location.",
   usage = ">plua -t backup <backup dir>",
-  fun = function()
-    backupQuickApps()
-    backupScenes()
-    backupGlobalVars()
-    backupClimate()
-    backupSprinklers()
-    -- backupHumidity()
-    backupLocation()
-    backupProfiles()
-    backupAlarmPartitions()
+  fun = function(_Emu,path)
+    Emu = _Emu
+    local now = os.time()
+    path = tostring(path)
+    path = path:gsub("\\","/") -- Normalize path separators
+    path = path:sub(#path) == "/" and path or path.."/"
+    if not lfs.attributes(path) then
+      error("Backup directory don't exist:"..tostring(path))
+    end
+    
+    lfs.mkdir(path.."quickApps")
+    lfs.mkdir(path.."scenes")
+    lfs.mkdir(path.."globalVars")
+    lfs.mkdir(path.."climate")
+    lfs.mkdir(path.."sprinklers")
+    -- lfs.mkdir(path.."humidity")
+    lfs.mkdir(path.."profiles")
+    lfs.mkdir(path.."alarmPartitions")
+    lfs.mkdir(path.."location")
+    lfs.mkdir(path.."older")
+
+    backupQuickApps(path,now)
+    backupScenes(path,now)
+    backupGlobalVars(path,now)
+    backupClimate(path,now)
+    backupSprinklers(path,now)
+    -- backupHumidity(path,now)
+    backupLocation(path,now)
+    backupProfiles(path,now)
+    backupAlarmPartitions(path,now)
   end
 }

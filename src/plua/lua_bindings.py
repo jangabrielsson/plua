@@ -8,6 +8,9 @@ specifically for timer operations and other engine features.
 import logging
 from typing import Any, Callable, Dict, Optional
 import os
+import socket
+import subprocess
+import platform
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -959,7 +962,7 @@ class LuaBindings:
             except Exception as e:
                 logger.error(f"Error getting refresh states status: {e}", file=sys.stderr)
                 return {'running': False, 'error': str(e)}
-        
+
     def get_all_bindings(self) -> Dict[str, Any]:
         """
         Get all available bindings for Lua.
@@ -968,4 +971,97 @@ class LuaBindings:
             Dictionary containing all exported functions
         """
         return get_exported_functions()
+
+@export_to_lua("wake_network_device")
+def wake_network_device(host: str, timeout: float = 5.0) -> bool:
+    """
+    Attempt to wake up a network device that may have sleeping network interfaces.
+    
+    This function tries multiple approaches:
+    1. ARP ping to refresh ARP tables
+    2. TCP connection attempts on common ports
+    3. Platform-specific ping with broadcast
+    
+    Args:
+        host: IP address or hostname of the device
+        timeout: Timeout in seconds for each attempt
+        
+    Returns:
+        True if device responds, False otherwise
+    """
+    try:
+        logger.info(f"Attempting to wake network device: {host}")
+        
+        # Method 1: Try ARP ping (if available)
+        try:
+            if platform.system().lower() == "linux":
+                result = subprocess.run(
+                    ["arping", "-c", "1", "-W", str(int(timeout)), host],
+                    capture_output=True,
+                    timeout=timeout
+                )
+                if result.returncode == 0:
+                    logger.info(f"ARP ping successful for {host}")
+                    return True
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass  # arping not available or timed out
+        
+        # Method 2: TCP connection attempts on common ports
+        common_ports = [80, 443, 22, 23, 8080, 11111]  # Common HC3 ports
+        for port in common_ports:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(timeout / len(common_ports))
+                result = sock.connect_ex((host, port))
+                sock.close()
+                if result == 0:
+                    logger.info(f"TCP connection successful to {host}:{port}")
+                    return True
+            except Exception:
+                continue
+        
+        # Method 3: ICMP ping with broadcast-like behavior
+        try:
+            ping_cmd = ["ping", "-c", "1", "-W", str(int(timeout * 1000))]
+            if platform.system().lower() == "darwin":  # macOS
+                ping_cmd = ["ping", "-c", "1", "-t", str(int(timeout))]
+            elif platform.system().lower() == "windows":
+                ping_cmd = ["ping", "-n", "1", "-w", str(int(timeout * 1000))]
+            
+            ping_cmd.append(host)
+            result = subprocess.run(ping_cmd, capture_output=True, timeout=timeout)
+            if result.returncode == 0:
+                logger.info(f"Ping successful for {host}")
+                return True
+        except subprocess.TimeoutExpired:
+            pass
+        
+        # Method 4: Try UDP broadcast on same subnet (last resort)
+        try:
+            # Parse IP to determine broadcast address
+            ip_parts = host.split('.')
+            if len(ip_parts) == 4:
+                broadcast_addr = f"{ip_parts[0]}.{ip_parts[1]}.{ip_parts[2]}.255"
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                sock.settimeout(1.0)
+                # Send a small UDP packet to broadcast
+                sock.sendto(b"wake", (broadcast_addr, 9))
+                sock.close()
+                logger.info(f"Sent broadcast packet to wake {host}")
+        except Exception:
+            pass
+        
+        logger.warning(f"Failed to wake network device: {host}")
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error in wake_network_device: {e}")
+        return False
+
+@export_to_lua("py_sleep")
+def py_sleep(milliseconds: int):
+    """Sleep for the specified number of milliseconds (blocking)."""
+    import time
+    time.sleep(milliseconds / 1000.0)
         

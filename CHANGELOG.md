@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.20] - 2025-08-19
+
+
+
+#### Commits since v1.2.19:
+
+- ✨ **Feature**: add wake_network_device functionality to handle device wake-up on connection errors feat(backup): refactor backup functions to accept path and now parameters for improved flexibility feat(lua_bindings): implement wake_network_device and py_sleep functions for enhanced Lua-Python integration
+
+
+
 ## [v1.2.19] - 2025-08-18
 
 

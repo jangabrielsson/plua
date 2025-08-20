@@ -144,9 +144,9 @@ local function UI2NewUiView(UI)
           onToggled = (typ=='select' or typ=='multi') and mkBinding(name,"onToggled","$event.value",el.onToggled) or nil,
           onChanged = typ=='slider' and mkBinding(name,"onChanged","$event.value",el.onChanged) or nil,
         },
-        max = el.max,
-        min = el.min,
-        step = el.step,
+        max = el.max and tostring(el.max) or nil,
+        min = el.min and tostring(el.min) or nil,
+        step = el.step and tostring(el.step) or nil,
         name = el[typ],
         options = arrayify(el.options),
         values = arrayify(el.values) or ((typ=='select' or typ=='multi') and arrayify({})) or nil,
@@ -217,9 +217,9 @@ local function uiView2UI(uiView,uiCallbacks)
           slider=e.name,
           text=e.text,
           onChanged=cb,
-          min=e.min,
-          max=e.max,
-          step=e.step
+          min=e.min and tostring(e.min) or nil,
+          max=e.max and tostring(e.max) or nil,
+          step=e.step and tostring(e.step) or nil
         }
       elseif e.type == 'switch' then
         elm = {switch=e.name,text=e.text,value=e.value,onReleased=cb}
@@ -275,9 +275,9 @@ local function extendUI(UI,UImap)
         if e.text == nil then e.text = "" end
         if e.onChanged == nil then e.onChanged = "" end
         if e.value == nil then e.value = "0" end
-        if e.min == nil then e.min = "0" end
-        if e.max == nil then e.max = "100" end
-        if e.step == nil then e.step = "1" end
+        if e.min == nil then e.min = "0" else e.min = tostring(e.min) end
+        if e.max == nil then e.max = "100" else e.max = tostring(e.max) end
+        if e.step == nil then e.step = "1" else e.step = tostring(e.step) end
         if e.visible == nil then e.visible = true end
       elseif e.label then
         UImap[e.label] = e
@@ -397,9 +397,9 @@ local function collectViewLayoutRow(u,map)
             slider=name, 
             text=u.text, 
             onChanged=(map[name] or {}).onChanged,
-            max = u.max,
-            min = u.min,
-            step = u.step,
+            max = u.max and tostring(u.max) or nil,
+            min = u.min and tostring(u.min) or nil,
+            step = u.step and tostring(u.step) or nil,
             visible = u.visible==nil and true or u.visible,
           }
         elseif typ=='select' then

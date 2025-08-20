@@ -922,16 +922,31 @@
                 label.textContent = element.text || 'Select';
                 
                 const select = document.createElement('select');
-                if (element.options) {
-                    element.options.forEach(option => {
-                        const optionElement = document.createElement('option');
-                        optionElement.value = option.value || option;
-                        optionElement.textContent = option.text || option;
-                        if (option.value === element.value || option === element.value) {
-                            optionElement.selected = true;
-                        }
-                        select.appendChild(optionElement);
-                    });
+                // Robust option handling for select elements
+                try {
+                    if (element.options && Array.isArray(element.options) && element.options.length > 0) {
+                        element.options.forEach(option => {
+                            const optionElement = document.createElement('option');
+                            optionElement.value = option.value || option;
+                            optionElement.textContent = option.text || option;
+                            if (option.value === element.value || option === element.value) {
+                                optionElement.selected = true;
+                            }
+                            select.appendChild(optionElement);
+                        });
+                    } else {
+                        // Add a placeholder option when no options are available
+                        const placeholderOption = document.createElement('option');
+                        placeholderOption.value = '';
+                        placeholderOption.textContent = 'No options available';
+                        placeholderOption.disabled = true;
+                        select.appendChild(placeholderOption);
+                    }
+                } catch (error) {
+                    console.warn('Error processing select options:', error, element.options);
+                    placeholderOption.textContent = 'No options available';
+                    placeholderOption.disabled = true;
+                    select.appendChild(placeholderOption);
                 }
                 
                 select.onchange = (e) => {
@@ -982,22 +997,37 @@
                 const dropdownList = document.createElement('div');
                 dropdownList.className = 'qa-ui-multidrop-list';
                 
-                if (element.options) {
-                    element.options.forEach(option => {
-                        const optionLabel = document.createElement('label');
-                        
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.value = option.value || option;
-                        
-                        if (element.values && element.values.includes(option.value || option)) {
-                            checkbox.checked = true;
-                        }
-                        
-                        optionLabel.appendChild(checkbox);
-                        optionLabel.appendChild(document.createTextNode(option.text || option));
-                        dropdownList.appendChild(optionLabel);
-                    });
+                // Robust option handling for multi-select elements  
+                try {
+                    if (element.options && Array.isArray(element.options) && element.options.length > 0) {
+                        element.options.forEach(option => {
+                            const optionLabel = document.createElement('label');
+                            
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.value = option.value || option;
+                            
+                            if (element.values && element.values.includes(option.value || option)) {
+                                checkbox.checked = true;
+                            }
+                            
+                            optionLabel.appendChild(checkbox);
+                            optionLabel.appendChild(document.createTextNode(option.text || option));
+                            dropdownList.appendChild(optionLabel);
+                        });
+                    } else {
+                        // Add a placeholder when no options are available
+                        const placeholderLabel = document.createElement('div');
+                        placeholderLabel.style.padding = '8px';
+                        placeholderLabel.style.color = '#666';
+                        placeholderLabel.textContent = 'No options available';
+                        dropdownList.appendChild(placeholderLabel);
+                    }
+                } catch (error) {
+                    console.warn('Error processing multi-select options:', error, element.options);
+                    placeholderLabel.style.color = '#666';
+                    placeholderLabel.textContent = 'No options available';
+                    dropdownList.appendChild(placeholderLabel);
                 }
                 
                 container.appendChild(dropdownList);
@@ -1435,7 +1465,7 @@
                             }
                         } else if (property === 'options') {
                             const select = elementContainer.querySelector('select');
-                            if (select && Array.isArray(value)) {
+                            if (select && Array.isArray(value) && value.length > 0) {
                                 select.innerHTML = '';
                                 value.forEach(option => {
                                     const optionElement = document.createElement('option');
@@ -1443,6 +1473,15 @@
                                     optionElement.textContent = option.text || option;
                                     select.appendChild(optionElement);
                                 });
+                                this.forceDOMUpdate(select);
+                            } else if (select) {
+                                // Handle empty options array
+                                select.innerHTML = '';
+                                const placeholderOption = document.createElement('option');
+                                placeholderOption.value = '';
+                                placeholderOption.textContent = 'No options available';
+                                placeholderOption.disabled = true;
+                                select.appendChild(placeholderOption);
                                 this.forceDOMUpdate(select);
                             }
                         }
@@ -1472,18 +1511,43 @@
                             this.forceDOMUpdate(elementContainer);
                         } else if (property === 'options') {
                             const dropdownList = elementContainer.querySelector('.qa-ui-multidrop-list');
-                            if (dropdownList && Array.isArray(value)) {
-                                dropdownList.innerHTML = '';
-                                value.forEach(option => {
-                                    const optionLabel = document.createElement('label');
-                                    const checkbox = document.createElement('input');
-                                    checkbox.type = 'checkbox';
-                                    checkbox.value = option.value || option;
-                                    optionLabel.appendChild(checkbox);
-                                    optionLabel.appendChild(document.createTextNode(option.text || option));
-                                    dropdownList.appendChild(optionLabel);
-                                });
-                                this.forceDOMUpdate(dropdownList);
+                            if (dropdownList) {
+                                // Robust option handling for dynamic updates
+                                try {
+                                    if (value && Array.isArray(value) && value.length > 0) {
+                                        dropdownList.innerHTML = '';
+                                        value.forEach(option => {
+                                            const optionLabel = document.createElement('label');
+                                            const checkbox = document.createElement('input');
+                                            checkbox.type = 'checkbox';
+                                            checkbox.value = option.value || option;
+                                            optionLabel.appendChild(checkbox);
+                                            optionLabel.appendChild(document.createTextNode(option.text || option));
+                                            dropdownList.appendChild(optionLabel);
+                                        });
+                                        this.forceDOMUpdate(dropdownList);
+                                    } else {
+                                        // Handle empty or invalid options
+                                        dropdownList.innerHTML = '';
+                                        const placeholderLabel = document.createElement('div');
+                                        placeholderLabel.style.padding = '8px';
+                                        placeholderLabel.style.color = '#666';
+                                        placeholderLabel.textContent = 'No options available';
+                                        dropdownList.appendChild(placeholderLabel);
+                                        this.forceDOMUpdate(dropdownList);
+                                    }
+                                } catch (error) {
+                                    console.error('Error updating multi-select options:', error);
+                                    console.error('Value received:', value);
+                                    // Fallback: clear the dropdown and show error message
+                                    dropdownList.innerHTML = '';
+                                    const errorLabel = document.createElement('div');
+                                    errorLabel.style.padding = '8px';
+                                    errorLabel.style.color = '#ff0000';
+                                    errorLabel.textContent = 'Error loading options';
+                                    dropdownList.appendChild(errorLabel);
+                                    this.forceDOMUpdate(dropdownList);
+                                }
                             }
                         }
                         break;

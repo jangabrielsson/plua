@@ -579,6 +579,32 @@ class FastAPIProcessManager:
         self.quickapp_callback = callback
         logger.info("QuickApp callback set for FastAPI process")
         
+    def _convert_lua_objects(self, obj):
+        """Convert LuaTable objects to Python objects to avoid pickle errors"""
+        if hasattr(obj, '__class__') and 'LuaTable' in str(obj.__class__):
+            # Import here to avoid circular imports
+            try:
+                from .lua_bindings import lua_to_python_table
+                return lua_to_python_table(obj)
+            except ImportError:
+                # Fallback: convert manually if import fails
+                result = {}
+                try:
+                    for key, value in obj.items():
+                        python_key = self._convert_lua_objects(key)
+                        python_value = self._convert_lua_objects(value)
+                        result[python_key] = python_value
+                    return result
+                except Exception:
+                    # If all else fails, return string representation
+                    return str(obj)
+        elif isinstance(obj, (list, tuple)):
+            return [self._convert_lua_objects(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {self._convert_lua_objects(k): self._convert_lua_objects(v) for k, v in obj.items()}
+        else:
+            return obj
+        
     def start(self):
         """Start the FastAPI server process"""
         if self.running:
@@ -743,6 +769,8 @@ class FastAPIProcessManager:
                             logger.info(f"🔧 Calling quickapp_callback for QA {qa_id}")
                             qa_info = self.quickapp_callback("get_quickapp", qa_id)
                             if qa_info:
+                                # Convert any LuaTable objects to Python objects before IPC
+                                qa_info = self._convert_lua_objects(qa_info)
                                 logger.info(f"🔧 QuickApp info found: {qa_info}")
                                 response_data = {"success": True, "data": qa_info}
                             else:
@@ -762,6 +790,8 @@ class FastAPIProcessManager:
                         if self.quickapp_callback:
                             logger.info("🔧 Calling quickapp_callback for all QAs")
                             all_qas = self.quickapp_callback("get_all_quickapps")
+                            # Convert any LuaTable objects to Python objects before IPC
+                            all_qas = self._convert_lua_objects(all_qas)
                             logger.info(f"🔧 All QuickApps found: {all_qas}")
                             response_data = {"success": True, "data": all_qas}
                         else:
@@ -798,6 +828,9 @@ class FastAPIProcessManager:
                 logger.warning("FastAPI process not running")
                 return False
                 
+            # Convert LuaTable objects before sending via IPC
+            converted_value = self._convert_lua_objects(value)
+                
             # Queue the WebSocket broadcast request
             broadcast_data = {
                 "id": str(uuid.uuid4()),
@@ -806,7 +839,7 @@ class FastAPIProcessManager:
                     "qa_id": qa_id,
                     "element_id": element_id,
                     "property_name": property_name,
-                    "value": value
+                    "value": converted_value
                 },
                 "timestamp": time.time()
             }

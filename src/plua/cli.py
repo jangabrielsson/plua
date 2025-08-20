@@ -833,6 +833,13 @@ def main():
     # Store the full CLI command line as a string
     config["argv"] = " ".join([repr(arg) if " " in arg else arg for arg in sys.argv])
 
+    # Configure Rich console based on detected environment
+    try:
+        from .console import configure_console_for_environment
+        configure_console_for_environment(config["environment"])
+    except ImportError:
+        pass  # Rich not available, continue without styling
+
     # Display startup greeting for all modes (unless suppressed)
     if not args.nogreet:
         display_startup_greeting(config)

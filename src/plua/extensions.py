@@ -531,6 +531,12 @@ def broadcast_view_update(qa_id: int, element_id: str, property_name: str, value
             logging.debug("PLua engine not available for broadcast")
             return True  # Don't fail, just skip broadcasting
         
+        # Convert LuaTable values to Python objects to avoid multiprocessing pickle errors
+        if hasattr(value, '__class__') and 'LuaTable' in str(value.__class__):
+            # Convert LuaTable to Python dict
+            from .lua_bindings import lua_to_python_table
+            value = lua_to_python_table(value)
+        
         # Check if API manager is available (multi-process mode)
         api_manager = getattr(engine, '_api_manager', None)
         if api_manager:

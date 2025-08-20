@@ -195,7 +195,6 @@ end
 local function doError(str,n) error(Error(str),n or nil) end
 
 function _PY.mainfileResolver(filename)
-  print("MFR",filename)
   if not filename:match("%.lua$") or filename:match("%.fqa") then
     local f = io.open(filename, "r")
     if not f then return filename end

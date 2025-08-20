@@ -95,7 +95,10 @@ local function uploadFQA(fqa)
   end
   assert(haveMain, "fqa must have a main file")
   arrayifyFqa(fqa)
-  local res,code = Emu.api.hc3.post("/quickApp/",json.encodeFast(fqa))
+  --fqa.files = {}
+  local encodedFQA = json.encodeFast(fqa)
+  --print("Uploading FQA:",encodedFQA)
+  local res,code = Emu.api.hc3.post("/quickApp/",encodedFQA)
   if not code or code > 201 then
     Emu:ERROR("Failed to upload FQA: "..tostring(code))
   else

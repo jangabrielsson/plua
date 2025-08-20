@@ -60,7 +60,7 @@
       "arguments": [
         "--tool",
         "uploadQA",
-        "examples/fibaro/QA_ui.lua"
+        "dev/brorsUI.lua"
       ],
       "listenPublicly": true
     },

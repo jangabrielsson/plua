@@ -62,7 +62,11 @@ The device management category encompasses core device operations, plugin manage
 
 #### Core Device Operations
 - `GET /api/devices` - List all devices with filtering options (room, interface, type)
-- `POST /api/devices` - Create new plugin device
+Ex.
+  - /api/devices?name=MyQuickApp
+  - /api/devices?interface=quickApp
+
+- `POST /api/devices` - Create new plugin device. Use POST /quickApp/ to create a QuickApp.
   ```json
   {
     "name": "Device Name",
@@ -118,11 +122,13 @@ The device management category encompasses core device operations, plugin manage
 
 #### Device Actions
 - `POST /api/devices/{deviceID}/action/{actionName}` - Execute device action
+Ex. Call QuckApp 344, function QuickApp:myFun(25,"Heating")
+POST /api/devices/344/myFun
   ```json
   {
     "args": [25, "heating"],
     "delay": 0,
-    "integrationPin": "1234"
+    // "integrationPin": "1234"
   }
   ```
 - `DELETE /api/devices/action/{timestamp}/{id}` - Cancel delayed action
@@ -161,13 +167,13 @@ The device management category encompasses core device operations, plugin manage
 #### Plugin Management
 - `GET /api/plugins` - Get all plugins information
 - `GET /api/plugins/installed` - Get installed plugins list
-- `POST /api/plugins/installed` - Install plugin (HC2 compatibility)
+- `POST /api/plugins/installed` - Install plugin (HC2 compatibility). Don't use for QuickApps.
   ```json
   {
     "type": "com.fibaro.lightBulb"
   }
   ```
-- `DELETE /api/plugins/installed` - Delete/uninstall plugin
+- `DELETE /api/plugins/installed` - Delete/uninstall plugin. Don't use for QuickApps.
   ```json
   {
     "type": "com.fibaro.lightBulb",
@@ -200,7 +206,7 @@ The device management category encompasses core device operations, plugin manage
   ```
 
 #### Property and Interface Management
-- `POST /api/plugins/updateProperty` - Update device properties
+- `POST /api/plugins/updateProperty` - Update device properties. UPdates property without causing restart of QuickApp. Also generates system event.
   ```json
   {
     "deviceId": 25,

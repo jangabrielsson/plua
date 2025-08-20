@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.21] - 2025-08-20
+
+
+
+#### Commits since v1.2.20:
+
+- ✨ **Feature**: update upload functionality and add noproxy support
+
+
+
 ## [v1.2.20] - 2025-08-19
 
 

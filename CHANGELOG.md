@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.22] - 2025-08-20
+
+
+
+#### Commits since v1.2.21:
+
+- 📝 `fastapi_process.py` to convert LuaTable objects before IPC. - Improved error handling in `quickapp_ui.html` for select and multi-select elements to provide better user feedback. - Created a new test script `test_rich_colors.py` to validate console color detection and configuration.
+- ✨ **Feature**: integrate Rich for enhanced terminal output and add styled print functions
+- 📚 **Docs**: enhance device management section with examples and clarifications
+- 📝 Added FIbaro REST documentation
+
+
+
 ## [v1.2.21] - 2025-08-20
 
 

@@ -2,9 +2,9 @@
 --%%type:com.fibaro.multilevelSwitch
 
 --%%debug:false
---%% proxy:true
---%%offline:true
---%%desktop:true
+--%%proxy:true
+--%% offline:true
+--% %desktop:true
 
 --%%u:{label="lbl1",text="Hello Tue Jul 1 06_34:53 2025"}
 --%%u:{{button="button_ID_6_1",text="Btn 1",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn1"},{button="button_ID_6_2",text="Btn 2",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn2"},{button="button_ID_6_3",text="Btn 3",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn3"},{button="button_ID_6_4",text="Btn 5",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn5"}}

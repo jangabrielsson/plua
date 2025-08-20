@@ -26,12 +26,10 @@ setbreakpoint = function(_,_) end,
 done = function() end 
 }
 
-local argv = _PY.config.argv or ""
-local vscode = argv:match("lua%-mobdebug") and argv:match("vscode") or false -- only turn on mobdebug for VSCode
+local debugIDE = config.environment == "vscode" or config.environment == "zerobrane"
 -- ToDo, make this more robust, by only guessing if we have no debugger flag.
-
 -- Only try to start mobdebug if debugger is enabled in config
-if config.debugger and vscode then 
+if config.debugger and debugIDE then 
   local success, mobdebug = pcall(require, 'mobdebug')
   if success then
     if config.debugger_logging then mobdebug.logging(true) end
@@ -197,6 +195,7 @@ end
 local function doError(str,n) error(Error(str),n or nil) end
 
 function _PY.mainfileResolver(filename)
+  print("MFR",filename)
   if not filename:match("%.lua$") or filename:match("%.fqa") then
     local f = io.open(filename, "r")
     if not f then return filename end

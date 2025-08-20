@@ -2,9 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Plua, upload current file as QA to HC3",
+      "label": "Plua, upload current file as QA to HC3-",
       "type": "shell",
-      "command": "plua",
+      "command": "./run.sh",
       "args": [
         "--tool",
         "uploadQA",

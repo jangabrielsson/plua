@@ -284,6 +284,7 @@ function Emulator:createInfoFromContent(filename,content,extraHeaders)
     headers.proxy = false
     self:WARNING("Offline mode, proxy disabled")
   end
+  if headers.noproxy then headers.proxy = false end
   if not headers.offline then
     if not self.lib.startHelper then loadLib("helper",self) end
     self.lib.startHelper()
@@ -719,6 +720,7 @@ function headerKeys.proxyupdate(str,info) info.proxyupdate = str end
 function headerKeys.project(str,info,k) info.project = validate(str,"number",k) end
 function headerKeys.nop(str,info,k) validate(str,"boolean",k) end
 function headerKeys.norun(str,info,k) end
+function headerKeys.noproxy(str,info,k) info.noproxy = validate(str,"boolean",k) end
 function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
 function headerKeys.breakonload(str,info,k) info.breakOnLoad = validate(str,"boolean",k) end
 function headerKeys.var(str,info,k) 
@@ -810,8 +812,8 @@ function Emulator:processHeaders(filename,content,extraHeaders)
   return content,headers
 end
 
-local function getFQA(self,fname)
-  local info = self:createInfoFromFile(fname)
+local function getFQA(self,fname,extraHeaders)
+  local info = self:createInfoFromFile(fname,extraHeaders)
   self:registerDevice(info)
   return self.lib.getFQA(info.device.id)
 end
@@ -825,7 +827,7 @@ local tools = {
       file = tostring(file)
       assert(_PY.file_exists(file),"File don't exist:"..tostring(file))
       self:INFO("Uploading QA",file)
-      local fqa = getFQA(self,file)
+      local fqa = getFQA(self,file,{"noproxy:true"})
       local dev,code = self.lib.uploadFQA(fqa)
       if dev then
       else

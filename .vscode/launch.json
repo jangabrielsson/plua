@@ -59,8 +59,8 @@
       "interpreter": "./run.sh",
       "arguments": [
         "--tool",
-        "backup",
-        "backup/"
+        "uploadQA",
+        "examples/fibaro/QA_ui.lua"
       ],
       "listenPublicly": true
     },

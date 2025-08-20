@@ -136,6 +136,10 @@ def get_version():
 def display_startup_greeting(config: Dict[str, Any]):
     """Display a proper startup greeting with version information"""
     import sys
+    from .console import console
+    from rich.panel import Panel
+    from rich.text import Text
+    
     try:
         import lupa
         lua_runtime = lupa.LuaRuntime()
@@ -152,56 +156,55 @@ def display_startup_greeting(config: Dict[str, Any]):
     plua_version = get_version()
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     
-    if config['environment'] == 'zerobrane':
-        CYAN = "\033[36;1m"
-        GREEN = "\033[32m" 
-        YELLOW = "\033[33;1m"
-        BLUE = "\033[36m"
-        MAGENTA = "\033[35;1m"
-        RESET = "\033[0m"
-        BOLD = ""
-    else:
-        # ANSI color codes
-        CYAN = "\033[96m"
-        GREEN = "\033[92m" 
-        YELLOW = "\033[93m"
-        BLUE = "\033[94m"
-        MAGENTA = "\033[95m"
-        RESET = "\033[0m"
-        BOLD = "\033[1m"
+    # Create a rich greeting with panel
+    greeting_text = Text()
+    greeting_text.append("🚀 PLua version ", style="bright_white")
+    greeting_text.append(plua_version, style="version")
+    greeting_text.append("\n")
+    greeting_text.append("Python:", style="python")
+    greeting_text.append(python_version, style="python")
+    greeting_text.append(", ", style="dim")
+    greeting_text.append("Lua:", style="lua") 
+    greeting_text.append(lua_version, style="lua")
+    greeting_text.append("\n")
+    greeting_text.append("API:", style="api")
+    greeting_text.append(str(api_port), style="api")
     
-    # Use colored print for startup greeting
-    print(f"{CYAN}{BOLD}🚀 PLua version {plua_version}{RESET}")
-    print(f"{GREEN}Python:{python_version}{RESET}, {BLUE}Lua:{lua_version}{RESET}")
     if config['telnet']:
-        print(f"{YELLOW}API:{api_port}{RESET}, {MAGENTA}Telnet:{telnet_port}{RESET}")
-    else:
-        print(f"{YELLOW}API:{api_port}{RESET}")
+        greeting_text.append(", ", style="dim")
+        greeting_text.append("Telnet:", style="telnet")
+        greeting_text.append(str(telnet_port), style="telnet")
+    
+    # Display in a subtle panel for better visual separation
+    console.print(Panel(greeting_text, border_style="dim", padding=(0, 1)))
 
 
 def safe_print(message, fallback_message=None):
-    """Print with Unicode support, fallback to ASCII if needed"""
+    """Print with Unicode support using Rich, fallback if needed"""
     try:
-        # Try to use logger if available, otherwise fall back to print
+        # Try to use Rich console first for better Unicode support
+        from .console import console
+        console.print(message)
+    except Exception:
+        # Fallback to basic print with Unicode handling
         try:
-            logger.info(message)
-            return
-        except NameError:
-            # Logger not available yet, use print
-            pass
-        
-        print(message)
-    except UnicodeEncodeError:
-        if fallback_message:
-            ascii_message = fallback_message
-        else:
-            # Convert Unicode characters to ASCII equivalents
-            ascii_message = (
-                message.encode("ascii", errors="replace").decode("ascii")
-            )
-        try:
-            logger.info(ascii_message)
-        except NameError:
+            # Try to use logger if available, otherwise fall back to print
+            try:
+                logger.info(message)
+                return
+            except NameError:
+                # Logger not available yet, use print
+                pass
+            
+            print(message)
+        except UnicodeEncodeError:
+            if fallback_message:
+                ascii_message = fallback_message
+            else:
+                # Convert Unicode characters to ASCII equivalents
+                ascii_message = (
+                    message.encode("ascii", errors="replace").decode("ascii")
+                )
             print(ascii_message)
 
 
@@ -826,6 +829,7 @@ def main():
     config["tool"] = args.tool
     config["startTime"] = startTime
     config["diagnostic"] = args.diagnostic or False
+    config["environment"] = detect_environment()
     # Store the full CLI command line as a string
     config["argv"] = " ".join([repr(arg) if " " in arg else arg for arg in sys.argv])
 

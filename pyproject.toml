@@ -20,6 +20,7 @@ dependencies = [
     "httpx>=0.24.0",  # For FastAPI testing
     "requests>=2.28.0",
     "prompt_toolkit>=3.0.0",  # Enhanced REPL with history and completion
+    "rich>=13.0.0",  # Rich text and beautiful formatting for terminal output
 ]
 
 [project.urls]

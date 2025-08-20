@@ -491,9 +491,17 @@ class LuaBindings:
                         print_formatted_text(HTML('<ansicyan>Type Lua commands and press Enter to execute</ansicyan>'))
                         print_formatted_text(HTML('<ansicyan>Type "exit" or "quit" to stop, Ctrl+C to interrupt</ansicyan>'))
                     else:
-                        print("🚀 PLua Interactive REPL")
-                        print("Type Lua commands and press Enter to execute")
-                        print("Type 'exit' or 'quit' to stop, Ctrl+C to interrupt")
+                        # Import Rich console for better REPL output
+                        try:
+                            from .console import console
+                            console.print("🚀 PLua Interactive REPL", style="version")
+                            console.print("Type Lua commands and press Enter to execute", style="info")
+                            console.print("Type 'exit' or 'quit' to stop, Ctrl+C to interrupt", style="dim")
+                        except ImportError:
+                            # Fallback if Rich is not available
+                            print("🚀 PLua Interactive REPL")
+                            print("Type Lua commands and press Enter to execute")
+                            print("Type 'exit' or 'quit' to stop, Ctrl+C to interrupt")
                     
                     self.repl_running = True
                     
@@ -513,7 +521,11 @@ class LuaBindings:
                             
                             # Handle exit commands
                             if command.lower() in ['exit', 'quit']:
-                                print("👋 Goodbye!")
+                                try:
+                                    from .console import console
+                                    console.print("👋 Goodbye!", style="success")
+                                except ImportError:
+                                    print("👋 Goodbye!")
                                 self.repl_running = False
                                 break
                             
@@ -527,12 +539,24 @@ class LuaBindings:
                                     # Fallback: execute directly in Lua and print result
                                     result = self.engine._lua.execute(command)
                                     if result is not None:
-                                        print(f"=> {result}")
+                                        try:
+                                            from .console import console
+                                            console.print(f"=> {result}", style="bright")
+                                        except ImportError:
+                                            print(f"=> {result}")
                             except Exception as e:
-                                print(f"Error: {e}")
+                                try:
+                                    from .console import console
+                                    console.print(f"Error: {e}", style="error")
+                                except ImportError:
+                                    print(f"Error: {e}")
                             
                         except (EOFError, KeyboardInterrupt):
-                            print("\n👋 Goodbye!")
+                            try:
+                                from .console import console
+                                console.print("\n👋 Goodbye!", style="success")
+                            except ImportError:
+                                print("\n👋 Goodbye!")
                             self.repl_running = False
                             break
                         except Exception as e:

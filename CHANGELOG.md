@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.26] - 2025-08-21
+
+
+
+#### Commits since v1.2.25:
+
+- ✨ **Feature**: enhance loadLuaFile function to handle directory checks and improve error handling feat(lua_bindings): add is_directory function to check if a path is a directory
+
+
+
 ## [v1.2.25] - 2025-08-21
 
 

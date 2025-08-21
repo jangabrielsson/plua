@@ -2,6 +2,69 @@
 
 This document provides a comprehensive overview of the 269 REST API endpoints available in the Fibaro Home Center 3 (HC3) system, as implemented in PLua's FastAPI server.
 
+## Model Context Protocol (MCP) Usage
+
+This documentation is optimized for use as context in Model Context Protocol implementations. It provides:
+
+- **Complete API Coverage**: All 269 endpoints with request/response formats
+- **Functional Categorization**: Endpoints grouped by use case for efficient context retrieval
+- **Tool Implementation Guidance**: Ready-to-use JSON schemas and examples
+- **Integration Context**: PLua-specific implementation details and best practices
+
+### Quick MCP Integration Guide
+
+**For Tool Definitions**: Each endpoint includes HTTP method, path, and complete JSON schemas
+**For Context Retrieval**: Use category-based sections to provide relevant API subsets
+**For Error Handling**: Reference the Authentication & Security section for proper error responses
+**For Type Safety**: All examples use proper JSON formatting compatible with Pydantic models
+
+### Common MCP Tool Patterns
+
+```typescript
+// Device Control Tool Example
+{
+  "name": "fibaro_control_device",
+  "description": "Control a Fibaro device (turn on/off, set value, etc.)",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "deviceId": {"type": "number", "description": "Device ID"},
+      "action": {"type": "string", "description": "Action name (turnOn, turnOff, setValue, etc.)"},
+      "args": {"type": "array", "description": "Action arguments"}
+    },
+    "required": ["deviceId", "action"]
+  }
+}
+
+// Scene Execution Tool Example  
+{
+  "name": "fibaro_run_scene",
+  "description": "Execute a Fibaro scene",
+  "inputSchema": {
+    "type": "object", 
+    "properties": {
+      "sceneId": {"type": "number", "description": "Scene ID to execute"},
+      "args": {"type": "object", "description": "Scene arguments"}
+    },
+    "required": ["sceneId"]
+  }
+}
+
+// Device Query Tool Example
+{
+  "name": "fibaro_get_devices", 
+  "description": "Get Fibaro devices with filtering",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "roomId": {"type": "number", "description": "Filter by room ID"},
+      "interface": {"type": "array", "items": {"type": "string"}, "description": "Filter by interfaces"},
+      "type": {"type": "string", "description": "Filter by device type"}
+    }
+  }
+}
+```
+
 ## API Organization
 
 This comprehensive reference covers 253+ endpoints organized into functional categories. Click any section to jump directly to the detailed documentation.
@@ -1527,5 +1590,28 @@ This FastAPI implementation serves as a bridge between PLua's Lua environment an
 - Scene automation
 - Energy monitoring
 - System configuration
+
+### MCP Implementation Patterns
+
+**Device Operations**: Use `/api/devices` endpoints for device discovery, control, and monitoring
+**Automation**: Combine `/api/scenes` and `/api/customEvents` for complex automation workflows  
+**Energy Management**: Leverage `/api/energy` endpoints for consumption monitoring and optimization
+**Climate Control**: Use `/api/panels/climate` for temperature and HVAC management
+**Security**: Implement `/api/alarms` endpoints for alarm system integration
+**Notifications**: Use `/api/notificationCenter` for user alerts and system messages
+
+**Typical MCP Workflow**:
+1. Discover devices using `GET /api/devices`
+2. Get device details with `GET /api/devices/{deviceID}`
+3. Control devices via `POST /api/devices/{deviceID}/action/{actionName}`
+4. Monitor status through periodic device queries
+5. Create automation with scenes and custom events
+
+**Best Practices for MCP**:
+- Cache device lists to minimize API calls
+- Use filtering parameters to reduce response sizes
+- Implement proper error handling for network timeouts
+- Group related operations for efficiency
+- Use WebSocket connections for real-time updates when available
 
 The endpoints are automatically generated from Swagger documentation and provide full type safety through Pydantic models, ensuring reliable integration with both the HC3 system and PLua's emulation environment.

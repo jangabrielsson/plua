@@ -17,7 +17,7 @@ local DEVICEID = 5555-1
 local function loadLuaFile(filename)
   if not _PY.file_exists(filename) then return {} end
   local f, err = loadfile(filename, "t", _G)
-  if not f then error(fmt("Failed to load %s: %s",filename,err)) end
+  if not f then return {} end -- error(fmt("Failed to load %s: %s",filename,err)) end
   local stat,res = pcall(f)
   if not stat then  error(fmt("Error in %s: %s",filename,res)) end
   if type(res) ~= "table" then

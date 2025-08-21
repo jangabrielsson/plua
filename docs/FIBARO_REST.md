@@ -1565,6 +1565,51 @@ This category includes various utility endpoints for icons, RGB programs, system
 
 ## Authentication & Security
 
+All endpoints require proper authentication through the HC3 system. When making API calls to a real Fibaro HC3 device, you must include the following required headers:
+
+### Required Headers
+
+```http
+X-Fibaro-Version: 2
+Content-Type: application/json
+Authorization: Basic <base64-encoded-credentials>
+```
+
+Where the Authorization header contains Base64-encoded credentials in the format `username:password`.
+
+### Example API Call
+
+```javascript
+// JavaScript example
+const credentials = btoa('username:password'); // Base64 encode
+fetch('https://your-hc3-ip/api/devices', {
+  method: 'GET',
+  headers: {
+    'X-Fibaro-Version': '2',
+    'Content-Type': 'application/json',
+    'Authorization': `Basic ${credentials}`
+  }
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python
+# Python example
+import base64
+import requests
+
+credentials = base64.b64encode('username:password'.encode()).decode()
+headers = {
+    'X-Fibaro-Version': '2',
+    'Content-Type': 'application/json',
+    'Authorization': f'Basic {credentials}'
+}
+
+response = requests.get('https://your-hc3-ip/api/devices', headers=headers)
+data = response.json()
+```
+
 All endpoints require proper authentication through the HC3 system. The API supports:
 
 - User-based access control

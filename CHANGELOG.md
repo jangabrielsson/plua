@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.23] - 2025-08-21
+
+
+
+#### Commits since v1.2.22:
+
+- ✨ **Feature**: enhance FIBARO_REST documentation with MCP usage patterns and examples
+- ✨ **Feature**: enhance system info detection and add user validation in test script
+
+
+
 ## [v1.2.22] - 2025-08-20
 
 

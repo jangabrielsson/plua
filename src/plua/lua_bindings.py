@@ -347,6 +347,14 @@ class LuaBindings:
             import os
             return os.path.exists(filename)
         
+        @export_to_lua("is_directory")
+        def is_directory(filename: str) -> bool:
+            """
+            Check if a file is a directory.
+            """
+            import os
+            return os.path.isdir(filename)
+
         @export_to_lua("fwrite_file")
         def fwrite_file(filename: str, data: str) -> bool:
             """

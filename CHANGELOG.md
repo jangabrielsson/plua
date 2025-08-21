@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.25] - 2025-08-21
+
+
+
+#### Commits since v1.2.24:
+
+- ✨ **Feature**: add debug print statement when loading Lua files
+
+
+
 ## [v1.2.24] - 2025-08-21
 
 

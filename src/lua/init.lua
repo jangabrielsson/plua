@@ -57,6 +57,7 @@ local userFuns = {}
 local environment = _PY.get_system_info().environment
 _PY.config.cwd = environment.cwd
 _PY.config.homedir = environment.home
+_PY.config.user = environment.user
 
 local f = io.open(_PY.config.homedir .. "/.plua/user_funs.lua", "r")
 if f then

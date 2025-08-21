@@ -28,6 +28,7 @@ local keys = {
   "tempdir",
   "environment",
   "cwd",
+  "user",
   "homedir",
   "enginePath",
   "api_port",

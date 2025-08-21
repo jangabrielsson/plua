@@ -271,8 +271,8 @@ class LuaBindings:
                 },
                 "environment": {
                     "cwd": os.getcwd().replace("\\", "/"),
-                    "user": os.environ.get("USER", "unknown"),
-                    "home": os.environ.get("HOME", "unknown").replace("\\", "/"),
+                    "user": os.environ.get("USERNAME") or os.environ.get("USER", "unknown"),
+                    "home": (os.environ.get("USERPROFILE") or os.environ.get("HOME", "unknown")).replace("\\", "/"),
                     "path_separator": os.pathsep,
                     "line_separator": os.linesep
                 },

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.24] - 2025-08-21
+
+
+
+#### Commits since v1.2.23:
+
+- ✨ **Feature**: add authentication details and example API calls to FIBARO_REST documentation
+
+
+
 ## [v1.2.23] - 2025-08-21
 
 

@@ -18,7 +18,6 @@ local function loadLuaFile(filename)
   if not _PY.file_exists(filename) then return {} end
   if _PY.is_directory(filename) then return {} end
   local f, err = loadfile(filename, "t", _G)
-  print("Loading",filename)
   if not f then error(fmt("Failed to load %s: %s",filename,err)) end
   local stat,res = pcall(f)
   if not stat then  error(fmt("Error in %s: %s",filename,res)) end

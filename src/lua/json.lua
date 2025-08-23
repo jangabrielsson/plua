@@ -15,6 +15,13 @@ end
 
 --gsub("[\\\"]",{["\\"]="\\\\",['"']='\\"'})
 -- our own json encode, as we don't have 'pure' json structs, and sorts keys in order (i.e. "stable" output)
+
+local function quote(s)
+  local t = type(s)
+  if t == 'string' then return s end
+  return "["..tostring(s).."]"
+end
+
 local function prettyJsonFlat(e0) 
   local res,seen = {},{}
   local function pretty(e)
@@ -42,12 +49,12 @@ local function prettyJsonFlat(e0)
       else
         seen[e]=true
         if e._var_  then res[#res+1] = fmt('"%s"',e._str) return end
-        local k = {} for key,_ in pairs(e) do k[#k+1] = tostring(key) end
+        local k,kmap = {},{} for key,_ in pairs(e) do local ks = tostring(key) k[#k+1] = ks; kmap[ks]=key end
         table.sort(k,keyCompare)
         if #k == 0 then res[#res+1] = "[]" return end
-        res[#res+1] = '{'; res[#res+1] = '"' res[#res+1] = k[1]; res[#res+1] = '":' t = k[1] pretty(e[t])
+        res[#res+1] = '{'; res[#res+1] = '"' t = k[1] res[#res+1] = t; res[#res+1] = '":' pretty(e[kmap[t]])
         for i=2,#k do
-          res[#res+1] = ',"' res[#res+1] = k[i]; res[#res+1] = '":' t = k[i] pretty(e[t])
+          res[#res+1] = ',"' t = k[i] res[#res+1] = t; res[#res+1] = '":' pretty(e[kmap[t]])
         end
         res[#res+1] = '}'
         seen[e]=nil
@@ -57,12 +64,6 @@ local function prettyJsonFlat(e0)
   end
   pretty(e0)
   return table.concat(res)
-end
-
-local function quote(s)
-  local t = type(s)
-  if t == 'string' then return s end
-  return "["..tostring(s).."]"
 end
 
 local function prettyLuaFlat(e0) 
@@ -91,7 +92,7 @@ local function prettyLuaFlat(e0)
           ks = tostring(key)
           k[#k+1] = ks kmap[ks] = key
         end
-        print("keys",json.encode(k))
+        --print("keys",json.encode(k))
         table.sort(k,keyCompare)
         if #k == 0 then res[#res+1] = "{}" return end
         res[#res+1] = '{';  t = k[1]  res[#res+1] = quote(kmap[t]); res[#res+1] = '=' pretty(e[kmap[t]])

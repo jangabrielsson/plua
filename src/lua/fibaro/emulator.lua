@@ -155,15 +155,18 @@ function Emulator:registerDevice(info)
   self:DEBUG("Device registered. Total devices in DIR: " .. table.maxn(self.DIR))
 end
 
+local gbgcolor = os.getenv("PLUA_QA_COLOR") or "lightgrey"
+
 local tileX, tileY = 20,20
 function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   _G["QA"..qa.id] = qa
   local info = self.DIR[qa.id]
+  local bgcolor = info.headers.qacolor or gbgcolor
   local openWindow = self.config.desktop
   if openWindow == nil then openWindow = info.headers and info.headers.desktop end
   if openWindow then
     local dim = self.lib.getScreenDimension()
-    local success = self.lib.createQuickAppWindow(qa.id, "Auto-opened Desktop Window", 400, 400, tileX, tileY)
+    local success = self.lib.createQuickAppWindow(qa.id, "Auto-opened Desktop Window", 400, 400, tileX, tileY, bgcolor)
     if success then
       tileX = tileX + 400 + 10
     end
@@ -534,7 +537,7 @@ end
 function Emulator:startQA(id)
   local info = self.DIR[id]
   if info.headers.save then self:saveQA(info.headers.save ,id) end
-  if info.headers.project then self.lib.saveProject(id,info,nil) end
+  if info.headers.project then self.lib.saveProject(info.headers.project,info,nil) end
   local env = info.env
   local function func()
     if env.QuickApp and env.QuickApp.onInit then
@@ -713,6 +716,7 @@ function headerKeys.description(str,info)
   info.description = str
 end
 function headerKeys.latitude(str,info,k) info.latitude = validate(str,"number",k) end
+function headerKeys.qacolor(str,info,k) info.qacolor = str end
 function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number",k) end
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
 function headerKeys.save(str,info) info.save = str end
@@ -748,7 +752,7 @@ function headerKeys.file(str,info)
     info.files[name] = {path = path, content = nil, order = fileOrder } 
     fileOrder = fileOrder + 1
   else
-    error(fmt("File not found: '%s'",path))
+    error(fmt("--%%file: File not found: '%s'",path))
   end
 end
 

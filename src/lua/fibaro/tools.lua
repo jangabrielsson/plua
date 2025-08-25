@@ -67,20 +67,31 @@ local function getScreenDimension()
   end
 end
 
-local function createQuickAppWindow(qaId, title, width, height, x, y)
+local function createQuickAppWindow(qaId, title, width, height, x, y, backgroundColor)
   title = title or fmt("QuickApp %s", qaId)
   width = width or 800
   height = height or 600
   x = x or 100
   y = y or 100
+  backgroundColor = backgroundColor or ""
   
-  local success = _PY.open_quickapp_window(qaId, title, width, height, x, y)
+  local success = _PY.open_quickapp_window(qaId, title, width, height, x, y, backgroundColor)
   if success then
     Emu:DEBUG(fmt("Created QuickApp window for QA %s: %s (%dx%d at %d,%d)", qaId, title, width, height, x, y))
+    if backgroundColor ~= "" then
+      Emu:DEBUG(fmt("Applied background color: %s", backgroundColor))
+    end
   else
     Emu:WARNING(fmt("Failed to create QuickApp window for QA %s", qaId))
   end
   return success
+end
+
+local function setQuickAppWindowBackground(qaId, color)
+  -- For existing windows, we can't change the background color after creation
+  -- This function is kept for compatibility but will return false for existing windows
+  Emu:WARNING(fmt("Cannot change background color for existing QuickApp window %s. Use createQuickAppWindow with backgroundColor parameter instead.", qaId))
+  return false
 end
 
 local function uploadFQA(fqa)
@@ -514,7 +525,9 @@ Emu.lib.updateQA = updateQA
 Emu.lib.updateFile = updateFile
 Emu.lib.getScreenDimension = getScreenDimension
 Emu.lib.createQuickAppWindow = createQuickAppWindow
+Emu.lib.setQuickAppWindowBackground = setQuickAppWindowBackground
 Emu.lib.updateFile = updateFile
 Emu.lib.updateQAparts = updateQAparts
 Emu.lib.info2FQA = info2FQA
 Emu.lib.luaToFQA = luaToFQA
+Emu.lib.createTempName = createTempName

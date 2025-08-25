@@ -273,6 +273,51 @@ def set_browser_window_url(window_id: str, url: str) -> bool:
         return False
 
 
+@export_to_lua("set_window_background")
+def set_window_background(window_id: str, color: str) -> bool:
+    """
+    Set the background color of a QuickApp window's UI tab.
+    
+    Args:
+        window_id: Window ID (e.g., "quickapp_5555")
+        color: CSS color value - web color name ("red", "blue") or RGB string ("255,100,50")
+        
+    Returns:
+        True if the background was set successfully, False otherwise
+    """
+    try:
+        # Parse color input
+        css_color = color.strip()
+        
+        # If it's an RGB string like "100,100,100", convert to rgb() format
+        if ',' in css_color and css_color.replace(',', '').replace(' ', '').isdigit():
+            rgb_parts = [part.strip() for part in css_color.split(',')]
+            if len(rgb_parts) == 3:
+                css_color = f"rgb({rgb_parts[0]}, {rgb_parts[1]}, {rgb_parts[2]})"
+        
+        # Use the window manager instance to inject CSS into the window
+        # Strategy: Set the tab background and make UI elements semi-transparent
+        # so the background color shows through
+        manager = window_manager.get_window_manager()
+        return manager.inject_css(window_id, f"""
+            .tab-content.ui-tab {{
+                background-color: {css_color} !important;
+            }}
+            .ui-element {{
+                background-color: rgba(255,255,255,0.7) !important;
+                border: 1px solid rgba(0,0,0,0.15) !important;
+                backdrop-filter: blur(1px) !important;
+            }}
+            /* Also ensure the entire UI content area shows the background */
+            #ui-content {{
+                background-color: {css_color} !important;
+            }}
+        """)
+    except Exception as e:
+        logging.error(f"Error setting window background: {e}")
+        return False
+
+
 @export_to_lua("get_browser_window_info")
 def get_browser_window_info(window_id: str) -> Any:
     """Get information about a browser window."""
@@ -392,7 +437,7 @@ def get_screen_dimensions() -> Any:
 
 @export_to_lua("open_quickapp_window")
 def open_quickapp_window(qa_id: int, title: str, width: int = 800, height: int = 600, 
-                        pos_x: int = 100, pos_y: int = 100) -> bool:
+                        pos_x: int = 100, pos_y: int = 100, background_color: str = "") -> bool:
     """
     Open a QuickApp window using the /plua/quickApp/<id>/info endpoint.
     
@@ -403,6 +448,7 @@ def open_quickapp_window(qa_id: int, title: str, width: int = 800, height: int =
         height: Window height in pixels (default: 600)
         pos_x: Window x position (default: 100)
         pos_y: Window y position (default: 100)
+        background_color: Background color for the UI tab (default: "")
         
     Returns:
         True if window was created successfully, False otherwise
@@ -425,6 +471,13 @@ def open_quickapp_window(qa_id: int, title: str, width: int = 800, height: int =
         # Construct the URL for the QuickApp UI
         base_url = f"http://localhost:{server_port}"
         static_url = f"{base_url}/static/quickapp_ui.html?qa_id={qa_id}&desktop=true"
+        
+        # Add background color parameter if provided
+        if background_color:
+            # URL encode the color parameter
+            import urllib.parse
+            encoded_color = urllib.parse.quote(background_color)
+            static_url += f"&bg_color={encoded_color}"
         
         # Use the existing window manager to create the browser window
         window_id = f"quickapp_{qa_id}"

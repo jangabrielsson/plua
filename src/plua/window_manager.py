@@ -11,6 +11,7 @@ import time
 import os
 import json
 import webbrowser
+import subprocess
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
 
@@ -387,6 +388,92 @@ class WindowManager:
             "y": window.y,
             "is_open": window.is_open
         }
+        
+    def inject_css(self, window_id: str, css_code: str) -> bool:
+        """
+        Inject CSS code into a browser window.
+        
+        Args:
+            window_id: ID of the window
+            css_code: CSS code to inject
+            
+        Returns:
+            True if CSS was injected successfully, False otherwise
+        """
+        if window_id not in self.windows:
+            logger.warning(f"Window {window_id} not found for CSS injection")
+            return False
+            
+        try:
+            import platform
+            
+            if platform.system() == "Darwin":  # macOS
+                # Use AppleScript to inject CSS via JavaScript
+                # We'll inject the CSS by creating a style element
+                escaped_css = css_code.replace('"', '\\"').replace('\n', ' ').replace('\t', ' ').replace('!', '\\!')
+                
+                # More specific targeting for QuickApp windows
+                applescript = f'''
+                tell application "Safari"
+                    set windowFound to false
+                    repeat with w in every window
+                        repeat with t in every tab of w
+                            set tabURL to URL of t
+                            if tabURL contains "quickapp_ui.html" and tabURL contains "qa_id=" then
+                                try
+                                    do JavaScript "
+                                        console.log('PLua: Injecting CSS for window {window_id}');
+                                        var styleElement = document.getElementById('plua-dynamic-style');
+                                        if (!styleElement) {{
+                                            styleElement = document.createElement('style');
+                                            styleElement.id = 'plua-dynamic-style';
+                                            styleElement.type = 'text/css';
+                                            document.head.appendChild(styleElement);
+                                            console.log('PLua: Created new style element');
+                                        }}
+                                        styleElement.textContent = '{escaped_css}';
+                                        console.log('PLua: CSS injected successfully');
+                                        console.log('PLua: Injected CSS content: {escaped_css}');
+                                    " in t
+                                    set windowFound to true
+                                    exit repeat
+                                on error errorMessage
+                                    log "JavaScript error: " & errorMessage
+                                end try
+                            end if
+                        end repeat
+                        if windowFound then exit repeat
+                    end repeat
+                    
+                    if not windowFound then
+                        log "No matching QuickApp window found for CSS injection"
+                    end if
+                end tell
+                '''
+                
+                result = subprocess.run(
+                    ["osascript", "-e", applescript],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if result.returncode == 0:
+                    logger.info(f"Successfully injected CSS into window {window_id}")
+                    return True
+                else:
+                    logger.warning(f"Failed to inject CSS into window {window_id}: {result.stderr}")
+                    return False
+                    
+            else:
+                # For other platforms, we could implement browser automation
+                # For now, log that it's not supported
+                logger.warning(f"CSS injection not yet supported on {platform.system()}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error injecting CSS into window {window_id}: {e}")
+            return False
         
     def list_windows(self) -> Dict[str, Dict[str, Any]]:
         """

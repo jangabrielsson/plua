@@ -510,6 +510,12 @@
                 
                 document.getElementById('qa-id').textContent = this.qaId;
                 
+                // Apply background color if specified in URL parameters
+                const bgColor = this.getQueryParam('bg_color');
+                if (bgColor) {
+                    this.applyBackgroundColor(decodeURIComponent(bgColor));
+                }
+                
                 try {
                     // Connect WebSocket FIRST for real-time updates
                     this.connectWebSocket();
@@ -1626,6 +1632,46 @@
                 this.debug(`📊 Status updated: ${status}`);
             }
             
+            applyBackgroundColor(color) {
+                console.log('PLua: Applying background color:', color);
+                
+                // Create or update a style element for dynamic background colors
+                let styleElement = document.getElementById('plua-bg-style');
+                if (!styleElement) {
+                    styleElement = document.createElement('style');
+                    styleElement.id = 'plua-bg-style';
+                    styleElement.type = 'text/css';
+                    document.head.appendChild(styleElement);
+                }
+                
+                // Parse color input
+                let cssColor = color.trim();
+                
+                // If it's an RGB string like "100,100,100", convert to rgb() format
+                if (cssColor.includes(',') && cssColor.replace(/[,\s\d]/g, '') === '') {
+                    const rgbParts = cssColor.split(',').map(part => part.trim());
+                    if (rgbParts.length === 3) {
+                        cssColor = `rgb(${rgbParts[0]}, ${rgbParts[1]}, ${rgbParts[2]})`;
+                    }
+                }
+                
+                // Apply CSS with high specificity to override existing styles
+                styleElement.textContent = `
+                    .tab-content.ui-tab {
+                        background-color: ${cssColor} !important;
+                    }
+                    .ui-element {
+                        background-color: rgba(255,255,255,0.8) !important;
+                        border: 1px solid rgba(0,0,0,0.15) !important;
+                    }
+                    #ui-content {
+                        background-color: ${cssColor} !important;
+                    }
+                `;
+                
+                console.log('PLua: Background color applied successfully');
+            }
+
             showError(message) {
                 const content = document.getElementById('ui-content');
                 content.innerHTML = `<div class="error">${message}</div>`;

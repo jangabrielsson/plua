@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.27] - 2025-08-25
+
+
+
+#### Commits since v1.2.26:
+
+- ✨ **Feature**: add support for setting QuickApp window background color with new function and CSS injection bug(emulator): fixed project file generation bug
+- ♻️ **Refactor**: remove debug print statement and improve error handling refactor(json): move quote function and optimize key handling in prettyJsonFlat
+
+
+
 ## [v1.2.26] - 2025-08-21
 
 

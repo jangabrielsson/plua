@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.28] - 2025-08-27
+
+
+
+#### Commits since v1.2.27:
+
+- ✨ **Feature**: add new launch configuration for testing FQA and update README options refactor(emulator): improve directory handling and event processing fix(fibaro_api): update event structure for device property updates fix(quickapp): handle missing args in action calls fix(tools): ensure temp directory is created before file operations
+
+
+
 ## [v1.2.27] - 2025-08-25
 
 

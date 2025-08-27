@@ -394,7 +394,7 @@ function onAction(id,event) -- { deviceID = 1234, actionName = "test", args = {1
   ---@diagnostic disable-next-line: undefined-field
   if self.actionHandler then return self:actionHandler(event) end
   if event.deviceId == self.id then
-    return self:callAction(event.actionName, table.unpack(event.args))
+    return self:callAction(event.actionName, table.unpack(event.args or {}))
   elseif self.childDevices[event.deviceId] then
     return self.childDevices[event.deviceId]:callAction(event.actionName, table.unpack(event.args or {}))
   end
@@ -491,16 +491,17 @@ function RefreshStateSubscriber:unsubscribe(subscription)
 end
 
 local listeners = {}
-function _PY.newRefreshStatesEvent(jsonevent)
-  --print("New jsonevent",jsonevent) -- jsonevent)
-  local event = json.decode(jsonevent)
-  for listener,_ in pairs(listeners) do
-    pcall(listener,event)
-  end
-end
+
 -- Starts the refresh state subscriber
 ---@diagnostic disable-next-line: undefined-field
 function RefreshStateSubscriber:run()
+  function _PY.newRefreshStatesEvent(jsonevent)
+  --print("New jsonevent",jsonevent) -- jsonevent)
+  local event = json.decode(jsonevent)
+  for l,_ in pairs(listeners) do
+    pcall(l,event)
+  end
+end
   fibaro.plua:startRefreshStatesPolling()
   listeners[self.handle] = true
 end

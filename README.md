@@ -208,6 +208,7 @@ Options:
   --loglevel LEVEL    Set logging level (debug, info, warning, error)
   -o, --offline       Run in offline mode (disable HC3 connections)
   --desktop [BOOL]    Override desktop UI mode for QuickApp windows (true/false)
+  -t, --tool          Run tool, [help, downloadQA, uploadQA, updateFile, updateQA]
   --nodebugger        Disable Lua debugger support
   --fibaro            Enable Fibaro HC3 emulation mode
   -l                  Ignored, for Lua CLI compatibility

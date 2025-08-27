@@ -204,6 +204,7 @@ function fibaro.call(deviceId, action, ...)
     __assert_type(deviceId, "number")
     local arg = {...}
     local arg2 = #arg>0 and arg or nil
+    print(json.encodeFast(arg2))
     return api.post("/devices/"..deviceId.."/action/"..action, { args = arg2 })
   end
 end

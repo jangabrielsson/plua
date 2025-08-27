@@ -541,9 +541,10 @@ router:add("POST", "/plugins/updateProperty", function(path, data, vars, query)
       -- Generate refreshState event
       if not dev.device.isProxy then
         Emu:refreshEvent('DevicePropertyUpdatedEvent',{
-          deviceId = id,
-          propertyName = prop,
+          id = id,
+          property = prop,
           newValue = value,
+          oldValue = dev.device.properties[prop]
         })
       end
       if dev.watches and dev.watches[prop] then

@@ -36,8 +36,10 @@ local function findFirstLine(src)
   return first or 1,init
 end
 
+local lfs = require("lfs")
 local function loadQAString(src,options) -- Load QA from string and run it
   local path = Emu.config.tempdir..createTempName(".lua")
+  lfs.mkdir(Emu.config.tempdir)
   local f = io.open(path,"w")
   assert(f,"Can't open file "..path)
   f:write(src)
@@ -223,7 +225,7 @@ local function unpackFQAAux(id,fqa,path) -- Unpack fqa and save it to disk
   
   local qvars = props.quickAppVariables or {}
   for _,v in ipairs(qvars) do
-    pr:printf('--%%%%var:%s=%s',v.name,type(v.value)=='string' and '"'..v.value..'"' or v.value)
+    pr:printf('--%%%%var:%s=%s',v.name,type(v.value)=='string' and '"'..v.value:gsub('"','\\"')..'"' or v.value)
   end
   if id then pr:printf('--%%%%project:%s',id) end
   if props.quickAppUuid then pr:printf('--%%%%uid:%s',props.quickAppUuid) end

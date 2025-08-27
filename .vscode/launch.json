@@ -64,5 +64,22 @@
       ],
       "listenPublicly": true
     },
+    {
+      "name": "Plua: Test FQA",
+      "type": "luaMobDebug",
+      "request": "launch",
+      "workingDirectory": "${workspaceFolder}",
+      "sourceBasePath": "${workspaceFolder}",
+      "listenPort": 8172,
+      "stopOnEntry": false,
+      "sourceEncoding": "UTF-8",
+      "interpreter": "./run.sh",
+      "arguments": [
+        "--fibaro",
+        "/Users/jangabrielsson/Downloads/GEA_v7.39.fqa"
+      ],
+      "listenPublicly": true
+    },
+    
   ]
 }

@@ -429,6 +429,7 @@ end
 | `breakonload` | boolean | Debugger breakpoint | `--%%breakonload:true` |
 | `save` | string | State persistence file | `--%%save:state.json` |
 | `project` | number | Project identifier | `--%%project:1001` |
+| `qacolor` | string | Background color of QA window | `--%%qacolor:lightblue` |
 
 ---
 

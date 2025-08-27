@@ -13,6 +13,7 @@ local function loadLib(name,...) return loadfile(libpath..name..".lua","t",_G)(.
 _print = print
 local pluaConf = {}
 local DEVICEID = 5555-1
+local lfs = require("lfs")
 
 local function loadLuaFile(filename)
   if not _PY.file_exists(filename) then return {} end
@@ -41,6 +42,9 @@ function Emulator:__init()
   self.config.hc3_password = os.getenv("HC3_PASSWORD")
   if self.config.hc3_user and self.config.hc3_password then
     self.config.hc3_creds = _PY.base64_encode(self.config.hc3_user..":"..self.config.hc3_password)
+  end
+  if not lfs.attributes(self.config.tempdir) then
+    lfs.mkdir(self.config.tempdir)
   end
   self.config.IPAddress = _PY.config.host_ip
   self.config.headers = _PY.python_2_lua_table(_PY.config.headers)
@@ -466,7 +470,7 @@ function Emulator:loadMainFile(filenames,greet)
   
   if greet and not _PY.config.nogreet then
     local color = _PY.config.environment == 'zerobrane' and "yellow" or "orange"
-    _print(self.lib.log.colorStr(color,fmt("Fibaro support, %s, (%.4fs)",
+    _print(self.lib.log.colorStr(color,fmt("Fibaro SDK, %s, (%.4fs)",
     self.offline and "offline" or "online",
     self.lib.millitime()-self.config.startTime)
   )
@@ -694,7 +698,7 @@ end
 function Emulator:getRefreshStates(last) return _PY.getEvents(last) end
 
 function Emulator:refreshEvent(typ,data) 
-  _PY.addEventFromLua(json.encode({type=typ,data=data})) 
+  setTimeout(function() _PY.addEventFromLua(json.encode({type=typ,data=data})) end, 0)
 end
 
 local headerKeys = {}
@@ -728,6 +732,7 @@ function headerKeys.norun(str,info,k) end
 function headerKeys.noproxy(str,info,k) info.noproxy = validate(str,"boolean",k) end
 function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
 function headerKeys.breakonload(str,info,k) info.breakOnLoad = validate(str,"boolean",k) end
+function headerKeys.headers(str,info,k) info.include = str end
 function headerKeys.var(str,info,k) 
   local name,value = str:match("^([%w_]+)%s*=%s*(.+)$")
   assert(name,"Invalid var header: "..str)
@@ -796,7 +801,18 @@ function Emulator:processHeaders(filename,content,extraHeaders)
       headerKeys[key](str,headers,key)
     else print(fmt("Unknown header key: '%s' - ignoring",key)) end 
   end)
-  for _,h in ipairs(extraHeaders or {}) do
+  extraHeaders = extraHeaders or {}
+  if headers.include then
+    assert(_PY.file_exists(headers.include),"file doesn't exist")
+    local f = io.open(headers.include)
+    assert(f,"Failed to open include file: "..headers.include)
+    for line in f:lines() do
+      line = line and line:match("%-%-%%%%(.*)") or line
+      extraHeaders[#extraHeaders+1] = line
+    end
+    f:close()
+  end
+  for _,h in ipairs(extraHeaders) do
     local key,str = h:match("^%s*([%w_]+):%s*(.*)$")
     if headerKeys[key] then
       headerKeys[key](str,headers,key)

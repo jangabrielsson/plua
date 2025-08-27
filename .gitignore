@@ -269,3 +269,4 @@ debug_*.txt
 network_*.log
 
 backup/
+test/

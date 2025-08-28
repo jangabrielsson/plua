@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.29] - 2025-08-28
+
+
+
+#### Commits since v1.2.28:
+
+- ✨ **Feature**: add restart functionality and update variable handling
+- ✨ **Feature**: add MIT License file and update README with license badge
+- ✨ **Feature**: add backup and test directories to .gitignore
+
+
+
 ## [v1.2.28] - 2025-08-27
 
 

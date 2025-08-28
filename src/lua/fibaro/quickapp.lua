@@ -252,6 +252,7 @@ function QuickAppBase:setVariable(name, value)
   if not found then
     table.insert(qvars, {name=name, value=value})
   end
+  self:updateProperty("quickAppVariables", qvars)
 end
 
 -- Gets a QuickApp variable value

@@ -13,7 +13,7 @@ function urlencode(str) -- very useful
 end
 
 function table.copy(obj)
-  if type(obj) == 'table' then
+  if type(obj) == 'table' then 
     local res = {} for k,v in pairs(obj) do res[k] = table.copy(v) end
     return res
   else return obj end

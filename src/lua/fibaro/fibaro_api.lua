@@ -631,6 +631,7 @@ router:add("POST", "/quickApp/<id>/files", function(path, data, vars, query)
 end)
 
 router:add("PUT", "/quickApp/<id>/files", function(path, data, vars, query)
+  print("PUTFILES")
   local dev = Emu.DIR[vars.id]
   if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return nil,301 end end
   local files = dev.files or {}

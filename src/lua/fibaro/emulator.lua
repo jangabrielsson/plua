@@ -165,6 +165,7 @@ local tileX, tileY = 20,20
 function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   _G["QA"..qa.id] = qa
   local info = self.DIR[qa.id]
+  if info.restarted then return end
   local bgcolor = info.headers.qacolor or gbgcolor
   local openWindow = self.config.desktop
   if openWindow == nil then openWindow = info.headers and info.headers.desktop end
@@ -511,7 +512,11 @@ function Emulator:loadQA(info,envAdds)
   env._ENV = env
   env.type = function(e) local t = type(e) return t == "table" and e.__USERDATA and "userdata" or t end
   loadfile(libpath.."fibaro_funs.lua","t",env)()
-  loadfile(libpath.."quickapp.lua","t",env)()
+  local ff,erf = loadfile(libpath.."quickapp.lua","t",env)
+  if ff then ff()
+  else 
+    error(erf) 
+  end
   env.__TAG = info.device.name:upper()..info.device.id
   env.plugin.mainDeviceId = info.device.id
   self:post({ type = "qaEnvSetup", info = info})
@@ -526,6 +531,16 @@ function Emulator:loadQA(info,envAdds)
     if firstLine then self.lib.mobdebug.setbreakpoint(info.files.main.path,firstLine) end
   end
   loadFile(env,info.files.main.path,'main',info.files.main.content)
+end
+
+function Emulator:restartQA(id)
+  self:INFO("Restarting QA",id,"in 3sec")
+  setTimeout(function() 
+    local info = self.DIR[id]
+    info.restarted = true
+    self:loadQA(info)
+    self:startQA(info.device.id)
+  end,3*1000)
 end
 
 local venv = setmetatable({}, { __index = function(t,k) return os.getenv(k) end })
@@ -709,7 +724,7 @@ function headerKeys.proxy(str,info,k) info.proxy = validate(str,"boolean",k) end
 function headerKeys.proxy_port(str,info,k) info.proxy_port = validate(str,"number",k) end
 function headerKeys.offline(str,info,k) info.offline = validate(str,"boolean",k) end
 function headerKeys.time(str,info,k) info.time = str end
-function headerKeys.uid(str,info,k) info.version =str end
+function headerKeys.uid(str,info,k) info.uid = str end
 function headerKeys.manufacturer(str,info) info.manufacturer = str end
 function headerKeys.model(str,info) info.model = str end
 function headerKeys.role(str,info) info.role = str end

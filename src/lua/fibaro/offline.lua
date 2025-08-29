@@ -144,6 +144,16 @@ local function setup()
   end
   
   local gvs = store.globalVariables
+
+  add("POST/plugins/publishEvent", function(path, data, vars, query)
+    --return create_response({status = "published"})
+    local typ = data.type:sub(1,1):upper() .. data.type:sub(2)
+    if typ == 'CentralSceneEvent' then
+      Emu:refreshEvent(typ, {id = data.source, keyId = data.data.keyId, keyAttribute = data.data.keyAttribute})
+    end
+    return {nil,HTTP.OK}
+  end)
+
   add("GET/globalVariables", function(path, data, vars, query)
     return {strip(gvs),HTTP.OK}
   end)

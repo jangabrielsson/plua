@@ -1,7 +1,7 @@
 local json = {}
-json.encode = _PY.to_json
-json.decode = _PY.parse_json
-json.encodeFormated = _PY.to_json_formatted
+json.encode = function(...) return _PY.to_json(...) end
+json.decode = function(...) return _PY.parse_json(...) end
+json.encodeFormated = function(...) return _PY.to_json_formatted(...) end
 
 local fmt = string.format
 local escTab = {["\\"]="\\\\",['"']='\\"'}
@@ -32,14 +32,19 @@ local function prettyJsonFlat(e0)
       if e == json.null then res[#res+1]='null'
       else res[#res+1] = tostring(e) end
     elseif t == 'table' then
-      if next(e)==nil then 
-        local mt = getmetatable(e)
+      local mt = getmetatable(e)
+      if seen[e] then res[#res+1]="..rec.."
+      elseif mt and mt.__tostring then
+        local tstr = mt.__tostring
+        mt.__tostring = nil
+        res[#res+1] = tstr(e)
+        mt.__tostring = tstr
+      elseif next(e)==nil then
         if mt and mt.__isArray then
           res[#res+1]='[]'
         else
           res[#res+1]='{}'
         end
-      elseif seen[e] then res[#res+1]="..rec.."
       elseif e[1] or #e>0 then
         seen[e]=true
         res[#res+1] = "[" pretty(e[1])

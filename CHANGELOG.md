@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.30] - 2025-08-29
+
+
+
+#### Commits since v1.2.29:
+
+- 🐛 **Fix**: os.time reported wrong when setting --%%time
+
+
+
 ## [v1.2.29] - 2025-08-28
 
 

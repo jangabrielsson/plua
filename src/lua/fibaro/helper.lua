@@ -21,7 +21,7 @@ local function installHelper()
     Emu:ERROR(fmt("Failed to install helper: %s",err or "Unknown error"))
     return nil
   end
-  Emu.api.hc3.put("/devices/"..helper.id,{visible=false}) -- Hide helper
+  --Emu.api.hc3.put("/devices/"..helper.id,{visible=false}) -- Hide helper
   Emu:INFO("Helper installed")
   return helper
 end
@@ -60,15 +60,17 @@ local cb = nil
 function startServer(helperId,wsurl)
   server = net.WebSocketServer(false,true)
   local host,port = Emu.config.IPAddress,PORT
-  --Emu:INFO("Starting helper server on",host,port)
+  Emu:INFO("Starting helper server on",host or "",port)
   server:start(host, port, {
-    receive = function(client_id, msg) if cb then cb(msg) end end,
+    receive = function(client_id, msg)
+      print("Helper msg:",msg) 
+      if cb then cb(msg) end end,
     connected = function(client_id)
       if Emu.debugFlag then Emu:INFO("Helper connected") end
       client = client_id
       Emu.config.helperConnected = helperId
     end,
-    disconnected = function(client_id) client = nil end
+    disconnected = function(client_id) print("DIS") client = nil end
   })
   setTimeout(function()
     Emu.api.hc3.post("/devices/"..helperId.."/action/connect",{args={wsurl}}) 

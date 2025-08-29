@@ -32,14 +32,9 @@ local function prettyJsonFlat(e0)
       if e == json.null then res[#res+1]='null'
       else res[#res+1] = tostring(e) end
     elseif t == 'table' then
-      local mt = getmetatable(e)
       if seen[e] then res[#res+1]="..rec.."
-      elseif mt and mt.__tostring then
-        local tstr = mt.__tostring
-        mt.__tostring = nil
-        res[#res+1] = tstr(e)
-        mt.__tostring = tstr
       elseif next(e)==nil then
+        local mt = getmetatable(e)
         if mt and mt.__isArray then
           res[#res+1]='[]'
         else

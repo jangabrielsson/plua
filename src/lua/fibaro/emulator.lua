@@ -94,7 +94,7 @@ function Emulator:__init()
       return nil,408
     end
     path = path:gsub("^/api/","/")
-    local res = self.lib.sendSyncHc3(json.encode({method=method,path=path,data=data}))
+    local res,g = self.lib.sendSyncHc3(json.encode({method=method,path=path,data=data}))
     if res == nil then return nil,408 end
     local stat,data = pcall(json.decode,res)
     if stat then
@@ -424,7 +424,7 @@ end
 function Emulator:saveQA(fname,id)
   local info = self.DIR[id]
   local fqa = self.lib.getFQA(id)
-  self.lib.writeFile(fname,json.encode(fqa))
+  self.lib.writeFile(fname,json.encodeFast(fqa))
   self:INFO("Saved QA to",fname)
 end
 
@@ -668,7 +668,7 @@ function Emulator:HC3_CALL(method, path, data)
   if res.status == 401 or res.status == 403  then
     self:ERROR("HC3 Authentication failed: " .. res.status.." ".. (res.status_text or ""))
     self:INFO("Please check your HC3 credentials in the .env or ~/.env file") 
-    self.INFO("Terminating emulator due to authentication failure, and to avoid lock out of HC3")
+    self:INFO("Terminating emulator due to authentication failure, and to avoid lock out of HC3")
     os.exit()
   end
   if res.error and not (res.status and res.json) then

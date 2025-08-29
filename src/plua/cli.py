@@ -8,6 +8,7 @@ import platform
 import subprocess
 import logging
 import time 
+import socket
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -820,6 +821,11 @@ def main():
     config["fibaro"] = args.fibaro
     config["headers"] = args.header or []
     config["api_enabled"] = not args.no_api
+    try:
+        # Get the IP address of the host
+        config['host_ip'] = socket.gethostbyname(socket.gethostname())
+    except Exception:
+        config['host_ip'] = "127.0.0.1"
     config["api_host"] = args.api_host
     config["api_port"] = args.api_port
     config["telnet"] = args.telnet

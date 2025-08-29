@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.32] - 2025-08-29
+
+
+
+#### Commits since v1.2.31:
+
+- ✨ **Feature**: implement event publishing in QuickApp initialization fix(emulator): correct response handling and logging in HC3_CALL refactor(helper): improve logging and remove commented-out code feat(offline): enhance setup function to handle scene activation events fix(json): optimize prettyJsonFlat function by removing unnecessary code feat(cli): add host IP retrieval to configuration in CLI
+
+
+
 ## [v1.2.31] - 2025-08-29
 
 

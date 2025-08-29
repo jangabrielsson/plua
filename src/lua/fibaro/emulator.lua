@@ -487,7 +487,7 @@ for i=2, #filenames do self.lib.loadQA(filenames[i]) end
 end
 
 local stdLua = { 
-  "string", "table", "math", "os", "io", 
+  "string", "table", "math", "io", 
   "package", "coroutine", "debug", "require",
   "setTimeout", "clearTimeout", "setInterval", "clearInterval",
   "setmetatable", "getmetatable", "rawget", "rawset", "rawlen",

@@ -59,8 +59,8 @@
       "interpreter": "./run.sh",
       "arguments": [
         "--tool",
-        "uploadQA",
-        "dev/brorsUI.lua"
+        "updateQA",
+        "${relativeFile}"
       ],
       "listenPublicly": true
     },

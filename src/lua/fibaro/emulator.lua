@@ -1,4 +1,4 @@
-
+_PY = _PY or {}
 local mobdebug = require("mobdebug")
 _PY.mobdebug.on()
 local class = require("class")
@@ -501,7 +501,7 @@ function Emulator:loadQA(info,envAdds)
   envAdds = envAdds or {}
   local env = { 
     fibaro = { plua = self }, net = net, json = json, api = self.api, 
-    os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime },
+    os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime, exit = os.exit },
     __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
   }
   for _,name in ipairs(stdLua) do env[name] = _G[name] end
@@ -568,7 +568,7 @@ function Emulator:startQA(id)
   coroutine.wraptest = coroutine.wraptest
   if coroutine.wraptest then return coroutine.wraptest(func,info) end
   coroutine.wrapdebug(func, function(err,tb)
-    err = err:match(":(%d+: .*)")
+    err = tostring(err):match(":(%d+: .*)") or err
     print("Error in QA " .. id .. ": " .. tostring(err))
     print(tb)
   end)() 

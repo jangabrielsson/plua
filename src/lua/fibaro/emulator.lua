@@ -761,7 +761,7 @@ function headerKeys.file(str,info)
   assert(path,"Invalid file header: "..str)
   if path:sub(1,1) == '$' then
     local lpath = package.searchpath(path:sub(2),package.path)
-    if _PY.file_exists(lpath) then path = lpath
+    if _PY.file_exists(lpath or "x") then path = lpath
     else error(fmt("Library not found: '%s'",path)) end
   elseif path:sub(1,1) == '%' then
     path = info.path..path:sub(2) -- Relative to the QA path

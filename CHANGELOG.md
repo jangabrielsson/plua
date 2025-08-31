@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.33] - 2025-08-31
+
+
+
+#### Commits since v1.2.32:
+
+- 🐛 **Fix**: handle nil path in file existence check
+- ✨ **Feature**: add launch configuration for Lua debugging
+- 📝 Stop tracking .vscode/launch.json (added to .gitignore)
+- ✨ **Feature**: enhance findIdAndName function to include filename in search
+- ✨ **Feature**: update launch configuration arguments and add new ProjTest file
+- ✨ **Feature**: enhance error handling and add exit function to OS environment feat(offline): update event handling logic in setup function
+
+
+
 ## [v1.2.32] - 2025-08-29
 
 

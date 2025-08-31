@@ -286,7 +286,7 @@ end
 
 
 local function findIdAndName(fname)
-  local function find(path)
+  local function find(path,fname)
     local f = io.open(path,"r")
     if not f then return false,nil end
     local p = f:read("*a")
@@ -294,7 +294,9 @@ local function findIdAndName(fname)
     local _,data = pcall(json.decode,p)
     data = data or {}
     for qn,fn in pairs(data.files or {}) do
-      if fn==fname then
+      fn:gsub("\\","/")
+      local path,file = fn:match("^(.-)([^/\\]+)$")
+      if file==fname then
         return true,data.id, qn, data
       end
     end
@@ -303,9 +305,9 @@ local function findIdAndName(fname)
   if not path then path = "" end
   local p1 = path..".project"
   local p2 = ".project"
-  local _,id,name,data = find(p1)
+  local _,id,name,data = find(p1,file)
   if id then return true,id,name,data end
-  return find(p2)
+  return find(p2,file)
 end
 
 local function updateQAparts(id,parts,silent)

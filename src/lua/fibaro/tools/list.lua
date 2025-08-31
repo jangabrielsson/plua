@@ -16,6 +16,9 @@ end
 
 local YES = "✅"
 local NO = "❌"
+local RED = "🔴"
+local GREEN = "⚪"
+local RED = "🚨"
 
 local function listQA()
   local qas = Emu.api.hc3.get("/devices?interface=quickApp")
@@ -51,6 +54,39 @@ local function listGlobalVars()
   print(pr:toString())
 end
 
+local function listAlarms()
+  local alarms = Emu.api.hc3.get("/alarms/v1/partitions")
+  local pr = buffPrint("\n")
+  pr:printf("%-5s %-30s %-8s %-10s %-8s", "ID", "Name", "Armed", "Breached", "Modified")
+  pr:printf("%s",("-"):rep(128))
+  for _, alarm in ipairs(alarms) do
+    pr:printf("%-5s %-30s %-9s %-9s %-8s", alarm.id, alarm.name, alarm.armed and RED or GREEN, alarm.breached and RED or GREEN, os.date("%Y-%m-%d %H:%M:%S", alarm.modified))
+  end
+  print(pr:toString())
+end
+
+local function listClimate()
+  local climates = Emu.api.hc3.get("/panels/climate")
+  local pr = buffPrint("\n")
+  pr:printf("%-5s %-30s %-8s %-10s", "ID", "Name", "Active", "Mode")
+  pr:printf("%s",("-"):rep(128))
+  for _, clim in ipairs(climates) do
+    pr:printf("%-5s %-30s %-9s %-9s", clim.id, clim.name, clim.active and YES or NO, clim.mode)
+  end
+  print(pr:toString())
+end
+
+local function listProfiles()
+  local profiles = Emu.api.hc3.get("/profiles")
+  local pr = buffPrint("\n")
+  pr:printf("%-5s %-30s %-8s", "ID", "Name", "Active")
+  pr:printf("%s",("-"):rep(128))
+  for _, profile in ipairs(profiles.profiles) do
+    pr:printf("%-5s %-30s %-9s", profile.id, profile.name, profile.id == profiles.activeProfile and YES or NO)
+  end
+  print(pr:toString())
+end
+
 local listFuns = {
   qa = listQA,
   scene = listScene,
@@ -67,7 +103,11 @@ return {
   usage = ">plua -t list <rsrc name",
   fun = function(_Emu,rsrc)
     Emu = _Emu
-    assert(type(rsrc) == "string", "Resource name must be a string")
+    if rsrc == nil then
+      print("Please provide a resource name to list, e.g., qa, scene, gv, climate, sprinkler, profile, alarm, or location.")
+      return
+    end
+    assert(type(rsrc) == "string", "Resource name must be a string") 
     for k,v in pairs(listFuns) do
       if k:match("^" .. rsrc) then
         v()

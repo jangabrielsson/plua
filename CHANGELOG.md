@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.34] - 2025-09-01
+
+
+
+#### Commits since v1.2.33:
+
+- ✨ **Feature**: add functions to list sprinklers and location, sort global variables
+- ✨ **Feature**: add functions to list alarms, climate, and profiles
+
+
+
 ## [v1.2.33] - 2025-08-31
 
 

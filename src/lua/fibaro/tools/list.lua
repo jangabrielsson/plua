@@ -45,6 +45,7 @@ end
 
 local function listGlobalVars()
   local vars = Emu.api.hc3.get("/globalVariables")
+  table.sort(vars, function(a,b) return a.name < b.name end)
   local pr = buffPrint("\n")
   pr:printf("%-30s %-8s %-8s", "Name", "Type", "Value")
   pr:printf("%s",("-"):rep(128))
@@ -87,6 +88,28 @@ local function listProfiles()
   print(pr:toString())
 end
 
+local function listSprinklers()
+  local sprinklers = Emu.api.hc3.get("/panels/sprinklers")
+  local pr = buffPrint("\n")
+  pr:printf("%-5s %-30s %-8s %-10s", "ID", "Name", "Active", "Days")
+  pr:printf("%s",("-"):rep(128))
+  for _, spr in ipairs(sprinklers) do
+    pr:printf("%-5s %-30s %-9s %-9s", spr.id, spr.name, spr.isActive and YES or NO, json.encode(spr.days):sub(2,-2))
+  end
+  print(pr:toString())
+end
+
+local function listLocation()
+  local location = Emu.api.hc3.get("/panels/location")
+  local pr = buffPrint("\n")
+  pr:printf("%-5s %-30s %-8s %-10s", "ID", "Name", "Home", "Address")
+  pr:printf("%s",("-"):rep(128))
+  for _, loc in ipairs(location) do
+    pr:printf("%-5s %-30s %-9s %-9s", loc.id, loc.name, loc.home and YES or NO, loc.address)
+  end
+  print(pr:toString())
+end
+
 local listFuns = {
   qa = listQA,
   scene = listScene,
@@ -97,6 +120,7 @@ local listFuns = {
   alarm = listAlarms,
   location = listLocation
 }
+
 return {
   sort = -1,
   doc = "List resources on HC3, qa, scene, gv, climate, sprinkler, profile, alarm, and location.",

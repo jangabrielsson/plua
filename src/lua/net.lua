@@ -13,7 +13,8 @@ function net.HTTPClient()
       method = options.options and options.options.method or "GET",
       headers = options.options and options.options.headers or {},
       data = options.options and options.options.data or nil,
-      timeout = options.options and options.options.timeout or 30
+      timeout = options.options and options.options.timeout or 30,
+      checkCertificate = options.options and options.options.checkCertificate ~= false,
     }
     
     -- Create a callback function that adapts call_http response to net.HTTPClient format

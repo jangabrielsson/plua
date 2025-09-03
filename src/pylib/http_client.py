@@ -31,20 +31,22 @@ def call_http(url: str, options: Any, callback_id: int) -> None:
     """
     # Convert Lua table to Python dict
     py_options = lua_to_python_table(options) if hasattr(options, 'items') else {}
-    
+
     method = py_options.get('method', 'GET').upper()
     headers = py_options.get('headers', {})
     data = py_options.get('data')
-    
+    check_cert = py_options.get('checkCertificate', True)
+
     # Create options dict for the async function
     request_options = {
         'method': method,
-        'headers': headers
+        'headers': headers,
+        'checkCertificate': check_cert
     }
-    
+
     if data is not None:
         request_options['data'] = data
-    
+
     # Schedule the async request
     engine = get_global_engine()
     if engine and engine._timer_manager:
@@ -72,21 +74,28 @@ async def _perform_http_request(url: str, options: Dict[str, Any], callback_id: 
         data = options.get('data')
         json_data = options.get('json')
         timeout = options.get('timeout', 30)
-        
+        check_cert = options.get('checkCertificate', True)
+
         # Prepare request kwargs
         request_kwargs = {
             'headers': headers,
             'timeout': aiohttp.ClientTimeout(total=timeout)
         }
-        
+
         # Handle request body
         if json_data:
             request_kwargs['json'] = json_data
         elif data:
             request_kwargs['data'] = data
-        
+
+        # SSL verification
+        connector = None
+        if not check_cert:
+            import ssl
+            connector = aiohttp.TCPConnector(ssl=False)
+
         # Make the HTTP request
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.request(method, url, **request_kwargs) as response:
                 # Get response text
                 response_text = await response.text()

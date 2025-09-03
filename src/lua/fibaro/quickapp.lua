@@ -7,7 +7,7 @@
 ---- QuickApp lifecycle management
 ---- Device and UI interaction
 ---- Logging and event handling
-
+_PY = _PY or {}
 local fmt = string.format
 
 function class(name)

@@ -461,11 +461,17 @@ end
 local runFor = tonumber(_PY.config.runFor)
 if runFor then
   if runFor > 0 then
-    _PY.setTimeout(function() os.exit() end, runFor * 1000, {system = true}) -- Kill after runFor seconds, if still running
+    _PY.setTimeout(function() 
+      print("Exit.")
+      os.exit(0) 
+    end, runFor * 1000, {system = true}) -- Kill after runFor seconds, if still running
   elseif runFor == 0 then
     _PY.setTimeout(function() end, math.huge) -- Keep running indefinitely...
   elseif runFor < 0 then
-    _PY.setTimeout(function() os.exit() end, (-runFor) * 1000) -- Kill exactly runFor seconds
+    _PY.setTimeout(function() 
+      print("Exit")
+      os.exit(0)
+    end, (-runFor) * 1000) -- Kill exactly runFor seconds
   end
 end
 

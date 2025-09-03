@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.35] - 2025-09-03
+
+
+
+#### Commits since v1.2.34:
+
+- ✨ **Feature**: add better QA functionality and improve HTTP client options (checkCertificate)
+
+
+
 ## [v1.2.34] - 2025-09-01
 
 

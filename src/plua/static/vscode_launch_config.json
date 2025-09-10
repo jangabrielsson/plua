@@ -11,7 +11,7 @@
       "listenPublicly": false,
       "stopOnEntry": false,
       "sourceEncoding": "UTF-8",
-      "executable": "plua",
+      "interpreter": "plua",
       "arguments": [
         "${file}"
       ]
@@ -26,7 +26,7 @@
       "listenPublicly": false,
       "stopOnEntry": false,
       "sourceEncoding": "UTF-8",
-      "executable": "plua",
+      "interpreter": "plua",
       "arguments": [
         "--fibaro",
        "--run-for",

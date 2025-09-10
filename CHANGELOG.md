@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.36] - 2025-09-10
+
+
+
+#### Commits since v1.2.35:
+
+- 📝 Add QuickApps tutorials and examples; enhance emulator and API functionality
+
+
+
 ## [v1.2.35] - 2025-09-03
 
 

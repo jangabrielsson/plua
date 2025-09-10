@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.37] - 2025-09-10
+
+
+
+#### Commits since v1.2.36:
+
+- 🐛 **Fix**: rename 'executable' to 'interpreter' in VSCode launch configuration
+
+
+
 ## [v1.2.36] - 2025-09-10
 
 

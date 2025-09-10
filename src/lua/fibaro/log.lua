@@ -1,5 +1,5 @@
--- @module hc3emu2.log
----@description Logging system for HC3Emu2
+-- @module plua.log
+---@description Logging system for plua
 ---@author Jan Gabrielsson
 ---@license MIT
 ---
@@ -13,7 +13,7 @@
 ---
 ---@usage
 ---```lua
----local log = require("hc3emu2.log")
+---local log = require("plua.log")
 ---log.init() -- Initialize with default colors
 ---log.LOGGER.DEBUG("TAG", "Debug message")
 ---log.LOGGER.ERROR("TAG", "Error message")

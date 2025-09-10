@@ -97,6 +97,8 @@ local store = {
   }
 }
 
+local Partitions,PartitionId = {},0
+
 local function setup()
 
   Emu.lib.loadLib("offline_data",Emu,store)
@@ -293,12 +295,56 @@ local function setup()
 
   add("GET/alarms/v1/partitions", function(path, data, vars, query)
     local alarms = {}
+    for id,part in pairs(Partitions) do
+      alarms[#alarms+1] = part
+    end
     return {alarms,HTTP.OK}
   end)
 
   add("GET/alarms/v1/partitions/<id>", function(path, data, vars, query)
+    local part = Partitions[tonumber(vars.id)]
+    if not part then return {nil,HTTP.NOT_FOUND} end
+    return {part,HTTP.OK}
+  end)
+
+  add("POST/alarms/v1/partitions", function(path, data, vars, query)
+    local part = {}
+    part.name = data.name or ("Zone"..(PartitionId+1))
+    part.id = PartitionId + 1
+    PartitionId = part.id
+    part.breached = false
+    part.armed = false
+    part.breachDelay = data.breachDelay or 16
+    part.armDelay = data.armDelay or 16
+    part.devices = data.devices or {}
+    part.lastActionAt = Emu.lib.userTime()
+    Partitions[part.id] = part
+    return {part,HTTP.CREATED}
+  end)
+
+  add("GET/alarms/v1/partitions/breached", function(path, data, vars, query)
     local alarms = {}
+    for id,part in pairs(Partitions) do
+      if part.breached then alarms[#alarms+1] = part end
+    end
     return {alarms,HTTP.OK}
+  end)
+
+  add("PUT/alarms/v1/partitions/<id>", function(path, data, vars, query)
+    local part = Partitions[tonumber(vars.id)]
+    if not part then return {nil,HTTP.NOT_FOUND} end
+    for k,v in pairs(data) do
+      if k ~= 'id' then part[k] = v end
+    end
+    part.lastActionAt = Emu.lib.userTime()
+    return {part,HTTP.OK}
+  end)
+
+    add("DELETE/alarms/v1/partitions/<id>", function(path, data, vars, query)
+    local part = Partitions[tonumber(vars.id)]
+    if not part then return {nil,HTTP.NOT_FOUND} end
+    Partitions[tonumber(vars.id)] = nil
+    return {part,HTTP.OK}
   end)
 
   add("GET/alarms/v1/devices", function(path, data, vars, query)
@@ -326,6 +372,10 @@ local function setup()
     return {{},HTTP.OK}
   end)
 
+  add("GET/diagnostics", function(path, data, vars, query)
+    local resp = { memory = { used = 50 }}
+    return {resp,HTTP.OK}
+  end)
 end
 
 Emu.lib.setupOfflineRoutes = setup

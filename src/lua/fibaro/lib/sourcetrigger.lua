@@ -160,5 +160,8 @@ function exports.refreshStateEvent2SourceTrigger(event,post)
   if et then et(event.data,event,post) end
 end
 
-if fibaro then fibaro.FILE['hc3emu.sourcetrigger'] = exports end
+if fibaro then
+  fibaro.FILE = fibaro.FILE or {}
+  fibaro.FILE['plua.sourcetrigger'] = exports
+end
 return exports

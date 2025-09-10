@@ -1,8 +1,8 @@
 # The Anatomy of QuickApps - Part 1
 
-> **Note**: This document explores QuickApp tricks and requires a deeper understanding of Lua. This tutorial is designed for newcomers to Lua, focusing not just on "call this function to do this," but on "How and why will calling this function achieve this?"
+> Note: This series explores QuickApp internals. It focuses not only on "call this function to do this," but on why calling a function produces a particular result.
 
-We will slowly dive into QuickApps and try to gain understanding of how they work under the hood. The first part is mostly a Lua functions introduction and objects - a foundation we need. The next part will go deeper into the QuickApp class and how it works. It will get progressively more challenging! 😊
+We'll gradually dive into QuickApps and understand how they work under the hood. This first part is mostly an introduction to Lua functions and objects—the foundation we need. The next part goes deeper into the QuickApp class and how it works. It will get progressively more challenging! 😊
 
 ## 📖 Table of Contents
 
@@ -71,16 +71,16 @@ We will slowly dive into QuickApps and try to gain understanding of how they wor
 
 ## Introduction
 
-**QuickApps are written in the programming language Lua.** Let's look behind the curtain of a QuickApp and try to understand how it works.
+**QuickApps are written in the programming language Lua.** Let's look behind the curtain of a QuickApp and understand how it works.
 
 ### Prerequisites
 
-To understand this tutorial, you need:
+To follow along, you should have:
 - Basic understanding of Lua
 - Experience making a simple QuickApp
 - Knowledge of Lua tables (helpful but we'll explain most concepts)
 
-Even for seasoned Lua coders, this may explain why Lua behaves the way it does sometimes. Corrections and feedback are welcome! 
+Even for seasoned Lua coders, this may explain why Lua behaves the way it does sometimes. Corrections and feedback are welcome!
 
 ### What We'll Cover
 
@@ -94,7 +94,7 @@ Even for seasoned Lua coders, this may explain why Lua behaves the way it does s
 
 ## Part 1: Lua Functions Recap
 
-First, QuickApps are based on a Lua object-oriented model using 'classes' - but what is that? To answer this question, we need to take a longer journey through Lua fundamentals.
+First, QuickApps are based on a Lua object-oriented model using “classes.” But what is a class in Lua? To answer that, we need to take a short tour through Lua fundamentals.
 
 ### Basic Function Definition
 
@@ -106,7 +106,7 @@ function test(x)
 end
 ```
 
-This defines a Lua function named `test` that takes one argument `x` and returns `2*x`. 
+This defines a Lua function named `test` that takes one argument `x` and returns `2*x`.
 
 > **Note**: `x` has to be a number, or we get an error. Only numbers can be added.
 
@@ -130,7 +130,7 @@ end
 
 ### ⚠️ Important: Function Definition Order
 
-When Lua runs your code, it runs it **top to bottom**, starting with the first line. This means that functions have to be defined before you can call them.
+When Lua runs your code, it runs **top to bottom**, starting with the first line. This means functions must be defined before you can call them.
 
 ```lua
 -- ❌ This will NOT work:
@@ -138,7 +138,7 @@ x = test(21)
 function test(x) return x + x end
 ```
 
-This will complain that the function `test` doesn't exist when it sees `x = test(21)`. The function becomes defined only on the next line.
+Lua will complain that `test` doesn't exist when it sees `x = test(21)`. The function is only defined on the next line.
 
 ---
 
@@ -158,14 +158,14 @@ is just a convenient way that Lua allows us to write:
 test = function(x) return x + x end
 ```
 
-**From this we learn two important things:**
+From this we learn two important things:
 
 1. **We have "anonymous" functions** (or just "functions" for short)
 2. **A "named" function is just a variable assigned an anonymous function**
 
 ### Functions are Data Types
 
-A function in Lua is a data type just like any other. In fact, we don't have many types - there are only **8 data types** in Lua:
+A function in Lua is a data type just like any other. In fact, Lua has only eight basic types:
 
 | Type | Description | Example |
 |------|-------------|---------|
@@ -178,7 +178,7 @@ A function in Lua is a data type just like any other. In fact, we don't have man
 | `thread` | Coroutines (not allowed on HC3) | - |
 | `nil` | "Nothing" value | `print(type(nil))` → `"nil"` |
 
-> **HC3 Note**: The `class` function creates objects of type "userdata" - these are defined in C/C++ code.
+> HC3 note: The `class` function creates objects of type `userdata`—these are defined in C/C++ code.
 
 ### Passing Functions as Arguments
 
@@ -193,13 +193,13 @@ x = test(function(x) return x + x end)
 print(x)  -- prints 53 (11 + 21 + 21)
 ```
 
-**What's happening:**
+What's happening:
 1. We define `test` that takes parameter `f` (assumed to be a function)
 2. `test` calls `f(21)` and adds 11 to the result
 3. We call `test` with an anonymous function that doubles its argument
 4. Result: `11 + (21 + 21) = 53`
 
-**Alternative approach:**
+Alternative approach:
 
 ```lua
 function test(f) 
@@ -243,7 +243,7 @@ sum({1, 2, 3, 4, 5})  -- or sum{1, 2, 3, 4, 5}
 
 > **Lua Tip**: You can omit parentheses when passing a single table to a function.
 
-**Even better - use variable arguments:**
+Even better—use variable arguments:
 
 ```lua
 function sum(...)
@@ -260,7 +260,7 @@ sum(1, 2, 3, 4, 5)  -- Much cleaner!
 
 ### Named Parameters Pattern
 
-This style is common for "named parameters":
+This style is common for “named parameters”:
 
 ```lua
 function test(args)
@@ -293,7 +293,7 @@ print(sum(test()))  -- sum receives 42 and 17, prints 59
 
 ### Global Variables
 
-Global variables are stored in Lua's "global context" table called `_G`:
+Global variables are stored in Lua's global context table `_G`:
 
 ```lua
 test = 42
@@ -319,7 +319,7 @@ function test2(x)         -- Global function (in _G)
 end
 ```
 
-**Local scopes are created by:**
+Local scopes are created by:
 - `do ... end` blocks
 - `if then ... else ... end` statements  
 - `repeat ... until` loops
@@ -381,7 +381,7 @@ do
 end
 ```
 
-**Why it fails:** When `foo` is defined, `bar` doesn't exist yet as a local variable, so `bar` is assumed to be global (but doesn't exist there either).
+Why it fails: When `foo` is defined, `bar` doesn't exist yet as a local variable, so `bar` is assumed to be global (but it doesn't exist there either).
 
 ### The Solution: Forward Declaration
 
@@ -436,7 +436,7 @@ end
 print(42)  -- prints "V:42"
 ```
 
-**Practical example - better table printing:**
+Practical example—better table printing:
 
 ```lua
 do
@@ -469,7 +469,7 @@ end
 
 ### Closures
 
-**Functions can "close over" local variables:**
+Functions can “close over” local variables:
 
 ```lua
 x = 42
@@ -498,7 +498,7 @@ setX(10)
 print(getXplusY(8))  -- prints 18
 ```
 
-Both functions share the same local variable `x` - it's like a private shared variable.
+Both functions share the same local variable `x`—it's like a private shared variable.
 
 **Function factories:**
 
@@ -511,7 +511,7 @@ add42 = makeAdder(42)
 print(add42(8))  -- prints 50
 ```
 
-The returned function "remembers" the value of `x` (42) from when it was created. This combination of function + captured variables is called a **closure**.
+The returned function “remembers” the value of `x` (42) from when it was created. This combination of a function plus captured variables is called a **closure**.
 
 ---
 
@@ -532,9 +532,9 @@ If you've followed along this far, you have a solid grasp of functions in Lua:
 
 ## Part 7: Object-Oriented Programming
 
-Now let's do some object-oriented programming! Lua doesn't have OO built-in, but it provides the tools to build your own OO model.
+Now let's do some object-oriented programming! Lua doesn't have OO built in, but it provides the tools to build your own OO model.
 
-**What is an object?** An object is an encapsulation of data with associated functions (methods).
+What is an object? An object is an encapsulation of data with associated functions (methods).
 
 ### Tables as Data Containers
 
@@ -548,7 +548,7 @@ The variable `test` is assigned a key-value table where:
 - Key `'a'` → value `42`
 - Key `'y'` → value `17`
 
-**Important:** The table is constructed when this statement runs:
+Important: The table is constructed when this statement runs:
 
 ```lua
 function foo(x) return x + 4 end
@@ -558,21 +558,21 @@ test2 = {['a'..'b'] = foo(66)}
 
 ### Table Access Syntax
 
-**Bracket notation (always works):**
+Bracket notation (always works):
 
 ```lua
 print(test['a'])  -- prints 42
 print(test['y'])  -- prints 17
 ```
 
-**Dot notation (when key is a valid identifier):**
+Dot notation (when the key is a valid identifier):
 
 ```lua
 print(test.a)  -- prints 42
 print(test.y)  -- prints 17
 ```
 
-**When dot notation doesn't work:**
+When dot notation doesn't work:
 
 ```lua
 test = {['a b'] = 42, ['dörr'] = 99}
@@ -582,20 +582,20 @@ test = {['a b'] = 42, ['dörr'] = 99}
 
 ### Table Construction Shortcuts
 
-**String keys:**
+String keys:
 
 ```lua
 test = {a = 42, y = 17}  -- Same as {['a'] = 42, ['y'] = 17}
 ```
 
-**Adding/modifying keys:**
+Adding or modifying keys:
 
 ```lua
 test.a = 18  -- Modify existing
 test.c = 77  -- Create new
 ```
 
-**Nested tables:**
+Nested tables:
 
 ```lua
 test = { a = { b = 8 } }
@@ -604,7 +604,7 @@ print(test.a.b)  -- prints 8
 
 ### Arrays vs Hash Tables
 
-**Arrays (consecutive numeric keys):**
+Arrays (consecutive numeric keys):
 
 ```lua
 test = {[1]="a", [2]="b", [3]="c"}
@@ -614,7 +614,7 @@ print(test[2])    -- prints "b"
 -- Note: test.2 is invalid syntax
 ```
 
-> **Lua arrays start at index 1, not 0!**
+> Lua arrays start at index 1, not 0!
 
 ---
 
@@ -650,7 +650,7 @@ print(test1.f())  -- prints 59
 print(test2.f())  -- prints 61
 ```
 
-**Problem:** Each function must reference its specific table (`test1`, `test2`). The functions are nearly identical!
+Problem: Each function must reference its specific table (`test1`, `test2`). The functions are nearly identical!
 
 ### Shared Functions with Parameters
 
@@ -664,7 +664,7 @@ print(test1.f(test1))  -- prints 59
 print(test2.f(test2))  -- prints 61
 ```
 
-Better! Now we share one function, but we have to pass the table as an argument.
+Better! Now we share one function, but we must pass the table as an argument.
 
 ### The `:` Syntax Sugar
 
@@ -674,7 +674,7 @@ Lua provides special syntax for this common pattern:
 test1:f()  -- Same as: test1.f(test1)
 ```
 
-**With the `:` syntax:**
+With the `:` syntax:
 
 ```lua
 local f = function(self) return self.a + self.y end
@@ -690,7 +690,7 @@ The first parameter is automatically the table itself, conventionally named `sel
 
 ### Function Definition with `:`
 
-**Defining methods directly:**
+Defining methods directly:
 
 ```lua
 test1 = {a = 42, y = 17}
@@ -702,7 +702,7 @@ end
 print(test1:f())  -- prints 59
 ```
 
-**This is equivalent to:**
+This is equivalent to:
 
 ```lua
 test1.f = function(self) 
@@ -710,7 +710,7 @@ test1.f = function(self)
 end
 ```
 
-**With additional parameters:**
+With additional parameters:
 
 ```lua
 function test1:f(x) 
@@ -723,7 +723,7 @@ end
 
 ## Part 9: Classes and Object Creation
 
-We want a function that creates objects of a specific type - this is called a **class**.
+We want a function that creates objects of a specific type—this is called a **class**.
 
 ### Simple Class Implementation
 
@@ -777,9 +777,9 @@ obj2:test()  -- prints 28 (11 + 17)
 
 ## Part 10: QuickApps - Finally!
 
-Now we can understand how QuickApps work! When the HC3 starts your QuickApp:
+Now we can understand how QuickApps work. When the HC3 starts your QuickApp:
 
-### Conceptual QuickApp Lifecycle
+### Conceptual QuickApp lifecycle
 
 ```lua
 -- 1. HC3 creates the QuickApp class (simplified)
@@ -813,7 +813,7 @@ if quickApp.onInit then
 end
 ```
 
-### Real QuickApp Implementation
+### Real QuickApp implementation
 
 In reality, HC3 uses a built-in `class` function instead of our simple version:
 
@@ -844,14 +844,14 @@ if quickApp.onInit then
 end
 ```
 
-### Key Differences from Our Implementation
+### Key differences from our implementation
 
 1. **Built-in `class` function** creates objects of type `"userdata"` (protected)
 2. **Can't introspect** - you can't loop over keys or convert to JSON
 3. **Inheritance support** - QuickApp inherits from QuickAppBase
 4. **Automatic properties** - `self.id` is set to your device ID
 
-### Accessing QuickApp Properties
+### Accessing QuickApp properties
 
 ```lua
 function QuickApp:onInit()
@@ -865,7 +865,7 @@ end
 
 ## Summary: Understanding QuickApps
 
-**You now understand:**
+You now understand:
 
 ✅ **Tables** - Lua's flexible data structure  
 ✅ **Object-oriented programming** in Lua using tables and functions  
@@ -874,13 +874,13 @@ end
 ✅ **QuickApp structure** - it's a class with your methods added  
 ✅ **Object lifecycle** - class definition → method addition → object creation → initialization  
 
-**QuickApps are just Lua objects!** When you define `function QuickApp:onInit()`, you're adding a method to the QuickApp class. When HC3 runs your code, it creates an instance of that class and calls your methods.
+QuickApps are just Lua objects. When you define `function QuickApp:onInit()`, you're adding a method to the QuickApp class. When HC3 runs your code, it creates an instance of that class and calls your methods.
 
 ---
 
 ## What's Next?
 
-In **Part 2**, we'll dive deeper into:
+In Part 2, we'll dive deeper into:
 - **Inheritance** and how QuickAppBase works
 - **QuickAppChildren** implementation
 - **Advanced QuickApp patterns**

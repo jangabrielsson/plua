@@ -232,6 +232,10 @@ router:add("POST", "/devices/<id>/action/<name>", function(path, data, vars, que
   else
     if dev.device.isChild then dev = Emu.DIR[dev.device.parentId] end
     -- Call onAction directly instead of using setTimeout to avoid event loop issues
+    if not dev.env then
+      Emu:ERROR("No env for device",id,dev.device.name)
+      return nil,HTTP.INTERNAL_SERVER_ERROR
+    end
     dev.env.onAction(id,{ deviceId = id, actionName = vars.name, args = data.args })
     return nil,HTTP.OK
   end
@@ -276,8 +280,8 @@ router:add("GET", "/energy/devices", function(path, data, vars, query)
 end)
 
 router:add("GET", "/globalVariables", function(path, data, vars, query)
-  return create_response({var1 = {name = "var1", value = "foo"}})
-  --return nil,301
+  --return create_response({var1 = {name = "var1", value = "foo"}})
+  return nil,301
 end)
 
 router:add("GET", "/globalVariables/<name>", function(path, data, vars, query)

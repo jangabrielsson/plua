@@ -491,7 +491,6 @@ pip install --upgrade plua
 - Restart VS Code if IntelliSense stops working
 
 **3. Tasks Not Working**
-- Ensure `hc3emu2` is available in your Lua environment
 - Check that `.project` file exists for HC3 tasks
 - Verify HC3 connection settings
 

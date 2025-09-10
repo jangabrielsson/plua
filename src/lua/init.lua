@@ -463,14 +463,16 @@ if runFor then
   if runFor > 0 then
     _PY.setTimeout(function() 
       print("Exit.")
-      os.exit(0) 
+      setTimeout(function()
+        os.exit(0) -- Give some time for any final prints to complete
+      end,1000)
     end, runFor * 1000, {system = true}) -- Kill after runFor seconds, if still running
   elseif runFor == 0 then
     _PY.setTimeout(function() end, math.huge) -- Keep running indefinitely...
   elseif runFor < 0 then
     _PY.setTimeout(function() 
       print("Exit")
-      os.exit(0)
+      setTimeout(function() os.exit(0) end, 100) -- Give some time for any final prints to complete
     end, (-runFor) * 1000) -- Kill exactly runFor seconds
   end
 end

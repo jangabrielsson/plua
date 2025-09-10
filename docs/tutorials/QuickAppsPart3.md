@@ -1,57 +1,73 @@
 
 # 🔧 The Anatomy of QuickApps – Part 3: Execution Model Deep Dive
 
-*Advanced QuickApp Development - Understanding the Internal Operator Model*
+Advanced QuickApp development: understanding the internal Operator model.
 
 ---
 
 ## 📋 Table of Contents
 
-1. [**Recap: QuickApp Class Structure**](#part-1-recap-quickapp-class-structure)
-   - [The QuickApp Table Structure](#the-quickapp-table-structure)
-   - [Dynamic Method Extension](#dynamic-method-extension)
-   - [Runtime Method Addition](#runtime-method-addition)
-
-2. [**Method Invocation Mechanisms**](#part-2-method-invocation-mechanisms)
-   - [Local vs Remote Calls](#local-vs-remote-calls)
-   - [The fibaro.call() Magic](#the-fibarocall-magic)
-   - [Deadlock Prevention](#deadlock-prevention)
-
-3. [**The Persistence Problem**](#part-3-the-persistence-problem)
-   - [Why QuickApps Don't Terminate](#why-quickapps-dont-terminate)
-   - [Answering External Requests](#answering-external-requests)
-   - [The Disabled QuickApp Test](#the-disabled-quickapp-test)
-
-4. [**The Operator Model Implementation**](#part-4-the-operator-model-implementation)
-   - [Operator Main Loop](#operator-main-loop)
-   - [Request Processing](#request-processing)
-   - [Method Dispatch Logic](#method-dispatch-logic)
-
-5. [**Execution Model Deep Dive**](#part-5-execution-model-deep-dive)
-   - [Single-Threaded Nature](#single-threaded-nature)
-   - [setTimeout vs Busy Loops](#settimeout-vs-busy-loops)
-   - [The fibaro.sleep() Problem](#the-fibarosleep-problem)
-
-6. [**Advanced Handler Patterns**](#part-6-advanced-handler-patterns)
-   - [actionHandler Override](#actionhandler-override)
-   - [UIHandler Customization](#uihandler-customization)
-   - [Custom Dispatch Logic](#custom-dispatch-logic)
-
-7. [**Summary and Best Practices**](#summary-and-best-practices)
-   - [Key Takeaways](#-key-takeaways)
-   - [Quick Reference Index](#-quick-reference-index)
+- [🔧 The Anatomy of QuickApps – Part 3: Execution Model Deep Dive](#-the-anatomy-of-quickapps--part-3-execution-model-deep-dive)
+  - [📋 Table of Contents](#-table-of-contents)
+  - [⚠️ Important disclaimers](#️-important-disclaimers)
+  - [Part 1: Recap – QuickApp class structure](#part-1-recap--quickapp-class-structure)
+    - [The QuickApp Table Structure](#the-quickapp-table-structure)
+    - [Dynamic method extension](#dynamic-method-extension)
+    - [Runtime method addition](#runtime-method-addition)
+  - [Part 2: Method invocation mechanisms](#part-2-method-invocation-mechanisms)
+    - [Local vs remote calls](#local-vs-remote-calls)
+    - [The fibaro.call() magic](#the-fibarocall-magic)
+    - [Deadlock prevention](#deadlock-prevention)
+  - [Part 3: The persistence problem](#part-3-the-persistence-problem)
+    - [The QuickApp lifecycle](#the-quickapp-lifecycle)
+    - [Minimal QuickApp Example](#minimal-quickapp-example)
+    - [Why QuickApps don't terminate](#why-quickapps-dont-terminate)
+    - [Answering external requests](#answering-external-requests)
+    - [The disabled QuickApp test](#the-disabled-quickapp-test)
+  - [Part 4: The Operator model implementation](#part-4-the-operator-model-implementation)
+    - [Understanding the QuickApp “Operator”](#understanding-the-quickapp-operator)
+    - [Key implementation details](#key-implementation-details)
+    - [Request processing](#request-processing)
+    - [The table.unpack() pattern](#the-tableunpack-pattern)
+    - [Built-in callAction method](#built-in-callaction-method)
+  - [Part 5: Execution model deep dive](#part-5-execution-model-deep-dive)
+    - [The setTimeout pattern](#the-settimeout-pattern)
+    - [Single-threaded nature](#single-threaded-nature)
+    - [The blocking problem](#the-blocking-problem)
+    - [The fibaro.sleep() problem](#the-fibarosleep-problem)
+    - [setTimeout vs busy loops](#settimeout-vs-busy-loops)
+    - [setInterval convenience](#setinterval-convenience)
+    - [Key takeaway](#key-takeaway)
+    - [Simple QuickApp simulator](#simple-quickapp-simulator)
+  - [Part 6: Advanced handler patterns](#part-6-advanced-handler-patterns)
+    - [Two categories of incoming requests](#two-categories-of-incoming-requests)
+    - [Custom action handler](#custom-action-handler)
+    - [Custom UI handler](#custom-ui-handler)
+    - [Custom dispatch logic](#custom-dispatch-logic)
+    - [Handler responsibility](#handler-responsibility)
+    - [When to use custom handlers](#when-to-use-custom-handlers)
+    - [Implementation responsibility](#implementation-responsibility)
+  - [Summary and best practices](#summary-and-best-practices)
+    - [Key takeaways](#key-takeaways)
+    - [Practical guidelines](#practical-guidelines)
+    - [What's next?](#whats-next)
+    - [📚 Quick Reference Index](#-quick-reference-index)
+      - [Core Concepts](#core-concepts)
+      - [Essential Functions](#essential-functions)
+      - [Handler Patterns](#handler-patterns)
+      - [Best Practices](#best-practices)
 
 ---
 
-## ⚠️ **Important Disclaimers**
+## ⚠️ Important disclaimers
 
-- **Theoretical Implementation**: The "Operator" model presented is a conceptual framework to understand QuickApp execution
-- **Simplified Examples**: Code examples are educational and may not reflect exact HC3 implementation details
-- **Best Practices Focus**: Emphasis on practical patterns for robust QuickApp development
+- The “Operator” model presented is a conceptual framework to understand QuickApp execution.
+- Code examples are simplified and may not reflect exact HC3 implementation details.
+- The focus is on practical patterns for robust QuickApp development.
 
 ---
 
-## Part 1: Recap - QuickApp Class Structure
+## Part 1: Recap – QuickApp class structure
 
 ### The QuickApp Table Structure
 
@@ -75,9 +91,9 @@ In the previous post, we explored how the QuickApp class is fundamentally a Lua 
 }
 ```
 
-**⚠️ Note**: The `id`, `name`, and `type` fields are not available until the QuickApp object is instantiated.
+⚠️ Note: The `id`, `name`, and `type` fields are not available until the QuickApp object is instantiated.
 
-### Dynamic Method Extension
+### Dynamic method extension
 
 We can extend the class by adding functions:
 
@@ -97,7 +113,7 @@ This adds the field to the class:
 }
 ```
 
-### Runtime Method Addition
+### Runtime method addition
 
 **Can we add methods after object creation?**
 
@@ -120,9 +136,9 @@ This allows runtime extension of QuickApp functionality.
 
 ---
 
-## Part 2: Method Invocation Mechanisms
+## Part 2: Method invocation mechanisms
 
-### Local vs Remote Calls
+### Local vs remote calls
 
 **Local method calls** within our code:
 ```lua
@@ -144,11 +160,11 @@ self = {
 fibaro.call(deviceId, "methodName", arguments...)
 ```
 
-### The fibaro.call() Magic
+### The fibaro.call() magic
 
 This is where the **second piece of magic** occurs. The HC3 system manages inter-QuickApp communication through a sophisticated request/response mechanism.
 
-### Deadlock Prevention
+### Deadlock prevention
 
 In the previous post, we explained the "Operator" analogy and why this could create deadlock:
 
@@ -160,9 +176,9 @@ Fibaro introduced **asynchronous behavior by default** to prevent these issues.
 
 ---
 
-## Part 3: The Persistence Problem
+## Part 3: The persistence problem
 
-### The QuickApp Lifecycle
+### The QuickApp lifecycle
 
 When your code is loaded, Fibaro follows this sequence:
 
@@ -193,21 +209,21 @@ setInterval(function()
 end, 60*1000)
 ```
 
-**Why this works:**
+Why this works:
 - Updates a global variable every minute with current time
 - No `QuickApp:onInit` needed
 - No explicit `QuickApp` references required
 - Uses only built-in HC3 functions
 
-### Why QuickApps Don't Terminate
+### Why QuickApps don't terminate
 
-**The fundamental question**: Why doesn't a QuickApp terminate after executing this simple code?
+The fundamental question: Why doesn't a QuickApp terminate after executing this simple code?
 
 ```lua
 print(42)  -- No onInit, no loops, nothing else
 ```
 
-**The answer**: Even with no active Lua code, the QuickApp must remain available to handle:
+The answer: Even with no active Lua code, the QuickApp must remain available to handle:
 
 1. **Remote method calls** from other QuickApps
 2. **Scene invocations** via `fibaro.call()`
@@ -216,7 +232,7 @@ print(42)  -- No onInit, no loops, nothing else
 
 Someone needs to be "at home" to answer these requests - our **"Operator"**.
 
-### Answering External Requests
+### Answering external requests
 
 Other QuickApps or Scenes can call your methods:
 
@@ -226,7 +242,7 @@ fibaro.call(yourDeviceId, "setVariable", "test", "42")
 
 The QuickApp **must remain active** to process these incoming requests.
 
-### The Disabled QuickApp Test
+### The disabled QuickApp test
 
 **Experiment**: Testing QuickApp availability
 
@@ -241,17 +257,17 @@ api.put("/devices/78", {enabled = false})
 fibaro.call(78, "setVariable", "B", "17")  -- Set variable "B" = "17"
 ```
 
-**Result**: 
+Result:
 - ✅ Variable "A" gets set (QuickApp was active)
 - ❌ Variable "B" is NOT set (QuickApp was disabled)
 
-**Conclusion**: No one was "at home" to handle the second request because the Operator had "left for coffee".
+Conclusion: No one was “at home” to handle the second request because the Operator had “left for coffee.”
 
 ---
 
-## Part 4: The Operator Model Implementation
+## Part 4: The Operator model implementation
 
-### Understanding the QuickApp "Operator"
+### Understanding the QuickApp “Operator”
 
 Let's implement our conceptual **"Operator"** - the main loop of the QuickApp framework:
 
@@ -282,29 +298,29 @@ end
 Operator()  -- Start the Operator loop
 ```
 
-### Key Implementation Details
+### Key implementation details
 
-**Code Storage**: User code is stored in `device.properties.mainFunction` as a plain string:
+Code storage: User code is stored in `device.properties.mainFunction` as a plain string:
 ```lua
 -- Example: "print(42)"
 -- Or: "function QuickApp:onInit() self:debug('Hello') end"
 ```
 
-**loadstring() Function**: 
+loadstring():
 - Built-in Lua function for compiling and loading code from strings
-- **Not available** in the QuickApp Lua environment
+- Not available in the QuickApp Lua environment
 - Used internally by the HC3 system
 
-**Object Creation Sequence**:
+Object creation sequence:
 1. Load and execute user code
 2. Create QuickApp object instance
 3. Call `onInit()` if defined
 4. Set global `quickApp` reference
 5. Start Operator loop
 
-### Request Processing
+### Request processing
 
-**Request Structure** (conceptual):
+Request structure (conceptual):
 ```lua
 {
     method = "turnOn",
@@ -312,16 +328,16 @@ Operator()  -- Start the Operator loop
 }
 ```
 
-**Method Dispatch**:
+Method dispatch:
 ```lua
 if quickApp['turnOn'] then  -- Check if method exists
     quickApp['turnOn'](quickApp, table.unpack({}))  -- Call with self + args
 end
 ```
 
-### The table.unpack() Pattern
+### The table.unpack() pattern
 
-**Understanding argument unpacking**:
+Understanding argument unpacking:
 ```lua
 function test(a, b, c) 
     return a + b + c 
@@ -331,12 +347,12 @@ local rest = {2, 3}
 print(test(1, table.unpack(rest)))  -- Prints 6
 ```
 
-**How it works**:
+How it works:
 - `table.unpack(rest)` becomes `2, 3`
 - Final call: `test(1, 2, 3)`
 - Result: `1 + 2 + 3 = 6`
 
-### Built-in callAction Method
+### Built-in callAction method
 
 The QuickApp class provides a method for this pattern:
 
@@ -350,11 +366,11 @@ Now you understand how to implement this yourself! 🎯
 
 ---
 
-## Part 5: Execution Model Deep Dive
+## Part 5: Execution model deep dive
 
-### The setTimeout Pattern
+### The setTimeout pattern
 
-**Why setTimeout() instead of while loops?**
+Why setTimeout() instead of while loops?
 
 The Operator uses:
 ```lua
@@ -368,17 +384,17 @@ while true do
 end
 ```
 
-### Single-Threaded Nature
+### Single-threaded nature
 
-**Critical concept**: Nothing runs in parallel inside a QuickApp.
+Critical concept: Nothing runs in parallel inside a QuickApp.
 
 The `setTimeout()` function:
-- **Built-in HC3 function** (not standard Lua)
-- **Adds function to a queue** of functions to run in the future
-- **Time in milliseconds** - `setTimeout(func, 0)` means "run ASAP"
-- **Not immediate execution** - other queued functions may run first
+- Built-in HC3 function (not standard Lua)
+- Adds the function to a queue to run in the future
+- Time in milliseconds—`setTimeout(func, 0)` means “run ASAP”
+- Not immediate execution—other queued functions may run first
 
-### The Blocking Problem
+### The blocking problem
 
 **Dangerous code example**:
 ```lua
@@ -390,22 +406,22 @@ function QuickApp:onInit()
 end
 ```
 
-**What happens**:
+What happens:
 1. `onInit()` never exits
 2. Operator never starts
 3. No `fibaro.call()` requests can be processed
 4. QuickApp becomes **unresponsive**
 
-### The fibaro.sleep() Problem
+### The fibaro.sleep() problem
 
-**Important limitation**: `fibaro.sleep()` does a **"busy sleep"**:
-- ❌ Does NOT yield time to other functions
-- ❌ Does NOT allow `setTimeout` functions to run
-- ❌ BLOCKS the entire QuickApp
+Important limitation: `fibaro.sleep()` does a “busy sleep”:
+- ❌ Does not yield time to other functions
+- ❌ Does not allow `setTimeout` functions to run
+- ❌ Blocks the entire QuickApp
 
-**Missed opportunity**: Fibaro could have engineered `fibaro.sleep()` to yield time to other "threads", but they chose not to.
+Missed opportunity: Fibaro could have engineered `fibaro.sleep()` to yield time to other “threads,” but they chose not to.
 
-### setTimeout vs Busy Loops
+### setTimeout vs busy loops
 
 **❌ Wrong approach - Blocking loop**:
 ```lua
@@ -428,13 +444,13 @@ function QuickApp:onInit()
 end
 ```
 
-**Why this works**:
+Why this works:
 - Each iteration completes quickly
 - `setTimeout` schedules the next iteration
 - Operator can process requests between iterations
 - QuickApp remains responsive
 
-### setInterval Convenience
+### setInterval convenience
 
 **Even better - use setInterval**:
 ```lua
@@ -445,41 +461,41 @@ function QuickApp:onInit()
 end
 ```
 
-**Benefits**:
+Benefits:
 - Based on `setTimeout` internally
 - Automatic recurring execution
 - Non-blocking by design
 
-### 📚 Key Takeaway
+### Key takeaway
 
-**Always use `setTimeout` or `setInterval`** when looping in your QuickApp:
+Always use `setTimeout` or `setInterval` when looping in your QuickApp:
 - ✅ Ensures Operator can receive incoming requests
 - ✅ Allows `fibaro.call()` processing
 - ✅ Enables UI button/slider interactions
 - ✅ Maintains QuickApp responsiveness
 
-**Remember**: Whenever your code is busy running loops, **nothing else can happen**.
+Remember: Whenever your code is busy running loops, nothing else can happen.
 
-### Simple QuickApp Simulator
+### Simple QuickApp simulator
 
-**Note**: Here's a [very simple "QuickApp simulator"](simulator-link) (~20 lines of code):
-- Runs in any standard Lua environment with co-routines
+Note: Here's a very simple [“QuickApp simulator”](https://forum.fibaro.com/topic/49113-hc3-quickapps-coding-tips-and-tricks/page/14/#findComment-204213) (~20 lines of code):
+- Runs in any standard Lua environment with coroutines
 - Implements `setTimeout` and `:onInit` logic
-- No "Operator" concept (no external events)
+- No “Operator” concept (no external events)
 - Easy to see how external event handling could be added
 
 ---
 
-## Part 6: Advanced Handler Patterns
+## Part 6: Advanced handler patterns
 
-### Two Categories of Incoming Requests
+### Two categories of incoming requests
 
 In reality, the Operator sorts incoming requests into **two categories**:
 
 1. **Actions** - Method calls via `fibaro.call()`
 2. **UIEvents** - User interactions with buttons, sliders, etc.
 
-### Custom Action Handler
+### Custom action handler
 
 **Override default action handling**:
 ```lua
@@ -489,7 +505,7 @@ function QuickApp:actionHandler(action)
 end
 ```
 
-**⚠️ Warning**: If you define this handler, the Operator will send **all** incoming requests to your function instead of the default method dispatch.
+⚠️ Warning: If you define this handler, the Operator will send all incoming requests to your function instead of the default method dispatch.
 
 **Example action structure**:
 ```lua
@@ -500,12 +516,12 @@ end
 }
 ```
 
-**Log message example**:
+Log message example:
 ```
 onAction: {"args":[],"actionName":"turnOn","deviceId":987}
 ```
 
-### Custom UI Handler
+### Custom UI handler
 
 **Override default UI event handling**:
 ```lua
@@ -525,12 +541,12 @@ end
 }
 ```
 
-**Log message example**:
+Log message example:
 ```
 UIEvent: {"values":[null],"elementName":"button1","eventType":"onReleased","deviceId":987}
 ```
 
-### Custom Dispatch Logic
+### Custom dispatch logic
 
 **Why use custom handlers?**
 
@@ -561,15 +577,15 @@ function QuickApp:UIHandler(event)
 end
 ```
 
-### Handler Responsibility
+### Handler responsibility
 
-**⚠️ Critical**: If you define these handlers, **you become the Operator**:
+⚠️ Critical: If you define these handlers, you become the Operator:
 - You must implement method dispatch logic
 - You must handle UI event routing
 - Default automatic behavior is disabled
 - **If you don't handle it, nothing works**
 
-### When to Use Custom Handlers
+### When to use custom handlers
 
 **Normal cases**: Usually not needed - default handlers work fine.
 
@@ -579,7 +595,7 @@ end
 - Advanced debugging and logging
 - Working around QuickAppChild limitations (next post!)
 
-### Implementation Responsibility
+### Implementation responsibility
 
 **Default behavior (automatic)**:
 ```lua
@@ -602,9 +618,9 @@ end
 
 ---
 
-## Summary and Best Practices
+## Summary and best practices
 
-### 🎯 Key Takeaways
+### Key takeaways
 
 **Execution Model Understanding:**
 ✅ QuickApps use a single-threaded "Operator" model  
@@ -621,7 +637,7 @@ end
 ✅ You become responsible for method/UI routing  
 ✅ Useful for advanced scenarios and debugging  
 
-### 🔄 Practical Guidelines
+### Practical guidelines
 
 **Loop Implementation:**
 ```lua
@@ -652,7 +668,7 @@ function QuickApp:UIHandler(event)
 end
 ```
 
-### 🚀 What's Next?
+### What's next?
 
 In **Part 4**, we'll explore:
 - **QuickAppChildren** - Creating and managing child devices with the Operator model
@@ -695,4 +711,4 @@ In **Part 4**, we'll explore:
 
 ---
 
-*Understanding the Operator model gives you deep insight into QuickApp behavior and enables you to write more efficient, responsive, and well-architected applications!*
+Understanding the Operator model gives you deep insight into QuickApp behavior and enables you to write more efficient, responsive, and well-architected applications.

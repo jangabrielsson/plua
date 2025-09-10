@@ -1,6 +1,6 @@
-# 🔧 The Anatomy of QuickApps – Part 4: QuickAppChildren Deep Dive
+# 🔧 The Anatomy of QuickApps – Part 4: QuickAppChildren deep dive
 
-*Advanced QuickApp Development - Understanding Child Device Architecture*
+Advanced QuickApp development: understanding child device architecture.
 
 ---
 
@@ -47,11 +47,11 @@
 
 ---
 
-## ⚠️ **Important Disclaimers**
+## ⚠️ Important disclaimers
 
-- **Prerequisite Knowledge**: Recommended to read previous posts on Lua functions/classes and [Fibaro's QuickAppChild tutorial](https://manuals.fibaro.com/knowledge-base-browse/hc3-quick-apps-managing-child-devices/)
-- **Advanced Topic**: This covers complex child device management patterns
-- **HC3 Specific**: Features and limitations specific to Fibaro HC3 system
+- Prerequisite knowledge: Read previous posts on Lua functions/classes and Fibaro's QuickAppChild tutorial: https://manuals.fibaro.com/knowledge-base-browse/hc3-quick-apps-managing-child-devices/
+- Advanced topic: This covers complex child device management patterns.
+- HC3-specific: Features and limitations specific to the Fibaro HC3 system.
 
 ---
 
@@ -59,7 +59,7 @@
 
 ### Mother-Child Relationship
 
-Child devices are QuickApps that "belong to" and are created by a "mother" QuickApp:
+Child devices are QuickApps that “belong to” and are created by a “mother” QuickApp:
 
 ```
 "Mother QA"
@@ -73,7 +73,7 @@ Child devices are QuickApps that "belong to" and are created by a "mother" Quick
 
 ### Child Device Characteristics
 
-**Key Properties:**
+Key properties:
 - ✅ **Regular QuickApp devices** - appear in device lists with unique device IDs
 - ✅ **No separate code files** - code resides in mother QA definition
 - ✅ **Grouped display** - listed directly under mother QA (breaks deviceID sorting)
@@ -81,7 +81,7 @@ Child devices are QuickApps that "belong to" and are created by a "mother" Quick
 
 ### Typical Use Cases
 
-**External Device Integration:**
+External device integration:
 ```lua
 -- Examples:
 -- • Philips Hue bulbs as child devices
@@ -92,9 +92,9 @@ Child devices are QuickApps that "belong to" and are created by a "mother" Quick
 
 ### Device Type Selection
 
-**Critical consideration**: Child QAs cannot have custom UIs (currently), so device type determines available UI controls.
+Critical consideration: Child QAs cannot have custom UIs (currently), so device type determines available UI controls.
 
-**Get available device types:**
+Get available device types:
 ```lua
 function QuickApp:printTypes()
   local function print(s, p)
@@ -108,13 +108,13 @@ function QuickApp:printTypes()
 end
 ```
 
-**⚠️ Note**: Not all device types have UIs - testing required.
+⚠️ Note: Not all device types have UIs—testing required.
 
 ---
 
 ## Part 2: Child Device Structure
 
-### Device API Access
+### Device API access
 
 Child devices are accessible like regular QuickApps:
 
@@ -122,7 +122,7 @@ Child devices are accessible like regular QuickApps:
 local childDevice = api.get("/devices/77")  -- Get child device structure
 ```
 
-### Parent-Child Identification
+### Parent-child identification
 
 **Child device properties:**
 ```lua
@@ -136,30 +136,30 @@ local childDevice = api.get("/devices/77")  -- Get child device structure
 }
 ```
 
-**Get all children of a parent:**
+Get all children of a parent:
 ```lua
 local children = api.get("/devices?parentId=66")  -- All children of device 66
 ```
 
-### Event Routing Mechanism
+### Event routing mechanism
 
-**How child events work:**
+How child events work:
 1. **User interaction** - button press on child device UI
 2. **System routing** - HC3 sees `parentId` and routes event to parent
 3. **Parent processing** - parent finds child code and calls appropriate method
 
-**Event flow:**
+Event flow:
 ```
 Child Device UI → HC3 System → Parent QA → Child Code
 ```
 
 ---
 
-## Part 3: QuickAppChild Class System
+## Part 3: QuickAppChild class system
 
 ### Class Hierarchy
 
-**Important distinction**: `QuickAppChild` is **NOT** a subclass of `QuickApp`:
+Important distinction: `QuickAppChild` is not a subclass of `QuickApp`:
 
 ```lua
 -- Class hierarchy:
@@ -185,20 +185,20 @@ function Child1:fun1(x)
 end
 ```
 
-### Constructor and Initializer Patterns
+### Constructor and initializer patterns
 
-**Class definition creates constructor:**
+Class definition creates a constructor:
 ```lua
 class Child1(QuickAppChild)  -- Creates Child1() constructor function
 ```
 
-**Using the constructor:**
+Using the constructor:
 ```lua
 local c = Child1(device)  -- Create instance
 c:fun1(42)               -- Call method
 ```
 
-**The initializer pattern:**
+The initializer pattern:
 ```lua
 function Child1:__init(device) 
   QuickAppChild.__init(self, device)  -- Must call parent first
@@ -206,9 +206,9 @@ function Child1:__init(device)
 end
 ```
 
-### Object Creation Lifecycle
+### Object creation lifecycle
 
-**Internal constructor logic** (conceptual):
+Internal constructor logic (conceptual):
 ```lua
 function Child1(...)
   local self = createObject()
@@ -217,7 +217,7 @@ function Child1(...)
 end
 ```
 
-**Custom constructor with additional parameters:**
+Custom constructor with additional parameters:
 ```lua
 class Child2(QuickAppChild)
 
@@ -230,20 +230,20 @@ end
 local child = Child2(device, 'Bob')
 ```
 
-**⚠️ Note**: Additional constructor arguments are limited in practical use - better to use QuickApp variables.
+⚠️ Note: Additional constructor arguments are limited in practical use—better to use QuickApp variables.
 
-### Device Parameter Source
+### Device parameter source
 
-**Where does `device` come from?**
+Where does `device` come from?
 - `device` = the table structure from `api.get("/devices/childId")`
 - Contains all device properties, variables, and metadata
 - Used by `QuickAppChild.__init()` to populate `self.id`, `self.name`, `self.type`, etc.
 
 ---
 
-## Part 4: Child Device Creation
+## Part 4: Child device creation
 
-### createChildDevice() Method
+### createChildDevice() method
 
 **Standard creation pattern:**
 ```lua
@@ -253,9 +253,9 @@ local child = self:createChildDevice({
   }, Child2)
 ```
 
-### Device Registration Process
+### Device registration process
 
-**Internal implementation** (conceptual):
+Internal implementation (conceptual):
 ```lua
 function QuickApp:createChildDevice(options, constructor)
   -- 1. Create actual device in HC3 system
@@ -274,7 +274,7 @@ function QuickApp:createChildDevice(options, constructor)
 end
 ```
 
-### Key Process Steps
+### Key process steps
 
 1. **Device creation**: `/plugins/createChildDevice` creates real HC3 device
 2. **ID assignment**: HC3 assigns next available device ID (not choosable)
@@ -282,7 +282,7 @@ end
 4. **Registration**: Added to `self.childDevices` table
 5. **Parent linking**: `child.parent = self` for reverse access
 
-### Parent Field Assignment
+### Parent field assignment
 
 **Accessing parent from child:**
 ```lua
@@ -291,7 +291,7 @@ function Child2:test(x)
 end
 ```
 
-**⚠️ Timing Warning**: `self.parent` is **NOT available** during `__init()`:
+⚠️ Timing warning: `self.parent` is not available during `__init()`:
 ```lua
 function Child2:__init(device)
   QuickAppChild.__init(self, device)
@@ -300,11 +300,11 @@ function Child2:__init(device)
 end
 ```
 
-### Child onInit() Alternative
+### Child onInit() alternative
 
-**Two initialization options:**
+Two initialization options:
 
-**Option 1: Use `__init()` (recommended):**
+Option 1: Use `__init()` (recommended):
 ```lua
 function Child2:__init(device)
   QuickAppChild.__init(self, device)
@@ -312,7 +312,7 @@ function Child2:__init(device)
 end
 ```
 
-**Option 2: Use `onInit()` (parent available):**
+Option 2: Use `onInit()` (parent available):
 ```lua
 function Child2:onInit()
   -- self.parent is available here
@@ -320,39 +320,39 @@ function Child2:onInit()
 end
 ```
 
-**Personal preference**: Use `__init()` since it's required anyway.
+Personal preference: Use `__init()` since it's required anyway.
 
 ---
 
-## Part 5: Child Device Loading
+## Part 5: Child device loading
 
-### The Two-Task Challenge
+### The two-task challenge
 
 Your QuickApp must handle:
 
 1. **Create new children** when needed
 2. **Load existing children** at startup
 
-### Startup Initialization
+### Startup initialization
 
-**The persistence problem**: When QA restarts, child devices already exist in HC3 but Lua objects need recreation.
+The persistence problem: When the QA restarts, child devices already exist in HC3 but Lua objects need recreation.
 
-**Required steps:**
+Required steps:
 1. Find existing child devices
 2. Create corresponding QuickAppChild objects  
 3. Associate objects with devices
 4. Check for missing children and create if needed
 
-### initChildDevices() Function
+### initChildDevices() function
 
-**Standard Fibaro function:**
+Standard Fibaro function:
 ```lua
 function QuickApp:initChildDevices(map)
   -- map = {["deviceType"] = ConstructorClass}
 end
 ```
 
-**Example usage:**
+Example usage:
 ```lua
 function QuickApp:onInit()
   self:initChildDevices({
@@ -362,7 +362,7 @@ function QuickApp:onInit()
 end
 ```
 
-**Internal implementation** (conceptual):
+Internal implementation (conceptual):
 ```lua
 function QuickApp:initChildDevices(map)
   local devices = api.get("/devices?parentId=" .. self.id)
@@ -378,16 +378,16 @@ function QuickApp:initChildDevices(map)
 end
 ```
 
-### Limitations of Standard Function
+### Limitations of the standard function
 
-**Problems:**
+Problems:
 - ❌ **One type, one constructor** - can't have multiple classes for same type
 - ❌ **Type-based only** - limited flexibility in class selection
 - ❌ **No return value** - can't count loaded children
 
-### Missing Device Detection
+### Missing device detection
 
-**Typical startup pattern:**
+Typical startup pattern:
 ```lua
 function QuickApp:onInit()
   self:initChildDevices({...})
@@ -404,18 +404,18 @@ function QuickApp:onInit()
 end
 ```
 
-**Why children might be missing:**
+Why children might be missing:
 - User deleted child device in UI
 - Incomplete previous initialization
 - System error during creation
 
 ---
 
-## Part 6: Advanced Child Management
+## Part 6: Advanced child management
 
-### Custom createChild() Helper
+### Custom createChild() helper
 
-**Enhanced creation function:**
+Enhanced creation function:
 ```lua
 function QuickApp:createChild(name, typ, className, variables, properties, interfaces)
   properties = properties or {}
@@ -443,19 +443,19 @@ function QuickApp:createChild(name, typ, className, variables, properties, inter
 end
 ```
 
-**Usage example:**
+Usage example:
 ```lua
 self:createChild("myChild", "com.fibaro.binarySensor", "Child", {external_ID = 88})
 ```
 
-**Benefits:**
+Benefits:
 - ✅ **Class name storage** - stored as quickAppVariable for loading
 - ✅ **Variable initialization** - external_ID and other data stored
 - ✅ **Type flexibility** - same type can use different classes
 
-### Enhanced loadChildren() Method
+### Enhanced loadChildren() method
 
-**Improved loading function:**
+Improved loading function:
 ```lua
 function QuickApp:loadChildren()
   local cdevs = api.get("/devices?parentId=" .. self.id) or {}
@@ -489,24 +489,24 @@ function QuickApp:loadChildren()
 end
 ```
 
-**Key improvements:**
+Key improvements:
 - ✅ **Class name retrieval** - reads stored className from quickAppVariables
 - ✅ **Flexible construction** - uses stored class or falls back to QuickAppChild
 - ✅ **Count return** - allows comparison with expected children
 - ✅ **Default override** - prevents double initialization
 
-### Device Mapping Strategies
+### Device mapping strategies
 
-**The external device mapping problem:**
+The external device mapping problem:
 - Need to map child device IDs ↔ external device IDs
 - Example: HC3 child ID 77 ↔ Hue device ID 3
 
-**Storage during creation:**
+Storage during creation:
 ```lua
 self:createChild("Hue Light 3", "com.fibaro.binarySwitch", "HueChild", {hueID = 3})
 ```
 
-**Retrieval during initialization:**
+Retrieval during initialization:
 ```lua
 class HueChild(QuickAppChild)
 
@@ -516,12 +516,12 @@ function HueChild:__init(device)
 end
 ```
 
-**Forward mapping (childID → hueID):**
+Forward mapping (childID → hueID):
 ```lua
 local hueID = self.childDevices[childID].hueID
 ```
 
-**Reverse mapping (hueID → childID):**
+Reverse mapping (hueID → childID):
 ```lua
 -- Option 1: Search (inefficient)
 function hueID2childID(hueID)
@@ -537,11 +537,11 @@ local hueIDmap = {}  -- hueID → childID mapping
 hueIDmap[child.hueID] = child.id
 ```
 
-### Child Deletion Handling
+### Child deletion handling
 
-**The deletion problem**: When users delete children via UI, `self.childDevices` updates but custom mappings don't.
+The deletion problem: When users delete children via the UI, `self.childDevices` updates but custom mappings don't.
 
-**Solution: Override removeChildDevice:**
+Solution: Override `removeChildDevice`:
 ```lua
 do
   local orgRemoveChildDevice = self.removeChildDevice
@@ -558,22 +558,22 @@ do
 end
 ```
 
-**Monitoring alternatives:**
+Monitoring alternatives:
 - Listen to `/refreshStates` for `DeviceRemovedEvent`
 - Install custom `onAction` handler
 - Patch `removeChildDevice()` (shown above)
 
 ---
 
-## Part 7: Communication Patterns
+## Part 7: Communication patterns
 
-### Polling Strategies
+### Polling strategies
 
-**Two main approaches:**
+Two main approaches:
 
-### Centralized Polling (Recommended)
+### Centralized polling (recommended)
 
-**Mother QA controls all polling:**
+Mother QA controls all polling:
 ```lua
 -- Main QA loop
 local function loop()
@@ -586,14 +586,14 @@ local function loop()
 end
 ```
 
-**Benefits:**
+Benefits:
 - ✅ **Controlled frequency** - single poll rate for all children
 - ✅ **Efficient API usage** - batch requests possible
 - ✅ **Error handling** - centralized error management
 
-### Distributed Polling (Not Recommended)
+### Distributed polling (not recommended)
 
-**Each child polls independently:**
+Each child polls independently:
 ```lua
 function Child:poll()
   local function loop()
@@ -606,12 +606,12 @@ function Child:poll()
 end
 ```
 
-**Problems:**
+Problems:
 - ❌ **Frequency control** - difficult to manage multiple poll rates
 - ❌ **Resource usage** - many concurrent requests
 - ❌ **Coordination** - hard to synchronize updates
 
-### Optimized Batch Polling
+### Optimized batch polling
 
 **For many children with expensive API calls:**
 ```lua
@@ -629,9 +629,9 @@ function QuickApp:pollAllDevices()
 end
 ```
 
-### Event Handling
+### Event handling
 
-**Child method for data updates:**
+Child method for data updates:
 ```lua
 function Child:newData(data)
   -- Process new data
@@ -641,16 +641,16 @@ function Child:newData(data)
 end
 ```
 
-**Parent method calling:**
+Parent method calling:
 ```lua
 function Child:test(x) 
   self.parent:updateView('label', 'text', x)  -- Access parent UI
 end
 ```
 
-### Data Flow Management
+### Data flow management
 
-**Variable-based communication:**
+Variable-based communication:
 ```lua
 -- Store external ID during creation
 self:createChild("Sensor", "com.fibaro.binarySensor", "SensorChild", {
@@ -666,7 +666,7 @@ function SensorChild:__init(device)
 end
 ```
 
-**Simplified main loop:**
+Simplified main loop:
 ```lua
 for _, child in pairs(self.childDevices) do
   child:poll()  -- Each child knows its external_ID
@@ -675,9 +675,9 @@ end
 
 ---
 
-## Summary and Best Practices
+## Summary and best practices
 
-### 🎯 Key Takeaways
+### Key takeaways
 
 **Child Device Architecture:**
 ✅ Children are regular QuickApps with `parentId` and `quickAppChild` interface  
@@ -700,7 +700,7 @@ end
 ✅ Use quickAppVariables for external device mapping  
 ✅ Batch API calls when possible for efficiency  
 
-### 🔄 Practical Guidelines
+### Practical guidelines
 
 **Child Creation Pattern:**
 ```lua
@@ -746,7 +746,7 @@ function Child:startPolling()
 end
 ```
 
-### 🚀 What's Next?
+### What's next?
 
 In future posts, we may explore:
 - **Non-QuickAppChild implementations** - Managing children without the class system

@@ -1,14 +1,13 @@
 
 # The Anatomy of QuickApps - Part 2
 
+This deep dive into QuickApp internals provides the foundation for advanced QuickApp development. Understanding these mechanisms helps you write more efficient, robust, and well-architected QuickApps.
 
-*This deep dive into QuickApp internals provides the foundation for advanced QuickApp development. Understanding these mechanisms allows you to write more efficient, robust, and well-architected QuickApps!*
+> Disclaimer 1: We’re venturing into undocumented territory. Fibaro can change how things work at any time (even documented things!). 😉
 
-> **⚠️ Disclaimer 1**:Venturing into undocumented territory. Fibaro is free to change how things work at any time. Well, Fibaro is free to change how documented things work too... 😉
+> Disclaimer 2: This explains how I believe some QuickApp functionality is implemented by Fibaro. It’s most likely not exactly how Fibaro does it, but it should match the observable behavior. If I'm wrong, please correct me.
 
-> **⚠️ Disclaimer 2**: I'm explaining how I believe some QuickApp functionality is implemented by Fibaro. This is most likely not exactly how Fibaro has implemented it. However, the intention is that it should mimic the observable behavior correctly. If I'm wrong, please correct me.
-
-> **📚 Prerequisites**: Please also have a look at [Fibaro's documentation for QuickApp coding](https://docs.fibaro.com) to get some better background.
+> Prerequisites: Also see Fibaro’s documentation for QuickApp coding: https://docs.fibaro.com
 
 ## 📖 Table of Contents
 
@@ -73,7 +72,7 @@ Let's recap from the previous post:
 ✅ **Extension Pattern**: We extend QuickApp with our own method definitions  
 ✅ **Lifecycle**: Fibaro loads our code → creates QuickApp object → calls `onInit()`
 
-**Key Point**: `onInit()` is always called after all code has been loaded, regardless of where it's defined in your code.
+Key point: `onInit()` is always called after all code has been loaded, regardless of where it's defined in your code.
 
 ---
 
@@ -91,11 +90,11 @@ function QuickApp:onInit()
 end
 ```
 
-**Behind the scenes**: Fibaro's `class` function creates "userdata" objects that we can't easily inspect, but they behave like Lua tables for all practical purposes.
+Behind the scenes: Fibaro's `class` function creates `userdata` objects that we can't easily inspect, but they behave like Lua tables for most practical purposes.
 
 ### Code vs Object Access
 
-**During code loading (top-level):**
+During code loading (top level):
 ```lua
 -- ✅ Can extend the class
 QuickApp.myField = "default value"
@@ -104,7 +103,7 @@ QuickApp.myField = "default value"
 -- self:debug("This will fail!")
 ```
 
-**After object creation (in methods):**
+After object creation (in methods):
 ```lua
 function QuickApp:onInit()
     -- ✅ Can use self - object now exists
@@ -112,9 +111,9 @@ function QuickApp:onInit()
 end
 ```
 
-**Why this matters**: The main intention of QA code is to extend the QuickApp class with your own methods. Fibaro creates the object and calls your `onInit()` after all code has loaded.
+Why this matters: The main purpose of QA code is to extend the QuickApp class with your methods. Fibaro creates the object and calls your `onInit()` after all code has loaded.
 
-### Best Practices for Initialization
+### Best practices for initialization
 
 ```lua
 -- ✅ Good practice - main initialization in onInit()
@@ -127,7 +126,7 @@ end
 local myVar = "Hello"  -- This works - runs at load time
 ```
 
-### Global QuickApp Access Pattern
+### Global QuickApp access pattern
 
 ```lua
 myQuickApp = nil
@@ -142,9 +141,9 @@ function QuickApp:onInit()
 end
 ```
 
-**⚠️ Caution**: Can't use `myPrint()` until `onInit()` has run and set up the variable.
+⚠️ Caution: You can’t use `myPrint()` until `onInit()` has run and set up the variable.
 
-### Fibaro's Global Variable
+### Fibaro's global variable
 
 Fibaro actually assigns the QuickApp object to a global variable `quickApp`, but it doesn't get assigned until **after** `:onInit()` exits:
 
@@ -170,13 +169,13 @@ function QuickApp:onInit()
 end
 ```
 
-**Why?** The `setTimeout` callback runs after `onInit()` has finished and `quickApp` has been assigned.
+Why? The `setTimeout` callback runs after `onInit()` has finished and `quickApp` has been assigned.
 
 ---
 
 ## Part 2: Device Table Structure
 
-### Common QuickApp Methods
+### Common QuickApp methods
 
 The most common predefined methods for the QuickApp class:
 
@@ -206,7 +205,7 @@ device = api.get("/devices/78")
 print(device.id)  -- Prints the device ID
 ```
 
-> **💡 Tip**: Check the "Swagger" page of your HC3 (button with "{...}" icon in lower left of Web UI) to see all available API calls.
+> Tip: Check the “Swagger” page of your HC3 (button with the {…} icon in the lower-left of the web UI) to see all available API calls.
 
 ### Typical QuickApp Device Structure
 
@@ -264,7 +263,7 @@ print(device.id)  -- Prints the device ID
 }
 ```
 
-> **📝 Update**: The code is no longer stored in `mainFunction`. Modern QuickApps use separate files associated with the device. More on that later.
+> Update: The code is no longer stored in `mainFunction`. Modern QuickApps use separate files associated with the device. More on that later.
 
 ### Device Management via API
 
@@ -274,13 +273,13 @@ api.put("/devices/78", {properties = {value = false}})  -- Update value
 api.put("/devices/78", {enabled = false})               -- Disable device
 ```
 
-**💡 These API calls can also be used from Scenes.**
+> These API calls can also be used from Scenes.
 
 ---
 
 ## Part 3: QuickApp Object Creation
 
-### Class Hierarchy
+### Class hierarchy
 
 ```lua
 Device                    -- Base device class
@@ -291,7 +290,7 @@ QuickApp                 -- Your QuickApp class
 QuickAppChild           -- Child device class
 ```
 
-### Object Creation Process
+### Object creation process
 
 ```lua
 --- Simplified creation process ---
@@ -303,9 +302,9 @@ if quickApp.onInit then
 end
 ```
 
-**Note**: This is most likely not exactly how Fibaro implements it, but the net result is the same.
+Note: This is most likely not exactly how Fibaro implements it, but the end result is the same.
 
-### Accessing Device Properties
+### Accessing device properties
 
 The QuickApp constructor copies the most important device table values into the object:
 
@@ -331,7 +330,7 @@ function QuickApp:getVariable(varName)
 function QuickApp:setVariable(varName, value)
 ```
 
-### How getVariable() Works
+### How getVariable() works
 
 The `self:getVariable(varName)` method searches through the `quickAppVariables` list:
 
@@ -354,11 +353,11 @@ function QuickApp:getVariable(varName)
 end
 ```
 
-### Issues with QuickApp Variables
+### Issues with QuickApp variables
 
-**❌ Performance Issue**: Linear search through list - gets slower with more variables.
+❌ Performance issue: Linear search through the list—gets slower with more variables.
 
-**❌ No nil distinction**: Returns `""` instead of `nil` for missing variables.
+❌ No nil distinction: Returns `""` instead of `nil` for missing variables.
 
 ```lua
 -- ❌ Can't distinguish between missing and empty:
@@ -371,18 +370,18 @@ end
 -- self.myField = self:getVariable("myVar") or self.myField
 ```
 
-### Variable Types
+### Variable types
 
-**From Web UI**: Variables added via Web UI are always stored as strings.
+From the web UI: Variables added via the web UI are always stored as strings.
 
-**From Code**: You can store any Lua type:
+From code: You can store any Lua type:
 
 ```lua
 self:setVariable("myTable", {a = 9, b = 19})  -- Stores as table
 local tbl = self:getVariable("myTable")       -- Retrieved as table
 ```
 
-### Default Value Pattern
+### Default value pattern
 
 ```lua
 QuickApp.myField = "default value"  -- Class-level default
@@ -400,20 +399,20 @@ end
 
 ## Part 5: Property Management
 
-### updateProperty() Method
+### updateProperty() method
 
 ```lua
 function QuickApp:updateProperty(propertyName, value)
 ```
 
-### Read-Only vs Persistent Updates
+### Read-only vs persistent updates
 
 **❌ Direct property updates (temporary):**
 
 ```lua
 self.properties.value = 42  -- Updates locally but doesn't persist
 ```
-The main problem doing this is that no event is generated that the QA's property have changed.  So instead we use self:updateProperty...
+The main problem with doing this is that no event is generated to indicate the QA’s property changed. Instead, use `self:updateProperty(...)`.
 
 **✅ Persistent property updates:**
 
@@ -421,7 +420,7 @@ The main problem doing this is that no event is generated that the QA's property
 self:updateProperty("value", 42)  -- Persists and triggers events
 ```
 
-### Why Use updateProperty()?
+### Why use updateProperty()?
 
 1. **Persistence**: Changes are saved to the device table
 2. **Events**: Some properties trigger system events/notifications  
@@ -434,7 +433,7 @@ self:updateProperty("value", 42)
 -- This updates self.properties.value AND persists it
 ```
 
-### Variable Updates and Events
+### Variable updates and events
 
 When you call `self:setVariable(varName, value)`:
 
@@ -442,9 +441,9 @@ When you call `self:setVariable(varName, value)`:
 2. Fires a `DevicePropertyUpdatedEvent` 
 3. **Sends the entire variable list** as the event value (not just the changed variable)
 
-**Performance consideration**: Large variable lists create large events.
+Performance consideration: Large variable lists create large events.
 
-### Code Updates Create Events Too
+### Code updates create events too
 
 When you modify QA code and save it:
 
@@ -463,13 +462,13 @@ You can update device properties via API:
 api.put("/devices/88", {enabled = false})  -- Disable device (causes restart)
 ```
 
-**⚠️ Warning**: API updates often restart the QuickApp. Property updates via `updateProperty()` avoid restarts.
+⚠️ Warning: API updates often restart the QuickApp. Property updates via `updateProperty()` avoid restarts.
 
 ---
 
 ## Part 6: UI Management
 
-### updateView() Method
+### updateView() method
 
 ```lua
 function QuickApp:updateView(element, type, value)  
@@ -477,7 +476,7 @@ function QuickApp:updateView(element, type, value)
 
 This function updates the UI elements (buttons, labels, sliders) defined for your QuickApp.
 
-### UI Element Updates
+### UI element updates
 
 **Updating button text:**
 ```lua
@@ -489,13 +488,13 @@ self:updateView("myButton", "text", "New text for this button")
 self:updateView("mySlider", "value", "50")  -- Must be string!
 ```
 
-**⚠️ Important**: Values must be strings, or the update may not work properly.
+⚠️ Important: Values must be strings, or the update may not work properly.
 
-### ViewLayout Structure
+### viewLayout structure
 
 UI element definitions are stored in the `viewLayout` property. When you update elements, changes are reflected in this structure.
 
-### Alternative API Method
+### Alternative API method
 
 You can achieve the same result using the API directly:
 
@@ -508,11 +507,11 @@ api.post("/plugins/updateView", {
 })
 ```
 
-### UI Event Handling
+### UI event handling
 
 UI interactions generate events that trigger QuickApp methods:
 
-**Button event structure:**
+Button event structure:
 ```lua
 {
     eventType = "onReleased",
@@ -522,7 +521,7 @@ UI interactions generate events that trigger QuickApp methods:
 }
 ```
 
-**Slider event structure:**
+Slider event structure:
 ```lua
 {
     eventType = "onChanged",
@@ -532,7 +531,7 @@ UI interactions generate events that trigger QuickApp methods:
 }
 ```
 
-### Handling UI Events
+### Handling UI events
 
 Define methods with the same name as your UI elements:
 
@@ -550,11 +549,11 @@ function QuickApp:slider(event)
 end
 ```
 
-### Reading UI Element Values
+### Reading UI element values
 
-**The challenge**: No built-in function to read current UI element values.
+The challenge: There’s no built-in function to read current UI element values.
 
-**The solution**: Parse the viewLayout structure:
+The solution: Parse the viewLayout structure:
 
 ```lua
 local function getView(deviceId, name, typ)
@@ -584,7 +583,7 @@ local sliderValue = getView(self.id, "mySlider", "value")
 
 ## Part 7: Logging Methods
 
-### Logging Functions
+### Logging functions
 
 ```lua
 function QuickApp:debug(...)
@@ -593,7 +592,7 @@ function QuickApp:warning(...)   -- Warning-level logging
 function QuickApp:error(...)     -- Error-level logging
 ```
 
-### How Logging Works
+### How logging works
 
 These methods are similar to `fibaro.debug(tag, ...)` but with automatic tagging:
 
@@ -605,13 +604,13 @@ function QuickApp:debug(...)
 end
 ```
 
-### The TAG System
+### The TAG system
 
 - **`__TAG`** is a global variable set to `"QuickApp" .. self.id` by default
 - **You can customize it**: `__TAG = "MyApp"` changes the log prefix
 - **Variable arguments**: `debug` accepts any number of arguments via `...`
 
-### Usage Examples
+### Usage examples
 
 ```lua
 function QuickApp:onInit()
@@ -634,7 +633,7 @@ end
 
 ## Part 8: Method Invocation
 
-### fibaro.call() Mechanism
+### fibaro.call() mechanism
 
 All QuickApp methods can be called remotely:
 
@@ -647,7 +646,7 @@ fibaro.call(deviceId, methodName, arg1, arg2, ...)
 fibaro.call(55, "setVariable", "Test", 77)
 ```
 
-### Public Method Exposure
+### Public method exposure
 
 **⚠️ Important**: All methods you add to the QuickApp class become **publicly accessible**:
 
@@ -655,7 +654,7 @@ fibaro.call(55, "setVariable", "Test", 77)
 2. **From Scenes** via `fibaro.call()`  
 3. **From external systems** via REST API
 
-### REST API Access
+### REST API access
 
 External systems can call your methods:
 
@@ -668,11 +667,11 @@ Content-Type: application/json
 }
 ```
 
-### Privacy Strategies
+### Privacy strategies
 
 **Problem**: Sometimes you don't want to expose internal logic.
 
-**Solution 1**: Keep functions outside the QuickApp class:
+Solution 1: Keep functions outside the QuickApp class:
 
 ```lua
 local quickApp = nil
@@ -690,7 +689,7 @@ function QuickApp:onInit()
 end
 ```
 
-**Solution 2**: Pass self as parameter to avoid global variable:
+Solution 2: Pass `self` as a parameter to avoid a global variable:
 
 ```lua
 local interval = 30
@@ -706,19 +705,19 @@ function QuickApp:onInit()
 end
 ```
 
-**Trade-offs**: 
-- **Global variable approach**: Simpler, less parameter passing
-- **Parameter approach**: No global state, more explicit
+Trade-offs:
+- Global variable approach: Simpler, less parameter passing
+- Parameter approach: No global state, more explicit
 
 ---
 
 ## Part 9: Execution Model
 
-### Single-Threaded "Operator" Model
+### Single-threaded “Operator” model
 
 Each QuickApp has **one "Operator"** - QuickApps are single-threaded.
 
-### How fibaro.call() Works
+### How fibaro.call() works
 
 **Local method call**:
 ```lua
@@ -730,7 +729,7 @@ self:turnOn()  -- Simple function call: self.turnOn(self)
 fibaro.call(77, "turnOn")  -- Complex inter-process communication
 ```
 
-### The Communication Process
+### The communication process
 
 1. **Operator-55** calls `fibaro.call(77, "turnOn")`
 2. **Operator-55** waits for acknowledgment
@@ -743,20 +742,20 @@ fibaro.call(77, "turnOn")  -- Complex inter-process communication
    ```
 5. **Operator-77** acknowledges completion back to **Operator-55**
 
-### The Deadlock Problem
+### The deadlock problem
 
-**Self-calling deadlock**:
+Self-calling deadlock:
 ```lua
 fibaro.call(self.id, "turnOn")  -- QuickApp calls itself
 ```
 
-**What happens**:
+What happens:
 1. Operator waits for acknowledgment
 2. Operator can't check mailbox (busy waiting)
 3. Request never gets processed
 4. **Deadlock!** 
 
-### Asynchronous Solution
+### Asynchronous solution
 
 **Fibaro introduced async calls (firmware 5.031.33+)**:
 
@@ -765,7 +764,7 @@ fibaro.useAsyncHandler(true)   -- Default: async (recommended)
 fibaro.useAsyncHandler(false)  -- Synchronous (old behavior)
 ```
 
-### Async vs Sync Behavior
+### Async vs sync behavior
 
 **Synchronous (old way)**:
 ```lua
@@ -783,19 +782,19 @@ fibaro.call(self.id, "turnOn")  -- Returns immediately
 self:debug("Done")              -- Prints immediately
 ```
 
-### Return Values and Error Handling
+### Return values and error handling
 
-**Current limitation**: `fibaro.call()` doesn't return values or error messages.
+Current limitation: `fibaro.call()` doesn't return values or error messages.
 
-**REST API advantage**: External REST calls **do** return error messages:
+REST API advantage: External REST calls do return error messages:
 ```http
 HTTP 404: Device not found
 HTTP 400: Method does not exist
 ```
 
-**Future possibility**: Fibaro may add return values and error handling to `fibaro.call()`.
+Future possibility: Fibaro may add return values and error handling to `fibaro.call()`.
 
-### Best Practices
+### Best practices
 
 1. **Use async mode** (default) to avoid deadlocks
 2. **Keep timeouts in mind** for sync calls (5+ second timeout)
@@ -806,7 +805,7 @@ HTTP 400: Method does not exist
 
 ## Summary and What's Next
 
-### 🎯 What You've Learned
+### What you've learned
 
 **QuickApp Architecture:**
 ✅ Class extension patterns and field management  
@@ -825,7 +824,7 @@ HTTP 400: Method does not exist
 ✅ Single-threaded execution model  
 ✅ Async vs sync call behavior  
 
-### 🔄 Key Takeaways
+### Key takeaways
 
 **Property Management:**
 - Treat `self.*` values as read-only unless using update methods
@@ -842,7 +841,7 @@ HTTP 400: Method does not exist
 - Async calls prevent deadlocks (use default async mode)
 - No return values from `fibaro.call()` (yet)
 
-### 🚀 What's Next?
+### What's next?
 
 In **Part 3**, we'll explore:
 - **QuickAppChildren** - Creating and managing child devices

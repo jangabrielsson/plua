@@ -40,6 +40,7 @@ function Emulator:__init()
   end
   self.config.hc3_user = os.getenv("HC3_USER")
   self.config.hc3_password = os.getenv("HC3_PASSWORD")
+  self.config.hc3_pin = os.getenv("HC3_PIN")
   if self.config.hc3_user and self.config.hc3_password then
     self.config.hc3_creds = _PY.base64_encode(self.config.hc3_user..":"..self.config.hc3_password)
   end
@@ -633,6 +634,7 @@ function Emulator:HC3_CALL(method, path, data)
         ["User-Agent"] = "plua/0.1.0",
         ["Content-Type"] = "application/json",
         ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
+        ['Fibaro-User-PIN'] = self.config.hc3_pin
       }
     })
   end

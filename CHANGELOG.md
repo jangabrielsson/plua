@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.38] - 2025-09-11
+
+
+
+#### Commits since v1.2.37:
+
+- 🧪 **Test**: add script to verify Windows subprocess encoding fix
+
+
+
 ## [v1.2.37] - 2025-09-10
 
 

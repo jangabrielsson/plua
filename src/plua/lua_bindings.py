@@ -1030,6 +1030,9 @@ def wake_network_device(host: str, timeout: float = 5.0) -> bool:
                 result = subprocess.run(
                     ["arping", "-c", "1", "-W", str(int(timeout)), host],
                     capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='replace',
                     timeout=timeout
                 )
                 if result.returncode == 0:
@@ -1061,7 +1064,7 @@ def wake_network_device(host: str, timeout: float = 5.0) -> bool:
                 ping_cmd = ["ping", "-n", "1", "-w", str(int(timeout * 1000))]
             
             ping_cmd.append(host)
-            result = subprocess.run(ping_cmd, capture_output=True, timeout=timeout)
+            result = subprocess.run(ping_cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=timeout)
             if result.returncode == 0:
                 logger.info(f"Ping successful for {host}")
                 return True

@@ -45,9 +45,6 @@ end
 function QuickApp:onInit()
   self:debug(self.id,self.name,sensor.device.id)
   fibaro.call(sensor.device.id,"turnOn")
-
-  fibaro.alarm(1,"disarm")
-  fibaro.alarm(2,"disarm")
 end
 
 --setInterval(function() print('ok') end,3600)

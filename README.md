@@ -218,7 +218,7 @@ Options:
   --header HEADER     Add header string (can be used multiple times)
   -a, --args ARGS     Add argument string to pass to the script
   --api-port PORT     Port for FastAPI server (default: 8080)
-  --api-host HOST     Host for FastAPI server (default: localhost)
+  --api-host HOST     Host for FastAPI server (default: 0.0.0.0 - all interfaces)
   --telnet-port PORT  Port for telnet server (default: 8023)
   --no-api            Disable FastAPI server
   --run-for N         Run script for specified seconds then terminate:

@@ -382,7 +382,7 @@ def run_engine(
                         
                         # Start FastAPI in separate process
                         api_manager = start_fastapi_process(
-                            host=config.get("api_host", "localhost"),
+                            host=config.get("api_host", "0.0.0.0"),
                             port=api_port,
                             config=config
                         )
@@ -783,8 +783,8 @@ def main():
     )
     parser.add_argument(
         "--api-host",
-        default="localhost", 
-        help="Host for FastAPI server (default: localhost)",
+        default="0.0.0.0", 
+        help="Host for FastAPI server (default: 0.0.0.0 - all interfaces)",
     )
     parser.add_argument(
         "--telnet-port",

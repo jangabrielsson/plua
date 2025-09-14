@@ -529,7 +529,7 @@ def run_fastapi_server(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
         # Run with uvicorn
         uvicorn.run(
             app,
-            host=config.get("host", "localhost"),
+            host=config.get("host", "0.0.0.0"),
             port=config.get("port", 8080),
             log_level=uvicorn_log_level,
             access_log=False
@@ -544,7 +544,7 @@ def run_fastapi_server(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
 class FastAPIProcessManager:
     """Manages the FastAPI server process and IPC communication"""
     
-    def __init__(self, host: str = "localhost", port: int = 8080, config: Dict[str, Any] = None):
+    def __init__(self, host: str = "0.0.0.0", port: int = 8080, config: Dict[str, Any] = None):
         self.host = host
         self.port = port
         self.config = config or {}
@@ -870,7 +870,7 @@ def get_process_manager() -> Optional[FastAPIProcessManager]:
     return _process_manager
 
 
-def start_fastapi_process(host: str = "localhost", port: int = 8080, config: Dict[str, Any] = None) -> FastAPIProcessManager:
+def start_fastapi_process(host: str = "0.0.0.0", port: int = 8080, config: Dict[str, Any] = None) -> FastAPIProcessManager:
     """Start the global FastAPI server process"""
     global _process_manager
     

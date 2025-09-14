@@ -1,6 +1,7 @@
 --%%name:QATest
 --%%type:com.fibaro.binarySwitch
 --%%proxy:true
+--%%desktop:true
 
 --%%u:{label='lbl1', text='My label'}
 --%%u:{button='button_ID_1_1', text='Turn on', onReleased='turnOn2'}

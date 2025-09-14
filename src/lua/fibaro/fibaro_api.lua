@@ -454,7 +454,6 @@ router:add("POST", "/plugins/callUIEvent", function(path, data, vars, query)
   --return create_response({status = "ui_event_called"})
   local dev = Emu.DIR[data.deviceID]
   if not dev then return nil,400 end
-  
   if data.elementName:sub(1,2) == "__" then
     --   data.elementName = data.elementName:sub(3)
     local actionName = data.elementName:sub(3)

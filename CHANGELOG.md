@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.39] - 2025-09-14
+
+
+
+#### Commits since v1.2.38:
+
+- ✨ **Feature**: update FastAPI host configuration to allow external access
+
+
+
 ## [v1.2.38] - 2025-09-11
 
 

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.40] - 2025-09-15
+
+
+
+#### Commits since v1.2.39:
+
+- ✨ **Feature**: add support for multiple values in UI event handling
+
+
+
 ## [v1.2.39] - 2025-09-14
 
 

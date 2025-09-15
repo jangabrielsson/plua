@@ -80,7 +80,8 @@ function QuickApp:onInit()
       deviceID = ev.deviceId or ev.deviceID, 
       eventType = ev.eventType,
       elementName = ev.elementName,
-      value = ev.value
+      value = ev.value,
+      values = ev.values
     }
     net:HTTPClient():request(uiUrl,{
       options = {

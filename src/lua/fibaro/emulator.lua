@@ -304,7 +304,10 @@ function Emulator:createInfoFromContent(filename,content,extraHeaders)
     info = proxylib.existingProxy(headers.name or "myQA",headers)
     if not info then
       info = proxylib.createProxy(headers)
-    else -- Existing proxy, mau need updates
+    else -- Existing proxy, may need updates
+      if headers.logui then
+        self.lib.ui.logUI(info.device.id)
+      end
       local proxyupdate = headers.proxyupdate or ""
       local ifs = proxyupdate:match("interfaces")
       local qvars = proxyupdate:match("vars")
@@ -742,6 +745,7 @@ function headerKeys.longitude(str,info,k) info.longitude = validate(str,"number"
 function headerKeys.debug(str,info,k) info.debug = validate(str,"boolean",k) end
 function headerKeys.save(str,info) info.save = str end
 function headerKeys.desktop(str,info) info.desktop = validate(str,"boolean") end
+function headerKeys.logui(str,info) info.logui = validate(str,"boolean") end
 function headerKeys.proxyupdate(str,info) info.proxyupdate = str end
 function headerKeys.project(str,info,k) info.project = validate(str,"number",k) end
 function headerKeys.nop(str,info,k) validate(str,"boolean",k) end

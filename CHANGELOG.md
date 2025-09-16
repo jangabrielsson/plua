@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.41] - 2025-09-16
+
+
+
+#### Commits since v1.2.40:
+
+- ✨ **Feature**: enhance proxy handling to log UI updates for existing proxies
+
+
+
 ## [v1.2.40] - 2025-09-15
 
 

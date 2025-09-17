@@ -781,6 +781,20 @@ function headerKeys.file(str,info)
     error(fmt("--%%file: File not found: '%s'",path))
   end
 end
+function headerKeys.merge(str,info)
+  local files,dest = str:match("^(.+)=(.+)$")
+  files = files:split(',')
+  assert(#files > 0,"Invalid merge header: "..str)
+  local df = io.open(dest,"w")
+  assert(df,"Failed to open merge dest file: "..dest)
+  for _,file in ipairs(files) do
+    local f = io.open(file,"r")
+    assert(f,"Failed to open merge source file: "..file)
+    df:write(f:read("*all").."\n")
+    f:close()
+  end
+  df:close()
+end
 
 local function compatHeaders(code)
   code = code:gsub("%-%-%%%%([%w_]+)=([^\n\r]+)",function(key,str) 

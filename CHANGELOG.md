@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.43] - 2025-09-17
+
+
+
+#### Commits since v1.2.42:
+
+- ✨ **Feature**: add JSON encoding optimization and initialize array utility
+
+
+
 ## [v1.2.42] - 2025-09-17
 
 

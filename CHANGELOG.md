@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.42] - 2025-09-17
+
+
+
+#### Commits since v1.2.41:
+
+- ✨ **Feature**: add file merging header
+
+
+
 ## [v1.2.41] - 2025-09-16
 
 

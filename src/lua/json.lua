@@ -121,6 +121,7 @@ json.util = {}
 function json.util.InitArray(e) 
   return setmetatable(e,{__isArray=true})
 end
-
+json.encode2 = json.encode
+json.encode = json.encodeFast
 
 return json

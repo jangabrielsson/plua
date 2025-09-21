@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.44] - 2025-09-21
+
+
+
+#### Commits since v1.2.43:
+
+- 📝 Fix proxy connection IP address and enhance local IP detection method
+
+
+
 ## [v1.2.43] - 2025-09-17
 
 

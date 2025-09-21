@@ -827,11 +827,30 @@ def main():
     config["fibaro"] = args.fibaro
     config["headers"] = args.header or []
     config["api_enabled"] = not args.no_api
+    
+    # Get the IP address of the host using more robust method
+    def get_local_ip():
+        """Get the local IP address by connecting to a remote host"""
+        try:
+            # Connect to a remote host to determine local IP
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                # Use Google's DNS server - doesn't actually send data
+                s.connect(("8.8.8.8", 80))
+                local_ip = s.getsockname()[0]
+                return local_ip
+        except Exception:
+            # Fallback to hostname method
+            try:
+                return socket.gethostbyname(socket.gethostname())
+            except Exception:
+                return "127.0.0.1"
+    
     try:
-        # Get the IP address of the host
-        config['host_ip'] = socket.gethostbyname(socket.gethostname())
+        config['host_ip'] = get_local_ip()
+        print(f"Detected host IP: {config['host_ip']}")
     except Exception:
         config['host_ip'] = "127.0.0.1"
+        print(f"Failed to detect host IP, using default: {config['host_ip']}")
     config["api_host"] = args.api_host
     config["api_port"] = args.api_port
     config["telnet"] = args.telnet

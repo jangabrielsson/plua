@@ -137,7 +137,7 @@ local function createProxy(headers)
   Emu:INFO(fmt("Proxy installed: %s %s",device.id,headers.name))
   device.isProxy = true
   Emu.proxyId = device.id -- Just save the last proxy to be used for restricted API calls
-  Emu.api.hc3.post("/devices/"..device.id.."/action/CONNECT",{args={{ip=Emu.lib.IPAddress,port=Emu.lib.webport}}})
+  Emu.api.hc3.post("/devices/"..device.id.."/action/CONNECT",{args={{ip=Emu.config.IPAddress,port=Emu.config.webport}}})
   return { device=device, UI=headers.UI, headers=headers }
 end
 

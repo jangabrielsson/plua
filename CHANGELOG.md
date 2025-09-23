@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.45] - 2025-09-23
+
+
+
+#### Commits since v1.2.44:
+
+- ✨ **Feature**: implement Multi PositionSwitch functionality and enhance proxy error handling
+
+
+
 ## [v1.2.44] - 2025-09-21
 
 

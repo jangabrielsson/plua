@@ -61,7 +61,7 @@ function QuickApp:onInit()
     local data = { args = action.args }
     local url = fmt(actionUrl,action.deviceId,action.actionName)
     net:HTTPClient():request(url,{
-      optiones = {
+      options = {
         method = "POST",
         headers = {
           ["Content-Type"] = "application/json",

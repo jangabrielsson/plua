@@ -1461,7 +1461,7 @@ class DevicePropertiesDto(BaseModel):
 
 
 class DeviceActionArgumentsDto(BaseModel):
-    args: Optional[List[Dict[str, Any]]] = None
+    args: Optional[List[Any]] = None
     delay: Optional[float] = None  # Now truly optional
     integrationPin: Optional[str] = None  # Now truly optional
 

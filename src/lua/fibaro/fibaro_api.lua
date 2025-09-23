@@ -241,23 +241,23 @@ router:add("POST", "/devices/<id>/action/<name>", function(path, data, vars, que
   end
 end)
 
-router:add("GET", "/devices/<id>/action/<name>", function(path, data, vars, query)
-  local id = vars.id
-  local dev = Emu.DIR[id]
-  if not dev then 
-    if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.get(path,data) end
-  else
-    local action = vars.name
-    local data,args = {},{}
-    for k,v in pairs(query) do data[#data+1] = {k,v} end
-    table.sort(data,function(a,b) return a[1] < b[1] end)
-    for _,d in ipairs(data) do args[#args+1] = d[2] end
-    -- Call onAction directly instead of using setTimeout to avoid event loop issues
-    if dev.device.isChild then dev = Emu.DIR[dev.device.parentId] end
-    dev.env.onAction(id,{ deviceId = id, actionName = action, args =args})
-    return nil,HTTP.OK
-  end
-end)
+-- router:add("GET", "/devices/<id>/action/<name>", function(path, data, vars, query)
+--   local id = vars.id
+--   local dev = Emu.DIR[id]
+--   if not dev then 
+--     if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.get(path,data) end
+--   else
+--     local action = vars.name
+--     local data,args = {},{}
+--     for k,v in pairs(query) do data[#data+1] = {k,v} end
+--     table.sort(data,function(a,b) return a[1] < b[1] end)
+--     for _,d in ipairs(data) do args[#args+1] = d[2] end
+--     -- Call onAction directly instead of using setTimeout to avoid event loop issues
+--     if dev.device.isChild then dev = Emu.DIR[dev.device.parentId] end
+--     dev.env.onAction(id,{ deviceId = id, actionName = action, args =args})
+--     return nil,HTTP.OK
+--   end
+-- end)
 
 router:add("GET", "/devices/<id>/properties/<name>", function(path, data, vars, query)
   local id,name = vars.id,vars.name

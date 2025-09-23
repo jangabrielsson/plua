@@ -260,9 +260,9 @@ def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
             hook_result = result.get("data")
             status_code = result.get("status_code", 200)
             
-            # If hook returned a non-200 status code, return error
-            if status_code != 200:
-                error_msg = hook_result if isinstance(hook_result, str) else f"Fibaro API unavailable"
+            # Accept any 2xx status code as success (200, 201, 202, etc.)
+            if not (200 <= status_code < 300):
+                error_msg = hook_result if isinstance(hook_result, str) else f"Fibaro API error"
                 raise HTTPException(status_code=status_code, detail=error_msg)
                 
             return hook_result

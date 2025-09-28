@@ -683,7 +683,7 @@ router:add("GET", "/quickApp/export/<id>", function(path, data, vars, query)
   if fqa then return json.encodeFast(fqa),HTTP.OK else return nil,HTTP.NOT_FOUND end
 end)
 
-router:add("POST", "/quickApp/import", function(path, data, vars, query)
+router:add("POST", "/quickApp/", function(path, data, vars, query)
   --return create_response({status = "imported"})
   return nil,301
 end)

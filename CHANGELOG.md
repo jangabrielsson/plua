@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.46] - 2025-09-28
+
+
+
+#### Commits since v1.2.45:
+
+- ✨ **Feature**: update quickApp import endpoint to use a more general path
+- ✨ **Feature**: update QwikAppChild library version to 2.5 and add child removal hook functionality
+
+
+
 ## [v1.2.45] - 2025-09-23
 
 

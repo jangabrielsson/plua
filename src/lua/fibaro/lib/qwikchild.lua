@@ -1,5 +1,5 @@
 do
-  local VERSION = "2.3"
+  local VERSION = "2.5"
 
   print("QwikAppChild library v"..VERSION)
   local childID = 'ChildID'
@@ -14,6 +14,12 @@ do
   local function ERRORF(f,...) fibaro.error(__TAG,fmt(f,...)) end
   local function DEBUGF(f,...)
     if  fibaro.debugFlags['qwikchild'] then fibaro.debug(__TAG,fmt(f,...)) end 
+  end
+  local childRemovedHook
+  local function doChildRemovedHook(id)
+    if childRemovedHook then
+      pcall(childRemovedHook,id)
+    end
   end
 
   -- arrayify table. Ensures that empty array is json encoded as "[]"
@@ -210,6 +216,7 @@ do
       self.childDevices[id] = nil
       self.children[uid] = nil
       DEBUGF("Deleting existing child ID:%s, UID:'%s'",id,uid)
+      doChildRemovedHook(id)
       api.delete("/plugins/removeChildDevice/" .. id)
     end
     props.initialProperties = props.properties or {}
@@ -312,11 +319,18 @@ do
     for uid,id in pairs(allChildren) do
       if not childrenDefs[uid] then
         DEBUGF("Deleting undefined child ID:%s, UID:%s",id,uid)
-        
+        doChildRemovedHook(id)
         api.delete("/plugins/removeChildDevice/" .. id)
       end
     end
   end
+
+  local orgRemoveChildDevice = QuickApp.removeChildDevice
+  function QuickApp:removeChildDevice(id)
+    doChildRemovedHook(id)
+    return orgRemoveChildDevice(self,id)
+  end
+  function QuickApp.setChildRemovedHook(_,fun) childRemovedHook=fun end
   
   function QuickApp:initChildren(children) -- 
     -- CHeck if we run in emulator and warn if not setup correctly

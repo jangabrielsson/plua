@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.47] - 2025-09-28
+
+
+
+#### Commits since v1.2.46:
+
+- ✨ **Feature**: comment out quickApp POST endpoint in router
+
+
+
 ## [v1.2.46] - 2025-09-28
 
 

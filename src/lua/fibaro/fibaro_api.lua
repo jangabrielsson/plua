@@ -594,10 +594,10 @@ router:add("GET", "/proxy", function(path, data, vars, query)
   return nil,301
 end)
 
-router:add("POST", "/quickApp", function(path, data, vars, query)
-  --return create_response({id = 1, status = "imported"})
-  return nil,301
-end)
+-- router:add("POST", "/quickApp", function(path, data, vars, query)
+--   --return create_response({id = 1, status = "imported"})
+--   return nil,301
+-- end)
 
 local function findFile(name,files)
   for i,f in ipairs(files) do if f.name == name then return f,i end end

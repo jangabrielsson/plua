@@ -376,6 +376,12 @@ local function setup()
     local resp = { memory = { used = 50 }}
     return {resp,HTTP.OK}
   end)
+
+  add("POST/quickApp/", function(path, data, vars, query)
+    local fqa = json.decode(data)
+    Emu.lib.loadQA(fqa,Emu)
+    return {resp,HTTP.OK}
+  end)
 end
 
 Emu.lib.setupOfflineRoutes = setup

@@ -191,7 +191,6 @@ do
     end
     if room then api.put("/devices/"..device.id,{roomID=room}) end
     local deviceClass = _G[className] or QuickAppChild
-    print("OK")
     local child = deviceClass(device)
     child.parent = self
     self.childDevices[device.id] = child

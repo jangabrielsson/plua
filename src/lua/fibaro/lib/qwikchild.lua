@@ -1,5 +1,5 @@
 do
-  local VERSION = "2.5"
+  local VERSION = "2.5.1"
 
   print("QwikAppChild library v"..VERSION)
   local childID = 'ChildID'
@@ -191,6 +191,7 @@ do
     end
     if room then api.put("/devices/"..device.id,{roomID=room}) end
     local deviceClass = _G[className] or QuickAppChild
+    print("OK")
     local child = deviceClass(device)
     child.parent = self
     self.childDevices[device.id] = child
@@ -200,8 +201,8 @@ do
   local allChildren = {} 
 
   function QuickApp:createChild(uid,props,className,UI)
-    __assert_type(uid,'string')
-    __assert_type(className,'string')
+    if type(uid)~='string' then error(":createChild: uid must be string") end
+    if type(className)~='string' then error(":createChild: Missing className") end
     quickApp = self
     self:setupUIhandler()
     if not next(allChildren) then
@@ -249,7 +250,8 @@ do
   end
 
   local function loadExisting(self,childrenDefs)
-    __assert_type(childrenDefs,'table')
+    cdft = type(childfrenDefs)
+    assert(cdft=='nil' or cdft=='table','childrenDefs must be a table or nil')
     self:setupUIhandler()
     local cdevs,n,gerr = api.get("/devices?parentId="..self.id) or {},0,nil -- Pick up all my children
     for _,child in ipairs(cdevs) do
@@ -352,6 +354,7 @@ Usage:
     i1 = {
       name='ChildA',
       type='com.fibaro.binarySensor',
+      className=<className>,
       properties={...},
       interfaces={...},
       store={<key>=<value>,...},
@@ -363,6 +366,7 @@ Usage:
       type='com.fibaro.binarySensor',
       properties={...},
       interfaces={...},
+      className=<className>,
       store={<key>=<value>,...},
       room=<roomID>,
       UI=<UI>,

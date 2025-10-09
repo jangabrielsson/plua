@@ -17,9 +17,9 @@ try:
     import tomllib  # Python 3.11+
 except ImportError:
     try:
-        import tomli as tomllib  # Fallback for older Python versions
+        import tomli as tomllib  # pyright: ignore[reportMissingImports] # Fallback for older Python versions
     except ImportError:
-        tomllib = Nonen3
+        tomllib = Nonen3 # pyright: ignore[reportUndefinedVariable]
 """
 PLua CLI - Python Lua Engine with Web UI
 

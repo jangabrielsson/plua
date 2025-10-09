@@ -282,14 +282,29 @@ do
     if not stat then ERRORF("loadExistingChildren: %s",err) end
   end
 
+  local function verifyChildDef(chd)
+    if type(chd)~='table' then return false,"Child definition must be a table" end
+    if type(chd.name)~='string' then return false,"Child definition missing name" end
+    if type(chd.type)~='string' then return false,"Child definition missing type" end
+    if type(chd.className)~='string' then return false,"Child definition missing className" end
+    if chd.properties and type(chd.properties)~='table' then return false,"Child definition properties must be a table" end
+    if chd.interfaces and type(chd.interfaces)~='table' then return false,"Child definition interfaces must be a table" end
+    if chd.store and type(chd.store)~='table' then return false,"Child definition store must be a table" end
+    if chd.room and type(chd.room)~='number' then return false,"Child definition room must be a number" end
+    if chd.UI and type(chd.UI)~='table' then return false,"Child definition UI must be a table" end
+    return true
+  end
+
   local function createMissing(self,childrenDefs)
     local chs,k = {},0
     -- Try to create children in uid alphabetical order
     for uid,data in pairs(childrenDefs) do
+      local ok,err = verifyChildDef(data)
+      if not ok then error("createMissingChildren: %s %s",err,json.encode(data)) end
       local m = uid:sub(1,1)=='i' and 100 or 0; k = k + 1
       chs[#chs+1]={uid=uid,id=m+tonumber(uid:match("(%d+)$") or k),data=data}
     end
-    table.sort(chs,function(a,b) return a.id<b.id end)
+    table.sort(chs,function(a,b) return a.id < b.id end)
 
     for _,ch in ipairs(chs) do
       if not self.children[ch.uid] then -- not loaded yet
@@ -363,9 +378,9 @@ Usage:
     i2 = {
       name='ChildB',
       type='com.fibaro.binarySensor',
+      className=<className>,
       properties={...},
       interfaces={...},
-      className=<className>,
       store={<key>=<value>,...},
       room=<roomID>,
       UI=<UI>,
@@ -384,6 +399,7 @@ Usage:
   -- props = {
   --   name = 'ChildA',
   --   type = 'com.fibaro.binarySensor',
+  --   className=<className>,
   --   properties = {...},
   --   interfaces = {...},
   --   store = {<key>=<value>,...},

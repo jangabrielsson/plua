@@ -4,7 +4,7 @@ json.decode = function(...) return _PY.parse_json(...) end
 json.encodeFormated = function(...) return _PY.to_json_formatted(...) end
 
 local fmt = string.format
-local escTab = {["\\"]="\\\\",['"']='\\"'}
+local escTab = {["\""]="\\\"",["\'"]="\\'",["\\"]="\\\\",['"']='\\"',["\n"]="\\n",["\r"]="\\r",["\t"]="\\t"}
 local sortKeys = {"type","device","deviceID","id","name","properties","value","oldValue","val","key","arg","event","events","msg","res"}
 local sortOrder={}
 for i,s in ipairs(sortKeys) do sortOrder[s]="\n"..string.char(i+64).." "..s end
@@ -26,7 +26,7 @@ local function prettyJsonFlat(e0)
   local res,seen = {},{}
   local function pretty(e)
     local t = type(e)
-    if t == 'string' then res[#res+1] = '"' res[#res+1] = e:gsub("[\\\"]",escTab) res[#res+1] = '"'
+    if t == 'string' then res[#res+1] = '"' res[#res+1] = e:gsub(".",escTab) res[#res+1] = '"'
     elseif t == 'number' then res[#res+1] = e
     elseif t == 'boolean' or t == 'function' or t=='thread' or t=='userdata' then
       if e == json.null then res[#res+1]='null'

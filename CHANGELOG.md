@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.48] - 2025-10-09
+
+
+
+#### Commits since v1.2.47:
+
+- ✨ **Feature**: add toggle functionality for auto mode in QuickApp and update UI text dynamically
+- 🐛 **Fix**: remove unnecessary print statement in createChild function
+- ✨ **Feature**: add POST endpoint for quickApp to load data
+- ✨ **Feature**: update QwikAppChild library version to 2.5.1 and improve error handling in createChild function
+
+
+
 ## [v1.2.47] - 2025-09-28
 
 

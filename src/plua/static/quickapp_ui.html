@@ -1459,6 +1459,10 @@
                                 button.className = 'qa-ui-button qa-ui-switch-btn qa-switch qa-ui-switch-btn-off';
                             }
                             this.forceDOMUpdate(button);
+                        } else if (property === 'text') {
+                            const button = elementContainer;
+                            button.textContent = value;
+                            this.forceDOMUpdate(button);
                         }
                         break;
                         

@@ -7,36 +7,34 @@
 
 ## 📋 Table of Contents
 
-1. [**Getting Started**](#1-getting-started)
-   - [Installing PLua](#11-installing-plua)
-   - [VS Code Setup & Scaffolding](#12-vs-code-setup--scaffolding)
-   - [Development Environment](#13-development-environment)
-
-2. [**Basic QuickApp Structure**](#2-basic-quickapp-structure)
-   - [Minimal QuickApp](#21-minimal-quickapp)
-   - [Essential Methods](#22-essential-methods)
-   - [Code Organization](#23-code-organization)
-
-3. [**PLua Header Configuration**](#3-plua-header-configuration)
-   - [Header Syntax](#31-header-syntax)
-   - [Device Configuration](#32-device-configuration)
-   - [Development Headers](#33-development-headers)
-   - [UI Definition Headers](#34-ui-definition-headers)
-
-4. [**Complete Header Reference**](#4-complete-header-reference)
-   - [Basic Headers](#41-basic-headers)
-   - [Advanced Headers](#42-advanced-headers)
-   - [Development & Debugging](#43-development--debugging)
-
-5. [**Practical Examples**](#5-practical-examples)
-   - [Simple Sensor QuickApp](#51-simple-sensor-quickapp)
-   - [Interactive UI QuickApp](#52-interactive-ui-quickapp)
-   - [Advanced Configuration](#53-advanced-configuration)
-
-6. [**Best Practices**](#6-best-practices)
-   - [Code Structure](#61-code-structure)
-   - [Header Organization](#62-header-organization)
-   - [Testing & Debugging](#63-testing--debugging)
+- [🚀 QuickApp Development Guide: From Code to Execution](#-quickapp-development-guide-from-code-to-execution)
+  - [📋 Table of Contents](#-table-of-contents)
+  - [1. Getting Started](#1-getting-started)
+    - [1.1 Installing PLua](#11-installing-plua)
+    - [1.2 VS Code Setup \& Scaffolding](#12-vs-code-setup--scaffolding)
+    - [1.3 Development Environment](#13-development-environment)
+  - [2. Basic QuickApp Structure](#2-basic-quickapp-structure)
+    - [2.1 Minimal QuickApp](#21-minimal-quickapp)
+    - [2.2 Essential Methods](#22-essential-methods)
+    - [2.3 Code Organization](#23-code-organization)
+  - [3. PLua Header Configuration](#3-plua-header-configuration)
+    - [3.1 Header Syntax](#31-header-syntax)
+    - [3.2 Device Configuration](#32-device-configuration)
+    - [3.3 Development Headers](#33-development-headers)
+    - [3.4 UI Definition Headers](#34-ui-definition-headers)
+  - [4. Complete Header Reference](#4-complete-header-reference)
+    - [4.1 Basic Headers](#41-basic-headers)
+    - [4.2 Advanced Headers](#42-advanced-headers)
+    - [4.3 Development \& Debugging](#43-development--debugging)
+  - [5. Practical Examples](#5-practical-examples)
+    - [5.1 Simple Sensor QuickApp](#51-simple-sensor-quickapp)
+    - [5.2 Interactive UI QuickApp](#52-interactive-ui-quickapp)
+    - [5.3 Advanced Configuration](#53-advanced-configuration)
+  - [6. Best Practices](#6-best-practices)
+    - [6.1 Code Structure](#61-code-structure)
+    - [6.2 Header Organization](#62-header-organization)
+    - [6.3 Testing \& Debugging](#63-testing--debugging)
+  - [🎯 Summary](#-summary)
 
 ---
 
@@ -547,7 +545,7 @@ function QuickApp:setIntensity(event)
 end
 
 function QuickApp:toggleAutoMode(event)
-    self.autoMode = event.values[1] == "true"
+    self.autoMode = event.values[1] == true
     
     self:updateStatusDisplay()
     self:debug("Auto mode:", self.autoMode and "ON" or "OFF")

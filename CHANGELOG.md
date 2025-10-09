@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.49] - 2025-10-09
+
+
+
+#### Commits since v1.2.48:
+
+- ✨ **Feature**: add timer function and child definition verification in QwikAppChild
+
+
+
 ## [v1.2.48] - 2025-10-09
 
 

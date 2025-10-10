@@ -13,6 +13,7 @@ end
 
 trans("Hello\nWorld")
 trans("Hello\'World")
+trans("Hello' 'World")
 
 -- local str = json.encode("Hello\nWorld")
 -- print(str)

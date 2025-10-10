@@ -1,0 +1,268 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ntfy Publishing Options Schema",
+  "description": "Complete structure for all ntfy publishing options and parameters",
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "Target topic name (required for JSON publishing)",
+      "example": "mytopic"
+    },
+    "message": {
+      "type": "string",
+      "description": "Main body of the message as shown in the notification. Set to 'triggered' if empty",
+      "maxLength": 4096,
+      "example": "Backup successful 😀"
+    },
+    "title": {
+      "type": "string",
+      "description": "Message title - overrides default topic short URL",
+      "example": "Backup Alert"
+    },
+    "priority": {
+      "type": "integer",
+      "description": "Message priority: 1=min, 2=low, 3=default, 4=high, 5=max/urgent",
+      "enum": [1, 2, 3, 4, 5],
+      "default": 3
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of tags that may map to emojis (e.g., warning, skull) or custom strings",
+      "example": ["warning", "skull", "backup-host"]
+    },
+    "actions": {
+      "type": "array",
+      "maxItems": 3,
+      "description": "Custom user action buttons for notifications (max 3)",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "View action - opens website/app",
+            "required": ["action", "label", "url"],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": ["view"]
+              },
+              "label": {
+                "type": "string",
+                "description": "Button label text"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "URL to open (http/https/mailto/geo/ntfy/etc.)"
+              },
+              "clear": {
+                "type": "boolean",
+                "default": false,
+                "description": "Clear notification after button tap"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "HTTP action - sends HTTP request",
+            "required": ["action", "label", "url"],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": ["http"]
+              },
+              "label": {
+                "type": "string",
+                "description": "Button label text"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "URL for HTTP request"
+              },
+              "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                "default": "POST",
+                "description": "HTTP method"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "HTTP headers to include"
+              },
+              "body": {
+                "type": "string",
+                "description": "HTTP request body"
+              },
+              "clear": {
+                "type": "boolean",
+                "default": false,
+                "description": "Clear notification after successful request"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Broadcast action - sends Android broadcast intent",
+            "required": ["action", "label"],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": ["broadcast"]
+              },
+              "label": {
+                "type": "string",
+                "description": "Button label text"
+              },
+              "intent": {
+                "type": "string",
+                "default": "io.heckel.ntfy.USER_ACTION",
+                "description": "Android intent action name"
+              },
+              "extras": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Android intent extras (string values only)"
+              },
+              "clear": {
+                "type": "boolean",
+                "default": false,
+                "description": "Clear notification after broadcast"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "click": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to open when notification is clicked",
+      "example": "https://example.com/dashboard"
+    },
+    "attach": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of external attachment file",
+      "example": "https://example.com/file.jpg"
+    },
+    "filename": {
+      "type": "string",
+      "description": "Optional attachment filename override",
+      "example": "backup-report.pdf"
+    },
+    "markdown": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Markdown formatting in message body"
+    },
+    "icon": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to use as notification icon (JPEG/PNG only)",
+      "example": "https://example.com/icon.png"
+    },
+    "delay": {
+      "type": "string",
+      "description": "Scheduled delivery time - Unix timestamp, duration (30m, 3h), or natural language (tomorrow 10am)",
+      "examples": ["30m", "3h", "2 days", "tomorrow, 10am", "1639194738"]
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "E-mail address for forwarding notifications",
+      "example": "user@example.com"
+    },
+    "call": {
+      "type": "string",
+      "description": "Phone number (+country code) or 'yes' for text-to-speech call",
+      "examples": ["+12223334444", "yes"]
+    },
+    "template": {
+      "type": "string",
+      "description": "Template name (github/grafana/alertmanager), custom template name, or 'yes' for inline templating",
+      "examples": ["github", "grafana", "alertmanager", "myapp", "yes"]
+    },
+    "cache": {
+      "type": "string",
+      "enum": ["yes", "no"],
+      "default": "yes",
+      "description": "Whether to cache message server-side"
+    },
+    "firebase": {
+      "type": "string",
+      "enum": ["yes", "no"],
+      "default": "yes",
+      "description": "Whether to forward to Firebase Cloud Messaging"
+    },
+    "unifiedpush": {
+      "type": "string",
+      "enum": ["0", "1"],
+      "description": "UnifiedPush option (disables Firebase, enables base64 encoding for binary)"
+    },
+    "auth": {
+      "type": "object",
+      "description": "Authentication options",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Username for basic auth"
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for basic auth"
+        },
+        "token": {
+          "type": "string",
+          "description": "Access token for bearer auth"
+        }
+      }
+    }
+  },
+  "required": ["topic"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic": "alerts",
+      "message": "Backup completed successfully",
+      "title": "Backup Status",
+      "priority": 3,
+      "tags": ["backup", "checkmark"]
+    },
+    {
+      "topic": "doorbell",
+      "message": "Someone is at the door",
+      "title": "Doorbell Alert", 
+      "priority": 4,
+      "tags": ["bell", "warning"],
+      "click": "https://camera.example.com",
+      "attach": "https://camera.example.com/snapshot.jpg",
+      "actions": [
+        {
+          "action": "view",
+          "label": "View Camera",
+          "url": "https://camera.example.com",
+          "clear": false
+        },
+        {
+          "action": "http",
+          "label": "Unlock Door",
+          "url": "https://api.door.example.com/unlock",
+          "method": "POST",
+          "headers": {
+            "Authorization": "Bearer token123"
+          },
+          "clear": true
+        }
+      ]
+    }
+  ]
+}

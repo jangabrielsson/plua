@@ -287,8 +287,9 @@ function QuickApp:sendSimple(topic, message, title)
     })
 end
 
-function QuickApp:sendAlert(message, title)
+function QuickApp:sendAlert(topic, message, title)
     return self:send({
+        topic = topic,
         message = message,
         title = title or "Alert",
         priority = 4,
@@ -296,29 +297,14 @@ function QuickApp:sendAlert(message, title)
     })
 end
 
-function QuickApp:sendCritical(message, title)
+function QuickApp:sendCritical(topic, message, title)
     return self:send({
+        topic = topic,
         message = message,
         title = title or "Critical Alert", 
         priority = 5,
         tags = {"rotating_light", "skull"},
         email = "admin@example.com"  -- Configure your admin email
-    })
-end
-
-function QuickApp:sendWithAction(message, title, actionLabel, actionUrl)
-    return self:send({
-        message = message,
-        title = title,
-        priority = 3,
-        actions = {
-            {
-                action = "view",
-                label = actionLabel,
-                url = actionUrl,
-                clear = false
-            }
-        }
     })
 end
 

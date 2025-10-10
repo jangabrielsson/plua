@@ -1,0 +1,438 @@
+{\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;} {\f1 Courier New;} {\f2 Arial;}}
+{\colortbl;\red0\green0\blue0;\red255\green255\blue255;\red102\green126\blue234;\red220\green53\blue69;\red40\green167\blue69;\red255\green193\blue7;\red108\green117\blue125;\red23\green162\blue184;\red253\green126\blue20;}
+
+\paperw12240\paperh15840\margl1800\margr1800\margt1440\margb1440
+
+{\pard\qc\f2\fs36\b\cf3 NTFY QuickApp Documentation\par}
+{\pard\qc\f2\fs24\cf3 Complete guide for using the NTFY notification service with Fibaro HC3\par}
+\par
+
+{\pard\f2\fs28\b\cf3 Table of Contents\par}
+{\pard\f2\fs20
+1. Overview\par
+2. Installation\par
+3. Configuration\par
+4. Basic Usage\par
+5. Advanced Features\par
+6. Priority Levels\par
+7. Emoji Tags\par
+8. Real-World Examples\par
+9. Troubleshooting\par}
+\par
+
+{\pard\f2\fs28\b\cf3 1. Overview\par}
+{\pard\f2\fs20
+The NTFY QuickApp provides a powerful and flexible way to send push notifications from your Fibaro HC3 home automation system using the popular ntfy.sh service (or your own ntfy server). It supports all ntfy features including priorities, emojis, action buttons, attachments, and even bidirectional Fibaro actions.\par}
+\par
+
+{\pard\f2\fs24\b Key Features:\par}
+{\pard\f2\fs20
+\bullet Full ntfy API support - All notification features available\par
+\bullet Priority levels - From silent to urgent notifications\par
+\bullet Emoji tags - 75+ predefined emoji shortcuts\par
+\bullet Action buttons - Interactive notifications with callbacks\par
+\bullet Fibaro actions - Trigger HC3 actions from mobile notifications\par
+\bullet Attachments - Send files, images, and links\par
+\bullet Scheduling - Delayed delivery support\par
+\bullet Multi-channel - Email forwarding and phone calls\par
+\bullet Authentication - Support for private ntfy servers\par}
+\par
+
+{\pard\f2\fs28\b\cf3 2. Installation\par}
+
+{\pard\f2\fs24\b Step 1: Install the QuickApp\par}
+{\pard\f2\fs20
+1. Download the ntfy.fqa file\par
+2. Import it into your Fibaro HC3 via the QuickApp installer\par
+3. The QuickApp will appear in your device list as "NTFY Notification Service"\par}
+\par
+
+{\pard\f2\fs24\b Step 2: Mobile App Setup\par}
+{\pard\f2\fs20
+1. Install the ntfy mobile app:\par
+   \bullet Android: Google Play Store\par
+   \bullet iOS: App Store\par
+2. Subscribe to your chosen topic (e.g., "my-alerts")\par
+3. Configure notification preferences in the app\par}
+\par
+
+{\pard\f2\fs20\b\cf9 Tip: Choose a unique, hard-to-guess topic name to prevent others from sending to your topic. Topics are essentially passwords!\par}
+\par
+
+{\pard\f2\fs28\b\cf3 3. Configuration\par}
+
+{\pard\f2\fs24\b Basic Configuration\par}
+{\pard\f2\fs20
+After installation, you can customize the QuickApp by modifying the configuration in the onInit() function:\par}
+\par
+
+{\pard\f1\fs18\cf7
+self.config = \{\par
+    server = "https://ntfy.sh",        -- ntfy server URL\par
+    defaultTopic = "my-alerts",        -- Default topic for notifications\par
+    defaultResponseTopic = "responses", -- Topic for Fibaro action responses\par
+    timeout = 10                       -- HTTP timeout in seconds\par
+\}\par}
+\par
+
+{\pard\f2\fs24\b Configuration Options\par}
+{\pard\f2\fs20
+\bullet server: ntfy server URL (use your own server or ntfy.sh)\par
+\bullet defaultTopic: Topic to use when none specified\par
+\bullet defaultResponseTopic: Topic for receiving Fibaro action responses\par
+\bullet timeout: HTTP request timeout in seconds\par}
+\par
+
+{\pard\f2\fs28\b\cf3 4. Basic Usage\par}
+
+{\pard\f2\fs24\b Simple Notifications\par}
+{\pard\f2\fs20
+The easiest way to send a notification:\par}
+\par
+
+{\pard\f1\fs18\cf7
+-- Send to default topic\par
+quickApp:sendSimple("my-topic", "Hello World!", "Test Message")\par
+\par
+-- Send a basic alert\par
+quickApp:sendAlert("Door left open for 5 minutes", "Security Alert")\par
+\par
+-- Send a critical notification\par
+quickApp:sendCritical("Smoke detected in kitchen!", "Fire Alarm")\par}
+\par
+
+{\pard\f2\fs24\b Main send() Method\par}
+{\pard\f2\fs20
+The main send() method accepts a table with all notification options:\par}
+\par
+
+{\pard\f1\fs18\cf7
+quickApp:send(\{\par
+    topic = "home-alerts",              -- Optional: target topic\par
+    message = "Front door opened",      -- Required: notification message\par
+    title = "Security Status",          -- Optional: notification title\par
+    priority = 3,                       -- Optional: 1-5 priority level\par
+    tags = \{"door", "house"\}            -- Optional: emoji tags\par
+\})\par}
+\par
+
+{\pard\f2\fs24\b Convenience Methods\par}
+{\pard\f2\fs20
+\bullet sendSimple(topic, message, title) - Basic notification with custom topic\par
+\bullet sendAlert(message, title) - High priority with warning emoji\par
+\bullet sendCritical(message, title) - Max priority with critical emojis + email\par
+\bullet sendWithAction(message, title, label, url) - Notification with single view action\par}
+\par
+
+{\pard\f2\fs28\b\cf3 5. Advanced Features\par}
+
+{\pard\f2\fs24\b Action Buttons\par}
+{\pard\f2\fs20
+Create interactive notifications with up to 3 action buttons:\par}
+\par
+
+{\pard\f2\fs22\b View Action (Opens URL/App)\par}
+{\pard\f1\fs16\cf7
+actions = \{\par
+    \{\par
+        action = "view",\par
+        label = "View Camera",\par
+        url = "https://camera.example.com/living-room",\par
+        clear = false  -- Keep notification after tap\par
+    \}\par
+\}\par}
+\par
+
+{\pard\f2\fs22\b HTTP Action (API Call)\par}
+{\pard\f1\fs16\cf7
+actions = \{\par
+    \{\par
+        action = "http",\par
+        label = "Unlock Door",\par
+        url = "https://api.smartlock.com/unlock",\par
+        method = "POST",\par
+        headers = \{ Authorization = "Bearer abc123" \},\par
+        body = '\{"door_id": "front"\}',\par
+        clear = true  -- Remove notification after success\par
+    \}\par
+\}\par}
+\par
+
+{\pard\f2\fs22\b Fibaro Action (HC3 Integration)\par}
+{\pard\f1\fs16\cf7
+actions = \{\par
+    \{\par
+        action = "fibaro",\par
+        label = "Turn Off Alarm",\par
+        callback = function()\par
+            -- Execute any Lua code when button is pressed\par
+            fibaro.call(123, "disarm")\par
+            quickApp:debug("Alarm disarmed via mobile notification")\par
+        end,\par
+        timeout = 60  -- Action expires after 60 seconds\par
+    \}\par
+\}\par}
+\par
+
+{\pard\f2\fs24\b Attachments and Media\par}
+{\pard\f1\fs16\cf7
+quickApp:send(\{\par
+    message = "Security camera triggered",\par
+    title = "Motion Detected",\par
+    attach = "https://camera.com/snapshot.jpg",  -- Image URL\par
+    filename = "front-door-motion.jpg",          -- Custom filename\par
+    icon = "https://myserver.com/security.png"   -- Custom icon\par
+\})\par}
+\par
+
+{\pard\f2\fs24\b Scheduled Delivery\par}
+{\pard\f1\fs16\cf7
+-- Various delay formats\par
+quickApp:send(\{\par
+    message = "Don't forget the meeting",\par
+    delay = "30m"           -- 30 minutes from now\par
+\})\par
+\par
+quickApp:send(\{\par
+    message = "Good morning!",\par
+    delay = "tomorrow, 8am" -- Natural language\par
+\})\par}
+\par
+
+{\pard\f2\fs28\b\cf3 6. Priority Levels\par}
+{\pard\f2\fs20
+ntfy supports 5 priority levels that control how urgently notifications are delivered:\par}
+\par
+
+{\pard\f2\fs20
+\bullet {\b\cf7 MIN (1):} No vibration/sound, notification under fold\par
+\bullet {\b\cf8 LOW (2):} No vibration/sound, in notification drawer\par  
+\bullet {\b\cf5 DEFAULT (3):} Normal vibration and sound\par
+\bullet {\b\cf9 HIGH (4):} Long vibration, pop-over notification\par
+\bullet {\b\cf4 MAX (5):} Very long vibration, urgent pop-over\par}
+\par
+
+{\pard\f2\fs22\b Priority Usage Examples\par}
+{\pard\f1\fs16\cf7
+-- Silent notification (logs only)\par
+quickApp:send(\{message = "Backup completed", priority = 1\})\par
+\par
+-- Normal notification\par
+quickApp:send(\{message = "Door opened", priority = 3\})\par
+\par
+-- Urgent notification\par
+quickApp:send(\{message = "Alarm triggered!", priority = 5\})\par}
+\par
+
+{\pard\f2\fs28\b\cf3 7. Emoji Tags\par}
+{\pard\f2\fs20
+The QuickApp includes 75+ predefined emoji tags that automatically convert to emojis in notifications. Tags that don't match emojis are displayed as regular text labels.\par}
+\par
+
+{\pard\f2\fs24\b Popular Emoji Categories\par}
+
+{\pard\f2\fs22\b Success & Positive\par}
+{\pard\f2\fs18
++1, thumbsup \u8594? \u128077?\par
+checkmark, heavy_check_mark \u8594? \u10004?\par
+tada \u8594? \u127881?\par
+partying_face \u8594? \u129395?\par
+green_circle \u8594? \u128994?\par
+green_heart \u8594? \u128154?\par}
+\par
+
+{\pard\f2\fs22\b Warnings & Alerts\par}
+{\pard\f2\fs18
+warning \u8594? \u9888?\par
+rotating_light \u8594? \u128680?\par
+red_circle \u8594? \u128308?\par
+triangular_flag_on_post \u8594? \u127937?\par
+loudspeaker \u8594? \u128226?\par
+exclamation \u8594? \u10071?\par}
+\par
+
+{\pard\f2\fs22\b Errors & Critical\par}
+{\pard\f2\fs18
+skull \u8594? \u128128?\par
+x, cross_mark \u8594? \u10060?\par
+fire \u8594? \u128293?\par
+no_entry \u8594? \u9940?\par
+no_entry_sign \u8594? \u128683?\par
+-1, thumbsdown \u8594? \u128078?\par}
+\par
+
+{\pard\f2\fs22\b Home & IoT\par}
+{\pard\f2\fs18
+house \u8594? \u127968?\par
+door \u8594? \u128682?\par
+lock \u8594? \u128274?\par
+unlock \u8594? \u128275?\par
+bell \u8594? \u128276?\par
+camera \u8594? \u128247?\par
+thermometer \u8594? \u127777?\par
+bulb \u8594? \u128161?\par}
+\par
+
+{\pard\f2\fs20\b\cf9 Usage Tip: You can use multiple tags in one notification: tags = \{"house", "lock", "checkmark"\} will show multiple emojis\par}
+\par
+
+{\pard\f2\fs28\b\cf3 8. Real-World Examples\par}
+
+{\pard\f2\fs24\b Security System Alert\par}
+{\pard\f1\fs14\cf7
+quickApp:send(\{\par
+    topic = "security",\par
+    message = "Motion detected at front door\\nCamera: Front Entrance\\nTime: " .. os.date(),\par
+    title = "Security Alert",\par
+    priority = 4,\par
+    tags = \{"warning", "camera", "house"\},\par
+    click = "https://camera.home.com/front-door",\par
+    attach = "https://camera.home.com/snapshot/front-door.jpg",\par
+    actions = \{\par
+        \{\par
+            action = "view",\par
+            label = "View Live Feed",\par
+            url = "https://camera.home.com/live/front-door"\par
+        \},\par
+        \{\par
+            action = "fibaro",\par
+            label = "Disable Motion Detection",\par
+            deviceId = 67,\par
+            actionName = "setProperty",\par
+            args = \{"motionEnabled", false\},\par
+            timeout = 120\par
+        \}\par
+    \}\par
+\})\par}
+\par
+
+{\pard\f2\fs24\b Temperature Monitoring\par}
+{\pard\f1\fs14\cf7
+local temp = fibaro.getValue(45, "value")\par
+if temp > 25 then\par
+    quickApp:send(\{\par
+        message = "Living room temperature is " .. temp .. "°C\\nRecommend turning on AC",\par
+        title = "High Temperature Alert",\par
+        priority = 3,\par
+        tags = \{"thermometer", "warning"\},\par
+        actions = \{\par
+            \{\par
+                action = "fibaro",\par
+                label = "Turn On AC",\par
+                callback = function()\par
+                    fibaro.call(89, "turnOn")  -- AC device ID\par
+                    fibaro.call(89, "setTargetLevel", 20)\par
+                end\par
+            \}\par
+        \}\par
+    \})\par
+end\par}
+\par
+
+{\pard\f2\fs24\b Smart Energy Management\par}
+{\pard\f1\fs14\cf7
+quickApp:send(\{\par
+    message = "Energy usage is 85% of daily budget\\nCurrent: 34.2 kWh\\nBudget: 40 kWh",\par
+    title = "Energy Usage Alert",\par
+    priority = 2,\par
+    tags = \{"chart", "warning", "electric_plug"\},\par
+    markdown = true,\par
+    click = "https://energy.home.com/dashboard",\par
+    actions = \{\par
+        \{\par
+            action = "view",\par
+            label = "View Details",\par
+            url = "https://energy.home.com/usage"\par
+        \},\par
+        \{\par
+            action = "fibaro", \par
+            label = "Enable Eco Mode",\par
+            callback = function()\par
+                -- Turn off non-essential devices\par
+                fibaro.call(78, "turnOff")  -- Pool pump\par
+                fibaro.call(92, "turnOff")  -- Electric heater\par
+                quickApp:debug("Eco mode activated")\par
+            end\par
+        \}\par
+    \}\par
+\})\par}
+\par
+
+{\pard\f2\fs28\b\cf3 9. Troubleshooting\par}
+
+{\pard\f2\fs24\b Common Issues\par}
+
+{\pard\f2\fs22\b\cf6 Notifications Not Received\par}
+{\pard\f2\fs18
+\bullet Verify the topic name matches between HC3 and mobile app\par
+\bullet Check mobile app notification permissions\par
+\bullet Ensure internet connectivity on both HC3 and mobile device\par
+\bullet Try sending a test notification from ntfy.sh web interface\par}
+\par
+
+{\pard\f2\fs22\b\cf6 Fibaro Actions Not Working\par}
+{\pard\f2\fs18
+\bullet Check that setupListener() is running (check debug logs)\par
+\bullet Verify the response topic is unique and not used elsewhere\par
+\bullet Ensure callback functions don't have syntax errors\par
+\bullet Actions expire after timeout - check if pressing button quickly enough\par}
+\par
+
+{\pard\f2\fs22\b\cf5 Performance Optimization\par}
+{\pard\f2\fs18
+\bullet Use appropriate priorities - avoid overusing high/max priority\par
+\bullet Consider grouping similar notifications to reduce spam\par
+\bullet Use delays for non-urgent notifications to batch them\par
+\bullet Monitor ntfy.sh rate limits if using the public service\par}
+\par
+
+{\pard\f2\fs24\b Debug Information\par}
+{\pard\f2\fs18
+Enable debug logging in the QuickApp to see detailed information about sent notifications and received responses:\par}
+\par
+
+{\pard\f1\fs16\cf7
+-- Check debug log for send results\par
+self:debug("Notification sent successfully to topic:", topic)\par
+\par
+-- Check WebSocket listener status  \par
+print("[Listener] connected to", url)\par
+print("[Listener] Received from server:", data)\par}
+\par
+
+{\pard\f2\fs24\b Testing Commands\par}
+{\pard\f2\fs18
+Use these commands in the HC3 Lua interface to test functionality:\par}
+\par
+
+{\pard\f1\fs16\cf7
+-- Test basic notification\par
+quickApp:sendSimple("test-topic", "Hello World", "Test")\par
+\par
+-- Test Fibaro action \par
+quickApp:send(\{\par
+    message = "Test Fibaro action",\par
+    actions = \{\{\par
+        action = "fibaro",\par
+        label = "Test Button",\par
+        callback = function() \par
+            quickApp:debug("Test action executed!") \par
+        end\par
+    \}\}\par
+\})\par
+\par
+-- Check helper functions\par
+local emoji = quickApp:getEmojiForTag("warning")  -- Should return warning emoji\par
+local priority = quickApp:getPriorityInfo(4)      -- Should return HIGH info\par}
+\par
+
+{\pard\f2\fs24\b Support Resources\par}
+{\pard\f2\fs18
+\bullet ntfy Documentation: https://docs.ntfy.sh/\par
+\bullet ntfy.sh Status: https://ntfy.statuspage.io/\par
+\bullet Fibaro Community: https://forum.fibaro.com/\par}
+\par
+
+{\pard\qc\f2\fs18\cf7
+NTFY QuickApp Documentation \bullet Made for Fibaro HC3 \bullet ntfy.sh\par}
+}

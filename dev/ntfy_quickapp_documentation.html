@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTFY QuickApp Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .nav {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+
+        .nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .nav a {
+            text-decoration: none;
+            color: #667eea;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .nav a:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .section {
+            background: white;
+            margin-bottom: 30px;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .section h3 {
+            color: #495057;
+            font-size: 1.5em;
+            margin: 25px 0 15px 0;
+        }
+
+        .section h4 {
+            color: #6c757d;
+            font-size: 1.2em;
+            margin: 20px 0 10px 0;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            border-left: 4px solid #667eea;
+        }
+
+        .inline-code {
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid;
+        }
+
+        .alert.info {
+            background: #e7f3ff;
+            border-color: #0066cc;
+            color: #004499;
+        }
+
+        .alert.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .emoji-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .emoji-item .emoji {
+            font-size: 1.5em;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+
+        .priority-1 { background: #6c757d; }
+        .priority-2 { background: #17a2b8; }
+        .priority-3 { background: #28a745; }
+        .priority-4 { background: #fd7e14; }
+        .priority-5 { background: #dc3545; }
+
+        .example-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .example-box h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .nav ul {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .emoji-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 NTFY QuickApp Documentation</h1>
+            <p>Complete guide for using the NTFY notification service with Fibaro HC3</p>
+        </div>
+
+        <nav class="nav">
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="#configuration">Configuration</a></li>
+                <li><a href="#basic-usage">Basic Usage</a></li>
+                <li><a href="#advanced-features">Advanced Features</a></li>
+                <li><a href="#priorities">Priorities</a></li>
+                <li><a href="#emojis">Emoji Tags</a></li>
+                <li><a href="#examples">Examples</a></li>
+                <li><a href="#troubleshooting">Troubleshooting</a></li>
+            </ul>
+        </nav>
+
+        <!-- Overview Section -->
+        <section id="overview" class="section">
+            <h2>📋 Overview</h2>
+            <p>The NTFY QuickApp provides a powerful and flexible way to send push notifications from your Fibaro HC3 home automation system using the popular ntfy.sh service (or your own ntfy server). It supports all ntfy features including priorities, emojis, action buttons, attachments, and even bidirectional Fibaro actions.</p>
+            
+            <h3>Key Features</h3>
+            <ul>
+                <li>✅ <strong>Full ntfy API support</strong> - All notification features available</li>
+                <li>🎯 <strong>Priority levels</strong> - From silent to urgent notifications</li>
+                <li>😀 <strong>Emoji tags</strong> - 75+ predefined emoji shortcuts</li>
+                <li>🔘 <strong>Action buttons</strong> - Interactive notifications with callbacks</li>
+                <li>🔄 <strong>Fibaro actions</strong> - Trigger HC3 actions from mobile notifications</li>
+                <li>📎 <strong>Attachments</strong> - Send files, images, and links</li>
+                <li>⏰ <strong>Scheduling</strong> - Delayed delivery support</li>
+                <li>📧 <strong>Multi-channel</strong> - Email forwarding and phone calls</li>
+                <li>🔒 <strong>Authentication</strong> - Support for private ntfy servers</li>
+            </ul>
+        </section>
+
+        <!-- Installation Section -->
+        <section id="installation" class="section">
+            <h2>💾 Installation</h2>
+            
+            <h3>Step 1: Install the QuickApp</h3>
+            <ol>
+                <li>Download the <code class="inline-code">ntfy.fqa</code> file</li>
+                <li>Import it into your Fibaro HC3 via the QuickApp installer</li>
+                <li>The QuickApp will appear in your device list as "NTFY Notification Service"</li>
+            </ol>
+
+            <h3>Step 2: Mobile App Setup</h3>
+            <ol>
+                <li>Install the ntfy mobile app:
+                    <ul>
+                        <li><strong>Android:</strong> <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy">Google Play Store</a></li>
+                        <li><strong>iOS:</strong> <a href="https://apps.apple.com/us/app/ntfy/id1625396347">App Store</a></li>
+                    </ul>
+                </li>
+                <li>Subscribe to your chosen topic (e.g., "my-alerts")</li>
+                <li>Configure notification preferences in the app</li>
+            </ol>
+
+            <div class="alert info">
+                <strong>💡 Tip:</strong> Choose a unique, hard-to-guess topic name to prevent others from sending to your topic. Topics are essentially passwords!
+            </div>
+        </section>
+
+        <!-- Configuration Section -->
+        <section id="configuration" class="section">
+            <h2>⚙️ Configuration</h2>
+            
+            <h3>Basic Configuration</h3>
+            <p>After installation, you can customize the QuickApp by modifying the configuration in the <code class="inline-code">onInit()</code> function:</p>
+
+            <div class="code-block">
+self.config = {
+    server = "https://ntfy.sh",        -- ntfy server URL
+    defaultTopic = "my-alerts",        -- Default topic for notifications
+    defaultResponseTopic = "responses", -- Topic for Fibaro action responses
+    timeout = 10                       -- HTTP timeout in seconds
+}
+            </div>
+
+            <h3>Configuration Options</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Option</th>
+                        <th>Description</th>
+                        <th>Default</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="inline-code">server</code></td>
+                        <td>ntfy server URL (use your own server or ntfy.sh)</td>
+                        <td><code class="inline-code">https://ntfy.sh</code></td>
+                    </tr>
+                    <tr>
+                        <td><code class="inline-code">defaultTopic</code></td>
+                        <td>Topic to use when none specified</td>
+                        <td><code class="inline-code">my-alerts</code></td>
+                    </tr>
+                    <tr>
+                        <td><code class="inline-code">defaultResponseTopic</code></td>
+                        <td>Topic for receiving Fibaro action responses</td>
+                        <td>Auto-generated</td>
+                    </tr>
+                    <tr>
+                        <td><code class="inline-code">timeout</code></td>
+                        <td>HTTP request timeout in seconds</td>
+                        <td><code class="inline-code">10</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert warning">
+                <strong>⚠️ Security Note:</strong> If using a private ntfy server with authentication, add your credentials to each send() call using the auth parameter.
+            </div>
+        </section>
+
+        <!-- Basic Usage Section -->
+        <section id="basic-usage" class="section">
+            <h2>🚀 Basic Usage</h2>
+
+            <h3>Simple Notifications</h3>
+            <p>The easiest way to send a notification:</p>
+
+            <div class="code-block">
+-- Send to default topic
+quickApp:sendSimple("my-topic", "Hello World!", "Test Message")
+
+-- Send a basic alert
+quickApp:sendAlert("Door left open for 5 minutes", "Security Alert")
+
+-- Send a critical notification
+quickApp:sendCritical("Smoke detected in kitchen!", "Fire Alarm")
+            </div>
+
+            <h3>Main send() Method</h3>
+            <p>The main <code class="inline-code">send()</code> method accepts a table with all notification options:</p>
+
+            <div class="code-block">
+quickApp:send({
+    topic = "home-alerts",              -- Optional: target topic
+    message = "Front door opened",      -- Required: notification message
+    title = "Security Status",          -- Optional: notification title
+    priority = 3,                       -- Optional: 1-5 priority level
+    tags = {"door", "house"}            -- Optional: emoji tags
+})
+            </div>
+
+            <h3>Convenience Methods</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Description</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="inline-code">sendSimple(topic, message, title)</code></td>
+                        <td>Basic notification with custom topic</td>
+                        <td>General notifications</td>
+                    </tr>
+                    <tr>
+                        <td><code class="inline-code">sendAlert(message, title)</code></td>
+                        <td>High priority with warning emoji</td>
+                        <td>Important alerts</td>
+                    </tr>
+                    <tr>
+                        <td><code class="inline-code">sendCritical(message, title)</code></td>
+                        <td>Max priority with critical emojis + email</td>
+                        <td>Emergency situations</td>
+                    </tr>
+                    <tr>
+                        <td><code class="inline-code">sendWithAction(message, title, label, url)</code></td>
+                        <td>Notification with single view action</td>
+                        <td>Interactive notifications</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Advanced Features Section -->
+        <section id="advanced-features" class="section">
+            <h2>🔧 Advanced Features</h2>
+
+            <h3>Action Buttons</h3>
+            <p>Create interactive notifications with up to 3 action buttons:</p>
+
+            <div class="example-box">
+                <h4>View Action (Opens URL/App)</h4>
+                <div class="code-block">
+actions = {
+    {
+        action = "view",
+        label = "View Camera",
+        url = "https://camera.example.com/living-room",
+        clear = false  -- Keep notification after tap
+    }
+}
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>HTTP Action (API Call)</h4>
+                <div class="code-block">
+actions = {
+    {
+        action = "http",
+        label = "Unlock Door",
+        url = "https://api.smartlock.com/unlock",
+        method = "POST",
+        headers = { Authorization = "Bearer abc123" },
+        body = '{"door_id": "front"}',
+        clear = true  -- Remove notification after success
+    }
+}
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>Fibaro Action (HC3 Integration) 🔥</h4>
+                <div class="code-block">
+actions = {
+    {
+        action = "fibaro",
+        label = "Turn Off Alarm",
+        callback = function()
+            -- Execute any Lua code when button is pressed
+            fibaro.call(123, "disarm")
+            quickApp:debug("Alarm disarmed via mobile notification")
+        end,
+        timeout = 60  -- Action expires after 60 seconds
+    }
+}
+
+-- Alternative: Direct device action
+actions = {
+    {
+        action = "fibaro",
+        label = "Turn On Lights",
+        deviceId = 45,
+        actionName = "turnOn",
+        args = {}  -- Optional parameters
+    }
+}
+                </div>
+            </div>
+
+            <h3>Attachments and Media</h3>
+            <div class="code-block">
+quickApp:send({
+    message = "Security camera triggered",
+    title = "Motion Detected",
+    attach = "https://camera.com/snapshot.jpg",  -- Image URL
+    filename = "front-door-motion.jpg",          -- Custom filename
+    icon = "https://myserver.com/security.png"   -- Custom icon
+})
+            </div>
+
+            <h3>Scheduled Delivery</h3>
+            <div class="code-block">
+-- Various delay formats
+quickApp:send({
+    message = "Don't forget the meeting",
+    delay = "30m"           -- 30 minutes from now
+})
+
+quickApp:send({
+    message = "Good morning!",
+    delay = "tomorrow, 8am" -- Natural language
+})
+            </div>
+
+            <h3>Multi-Channel Notifications</h3>
+            <div class="code-block">
+quickApp:send({
+    message = "Critical system failure detected",
+    title = "Emergency Alert",
+    priority = 5,
+    email = "admin@company.com",  -- Also send via email
+    call = "+1234567890"          -- Text-to-speech call (requires auth)
+})
+            </div>
+        </section>
+
+        <!-- Priorities Section -->
+        <section id="priorities" class="section">
+            <h2>📶 Priority Levels</h2>
+            <p>ntfy supports 5 priority levels that control how urgently notifications are delivered:</p>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Level</th>
+                        <th>Value</th>
+                        <th>Name</th>
+                        <th>Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="priority-badge priority-1">MIN</span></td>
+                        <td>1</td>
+                        <td>min</td>
+                        <td>No vibration/sound, notification under fold</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-2">LOW</span></td>
+                        <td>2</td>
+                        <td>low</td>
+                        <td>No vibration/sound, in notification drawer</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-3">DEFAULT</span></td>
+                        <td>3</td>
+                        <td>default</td>
+                        <td>Normal vibration and sound</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-4">HIGH</span></td>
+                        <td>4</td>
+                        <td>high</td>
+                        <td>Long vibration, pop-over notification</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge priority-5">MAX</span></td>
+                        <td>5</td>
+                        <td>max/urgent</td>
+                        <td>Very long vibration, urgent pop-over</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="example-box">
+                <h4>Priority Usage Examples</h4>
+                <div class="code-block">
+-- Silent notification (logs only)
+quickApp:send({message = "Backup completed", priority = 1})
+
+-- Normal notification
+quickApp:send({message = "Door opened", priority = 3})
+
+-- Urgent notification
+quickApp:send({message = "Alarm triggered!", priority = 5})
+                </div>
+            </div>
+        </section>
+
+        <!-- Emojis Section -->
+        <section id="emojis" class="section">
+            <h2>😀 Emoji Tags</h2>
+            <p>The QuickApp includes 75+ predefined emoji tags that automatically convert to emojis in notifications. Tags that don't match emojis are displayed as regular text labels.</p>
+
+            <h3>Popular Emoji Categories</h3>
+            
+            <h4>✅ Success & Positive</h4>
+            <div class="emoji-grid">
+                <div class="emoji-item"><span class="emoji">👍</span> <code>+1</code>, <code>thumbsup</code></div>
+                <div class="emoji-item"><span class="emoji">✅</span> <code>checkmark</code>, <code>heavy_check_mark</code></div>
+                <div class="emoji-item"><span class="emoji">🎉</span> <code>tada</code></div>
+                <div class="emoji-item"><span class="emoji">🥳</span> <code>partying_face</code></div>
+                <div class="emoji-item"><span class="emoji">🟢</span> <code>green_circle</code></div>
+                <div class="emoji-item"><span class="emoji">💚</span> <code>green_heart</code></div>
+            </div>
+
+            <h4>⚠️ Warnings & Alerts</h4>
+            <div class="emoji-grid">
+                <div class="emoji-item"><span class="emoji">⚠️</span> <code>warning</code></div>
+                <div class="emoji-item"><span class="emoji">🚨</span> <code>rotating_light</code></div>
+                <div class="emoji-item"><span class="emoji">🔴</span> <code>red_circle</code></div>
+                <div class="emoji-item"><span class="emoji">🚩</span> <code>triangular_flag_on_post</code></div>
+                <div class="emoji-item"><span class="emoji">📢</span> <code>loudspeaker</code></div>
+                <div class="emoji-item"><span class="emoji">❗</span> <code>exclamation</code></div>
+            </div>
+
+            <h4>💀 Errors & Critical</h4>
+            <div class="emoji-grid">
+                <div class="emoji-item"><span class="emoji">💀</span> <code>skull</code></div>
+                <div class="emoji-item"><span class="emoji">❌</span> <code>x</code>, <code>cross_mark</code></div>
+                <div class="emoji-item"><span class="emoji">🔥</span> <code>fire</code></div>
+                <div class="emoji-item"><span class="emoji">⛔</span> <code>no_entry</code></div>
+                <div class="emoji-item"><span class="emoji">🚫</span> <code>no_entry_sign</code></div>
+                <div class="emoji-item"><span class="emoji">👎</span> <code>-1</code>, <code>thumbsdown</code></div>
+            </div>
+
+            <h4>🏠 Home & IoT</h4>
+            <div class="emoji-grid">
+                <div class="emoji-item"><span class="emoji">🏠</span> <code>house</code></div>
+                <div class="emoji-item"><span class="emoji">🚪</span> <code>door</code></div>
+                <div class="emoji-item"><span class="emoji">🔒</span> <code>lock</code></div>
+                <div class="emoji-item"><span class="emoji">🔓</span> <code>unlock</code></div>
+                <div class="emoji-item"><span class="emoji">🔔</span> <code>bell</code></div>
+                <div class="emoji-item"><span class="emoji">📷</span> <code>camera</code></div>
+                <div class="emoji-item"><span class="emoji">🌡️</span> <code>thermometer</code></div>
+                <div class="emoji-item"><span class="emoji">💡</span> <code>bulb</code></div>
+            </div>
+
+            <div class="alert info">
+                <strong>💡 Usage Tip:</strong> You can use multiple tags in one notification: <code class="inline-code">tags = {"house", "lock", "checkmark"}</code> will show 🏠🔒✅
+            </div>
+        </section>
+
+        <!-- Examples Section -->
+        <section id="examples" class="section">
+            <h2>💡 Real-World Examples</h2>
+
+            <div class="example-box">
+                <h4>🏠 Security System Alert</h4>
+                <div class="code-block">
+quickApp:send({
+    topic = "security",
+    message = "Motion detected at front door\nCamera: Front Entrance\nTime: " .. os.date(),
+    title = "🏠 Security Alert",
+    priority = 4,
+    tags = {"warning", "camera", "house"},
+    click = "https://camera.home.com/front-door",
+    attach = "https://camera.home.com/snapshot/front-door.jpg",
+    actions = {
+        {
+            action = "view",
+            label = "View Live Feed",
+            url = "https://camera.home.com/live/front-door"
+        },
+        {
+            action = "fibaro",
+            label = "Disable Motion Detection",
+            deviceId = 67,
+            actionName = "setProperty",
+            args = {"motionEnabled", false},
+            timeout = 120
+        }
+    }
+})
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>🌡️ Temperature Monitoring</h4>
+                <div class="code-block">
+local temp = fibaro.getValue(45, "value")
+if temp > 25 then
+    quickApp:send({
+        message = "Living room temperature is " .. temp .. "°C\nRecommend turning on AC",
+        title = "High Temperature Alert",
+        priority = 3,
+        tags = {"thermometer", "warning"},
+        actions = {
+            {
+                action = "fibaro",
+                label = "Turn On AC",
+                callback = function()
+                    fibaro.call(89, "turnOn")  -- AC device ID
+                    fibaro.call(89, "setTargetLevel", 20)
+                end
+            }
+        }
+    })
+end
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>💰 Smart Energy Management</h4>
+                <div class="code-block">
+quickApp:send({
+    message = "Energy usage is 85% of daily budget\nCurrent: 34.2 kWh\nBudget: 40 kWh",
+    title = "Energy Usage Alert",
+    priority = 2,
+    tags = {"chart", "warning", "electric_plug"},
+    markdown = true,
+    click = "https://energy.home.com/dashboard",
+    actions = {
+        {
+            action = "view",
+            label = "View Details",
+            url = "https://energy.home.com/usage"
+        },
+        {
+            action = "fibaro", 
+            label = "Enable Eco Mode",
+            callback = function()
+                -- Turn off non-essential devices
+                fibaro.call(78, "turnOff")  -- Pool pump
+                fibaro.call(92, "turnOff")  -- Electric heater
+                quickApp:debug("Eco mode activated")
+            end
+        }
+    }
+})
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>📱 Device Status Updates</h4>
+                <div class="code-block">
+-- Scene that runs daily to report status
+quickApp:send({
+    message = string.format([[
+**System Status Report**
+
+🏠 **Security:** Armed (All zones secure)
+🌡️ **Climate:** 22°C (Target: 21°C)
+💡 **Lighting:** 12 devices on, 3 dimmed
+🔋 **Energy:** 67%% of daily budget used
+📱 **Devices:** All online (%d total)
+
+*Last updated: %s*
+    ]], 
+    api.get("/devices").count,
+    os.date("%Y-%m-%d %H:%M")
+    ),
+    title = "Daily Home Status",
+    priority = 1,  -- Silent notification
+    tags = {"house", "checkmark"},
+    markdown = true,
+    delay = "8am"  -- Send every morning at 8am
+})
+                </div>
+            </div>
+        </section>
+
+        <!-- Troubleshooting Section -->
+        <section id="troubleshooting" class="section">
+            <h2>🔧 Troubleshooting</h2>
+
+            <h3>Common Issues</h3>
+
+            <div class="alert warning">
+                <h4>Notifications Not Received</h4>
+                <ul>
+                    <li>Verify the topic name matches between HC3 and mobile app</li>
+                    <li>Check mobile app notification permissions</li>
+                    <li>Ensure internet connectivity on both HC3 and mobile device</li>
+                    <li>Try sending a test notification from ntfy.sh web interface</li>
+                </ul>
+            </div>
+
+            <div class="alert warning">
+                <h4>Fibaro Actions Not Working</h4>
+                <ul>
+                    <li>Check that <code class="inline-code">setupListener()</code> is running (check debug logs)</li>
+                    <li>Verify the response topic is unique and not used elsewhere</li>
+                    <li>Ensure callback functions don't have syntax errors</li>
+                    <li>Actions expire after timeout - check if pressing button quickly enough</li>
+                </ul>
+            </div>
+
+            <div class="alert info">
+                <h4>Performance Optimization</h4>
+                <ul>
+                    <li>Use appropriate priorities - avoid overusing high/max priority</li>
+                    <li>Consider grouping similar notifications to reduce spam</li>
+                    <li>Use delays for non-urgent notifications to batch them</li>
+                    <li>Monitor ntfy.sh rate limits if using the public service</li>
+                </ul>
+            </div>
+
+            <h3>Debug Information</h3>
+            <p>Enable debug logging in the QuickApp to see detailed information about sent notifications and received responses:</p>
+
+            <div class="code-block">
+-- Check debug log for send results
+self:debug("Notification sent successfully to topic:", topic)
+
+-- Check WebSocket listener status  
+print("[Listener] connected to", url)
+print("[Listener] Received from server:", data)
+            </div>
+
+            <h3>Testing Commands</h3>
+            <p>Use these commands in the HC3 Lua interface to test functionality:</p>
+
+            <div class="code-block">
+-- Test basic notification
+quickApp:sendSimple("test-topic", "Hello World", "Test")
+
+-- Test Fibaro action 
+quickApp:send({
+    message = "Test Fibaro action",
+    actions = {{
+        action = "fibaro",
+        label = "Test Button",
+        callback = function() 
+            quickApp:debug("Test action executed!") 
+        end
+    }}
+})
+
+-- Check helper functions
+local emoji = quickApp:getEmojiForTag("warning")  -- Should return ⚠️
+local priority = quickApp:getPriorityInfo(4)      -- Should return HIGH info
+            </div>
+
+            <h3>Support Resources</h3>
+            <ul>
+                <li><strong>ntfy Documentation:</strong> <a href="https://docs.ntfy.sh/">https://docs.ntfy.sh/</a></li>
+                <li><strong>ntfy.sh Status:</strong> <a href="https://ntfy.statuspage.io/">https://ntfy.statuspage.io/</a></li>
+                <li><strong>Fibaro Community:</strong> <a href="https://forum.fibaro.com/">https://forum.fibaro.com/</a></li>
+            </ul>
+        </section>
+
+        <footer style="text-align: center; padding: 40px 0; color: #6c757d; border-top: 1px solid #dee2e6; margin-top: 40px;">
+            <p>📱 NTFY QuickApp Documentation • Made with ❤️ for Fibaro HC3 • <a href="https://ntfy.sh">ntfy.sh</a></p>
+        </footer>
+    </div>
+</body>
+</html>

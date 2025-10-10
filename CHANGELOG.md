@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.50] - 2025-10-10
+
+
+
+#### Commits since v1.2.49:
+
+- ✨ **Feature**: add NTFY Notification Service and publishing options schema documentation
+- 🐛 **Fix**: correct escape character handling in json.lua
+
+
+
 ## [v1.2.49] - 2025-10-09
 
 

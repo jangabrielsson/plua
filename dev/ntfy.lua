@@ -349,7 +349,7 @@ function QuickApp:test()
 end
 
 function QuickApp:setupListener()
-    local ws = net.WebSocketClient()
+    local ws = net.WebSocketClientTls()
     local url = "wss://ntfy.sh/" .. self.config.defaultResponseTopic .. "/ws"
     ws:addEventListener("connected", function()
       print("[Listener] connected to", url)

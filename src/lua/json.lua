@@ -4,7 +4,7 @@ json.decode = function(...) return _PY.parse_json(...) end
 json.encodeFormated = function(...) return _PY.to_json_formatted(...) end
 
 local fmt = string.format
-local escTab = {["\""]="\\\"",["\'"]="\\'",["\\"]="\\\\",['"']='\\"',["\n"]="\\n",["\r"]="\\r",["\t"]="\\t"}
+local escTab = {["\""]="\\\"",["\'"]="\'",["\\"]="\\\\",['"']='\\"',["\n"]="\\n",["\r"]="\\r",["\t"]="\\t"}
 local sortKeys = {"type","device","deviceID","id","name","properties","value","oldValue","val","key","arg","event","events","msg","res"}
 local sortOrder={}
 for i,s in ipairs(sortKeys) do sortOrder[s]="\n"..string.char(i+64).." "..s end

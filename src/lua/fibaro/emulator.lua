@@ -572,8 +572,13 @@ function Emulator:startQA(id)
   coroutine.wraptest = coroutine.wraptest
   if coroutine.wraptest then return coroutine.wraptest(func,info) end
   coroutine.wrapdebug(func, function(err,tb)
+    local file = err:match('(%b"")')
+    if file then 
+      file = file:sub(2,-2) 
+      file = file:match("([^/\\]-)%.lua$") or file
+    end
     err = tostring(err):match(":(%d+: .*)") or err
-    print("Error in QA " .. id .. ": " .. tostring(err))
+    print(string.format("Error in QA %s, %s:%s", id, (file or ""), tostring(err)))
     print(tb)
   end)() 
   --end, 0)

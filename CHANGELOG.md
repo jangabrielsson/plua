@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.51] - 2025-10-11
+
+
+
+#### Commits since v1.2.50:
+
+- 🐛 **Fix**: enhance error reporting for included files in Emulator:startQA for better debugging
+- 📝 Add NTFY QuickApp documentation for Fibaro HC3 integration
+- 🐛 **Fix**: update WebSocketClient to WebSocketClientTls for secure connection
+
+
+
 ## [v1.2.50] - 2025-10-10
 
 

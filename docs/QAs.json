@@ -1,6 +1,30 @@
 {
-    "EventRunner6" : {},
-    "Yahue" : {},
-    "NTFY" : {},
-    "Dirigera" : {}
+    "EventRunner6" : { 
+        "uid":"f1e8b22e2-3c4b-4d5a-9f6a-7b8c2360e1f2c",
+        "user":"jangabrielsson",
+        "repo":"EventRunner6",
+        "path":"dist/EventRunner6.fqa",
+        "note":"EventRunner 6"
+    },
+    "Yahue" : { 
+        "uid":"f1e8b22e2-3c4b-4d5b-9f6a-7b8c2360e1f2c",
+        "user":"jangabrielsson",
+        "repo":"Yahue",
+        "path":"Yahue.fqa",
+        "note":"Yahue"
+    },
+    "NTFY" : { 
+        "uid":"f1e8b22e2-3c4b-4d5c-9f6a-7b8c2360e1f2c",
+        "user":"jangabrielsson",
+        "repo":"NTFY",
+        "path":"NTFY.fqa",
+        "note":"NTFY"
+    },
+    "Dirigera" : { 
+        "uid":"f1e8b22e2-3c4b-4d5d-9f6a-7b8c2360e1f2c",
+        "user":"jangabrielsson",
+        "repo":"Dirigera",
+        "path":"Dirigera.fqa",
+        "note":"Dirigera"
+    }
 }

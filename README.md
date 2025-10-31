@@ -5,6 +5,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<a href="https://www.buymeacoffee.com/rywnwpdvvni" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+
 # PLua - Lua Runtime with Fibaro Home Automation Support
 
 PLua is a powerful Lua interpreter built on Python that provides **native Fibaro Home Center 3 (HC3) QuickApp development and emulation**. Whether you're developing QuickApps for Fibaro home automation or just need a robust Lua runtime with async capabilities, PLua has you covered.

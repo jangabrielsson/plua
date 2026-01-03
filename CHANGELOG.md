@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.52] - 2026-01-03
+
+
+
+#### Commits since v1.2.51:
+
+- 📝 Add donation button to README
+- ✨ **Feature**: populate QAs.json with detailed entries for EventRunner6, Yahue, NTFY, and Dirigera
+- ✨ **Feature**: add initial QAs.json file for QA updater
+
+
+
 ## [v1.2.51] - 2025-10-11
 
 

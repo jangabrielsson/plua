@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.53] - 2026-01-09
+
+
+
+#### Commits since v1.2.52:
+
+- ✨ **Feature**: add loadFQA function and installQuickAppFromInfo method for enhanced quick app handling
+
+
+
 ## [v1.2.52] - 2026-01-03
 
 

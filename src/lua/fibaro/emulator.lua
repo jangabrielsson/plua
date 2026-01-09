@@ -446,6 +446,15 @@ function Emulator:installQuickAppFile(path,options)
   return info
 end
 
+function Emulator:installQuickAppFromInfo(info,options)
+  options = options or {}
+  local extraHeaders = options.headers or {}
+  self:loadQA(info,options.env or {})
+  self:registerDevice(info)
+  self:startQA(info.device.id)
+  return info
+end
+
 function Emulator:loadMainFile(filenames,greet)
   local filename = filenames[1] -- our main file
   local extraHeaders = self.config.headers
@@ -494,7 +503,7 @@ local stdLua = {
   "string", "table", "math", "io", 
   "package", "coroutine", "debug", "require",
   "setTimeout", "clearTimeout", "setInterval", "clearInterval",
-  "setmetatable", "getmetatable", "rawget", "rawset", "rawlen",
+  "setmetatable", "getmetatable", "rawget", "rawset", "rawlen","collectgarbage",
   "next", "pairs", "ipairs", "type", "tonumber", "tostring", "pcall", "xpcall",
   "error", "assert", "select", "unpack", "load", "loadstring", "loadfile", "dofile",
   "print",

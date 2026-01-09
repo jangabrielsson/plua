@@ -515,9 +515,21 @@ local function luaToFQA(code)
     return info2FQA(info)
 end
 
+local function loadFQA(fqa,extraHeaders)
+  local path = Emu.config.tempdir..createTempName(".lua")
+  unpackFQAAux(nil, fqa, path)
+  local file = io.open(path, "r")
+  assert(file, "Failed to open file: " .. path)
+  local content = file:read("*all")
+  file:close()
+  local info  = Emu:createInfoFromContent(path,content,extraHeaders)
+  return Emu:installQuickAppFromInfo(info)
+end
+
 Emu.lib.createTempName = createTempName
 Emu.lib.findFirstLine = findFirstLine
 Emu.lib.loadQAString = loadQAString
+Emu.lib.loadFQA = loadFQA
 Emu.lib.uploadFQA = uploadFQA
 Emu.lib.getFQA = getFQA
 Emu.lib.saveQA = saveQA

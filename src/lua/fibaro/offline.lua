@@ -379,7 +379,7 @@ local function setup()
 
   add("POST/quickApp/", function(path, data, vars, query)
     local fqa = json.decode(data)
-    Emu.lib.loadQA(fqa,Emu)
+    local resp = Emu.lib.loadFQA(fqa)
     return {resp,HTTP.OK}
   end)
 end

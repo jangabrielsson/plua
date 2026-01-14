@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.54] - 2026-01-14
+
+
+
+#### Commits since v1.2.53:
+
+- ✨ **Feature**: implement UTF-8 handling improvements across Lua and Python integration
+- ✨ **Feature**: enhance JSON handling with UTF-8 support and error logging in to_json functions
+
+
+
 ## [v1.2.53] - 2026-01-09
 
 

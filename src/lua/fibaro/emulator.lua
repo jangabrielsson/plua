@@ -214,10 +214,23 @@ function Emulator:loadState() end
 
 local function loadFile(env,path,name,content)
   if not content then
-    local file = io.open(path, "r")
-    assert(file, "Failed to open file: " .. path)
-    content = file:read("*all")
-    file:close()
+    -- Use Python's UTF-8 reader if available to ensure proper encoding
+    if _PY and _PY.read_file then
+      local success, file_content = pcall(_PY.read_file, path)
+      if success and file_content and not file_content:match("^Error") then
+        content = file_content
+      else
+        local file = io.open(path, "r")
+        assert(file, "Failed to open file: " .. path)
+        content = file:read("*all")
+        file:close()
+      end
+    else
+      local file = io.open(path, "r")
+      assert(file, "Failed to open file: " .. path)
+      content = file:read("*all")
+      file:close()
+    end
   end
   local func, err = load(content, path, "t", env)
   if func then func() env._G = env return true

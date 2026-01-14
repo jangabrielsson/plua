@@ -141,10 +141,20 @@ def load_python_module(module_name: str) -> Dict[str, Any]:
 
 @export_to_lua("read_file")
 def read_file(filename: str) -> str:
-    """Read a file and return its contents."""
+    """Read a file and return its contents with proper UTF-8 handling."""
     try:
-        with open(filename, 'r', encoding='utf-8') as f:
+        # Try reading with UTF-8 first (most common)
+        with open(filename, 'r', encoding='utf-8', errors='strict') as f:
             return f.read()
+    except UnicodeDecodeError:
+        # If UTF-8 fails, try with error replacement to ensure valid UTF-8 output
+        try:
+            with open(filename, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+                logging.warning(f"File {filename} contains invalid UTF-8, used replacement characters")
+                return content
+        except Exception as e:
+            return f"Error reading file: {e}"
     except Exception as e:
         return f"Error reading file: {e}"
 

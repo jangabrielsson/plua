@@ -58,7 +58,12 @@ class LuaEngine:
                 # No running loop, we'll set it when start() is called
                 self._loop = None
 
-        self._lua = lupa.LuaRuntime(unpack_returned_tuples=True)
+        # Configure Lupa to use UTF-8 encoding for all string conversions
+        # This ensures Lua strings with UTF-8 characters are properly handled
+        self._lua = lupa.LuaRuntime(
+            unpack_returned_tuples=True,
+            encoding='UTF-8'  # Explicitly set UTF-8 encoding
+        )
         self._timer_manager = AsyncTimerManager()
         self._bindings = LuaBindings(self._timer_manager, self)
         self._running = False

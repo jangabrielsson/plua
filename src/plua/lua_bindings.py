@@ -220,10 +220,28 @@ class LuaBindings:
         # Engine functions
         @export_to_lua("print")
         def lua_print(*args) -> None:
-            """Enhanced print function for Lua scripts."""
-            message = " ".join(str(arg) for arg in args)
-            logger.info(f"Lua: {message}")
-            print(f"{message}", flush=True)
+            """Enhanced print function for Lua scripts with UTF-8 error handling."""
+            def safe_str(arg):
+                """Convert argument to string, handling UTF-8 errors."""
+                try:
+                    s = str(arg)
+                    # Verify it's valid UTF-8
+                    s.encode('utf-8')
+                    return s
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    # If string conversion fails, try to handle bytes
+                    if isinstance(arg, bytes):
+                        return arg.decode('utf-8', errors='replace')
+                    # For other types, use repr which is safer
+                    return repr(arg)
+            
+            try:
+                message = " ".join(safe_str(arg) for arg in args)
+                logger.info(f"Lua: {message}")
+                print(f"{message}", flush=True)
+            except Exception as e:
+                logger.error(f"Error in lua_print: {e}")
+                print(f"[print error: {e}]", flush=True)
         
         @export_to_lua("log")
         def lua_log(level: str, message: str) -> None:

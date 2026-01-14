@@ -101,6 +101,81 @@ local win = os and os.getenv and (os.getenv('WINDIR') or (os.getenv('OS') or '')
 local mac = not win and (os and os.getenv and os.getenv('DYLD_LIBRARY_PATH') or not io.open("/proc")) and true or false
 local iscasepreserving = win or (mac and io.open('/library') ~= nil)
 
+-- UTF-8 sanitizer to prevent crashes when passing strings to Python through Lupa
+local function sanitize_utf8(str)
+  if type(str) ~= "string" then return tostring(str) end
+  
+  -- Check if string contains potentially problematic bytes
+  local has_high_bytes = str:match("[\128-\255]")
+  if not has_high_bytes then return str end
+  
+  -- Replace invalid UTF-8 sequences with '?'
+  -- Valid UTF-8 multi-byte sequences start with specific byte ranges
+  local result = {}
+  local i = 1
+  while i <= #str do
+    local c = string.byte(str, i)
+    if c < 128 then
+      -- ASCII, always safe
+      table.insert(result, string.char(c))
+      i = i + 1
+    elseif c >= 194 and c <= 223 then
+      -- 2-byte sequence
+      if i + 1 <= #str then
+        local c2 = string.byte(str, i + 1)
+        if c2 >= 128 and c2 <= 191 then
+          table.insert(result, str:sub(i, i + 1))
+          i = i + 2
+        else
+          table.insert(result, "?")
+          i = i + 1
+        end
+      else
+        table.insert(result, "?")
+        i = i + 1
+      end
+    elseif c >= 224 and c <= 239 then
+      -- 3-byte sequence
+      if i + 2 <= #str then
+        local c2 = string.byte(str, i + 1)
+        local c3 = string.byte(str, i + 2)
+        if c2 >= 128 and c2 <= 191 and c3 >= 128 and c3 <= 191 then
+          table.insert(result, str:sub(i, i + 2))
+          i = i + 3
+        else
+          table.insert(result, "?")
+          i = i + 1
+        end
+      else
+        table.insert(result, "?")
+        i = i + 1
+      end
+    elseif c >= 240 and c <= 244 then
+      -- 4-byte sequence
+      if i + 3 <= #str then
+        local c2 = string.byte(str, i + 1)
+        local c3 = string.byte(str, i + 2)
+        local c4 = string.byte(str, i + 3)
+        if c2 >= 128 and c2 <= 191 and c3 >= 128 and c3 <= 191 and c4 >= 128 and c4 <= 191 then
+          table.insert(result, str:sub(i, i + 3))
+          i = i + 4
+        else
+          table.insert(result, "?")
+          i = i + 1
+        end
+      else
+        table.insert(result, "?")
+        i = i + 1
+      end
+    else
+      -- Invalid start byte (including 0xC0, 0xC1, and 0xF5-0xFF)
+      table.insert(result, "?")
+      i = i + 1
+    end
+  end
+  return table.concat(result)
+end
+
 local coroutines = {}; setmetatable(coroutines, {__mode = "k"}) -- "weak" keys
 local events = { BREAK = 1, WATCH = 2, RESTART = 3, STACK = 4 }
 local PROTOCOLS = {MOBDEBUG = 1, VSCODE = 2}
@@ -490,7 +565,14 @@ function Socket:receive_nread(n, sync)
 end
 
 function Socket:send(...)
-  return self.s:send(...)
+  local args = {...}
+  -- Sanitize all string arguments before sending
+  for i = 1, #args do
+    if type(args[i]) == "string" then
+      args[i] = sanitize_utf8(args[i])
+    end
+  end
+  return self.s:send(table.unpack(args))
 end
 
 function Socket:nsend(str)
@@ -1000,9 +1082,9 @@ local function debug_hook(event, line)
       abort = res
       -- only abort if safe; if not, there is another (earlier) check inside
       -- debug_hook, which will abort execution at the first safe opportunity
-      if is_safe(state.stack_level) then error(abort) end
+      if is_safe(state.stack_level) then error(sanitize_utf8(abort)) end
     elseif not status and res then
-      error(res, 2) -- report any other (internal) errors back to the application
+      error(sanitize_utf8(res), 2) -- report any other (internal) errors back to the application
     end
 
     if vars then restore_vars(vars) end
@@ -2066,6 +2148,9 @@ local function controller(controller_host, controller_port, scratchpad)
     server = Socket.new(server)
 
     local function report(trace, err)
+      -- Sanitize trace and error to prevent UTF-8 encoding issues
+      trace = sanitize_utf8(tostring(trace))
+      err = sanitize_utf8(tostring(err))
       local msg = err .. "\n" .. trace
       server:send("401 Error in Execution " .. tostring(#msg) .. "\n")
       server:send(msg)
@@ -2098,7 +2183,7 @@ local function controller(controller_host, controller_port, scratchpad)
         elseif err and not string_find(tostring(err), deferror) then
           -- report the error back
           -- err is not necessarily a string, so convert to string to report
-          report(debug.traceback(coro_debugee), tostring(err))
+          report(debug.traceback(coro_debugee), sanitize_utf8(tostring(err)))
           if exitonerror then break end
           -- check if the debugging is done (coro_debugger is nil)
           if not coro_debugger then break end
@@ -2348,6 +2433,48 @@ local function handle(params, client, options)
         -- read the file and remove the shebang line as it causes a compilation error
         local lines = file:read("*all"):gsub("^#!.-\n", "\n")
         file:close()
+
+        -- Ensure UTF-8 validity by checking if string is valid UTF-8
+        -- If not, the io.open patch should have already handled it via _PY.read_file
+        local function is_valid_utf8(s)
+          -- Simple UTF-8 validation: check for proper byte sequences
+          local i = 1
+          while i <= #s do
+            local c = string.byte(s, i)
+            if c < 128 then
+              i = i + 1
+            elseif c >= 194 and c <= 223 then
+              if i + 1 > #s then return false end
+              local c2 = string.byte(s, i + 1)
+              if c2 < 128 or c2 > 191 then return false end
+              i = i + 2
+            elseif c >= 224 and c <= 239 then
+              if i + 2 > #s then return false end
+              local c2 = string.byte(s, i + 1)
+              local c3 = string.byte(s, i + 2)
+              if c2 < 128 or c2 > 191 or c3 < 128 or c3 > 191 then return false end
+              i = i + 3
+            elseif c >= 240 and c <= 244 then
+              if i + 3 > #s then return false end
+              local c2 = string.byte(s, i + 1)
+              local c3 = string.byte(s, i + 2)
+              local c4 = string.byte(s, i + 3)
+              if c2 < 128 or c2 > 191 or c3 < 128 or c3 > 191 or c4 < 128 or c4 > 191 then return false end
+              i = i + 4
+            else
+              return false
+            end
+          end
+          return true
+        end
+
+        -- If UTF-8 validation fails and _PY.read_file is available, use it
+        if not is_valid_utf8(lines) and _PY and _PY.read_file then
+          local success, utf8_content = pcall(_PY.read_file, exp)
+          if success and utf8_content then
+            lines = utf8_content:gsub("^#!.-\n", "\n")
+          end
+        end
 
         local fname = string_gsub(exp, "\\", "/") -- convert slash
         fname = removebasedir(fname, state.basedir)

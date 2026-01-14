@@ -49,6 +49,98 @@ if config.debugger and debugIDE then
   end
 end
 
+-- Patch io.open to handle UTF-8 files properly when reading in text mode
+-- This fixes issues with mobdebug and other code reading source files with UTF-8 characters
+local original_io_open = io.open
+local function utf8_io_open(filename, mode)
+  mode = mode or "r"
+  
+  -- Only patch text reading modes
+  if mode == "r" or mode == "rt" then
+    local file = original_io_open(filename, mode)
+    if not file then return nil end
+    
+    -- Wrap the file handle to intercept read operations
+    local original_read = file.read
+    local file_closed = false
+    local utf8_file = {
+      read = function(self, ...)
+        if file_closed then return nil end
+        local args = {...}
+        -- If reading all content, use Python's UTF-8 reader
+        if args[1] == "*all" or args[1] == "*a" then
+          local success, content = pcall(_PY.read_file, filename)
+          if success then
+            file_closed = true
+            file:close()
+            return content
+          else
+            error("UTF-8 read error: " .. tostring(content))
+          end
+        else
+          -- For other read modes, use original
+          return original_read(file, ...)
+        end
+      end,
+      close = function(self)
+        if file_closed then return true end
+        file_closed = true
+        return file:close()
+      end,
+      -- Proxy other file methods
+      lines = function(self, ...) return file:lines(...) end,
+      seek = function(self, ...) return file:seek(...) end,
+      setvbuf = function(self, ...) return file:setvbuf(...) end,
+      write = function(self, ...) return file:write(...) end,
+      flush = function(self) return file:flush() end,
+    }
+    return utf8_file
+  else
+    -- For write/binary modes, use original
+    return original_io_open(filename, mode)
+  end
+end
+
+-- Replace io.open with UTF-8-aware version
+io.open = utf8_io_open
+
+-- Patch error() to sanitize messages before they cross Lua/Python boundary
+local original_error = error
+local function safe_error(message, level)
+  if type(message) == "string" then
+    -- Sanitize UTF-8: replace invalid sequences with '?'
+    local sanitized = message:gsub("[\192-\255][\128-\191]*", function(seq)
+      -- Check if it's a valid UTF-8 sequence
+      local b1 = string.byte(seq, 1)
+      if b1 >= 192 and b1 <= 223 then
+        -- 2-byte sequence
+        if #seq >= 2 then
+          local b2 = string.byte(seq, 2)
+          if b2 >= 128 and b2 <= 191 and b1 >= 194 then return seq end
+        end
+      elseif b1 >= 224 and b1 <= 239 then
+        -- 3-byte sequence
+        if #seq >= 3 then
+          local b2, b3 = string.byte(seq, 2), string.byte(seq, 3)
+          if b2 >= 128 and b2 <= 191 and b3 >= 128 and b3 <= 191 then return seq end
+        end
+      elseif b1 >= 240 and b1 <= 244 then
+        -- 4-byte sequence
+        if #seq >= 4 then
+          local b2, b3, b4 = string.byte(seq, 2), string.byte(seq, 3), string.byte(seq, 4)
+          if b2 >= 128 and b2 <= 191 and b3 >= 128 and b3 <= 191 and b4 >= 128 and b4 <= 191 then return seq end
+        end
+      end
+      -- Invalid sequence, replace with '?'
+      return "?"
+    end)
+    original_error(sanitized, (level or 1) + 1)
+  else
+    original_error(message, (level or 1) + 1)
+  end
+end
+error = safe_error
+
 json = require('json')
 local callbacks = {}
 local callbackID = 0

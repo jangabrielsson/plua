@@ -17,11 +17,21 @@ function _PY.mainLuaFile(filenames)
     filenames[1] =  _PY.mainfileResolver(filenames[1])
     _PY.mobdebug.on()
     --_print("mainLuaFile",_PY.milli_time()-_PY.config.startTime)
+    
+    -- Helper to sanitize error messages for UTF-8
+    local function sanitize_utf8_error(err)
+        if type(err) ~= "string" then return tostring(err) end
+        -- Remove or replace invalid UTF-8 sequences
+        return err:gsub("[^\32-\126\n\r\t\192-\244][\128-\191]*", "?")
+    end
+    
     xpcall(function()
         Emu:loadMainFile(filenames,"greet")
     end,function(err)
-        print(err)
-        print(debug.traceback())
+        local safe_err = sanitize_utf8_error(err)
+        local safe_trace = sanitize_utf8_error(debug.traceback())
+        print(safe_err)
+        print(safe_trace)
     end)
 end
 

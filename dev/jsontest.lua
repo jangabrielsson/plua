@@ -1,20 +1,18 @@
 
+local aG="[\192-\255][\128-\191]*"
+local aH={["Á"]="A",["Ä"]="A",["Ą"]="A",["À"]="A",["Â"]="A",["Č"]="C",["Ć"]="C",["Ç"]="C",["Ď"]="D",["É"]="E",["Ě"]="E",["Ë"]="E",["Ę"]="E",["È"]="E",["Ê"]="E",["Í"]="I",["Ï"]="I",["Î"]="I",["Ĺ"]="L",["Ľ"]="L",["Ł"]="L",["Ň"]="N",["Ń"]="N",["Ó"]="O",["Ô"]="O",["Ö"]="O",["Ő"]="O",["Œ"]="O",["Ŕ"]="R",["Ř"]="R",["Š"]="S",["Ś"]="S",["Ť"]="T",["Ú"]="U",["Ů"]="U",["Ü"]="U",["Ű"]="U",["Ù"]="U",["Û"]="U",["Ý"]="Y",["Ÿ"]="Y",["Ž"]="Z",["Ż"]="Z",["Ź"]="Z",["á"]="a",["ä"]="a",["ą"]="a",["à"]="a",["â"]="a",["č"]="c",["ć"]="c",["ç"]="c",["ď"]="d",["é"]="e",["ě"]="e",["ë"]="e",["ę"]="e",["è"]="e",["ê"]="e",["í"]="i",["ï"]="i",["î"]="i",["ĺ"]="l",["ľ"]="l",["ł"]="l",["ň"]="n",["ń"]="n",["ó"]="o",["ö"]="o",["ô"]="o",["ő"]="o",["œ"]="o",["ř"]="r",["ŕ"]="r",["š"]="s",["ś"]="s",["ť"]="t",["ú"]="u",["ů"]="u",["ü"]="u",["ű"]="u",["ù"]="u",["û"]="u",["ý"]="y",["ÿ"]="y",["ž"]="z",["ż"]="z",["ź"]="z"}
 
-
-local function trans(str)
-    local escTab = {["\""]="\\\"",["\'"]="\\'",["\\"]="\\\\",['"']='\\"',["\n"]="\\n",["\r"]="\\r",["\t"]="\\t"}
-    local str1 = '"'..str:gsub(".",escTab)..'"'
-    local str2 = json.encode2(str)
-    print(str1) 
-    print(str2) 
-    local b = json.decode(str2)
-    print(b)
+local function aI(aD) -- replace special character by standard one following table 'aH' in range 'aG'
+    if aD then return aD:gsub(aG,aH)
+    else return""
+    end
 end
 
-trans("Hello\nWorld")
-trans("Hello\'World")
-trans("Hello' 'World")
-
--- local str = json.encode("Hello\nWorld")
--- print(str)
--- print(json.decode(str))
+local a = aI("Salle à manger")
+print(a)
+local jsonStr = json.encode({a})
+print("JSON string:", jsonStr)
+local b = json.decode(jsonStr)
+for k,v in pairs(b) do
+    print(k,v)
+end

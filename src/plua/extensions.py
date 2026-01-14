@@ -194,23 +194,53 @@ def parse_json(json_string: str) -> Any:
 
 @export_to_lua("to_json")
 def to_json(lua_data: Any) -> str:
-    """Convert data to flat JSON string."""
+    """Convert data to flat JSON string with proper UTF-8 handling."""
     try:
-        # Convert Lua data to Python data structures first
+        # Convert Lua data to Python data structures with UTF-8 decoding
         python_data = lua_to_python_table(lua_data)
+        
+        # Encode with ensure_ascii=False to preserve UTF-8 characters
         return json.dumps(python_data, ensure_ascii=False, separators=(",", ":"))
+    except (UnicodeDecodeError, UnicodeEncodeError) as e:
+        logging.warning(f"UTF-8 encoding error in to_json: {e}")
+        
+        # Fallback: encode with ASCII escaping to avoid data loss
+        try:
+            python_data = lua_to_python_table(lua_data)
+            result = json.dumps(python_data, ensure_ascii=True, separators=(",", ":"))
+            logging.warning("Used ASCII-escaped encoding as fallback")
+            return result
+        except Exception as fallback_error:
+            logging.error(f"JSON encoding failed even with ASCII fallback: {fallback_error}")
+            return f'{{"error": "JSON encode error: {fallback_error}"}}'
     except Exception as e:
+        logging.error(f"Unexpected error in to_json: {e}")
         return f'{{"error": "JSON encode error: {e}"}}'
 
 
 @export_to_lua("to_json_formatted")
 def to_json_formatted(lua_data: Any) -> str:
-    """Convert data to JSON string."""
+    """Convert data to formatted JSON string with proper UTF-8 handling."""
     try:
-        # Convert Lua data to Python data structures first
+        # Convert Lua data to Python data structures with UTF-8 decoding
         python_data = lua_to_python_table(lua_data)
+        
+        # Encode with ensure_ascii=False to preserve UTF-8 characters
         return json.dumps(python_data, ensure_ascii=False, indent=2)
+    except (UnicodeDecodeError, UnicodeEncodeError) as e:
+        logging.warning(f"UTF-8 encoding error in to_json_formatted: {e}")
+        
+        # Fallback: encode with ASCII escaping to avoid data loss
+        try:
+            python_data = lua_to_python_table(lua_data)
+            result = json.dumps(python_data, ensure_ascii=True, indent=2)
+            logging.warning("Used ASCII-escaped encoding as fallback")
+            return result
+        except Exception as fallback_error:
+            logging.error(f"JSON encoding failed even with ASCII fallback: {fallback_error}")
+            return f'{{"error": "JSON encode error: {fallback_error}"}}'
     except Exception as e:
+        logging.error(f"Unexpected error in to_json_formatted: {e}")
         return f'{{"error": "JSON encode error: {e}"}}'
 
 

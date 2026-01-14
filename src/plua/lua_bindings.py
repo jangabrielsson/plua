@@ -54,7 +54,7 @@ def python_to_lua_table(data: Any) -> Any:
 
 def lua_to_python_table(lua_table: Any) -> Any:
     """
-    Convert Lua tables to Python data structures.
+    Convert Lua tables to Python data structures with proper UTF-8 handling.
     
     Args:
         lua_table: Lua table or primitive value
@@ -65,15 +65,41 @@ def lua_to_python_table(lua_table: Any) -> Any:
     if _global_engine is None:
         raise RuntimeError("Global engine not set. Call set_global_engine() first.")
     
+    # Handle bytes objects (Lupa sometimes passes strings as bytes)
+    if isinstance(lua_table, bytes):
+        try:
+            return lua_table.decode('utf-8')
+        except UnicodeDecodeError:
+            # Fallback: decode with error replacement
+            return lua_table.decode('utf-8', errors='replace')
+    
     # Check if it's a Lua table
     if hasattr(lua_table, '__class__') and 'lua' in str(lua_table.__class__).lower():
         try:
             # Convert to Python dict first
             temp_dict = {}
             for key, value in lua_table.items():
-                # Recursively convert nested tables
-                python_key = lua_to_python_table(key) if hasattr(key, '__class__') and 'lua' in str(key.__class__).lower() else key
-                python_value = lua_to_python_table(value) if hasattr(value, '__class__') and 'lua' in str(value.__class__).lower() else value
+                # Handle bytes keys/values
+                if isinstance(key, bytes):
+                    try:
+                        python_key = key.decode('utf-8')
+                    except UnicodeDecodeError:
+                        python_key = key.decode('utf-8', errors='replace')
+                elif hasattr(key, '__class__') and 'lua' in str(key.__class__).lower():
+                    python_key = lua_to_python_table(key)
+                else:
+                    python_key = key
+                
+                if isinstance(value, bytes):
+                    try:
+                        python_value = value.decode('utf-8')
+                    except UnicodeDecodeError:
+                        python_value = value.decode('utf-8', errors='replace')
+                elif hasattr(value, '__class__') and 'lua' in str(value.__class__).lower():
+                    python_value = lua_to_python_table(value)
+                else:
+                    python_value = value
+                
                 temp_dict[python_key] = python_value
             
             # Check if this looks like an array (consecutive integer keys starting from 1)
@@ -84,7 +110,8 @@ def lua_to_python_table(lua_table: Any) -> Any:
                     return [temp_dict[k] for k in keys]
             
             return temp_dict
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error converting Lua table: {e}")
             # If conversion fails, return string representation
             return str(lua_table)
     else:
@@ -1099,4 +1126,4 @@ def py_sleep(milliseconds: int):
     """Sleep for the specified number of milliseconds (blocking)."""
     import time
     time.sleep(milliseconds / 1000.0)
-        
+

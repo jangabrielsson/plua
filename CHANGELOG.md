@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.56] - 2026-02-25
+
+
+
+#### Commits since v1.2.55:
+
+- ✨ **Feature**: update MQTT example and integrate MQTT into Emulator environment
+
+
+
 ## [v1.2.55] - 2026-02-25
 
 

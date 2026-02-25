@@ -172,6 +172,17 @@ class LuaEngine:
                     callback_data = self._callback_queue.get_nowait()
                     callback_id, error, result = callback_data
 
+                    # Convert Python data structures to Lua tables before passing to Lua
+                    from .lua_bindings import python_to_lua_table
+                    
+                    # Convert error data if it's a dict or list
+                    if error is not None and isinstance(error, (dict, list)):
+                        error = python_to_lua_table(error)
+                    
+                    # Convert result data if it's a dict or list
+                    if result is not None and isinstance(result, (dict, list)):
+                        result = python_to_lua_table(result)
+
                     # Call the Lua callback
                     self._lua.globals()["_PY"]["timerExpired"](callback_id, error, result)
 

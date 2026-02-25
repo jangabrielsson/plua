@@ -891,8 +891,16 @@ function net.Client.connect(uri, options)
       end
     end
     
+    -- Remove callback from options before passing to Python
+    local py_options = {}
+    for k, v in pairs(options) do
+      if k ~= 'callback' then
+        py_options[k] = v
+      end
+    end
+    
     local callback_id = callback and _PY.registerCallback(callback) or nil
-    return _PY.mqtt_client_subscribe(self.client_id, topics, options, callback_id)
+    return _PY.mqtt_client_subscribe(self.client_id, topics, py_options, callback_id)
   end
 
   -- Unsubscribe method
@@ -910,8 +918,16 @@ function net.Client.connect(uri, options)
       end
     end
     
+    -- Remove callback from options before passing to Python
+    local py_options = {}
+    for k, v in pairs(options) do
+      if k ~= 'callback' then
+        py_options[k] = v
+      end
+    end
+    
     local callback_id = callback and _PY.registerCallback(callback) or nil
-    return _PY.mqtt_client_unsubscribe(self.client_id, topics, options, callback_id)
+    return _PY.mqtt_client_unsubscribe(self.client_id, topics, py_options, callback_id)
   end
 
   -- Publish method
@@ -929,8 +945,16 @@ function net.Client.connect(uri, options)
       end
     end
     
+    -- Remove callback from options before passing to Python
+    local py_options = {}
+    for k, v in pairs(options) do
+      if k ~= 'callback' then
+        py_options[k] = v
+      end
+    end
+    
     local callback_id = callback and _PY.registerCallback(callback) or nil
-    return _PY.mqtt_client_publish(self.client_id, topic, payload, options, callback_id)
+    return _PY.mqtt_client_publish(self.client_id, topic, payload, py_options, callback_id)
   end
 
   -- Add event listener (EventTarget API)

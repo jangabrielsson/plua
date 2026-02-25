@@ -7,7 +7,7 @@ import asyncio
 import uuid
 import ssl
 from typing import Dict, Any, Optional
-from eplua.lua_bindings import export_to_lua, get_global_engine, python_to_lua_table, lua_to_python_table
+from plua.lua_bindings import export_to_lua, get_global_engine, python_to_lua_table, lua_to_python_table
 import logging
 
 logger = logging.getLogger(__name__)
@@ -92,11 +92,11 @@ def mqtt_client_connect(uri: str, options: Optional[Dict] = None, callback_id: O
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'event': 'error',
                     'error': 'aiomqtt package not available',
                     'success': False
-                }))
+                })
         return "error_no_aiomqtt"
     
     client_id = _generate_client_id()
@@ -135,11 +135,11 @@ def mqtt_client_connect(uri: str, options: Optional[Dict] = None, callback_id: O
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'event': 'error',
                     'error': f'Failed to create task: {e}',
                     'success': False
-                }))
+                })
         return "error_task_creation"
     
     return client_id
@@ -177,50 +177,62 @@ async def _mqtt_connect_and_listen(client_id: str):
             if callback_id:
                 engine = get_global_engine()
                 if engine:
-                    engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                    engine.post_callback_from_thread(callback_id, {
                         'event': 'connected',
                         'client_id': client_id,
-                        'success': True
-                    }))
+                        'success': True,
+                        'sessionPresent': conn_params['clean_session'] == False,
+                        'returnCode': 0  # 0 = success
+                    })
             
             # Also call 'connected' event listeners
             if 'connected' in client_info['event_listeners']:
                 event_callback_id = client_info['event_listeners']['connected']
                 engine = get_global_engine()
                 if engine:
-                    engine.post_callback_from_thread(event_callback_id, python_to_lua_table({
+                    engine.post_callback_from_thread(event_callback_id, {
                         'event': 'connected',
-                        'client_id': client_id
-                    }))
+                        'client_id': client_id,
+                        'sessionPresent': conn_params['clean_session'] == False,
+                        'returnCode': 0  # 0 = success
+                    })
             
             # Listen for messages
             async for message in client.messages:
+                # Generate a packet ID (simplified)
+                import random
+                packet_id = random.randint(1, 65535)
+                
                 # Send to main callback if exists
                 if callback_id:
                     engine = get_global_engine()
                     if engine:
-                        engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                        engine.post_callback_from_thread(callback_id, {
                             'event': 'message',
                             'client_id': client_id,
                             'topic': str(message.topic),
                             'payload': message.payload.decode('utf-8', errors='replace'),
                             'qos': message.qos,
-                            'retain': message.retain
-                        }))
+                            'retain': message.retain,
+                            'packetId': packet_id,
+                            'dup': False  # Duplicate delivery flag
+                        })
                 
                 # Also send to 'message' event listeners
                 if 'message' in client_info['event_listeners']:
                     event_callback_id = client_info['event_listeners']['message']
                     engine = get_global_engine()
                     if engine:
-                        engine.post_callback_from_thread(event_callback_id, python_to_lua_table({
+                        engine.post_callback_from_thread(event_callback_id, {
                             'event': 'message',
                             'client_id': client_id,
                             'topic': str(message.topic),
                             'payload': message.payload.decode('utf-8', errors='replace'),
                             'qos': message.qos,
-                            'retain': message.retain
-                        }))
+                            'retain': message.retain,
+                            'packetId': packet_id,
+                            'dup': False  # Duplicate delivery flag
+                        })
                         
     except Exception as e:
         logger.error(f"MQTT connection error: {e}")
@@ -230,23 +242,23 @@ async def _mqtt_connect_and_listen(client_id: str):
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'event': 'error',
                     'client_id': client_id,
                     'error': str(e),
                     'success': False
-                }))
+                })
         
         # Notify error event listeners
         if 'error' in client_info['event_listeners']:
             event_callback_id = client_info['event_listeners']['error']
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(event_callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(event_callback_id, {
                     'event': 'error',
                     'client_id': client_id,
                     'error': str(e)
-                }))
+                })
     finally:
         # Clean up client info
         client_info['connected'] = False
@@ -255,20 +267,30 @@ async def _mqtt_connect_and_listen(client_id: str):
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'event': 'disconnected',
                     'client_id': client_id
-                }))
+                })
         
         # Notify disconnected event listeners
         if 'disconnected' in client_info['event_listeners']:
             event_callback_id = client_info['event_listeners']['disconnected']
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(event_callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(event_callback_id, {
                     'event': 'disconnected',
                     'client_id': client_id
-                }))
+                })
+        
+        # Also notify 'closed' event listeners (Fibaro HC3 compatibility)
+        if 'closed' in client_info['event_listeners']:
+            event_callback_id = client_info['event_listeners']['closed']
+            engine = get_global_engine()
+            if engine:
+                engine.post_callback_from_thread(event_callback_id, {
+                    'event': 'closed',
+                    'client_id': client_id
+                })
 
 @export_to_lua("mqtt_client_disconnect")
 def mqtt_client_disconnect(client_id: str, callback_id: Optional[str] = None) -> None:
@@ -283,10 +305,10 @@ def mqtt_client_disconnect(client_id: str, callback_id: Optional[str] = None) ->
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': 'Client not found'
-                }))
+                })
         return
     
     client_info = _mqtt_clients[client_id]
@@ -298,15 +320,25 @@ def mqtt_client_disconnect(client_id: str, callback_id: Optional[str] = None) ->
     # Mark as disconnected
     client_info['connected'] = False
     
+    # Notify 'closed' event listeners before cleanup
+    if 'closed' in client_info['event_listeners']:
+        event_callback_id = client_info['event_listeners']['closed']
+        engine = get_global_engine()
+        if engine:
+            engine.post_callback_from_thread(event_callback_id, {
+                'event': 'closed',
+                'client_id': client_id
+            })
+    
     # Clean up
     del _mqtt_clients[client_id]
     
     if callback_id:
         engine = get_global_engine()
         if engine:
-            engine.post_callback_from_thread(callback_id, python_to_lua_table({
+            engine.post_callback_from_thread(callback_id, {
                 'success': True
-            }))
+            })
 
 @export_to_lua("mqtt_client_publish")
 def mqtt_client_publish(client_id: str, topic: str, payload: str, options: Optional[Dict] = None, callback_id: Optional[str] = None) -> None:
@@ -324,10 +356,10 @@ def mqtt_client_publish(client_id: str, topic: str, payload: str, options: Optio
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': 'Client not found'
-                }))
+                })
         return
     
     client_info = _mqtt_clients[client_id]
@@ -336,10 +368,10 @@ def mqtt_client_publish(client_id: str, topic: str, payload: str, options: Optio
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': 'Client not connected'
-                }))
+                })
         return
     
     # Convert Lua table to Python dict if needed
@@ -357,10 +389,10 @@ def mqtt_client_publish(client_id: str, topic: str, payload: str, options: Optio
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': f'Failed to create task: {e}'
-                }))
+                })
 
 async def _mqtt_publish(client_id: str, topic: str, payload: str, qos: int, retain: bool, callback_id: Optional[str]):
     """Async MQTT publish"""
@@ -373,23 +405,39 @@ async def _mqtt_publish(client_id: str, topic: str, payload: str, qos: int, reta
     try:
         await client.publish(topic, payload, qos=qos, retain=retain)
         
+        # Generate a packet ID (simplified)
+        import random
+        packet_id = random.randint(1, 65535)
+        
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': True,
                     'topic': topic
-                }))
+                })
+        
+        # Also call 'published' event listeners
+        if 'published' in client_info['event_listeners']:
+            event_callback_id = client_info['event_listeners']['published']
+            engine = get_global_engine()
+            if engine:
+                engine.post_callback_from_thread(event_callback_id, {
+                    'event': 'published',
+                    'client_id': client_id,
+                    'packetId': packet_id,
+                    'topic': topic
+                })
                 
     except Exception as e:
         logger.error(f"MQTT publish error: {e}")
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': str(e)
-                }))
+                })
 
 @export_to_lua("mqtt_client_subscribe")
 def mqtt_client_subscribe(client_id: str, topic: str, options: Optional[Dict] = None, callback_id: Optional[str] = None) -> None:
@@ -406,10 +454,10 @@ def mqtt_client_subscribe(client_id: str, topic: str, options: Optional[Dict] = 
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': 'Client not found'
-                }))
+                })
         return
     
     client_info = _mqtt_clients[client_id]
@@ -418,10 +466,10 @@ def mqtt_client_subscribe(client_id: str, topic: str, options: Optional[Dict] = 
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': 'Client not connected'
-                }))
+                })
         return
     
     # Convert Lua table to Python dict if needed
@@ -438,10 +486,10 @@ def mqtt_client_subscribe(client_id: str, topic: str, options: Optional[Dict] = 
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': f'Failed to create task: {e}'
-                }))
+                })
 
 async def _mqtt_subscribe(client_id: str, topic: str, qos: int, callback_id: Optional[str]):
     """Async MQTT subscribe"""
@@ -455,23 +503,39 @@ async def _mqtt_subscribe(client_id: str, topic: str, qos: int, callback_id: Opt
         await client.subscribe(topic, qos=qos)
         client_info['subscriptions'].add(topic)
         
+        # Generate a packet ID (simplified - just use a counter)
+        import random
+        packet_id = random.randint(1, 65535)
+        
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': True,
                     'topic': topic
-                }))
+                })
+        
+        # Also call 'subscribed' event listeners
+        if 'subscribed' in client_info['event_listeners']:
+            event_callback_id = client_info['event_listeners']['subscribed']
+            engine = get_global_engine()
+            if engine:
+                engine.post_callback_from_thread(event_callback_id, {
+                    'event': 'subscribed',
+                    'client_id': client_id,
+                    'packetId': packet_id,
+                    'results': [qos]  # Array of granted QoS levels
+                })
                 
     except Exception as e:
         logger.error(f"MQTT subscribe error: {e}")
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': str(e)
-                }))
+                })
 
 @export_to_lua("mqtt_client_unsubscribe")
 def mqtt_client_unsubscribe(client_id: str, topic: str, callback_id: Optional[str] = None) -> None:
@@ -487,10 +551,10 @@ def mqtt_client_unsubscribe(client_id: str, topic: str, callback_id: Optional[st
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': 'Client not found'
-                }))
+                })
         return
     
     client_info = _mqtt_clients[client_id]
@@ -499,10 +563,10 @@ def mqtt_client_unsubscribe(client_id: str, topic: str, callback_id: Optional[st
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': 'Client not connected'
-                }))
+                })
         return
     
     # Schedule the async unsubscribe task
@@ -512,10 +576,10 @@ def mqtt_client_unsubscribe(client_id: str, topic: str, callback_id: Optional[st
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': f'Failed to create task: {e}'
-                }))
+                })
 
 async def _mqtt_unsubscribe(client_id: str, topic: str, callback_id: Optional[str]):
     """Async MQTT unsubscribe"""
@@ -532,20 +596,20 @@ async def _mqtt_unsubscribe(client_id: str, topic: str, callback_id: Optional[st
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': True,
                     'topic': topic
-                }))
+                })
                 
     except Exception as e:
         logger.error(f"MQTT unsubscribe error: {e}")
         if callback_id:
             engine = get_global_engine()
             if engine:
-                engine.post_callback_from_thread(callback_id, python_to_lua_table({
+                engine.post_callback_from_thread(callback_id, {
                     'success': False,
                     'error': str(e)
-                }))
+                })
 
 @export_to_lua("mqtt_client_is_connected")
 def mqtt_client_is_connected(client_id: str) -> bool:

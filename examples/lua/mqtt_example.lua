@@ -1,11 +1,11 @@
 -- MQTT Client Example following Fibaro HC3 API
 -- Based on: https://manuals.fibaro.com/knowledge-base-browse/hc3-quick-apps-mqtt-client/
 
-mqtt = {
-  Client = net.Client,
-  QoS = net.QoS,
-  MQTTConnectReturnCode = net.MQTTConnectReturnCode
-}
+-- mqtt = {
+--   Client = net.Client,
+--   QoS = net.QoS,
+--   MQTTConnectReturnCode = net.MQTTConnectReturnCode
+-- }
 
 print("MQTT Client Example - Fibaro HC3 API Compatible")
 

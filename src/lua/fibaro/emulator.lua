@@ -526,7 +526,7 @@ function Emulator:loadQA(info,envAdds)
   -- Load and execute included files + main file
   envAdds = envAdds or {}
   local env = { 
-    fibaro = { plua = self }, net = net, json = json, api = self.api, 
+    fibaro = { plua = self }, net = net, json = json, api = self.api, mqtt = mqtt,
     os = { time = self.lib.userTime, date = self.lib.userDate, getenv = os.getenv, clock = os.clock, difftime = os.difftime, exit = os.exit },
     __fibaro_add_debug_message = self.lib.__fibaro_add_debug_message, _PY = _PY,
   }

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.55] - 2026-02-25
+
+
+
+#### Commits since v1.2.54:
+
+- ✨ **Feature**: add MQTT event handling tests and improve net.Client connection options
+
+
+
 ## [v1.2.54] - 2026-01-14
 
 

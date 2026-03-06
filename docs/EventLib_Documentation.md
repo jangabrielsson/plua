@@ -311,12 +311,14 @@ Use `$variableName` to capture values from events:
 
 ```lua
 Event.id = 'anyDevice'
-Event{type='device', id='$deviceId', property='value', value='$val'}
+Event{type='device', id=123, property='value', value='$val'}
 function Event:handler(event)
   -- Access captured values via self._match
-  self:trace("Device " .. self._match.deviceId .. " = " .. self._match.val)
+  self:trace("Device value: " .. self._match.val)
 end
 ```
+
+**Note:** Device `id` cannot use pattern matching as it's used for event hashing. Use fixed IDs or multiple IDs: `id={100,101,102}`
 
 #### Constraints
 
@@ -342,18 +344,18 @@ function Event:handler(event)
   self:debug("High temperature detected")
 end
 
--- Capture only OFF events
-Event.id = 'lightOff'
-Event{type='device', id='$id', property='value', value='$val==0'}
+-- Capture value with constraint
+Event.id = 'lowBattery'
+Event{type='device', id=200, property='batteryLevel', value='$level<20'}
 function Event:handler(event)
-  self:debug("Device " .. self._match.id .. " turned off")
+  self:warning("Low battery: " .. self._match.level .. "%")
 end
 
--- Pattern match device names
-Event.id = 'motion'
-Event{type='device', id='$id<>motion', property='value'}
+-- Pattern match on value property
+Event.id = 'anyOn'
+Event{type='device', id=150, property='value', value='$val>0'}
 function Event:handler(event)
-  self:debug("Motion detected on device " .. self._match.id)
+  self:debug("Device turned on with value: " .. self._match.val)
 end
 ```
 
@@ -750,12 +752,12 @@ end
 ```lua
 Event = Event_std
 
--- React to any device > 50%
+-- React to multiple devices with value > 50
 Event.id = 'anyHigh'
-Event{type='device', id='$id', property='value', value='$val>50'}
+Event{type='device', id={100,101,102}, property='value', value='$val>50'}
 function Event:handler(event)
   self:debugf("Device %d exceeded threshold: %s", 
-    self._match.id, self._match.val)
+    event.id, self._match.val)
 end
 
 -- React to specific device turning off
@@ -865,23 +867,28 @@ fibaro.debugFlags.post = true  -- See all event posts
 Event.debug = true             -- Debug specific handler
 ```
 
-### 6. Use Pattern Matching for Flexibility
+### 6. Use Multiple Device IDs for Flexibility
 
 ```lua
 -- Instead of many similar handlers
 Event.id = 'sensor1'
-Event{type='device', id=100, ...}
+Event{type='device', id=100, property='value'}
+function Event:handler(event) end
 
 Event.id = 'sensor2'
-Event{type='device', id=101, ...}
+Event{type='device', id=101, property='value'}
+function Event:handler(event) end
 
--- Use one handler with pattern
+-- Use one handler for multiple devices
 Event.id = 'allSensors'
-Event{type='device', id='$id><1[0-9][0-9]', ...}
+Event{type='device', id={100,101,102,103}, property='value'}
 function Event:handler(event)
-  -- Handle all sensors 100-199
+  -- Handle all listed sensors
+  self:debug("Sensor " .. event.id .. " triggered")
 end
 ```
+
+**Note:** Device IDs cannot use pattern matching. Use array syntax `id={100,101,102}` for multiple devices.
 
 ### 7. Handle Errors Gracefully
 

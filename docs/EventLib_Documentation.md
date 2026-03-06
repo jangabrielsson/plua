@@ -50,7 +50,16 @@ EventLib eliminates the need for manual polling and provides a clean, maintainab
 -- Load the library
 Event = Event_std
 fibaro.debugFlags.post = true  -- Enable debug logging (optional)
+
+-- Attach to HC3 event stream at startup
+Event.id = 'start'
+Event{type='QAstart'}
+function Event:handler(event)
+  Event:attachRefreshstate()  -- Start receiving HC3 events
+end
 ```
+
+**Important:** Call `Event:attachRefreshstate()` in a `QAstart` handler to ensure all libraries are loaded first.
 
 ---
 
@@ -92,6 +101,41 @@ function Event:handler(event)
   end
 end
 ```
+
+### Complete QuickApp Startup
+
+```lua
+Event = Event_std
+
+-- STEP 1: Initialize EventLib at startup (REQUIRED)
+Event.id = 'start'
+Event{type='QAstart'}
+function Event:handler(event)
+  Event:attachRefreshstate()  -- Connect to HC3 event stream
+  self:debug("EventLib initialized")
+end
+
+-- STEP 2: Define your event handlers
+Event.id = 'motionDetector'
+Event{type='device', id=100, property='value'}
+function Event:handler(event)
+  if event.value > 0 then
+    self:debug("Motion detected!")
+    fibaro.call(200, "turnOn")  -- Turn on light
+  end
+end
+
+Event.id = 'dailyReport'
+Event{type='cron', time='0 8 * * *'}  -- Every day at 8:00
+function Event:handler(event)
+  self:debug("Daily report running...")
+end
+```
+
+**Key Points:**
+- Always attach RefreshState in a `QAstart` handler
+- Define handlers after initialization
+- Without `attachRefreshstate()`, device events won't trigger
 
 ---
 
@@ -294,10 +338,24 @@ EventLib supports all HC3 event types:
 
 #### System Events
 ```lua
-{type='QAstart'}                        -- QuickApp started
+{type='QAstart'}                        -- QuickApp started (initialization)
 {type='function'}                       -- Internal function call
 {type='schedule'}                       -- Internal scheduled event
 ```
+
+**QAstart Event Usage:**
+The `QAstart` event is posted when your QuickApp initializes. Use it to set up EventLib properly:
+
+```lua
+Event.id = 'start'
+Event{type='QAstart'}
+function Event:handler(event)
+  Event:attachRefreshstate()  -- Enable HC3 event reception
+  self:debug("EventLib initialized and attached to HC3 events")
+end
+```
+
+**Why use QAstart?** You can't call `Event:attachRefreshstate()` immediately because all libraries must be loaded first. The `QAstart` event ensures proper initialization timing.
 
 ---
 
@@ -575,13 +633,39 @@ end)
 
 ### Attaching to RefreshState
 
-Connect EventLib to HC3's event stream:
+To receive HC3 system events (device changes, global variables, etc.), you must connect EventLib to the HC3 event stream:
 
 ```lua
 Event:attachRefreshstate()
 ```
 
-This automatically starts listening to all HC3 system events.
+**Important:** This must be called **after** all libraries are loaded. The recommended approach is to use the `QAstart` event:
+
+```lua
+Event = Event_std
+
+-- Setup handler at startup
+Event.id = 'start'
+Event{type='QAstart'}
+function Event:handler(event)
+  Event:attachRefreshstate()  -- Enable HC3 event reception
+  self:debug("EventLib ready - listening to HC3 events")
+end
+
+-- Now define your event handlers
+Event.id = 'myLight'
+Event{type='device', id=123, property='value'}
+function Event:handler(event)
+  self:debug("Light changed to: " .. event.value)
+end
+```
+
+**What it does:**
+- Connects to HC3's `RefreshStateSubscriber` event stream
+- Enables handlers to receive device events, global variable changes, etc.
+- Must be called once during QuickApp initialization
+
+**Without attachRefreshstate():** Only timer, cron, and manually posted events will work.
 
 ### Multiple Device IDs
 

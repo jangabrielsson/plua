@@ -1050,16 +1050,6 @@ end
 ```lua
 -- Enable all debug flags
 fibaro.debugFlags.post = true
-
--- Log match results
-function Event:myHandler(event)
-  self:debugf("Event: %s", json.encode(event))
-  self:debugf("Match: %s", json.encode(self._match))
-end
-
--- Check handler status
-fibaro.enable("handlerName")   -- Enable
-fibaro.disable("handlerName")  -- Disable
 ```
 
 ---

@@ -18,6 +18,10 @@ function connectExample()
     clientId = "EPLua_Demo_" .. tostring(os.time()),
     keepAlivePeriod = 60,
     cleanSession = true,
+    -- port = 1883, -- Optional if included in URL
+    --tls = {
+    --    useSNI = false
+    --},
     callback = function(errorCode)
       print("Connect result:", errorCode == 0 and "Success" or "Failed: " .. tostring(errorCode))
     end

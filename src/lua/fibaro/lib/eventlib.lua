@@ -1,8 +1,28 @@
 ------- examples/EventLib.lua ----------
 --[[
-EventLib
+EventLib - Advanced Event Handling Library for Fibaro HC3
 Copyright (c) 2024 Jan Gabrielsson
 Email: jan@gabrielsson.com
+
+Features:
+  - Pattern matching with variable extraction ($var) and constraints ($var>10)
+  - Multiple event types: device, timer, cron, global variables, custom events, etc.
+  - Time specifications: relative (+/HH:MM), absolute (HH:MM), sunrise/sunset
+  - State tracking with trueFor() for debouncing and time-based conditions
+  - Event transformation and filtering
+  - Resource helpers (DEV, GLOB) for cleaner code
+  - Two API styles: Event_basic (functional) and Event_std (object-oriented)
+  - Automatic cleanup and resource management
+
+Usage:
+  Event = Event_std
+
+  Event.id = "MyHandler"
+  Event{type='device', id=123, property='value'}
+  function Event:handler(event)
+    self:debug("Device changed to: " .. event.value)
+  end
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
@@ -10,7 +30,7 @@ Email: jan@gabrielsson.com
  Everyone is permitted to copy and distribute verbatim copies
  of this license document, but changing it is not allowed.
 --]]
-local _version = "0.51"
+local _version = "0.52"
 local _author = "jan@gabrielsson.com"
 local _trigger = {}
 local _builtin = {}
@@ -46,7 +66,9 @@ return r end
 local function color(col,str) return fmt('<font color="%s">%s</font>',col,str) end
 local function timeStr(time) 
   if type(time) == 'string' then time = toTime(time) end
-  if time < 35*24*3600 then time=time+os.time() end
+  -- Consider times under 35 days as relative times that need current time added
+  local MAX_RELATIVE_TIME = 35*24*3600  -- 35 days in seconds
+  if time < MAX_RELATIVE_TIME then time=time+os.time() end
   return os.date("%H:%M:%S",time),time
 end
 
@@ -285,7 +307,15 @@ end
 ------------------ Time ---------------------------------
 local function midnight() local t = os.date("*t"); t.hour,t.min,t.sec = 0,0,0; return os.time(t) end
 
+--- Convert time string to seconds
+-- Supports formats: "HH:MM", "HH:MM:SS", "sunrise", "sunset", "sunrise+/-offset"
+-- @param hmstr string Time string to parse
+-- @param ns boolean If true, calculate next sunrise/sunset
+-- @return number Time in seconds
 local function hm2sec(hmstr,ns)
+  if type(hmstr) ~= 'string' then 
+    error(fmt("hm2sec expects string, got %s", type(hmstr)), 2) 
+  end
   local offs,sun
   sun,offs = hmstr:match("^(%a+)([+-]?%d*)")
   if sun and (sun == 'sunset' or sun == 'sunrise') then
@@ -297,12 +327,31 @@ local function hm2sec(hmstr,ns)
     end
   end
   local sg,h,m,s = hmstr:match("^(%-?)(%d+):(%d+):?(%d*)")
-  if not (h and m) then error(fmt("Bad hm2sec string %s",hmstr)) end
+  if not (h and m) then 
+    error(fmt("Invalid time format '%s'. Expected 'HH:MM', 'HH:MM:SS', 'sunrise', or 'sunset'", hmstr), 2) 
+  end
   return (sg == '-' and -1 or 1)*(tonumber(h)*3600+tonumber(m)*60+(tonumber(s) or 0)+(tonumber(offs or 0))*60)
 end
 
+--- Convert time specification to absolute time in seconds
+-- Supports multiple formats:
+--   number: absolute time
+--   "+/HH:MM": relative time from now
+--   "n/HH:MM": next occurrence (today or tomorrow)
+--   "t/HH:MM": today at HH:MM
+--   "h/SS": seconds into next hour
+--   "m/SS": seconds into next minute
+--   "HH:MM": time as seconds from midnight
+-- @param time string|number Time specification
+-- @return number Absolute time in seconds since epoch
 function toTime(time)
   if type(time) == 'number' then return time end
+  if type(time) ~= 'string' then
+    error(fmt("toTime expects string or number, got %s", type(time)), 2)
+  end
+  if #time < 2 then
+    error(fmt("Invalid time string '%s'. Too short", time), 2)
+  end
   local p = time:sub(1,2)
   if p == '+/' then return hm2sec(time:sub(3))+os.time()
   elseif p == 'n/' then
@@ -339,7 +388,13 @@ local eventMT = {
 local function addEventMT(event) if not getmetatable(event) then setmetatable(event,eventMT) end return event end
 
 local managedEvent = {}
+--- Manage timer events with optional alignment
+-- @param k string Handler identifier
+-- @param event table Event with 'time' and optional 'aligned' fields
+-- @return table Modified event
 function managedEvent.timer(k,event)
+  assert(event and type(event) == 'table', "Timer event must be a table")
+  assert(event.time, "Timer event must have 'time' property")
   event = addEventMT(copy(event))
   event.id = k
   local t = toTime(event.time)
@@ -355,12 +410,22 @@ function managedEvent.timer(k,event)
   post({type='schedule',event=event,_sh=true},t)
   return event
 end
+--- Manage cron events
+-- @param k string Handler identifier
+-- @param event table Event with 'time' field containing cron expression
+-- @return table Modified event
 function managedEvent.cron(k,event)
+  assert(event and type(event) == 'table', "Cron event must be a table")
+  assert(event.time, "Cron event must have 'time' property with cron expression")
   event = addEventMT(copy(event))
   event.id = k
   addCronItem(event)
   return event
 end
+--- Register a custom managed event type
+-- Managed events handle their own scheduling (like timer and cron)
+-- @param typ string Event type name
+-- @param fun function Manager function(handlerId, event) -> modifiedEvent
 function _builtin:_managedEvent(typ,fun)
   assert(type(typ)=='string',"Type expected")
   assert(type(fun)=='function',"Function expected")
@@ -378,14 +443,25 @@ constraints['<'] = function(val) return function(x) x,val=coerce(x,val) return x
 constraints['~='] = function(val) return function(x) x,val=coerce(x,val) return x ~= val end end
 constraints[''] = function(_) return function(x) return x ~= nil end end
 
+--- Compile event pattern with variable extraction and constraints
+-- Variables: $var, $var==val, $var~=val, $var>val, $var<val, $var>=val, $var<=val, $var<>pattern
+-- @param pattern table Pattern to compile
+-- @return table Compiled pattern with constraint functions
 local function compilePattern(pattern)
   if type(pattern) == 'table' then
     if pattern._var_ then return end
     for k,v in pairs(pattern) do
       if type(v) == 'string' and v:sub(1,1) == '$' then
-        local var,op,val = v:match("$([%w_]*)([<>=~]*)(.*)")
+        local var,op,val = v:match("^$([%w_]*)([<>=~]*)(.*)") 
+        if not var then
+          error(fmt("Invalid pattern variable syntax '%s'. Expected $var, $var==val, $var>val, etc.", v), 2)
+        end
         var = var =="" and "_" or var
-        assert(constraints[op],"Unknown constraint: "..tostring(op))
+        -- Validate operator
+        if not constraints[op] then
+          local validOps = "==, ~=, >, <, >=, <=, <> (pattern match)"
+          error(fmt("Unknown constraint operator '%s' in '%s'. Valid operators: %s", op, v, validOps), 2)
+        end
         local c = constraints[op](tonumber(val) or val)
         pattern[k] = {_var_=var, _constr=c, _str=v}
       else compilePattern(v) end
@@ -436,8 +512,12 @@ fromHash['sceneEvent'] = function(e) return {"sceneEvent"..e.id..e.value,"sceneE
 fromHash['timer'] = function(e) return {"timer"..e.id..e.time} end
 fromHash['cron'] = function(e) return {"cron"..e.id..e.time} end
 
+--- Register an event pattern for a handler
+-- Validates and adds an event to the event map, enabling pattern matching
+-- @param k string Handler identifier  
+-- @param event table Event pattern (must have 'type' field)
 local function addEvent(k,event)
-  assert(isEvent(event),"Event expected")
+  assert(isEvent(event),"Event expected: must be table with 'type' field")
   addEventMT(event)
   if managedEvent[event.type] then event = managedEvent[event.type](k,event) or event end
   local pattern = copy(event)
@@ -476,6 +556,10 @@ local function init()
 end
 
 local eventTransformers = {}
+--- Register a custom event transformer
+-- Transformers convert one event type into one or more other events
+-- @param typ string Event type to transform  
+-- @param fun function Transformer function(event) -> {event1, event2, ...} or false
 function _builtin:_transformEvent(typ,fun)
   assert(type(typ)=='string',"Type expected")
   assert(type(fun)=='function',"Function expected")
@@ -483,16 +567,37 @@ function _builtin:_transformEvent(typ,fun)
   table.insert(eventTransformers[typ],fun)
 end
 
-function transformEvent(event) -- single event -> list of events
+--- Transform a single event into a list of events
+-- Applies registered transformers recursively with depth limit to prevent infinite loops
+-- @param event table Event to transform
+-- @param depth number Current recursion depth (internal use)
+-- @return table List of transformed events
+function transformEvent(event, depth) 
+  depth = depth or 0
+  -- Prevent infinite transformation loops
+  if depth > 10 then 
+    fibaro.warning(__TAG, fmt("Event transformation depth limit reached for event type '%s'", event.type or "unknown"))
+    return {event} 
+  end
+  
   local tr = eventTransformers[event.type or ""]
   if not tr then return {event} end
   for _,fun in ipairs(tr) do
     local nevent = fun(event)
-    if nevent then return append(table.unpack(map(transformEvent,nevent))) end
+    if nevent then 
+      return append(table.unpack(map(function(e) return transformEvent(e, depth+1) end, nevent))) 
+    end
   end
   return {event}
 end
 
+--- Wait for a condition to remain true for a specified duration
+-- Returns true only after the condition has been continuously true for the given time
+-- Useful for debouncing and avoiding false triggers
+-- @param self table Handler context
+-- @param time number|string Duration to wait (seconds or time specification)
+-- @param cond boolean Current condition state
+-- @return boolean True if condition has been true for the full duration
 function trueFor(self,time,cond)
   if self._trueForRef==true then 
     self._trueForRef = nil
@@ -525,6 +630,11 @@ function trueFor(self,time,cond)
   end
 end
 
+--- Repeat the handler after elapsed time interval (used with trueFor)
+-- Allows a handler to retrigger itself multiple times at regular intervals
+-- @param self table Handler context
+-- @param n number Maximum number of repeats (default: unlimited)
+-- @return number Current repeat count
 function again(self,n)
   n = n or math.maxinteger
   self._trueForAgain = self._trueForAgain or 0
@@ -624,6 +734,10 @@ Event = setmetatable({},{
     end
   })
 
+--- Process an incoming event and trigger matching handlers
+-- Looks up handlers that match the event pattern and executes them
+-- @param event table Event to handle (must have 'type' field)
+-- @return any Result from handlers, or nil
 function handleEvent(event)
   addEventMT(event)
   return lookupEvent(event,function(k,match) 
@@ -636,12 +750,20 @@ function handleEvent(event)
   end)
 end
 
+--- Post an event for processing now or in the future
+-- @param event table Event to post (must have 'type' field)
+-- @param time number|string Optional delay in seconds or time specification (default: 0)
+-- @param silent boolean If true, suppress debug output
+-- @param guard function Optional guard function called before handling
+-- @return userdata Timer reference, or nil if time is in the past
 function post(event,time,silent,guard)
-  assert(isEvent(event),"Event expected")
+  assert(isEvent(event),"Event expected: must be table with 'type' field")
   addEventMT(event)
   local now = os.time()
   time = toTime(time or 0)
-  time = time < 72*3600 and now+time or time
+  -- Consider times under 72 hours as relative delays
+  local MAX_FUTURE_TIME = 72*3600  -- 72 hours in seconds
+  time = time < MAX_FUTURE_TIME and now+time or time
   time = time-now
   if time < 0 then return nil end
   if not (event._sh or silent) then DEBUG('post',"post %s at %s",event,timeStr(time)) end
@@ -652,14 +774,72 @@ end
 
 fibaro.post = post
 
+--- Cancel a scheduled timer
+-- @param ref userdata Timer reference returned from post() or setTimeout()
 function fibaro.cancel(ref) clearTimeout(ref) end
 
 local function isEnabled(k) return not _handler[k]._disabled end
-function fibaro.enable(k) _handler[k]._disabled = nil end
-function fibaro.disable(k) _handler[k]._disabled = true end
 
+--- Enable a disabled event handler
+-- @param k string Handler identifier
+function fibaro.enable(k) 
+  if not _handler[k] then
+    fibaro.warning(__TAG, fmt("Handler '%s' not found", tostring(k)))
+    return
+  end
+  _handler[k]._disabled = nil 
+end
+
+--- Disable an event handler (prevents it from triggering)
+-- @param k string Handler identifier  
+function fibaro.disable(k) 
+  if not _handler[k] then
+    fibaro.warning(__TAG, fmt("Handler '%s' not found", tostring(k)))
+    return
+  end
+  _handler[k]._disabled = true 
+end
+
+--- Remove an event handler and clean up all associated resources
+-- Cancels all timers, removes from event map, and cleans up handler state
+-- @param k string Handler identifier to remove
+-- @return boolean True if handler was found and removed
 function fibaro.remove(k)
+  if not _handler[k] then 
+    fibaro.warning(__TAG, fmt("Handler '%s' not found", tostring(k)))
+    return false 
+  end
   
+  -- Cancel all timers associated with this handler
+  if _handler[k]._timers then
+    for ref,_ in pairs(_handler[k]._timers) do
+      fibaro.cancel(ref)
+    end
+  end
+  
+  -- Remove handler
+  _handler[k] = nil
+  
+  -- Clean up event map entries
+  for _,em in pairs(_eMap) do
+    for i = #em, 1, -1 do
+      local eventGroup = em[i]
+      for j = #eventGroup.handlers, 1, -1 do
+        if eventGroup.handlers[j] == k then
+          table.remove(eventGroup.handlers, j)
+        end
+      end
+      -- Remove event group if no handlers left
+      if #eventGroup.handlers == 0 then
+        table.remove(em, i)
+      end
+    end
+  end
+  
+  -- Clean up trigger
+  _trigger[k] = nil
+  
+  return true
 end
 
 function _builtin:post(...) return post(...) end
@@ -667,9 +847,12 @@ function _builtin:cancel(...) return clearTimeout(...) end
 function _builtin:cancelAll(k) return _handler[k]:cancelAll() end
 function _builtin:enable(k) _handler[k]._disabled = nil end
 function _builtin:disable(k) _handler[k]._disabled = true end
-function _builtin:remove(...) print("Not implemented") end
+function _builtin:remove(k) return fibaro.remove(k) end
+--- Attach EventLib to HC3's RefreshState event stream
+-- Automatically receives and processes all HC3 system events
+-- Requires Trigger lib to be included
 function _builtin:attachRefreshstate(...)
-  assert(fibaro._APP.trigger,"Trigger lib not included")
+  assert(fibaro._APP.trigger,"Trigger lib not included. Cannot attach to RefreshState.")
   function fibaro._APP.trigger.post(event) 
     if event.type=='device' and event.property=='icon' then return end
     Event:post(event)
@@ -746,7 +929,7 @@ function builtin:cancel(ref) return Event:cancel(ref) end
 function builtin:cancelAll(k) return Event:cancelAll(k) end
 function builtin:enable(k) return Event:enable(k) end
 function builtin:disable(k) return Event:disable(k) end
-function builtin:remove(...) Event:remove(...) end
+function builtin:remove(k) return Event:remove(k) end
 function builtin:attachRefreshstate() return Event:attachRefreshstate() end
 end
 
@@ -957,7 +1140,13 @@ local GLOBMT = {
   end,
   __tostring = function(t) return t._gd.name end
 }
+--- Create a global variable helper object
+-- Provides easy access to global variables with watch capability
+-- @param name string Global variable name
+-- @return table Global variable object with .value and .watch properties
+-- @usage local myVar = GLOB("MyVariable"); myVar.watch = function(self, new, old) ... end
 function GLOB(name)
+  assert(type(name) == 'string', "GLOB expects variable name as string")
   if globs[name] then return globs[name] end
   local gd = { name = name }
   local g = setmetatable({_gd = gd},GLOBMT)
@@ -982,10 +1171,16 @@ local DEVMT = {
   end,
   __tostring = function(t) return t._dd.name end
 }
+--- Create a device helper object
+-- Provides easy access to device properties with watch capability
+-- @param id number Device ID
+-- @return table Device object with property accessors and watch_<property> methods
+-- @usage local light = DEV(123); light.watch_value = function(self, event) ... end
 function DEV(id)
+  assert(type(id) == 'number', "DEV expects device ID as number")
   if devs[id] then return devs[id] end
   local dd = { id = id, rsrc = api.get("/devices/"..id) }
-  assert(dd.rsrc,"No such device:"..tostring(id))
+  assert(dd.rsrc,fmt("Device %d not found in HC3", id))
   local d = setmetatable({_dd = dd},DEVMT)
   devs[id] = d
   return d

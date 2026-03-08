@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.57] - 2026-03-08
+
+
+
+#### Commits since v1.2.56:
+
+- ✨ **Feature**: add TLS certificate verification options for MQTT client
+- 📚 **Docs**: remove outdated debug handler examples from EventLib documentation
+- 📚 **Docs**: enhance EventLib documentation with detailed examples and key points for initialization
+- 📚 **Docs**: update EventLib documentation with new examples and clarify device ID usage
+- 📝 Add EventLib documentation and examples; update eventlib.lua with new features
+
+
+
 ## [v1.2.56] - 2026-02-25
 
 

@@ -63,10 +63,27 @@ def _parse_uri(uri: str, options: Dict = None) -> Dict[str, Any]:
     if 'port' in opts:
         port = opts['port']
     
+    # Parse TLS options
+    tls_opts = {}
+    if 'tls' in opts and isinstance(opts['tls'], dict):
+        tls_config = opts['tls']
+        # Support both allowUnauthorized and rejectUnauthorized (Fibaro HC3 compatibility)
+        # allowUnauthorized=true means skip verification
+        # rejectUnauthorized=false means skip verification
+        allow_unauthorized = tls_config.get('allowUnauthorized', False)
+        reject_unauthorized = tls_config.get('rejectUnauthorized', True)
+        
+        # If either flag indicates we should skip verification, set verify to False
+        tls_opts['verify'] = not allow_unauthorized and reject_unauthorized
+    else:
+        # Default: verify certificates
+        tls_opts['verify'] = True
+    
     return {
         'host': host,
         'port': port,
         'use_tls': use_tls,
+        'tls_options': tls_opts,
         'client_id': opts.get('clientId', f"eplua_mqtt_{uuid.uuid4().hex[:8]}"),
         'keep_alive': opts.get('keepAlivePeriod', 60),
         'username': opts.get('username'),
@@ -158,6 +175,16 @@ async def _mqtt_connect_and_listen(client_id: str):
         tls_context = None
         if conn_params['use_tls']:
             tls_context = ssl.create_default_context()
+            
+            # Apply TLS options for certificate verification
+            tls_opts = conn_params.get('tls_options', {})
+            if not tls_opts.get('verify', True):
+                # Disable certificate verification for self-signed certificates
+                tls_context.check_hostname = False
+                tls_context.verify_mode = ssl.CERT_NONE
+                logger.debug(f"MQTT client {client_id}: Certificate verification disabled")
+            else:
+                logger.debug(f"MQTT client {client_id}: Certificate verification enabled")
         
         # Connect to MQTT broker
         async with AioMQTTClient(

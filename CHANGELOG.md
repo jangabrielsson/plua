@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.58] - 2026-03-09
+
+
+
+#### Commits since v1.2.57:
+
+- 🐛 **Fix**: switch to SelectorEventLoop on Windows for compatibility with aiomqtt
+
+
+
 ## [v1.2.57] - 2026-03-08
 
 

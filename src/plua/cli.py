@@ -682,6 +682,10 @@ def run_async_repl(engine):
 def main():
     """Main CLI entry point"""
     startTime = time.time()
+    # On Windows, the default ProactorEventLoop does not support add_reader/add_writer,
+    # which are required by aiomqtt (paho-mqtt). Switch to SelectorEventLoop.
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     # Suppress multiprocessing resource tracker warnings (only if warnings module is available)
     import os
     try:

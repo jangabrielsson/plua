@@ -3,4 +3,5 @@
 
 function QuickApp:onInit()
   self:debug(self.name,self.id)
+  print(os.time())
 end

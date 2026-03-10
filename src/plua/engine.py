@@ -183,8 +183,12 @@ class LuaEngine:
                     if result is not None and isinstance(result, (dict, list)):
                         result = python_to_lua_table(result)
 
+                    # Keep strong references until after the Lua call so Python 3.12's
+                    # GC cannot finalize the Lupa wrapper objects while Lua is using them
+                    _keep_alive = (error, result)
                     # Call the Lua callback
                     self._lua.globals()["_PY"]["timerExpired"](callback_id, error, result)
+                    del _keep_alive
 
                 except queue.Empty:
                     pass  # No callbacks pending

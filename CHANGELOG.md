@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.59] - 2026-03-10
+
+
+
+#### Commits since v1.2.58:
+
+- ✨ **Feature**: add iOS location tracking QuickApp and geofence event publishing
+
+
+
 ## [v1.2.58] - 2026-03-09
 
 

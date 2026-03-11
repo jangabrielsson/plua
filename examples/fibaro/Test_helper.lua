@@ -1,5 +1,5 @@
 --%%name:TestHelper
---%%debug:true
+-- %%debug:true
 --%%proxy:true
 
 -- Deletes existing helper and installs new helper
@@ -19,7 +19,7 @@ function QuickApp:onInit()
   self:debug("a,b",a,b)
   --end,100)
 
-  self:internalStorageSet("LICEMAN_LAST_STATE","value42")
+  self:internalStorageSet("__LICEMAN_LAST_STATE","value42")
   local a,b = self:internalStorageGet("LICEMAN_LAST_STATE")
   self:debug("internalStorageGet",a,b)
 end

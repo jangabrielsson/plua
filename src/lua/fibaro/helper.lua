@@ -66,7 +66,7 @@ function startServer(helperId, wsurl)
   Emu:INFO("Starting helper server on", host or "", port)
   server:start(host, port, {
     receive = function(client_id, msg)
-      print("Helper msg:", msg)
+      --print("Helper msg:", msg)
       if cb then cb(msg) end
     end,
     connected = function(client_id)

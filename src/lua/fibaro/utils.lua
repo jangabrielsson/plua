@@ -1,6 +1,8 @@
 local Emu = ...
 local fmt = string.format
 
+---@type fun(str: string): string
+---@diagnostic disable-next-line: lowercase-global
 function urlencode(str) -- very useful
   if str then
     str = str:gsub("\n", "\r\n")

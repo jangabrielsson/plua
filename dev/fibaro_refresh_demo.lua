@@ -17,6 +17,7 @@ print("📦 Initialized global event queue:", success and "✅ Success" or "❌ 
 local previousStates = {}
 
 -- Callback function that gets called when refresh states are received
+---@diagnostic disable-next-line: lowercase-global
 function onRefreshStatesUpdate(refreshData)
     print("📡 Received refresh states update at", os.date("%H:%M:%S"))
     
@@ -81,6 +82,7 @@ function onRefreshStatesUpdate(refreshData)
 end
 
 -- Function to process events from the global queue
+---@diagnostic disable-next-line: lowercase-global
 function processDeviceChangeEvents()
     local events = _PY.get_events(10)
     
@@ -116,6 +118,7 @@ function processDeviceChangeEvents()
 end
 
 -- Function to add emulated events (for the emulator to use)
+---@diagnostic disable-next-line: lowercase-global
 function addEmulatedEvent(deviceId, action, value)
     local event = {
         type = "emulated_action",
@@ -131,6 +134,7 @@ function addEmulatedEvent(deviceId, action, value)
 end
 
 -- Demonstration functions
+---@diagnostic disable-next-line: lowercase-global
 function startPolling()
     local url = string.format("http://%s/api/refreshStates", HC3_IP)
     print(string.format("🚀 Starting refresh states polling: %s", url))
@@ -146,6 +150,7 @@ function startPolling()
     end
 end
 
+---@diagnostic disable-next-line: lowercase-global
 function stopPolling()
     print("🛑 Stopping refresh states polling...")
     local success = _PY.stop_refresh_states_polling()
@@ -157,12 +162,14 @@ function stopPolling()
     return success
 end
 
+---@diagnostic disable-next-line: lowercase-global
 function showQueueStatus()
     local size = _PY.get_event_count()
     print(string.format("📦 Current queue size: %d events", size))
     return size
 end
 
+---@diagnostic disable-next-line: lowercase-global
 function clearQueue()
     local success = _PY.clear_events()
     print("🗑️  Queue cleared:", success and "✅ Success" or "❌ Failed")
@@ -170,6 +177,7 @@ function clearQueue()
 end
 
 -- Timer-based event processing (every 5 seconds)
+---@diagnostic disable-next-line: lowercase-global
 local function setupEventProcessor()
     _PY.set_timeout(_G._CALLBACK_COUNTER + 1000, 5000)
     _G._CALLBACK_COUNTER = _G._CALLBACK_COUNTER + 1000

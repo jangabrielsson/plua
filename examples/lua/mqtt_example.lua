@@ -10,7 +10,7 @@
 print("MQTT Client Example - Fibaro HC3 API Compatible")
 
 -- Example 1: Basic connection and messaging (Fibaro style)
-function connectExample()
+local function connectExample()
   print("\n=== Example 1: Basic Connection ===")
   
   -- Connect using the official Fibaro API
@@ -81,7 +81,7 @@ function connectExample()
 end
 
 -- Example 2: Multiple topic subscription
-function multiTopicExample()
+local function multiTopicExample()
   print("\n=== Example 2: Multiple Topics ===")
   
   local client = mqtt.Client.connect("mqtt://broker.hivemq.com:1883", {
@@ -119,7 +119,7 @@ function multiTopicExample()
 end
 
 -- Example 3: Last Will and Testament
-function lastWillExample()
+local function lastWillExample()
   print("\n=== Example 3: Last Will and Testament ===")
   
   local client = mqtt.Client.connect("mqtt://broker.hivemq.com:1883", {

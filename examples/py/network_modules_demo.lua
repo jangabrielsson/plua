@@ -1,7 +1,7 @@
 -- Network modules demonstration
 -- This example shows the modular network architecture
 
-function main()
+local function main()
     _PY.print("=== EPLua Network Modules Demo ===")
     
     -- HTTP functionality (implemented)

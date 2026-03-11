@@ -89,7 +89,7 @@ local function prettyLuaFlat(e0)
         seen[e]=true
         if e._var_  then res[#res+1] = fmt('"%s"',e._str) return end
         local k,kmap = {},{} for key,_ in pairs(e) do 
-          ks = tostring(key)
+          local ks = tostring(key)
           k[#k+1] = ks kmap[ks] = key
         end
         --print("keys",json.encode(k))

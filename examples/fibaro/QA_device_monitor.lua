@@ -116,6 +116,7 @@ function QuickApp:updateStats()
 end
 
 -- Global callback for refresh states
+---@diagnostic disable-next-line: lowercase-global
 function onRefreshStatesUpdate(refreshData)
     local qa = _G.quickApp
     if not qa or not qa.monitoring then return end
@@ -160,6 +161,7 @@ function onRefreshStatesUpdate(refreshData)
 end
 
 -- UI Button Callbacks
+---@diagnostic disable-next-line: lowercase-global
 function startMonitoring()
     local qa = _G.quickApp
     if qa.monitoring then
@@ -186,6 +188,7 @@ function startMonitoring()
     end
 end
 
+---@diagnostic disable-next-line: lowercase-global
 function stopMonitoring()
     local qa = _G.quickApp
     if not qa.monitoring then
@@ -200,7 +203,7 @@ function stopMonitoring()
     qa:log("Stopped monitoring device changes")
 end
 
-function showStatus()
+local function showStatus()
     local qa = _G.quickApp
     local queueSize = _PY.get_queue_size(qa.eventQueue)
     local status = qa.monitoring and "Active" or "Stopped"
@@ -223,7 +226,7 @@ function showStatus()
     end
 end
 
-function clearEvents()
+local function clearEvents()
     local qa = _G.quickApp
     _PY.clear_event_queue(qa.eventQueue)
     qa.totalEvents = 0

@@ -2,7 +2,7 @@
 print("Script started - setting up timer and variables")
 
 -- Set a global variable from the script
-test_var = "Hello from script"
+local test_var = "Hello from script"
 
 -- Set up a timer
 setTimeout(function()

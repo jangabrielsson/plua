@@ -43,6 +43,7 @@ function QuickApp:__init(...)
   local _onInit = self.onInit
   self.translations = fibaro.translations
   function self:onInit()
+    ---@diagnostic disable-next-line: lowercase-global
     quickApp = self
     self.qvar = setmetatable({},{
       __index = function(t,k) return getVariable(self,k) end,

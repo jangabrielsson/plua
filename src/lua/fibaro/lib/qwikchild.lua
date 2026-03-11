@@ -202,6 +202,7 @@ do
   function QuickApp:createChild(uid,props,className,UI)
     if type(uid)~='string' then error(":createChild: uid must be string") end
     if type(className)~='string' then error(":createChild: Missing className") end
+    ---@diagnostic disable-next-line: lowercase-global
     quickApp = self
     self:setupUIhandler()
     if not next(allChildren) then
@@ -249,7 +250,8 @@ do
   end
 
   local function loadExisting(self,childrenDefs)
-    cdft = type(childfrenDefs)
+    ---@diagnostic disable-next-line: lowercase-global
+    cdft = type(childrenDefs)
     assert(cdft=='nil' or cdft=='table','childrenDefs must be a table or nil')
     self:setupUIhandler()
     local cdevs,n,gerr = api.get("/devices?parentId="..self.id) or {},0,nil -- Pick up all my children
@@ -277,6 +279,7 @@ do
   end
   
   function QuickApp:loadExistingChildren(childrenDefs)
+    ---@diagnostic disable-next-line: lowercase-global
     quickApp = self
     local stat,err = pcall(loadExisting,self,childrenDefs)
     if not stat then ERRORF("loadExistingChildren: %s",err) end

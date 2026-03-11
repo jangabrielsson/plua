@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime": {
+    "version": "Lua 5.4"
+  },
+  "diagnostics": {
+    "enable": true,
+    "globals": [
+      "_PY",
+      "Emulator",
+      "QuickApp",
+      "QuickAppBase",
+      "QuickAppChild",
+      "RefreshStateSubscriber",
+      "fibaro",
+      "net",
+      "api",
+      "mqtt",
+      "json",
+      "class",
+      "plugin",
+      "onAction",
+      "onUIEvent",
+      "__TAG",
+      "__assert_type",
+      "setTimeout",
+      "clearTimeout",
+      "setInterval",
+      "clearInterval"
+    ]
+  },
+  "workspace": {
+    "library": [],
+    "checkThirdParty": false
+  },
+  "hint": {
+    "enable": true
+  }
+}

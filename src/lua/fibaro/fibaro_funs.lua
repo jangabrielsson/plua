@@ -8,69 +8,83 @@ __TAG = __TAG or "PLUA"
 -- @param t - The value to return if the condition is true.
 -- @param f - The value to return if the condition is false.
 -- @return t or f based on the condition.
+---@diagnostic disable-next-line: lowercase-global
 function __ternary(c, t,f) if c then return t else return f end end
 
 -- Retrieves all devices from the system.
 -- @return A table containing all device objects.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_devices() return api.get("/devices/") end
 
 -- Retrieves a specific device by its ID.
 -- @param deviceId - The ID of the device.
 -- @return The device object, or nil if not found.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_device(deviceId) return api.get("/devices/"..deviceId) end
 
 -- Retrieves a specific room by its ID.
 -- @param roomId - The ID of the room.
 -- @return The room object, or nil if not found.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_room(roomId) return api.get("/rooms/"..roomId) end
 
 -- Retrieves a specific scene by its ID.
 -- @param sceneId - The ID of the scene.
 -- @return The scene object, or nil if not found.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_scene(sceneId) return api.get("/scenes/"..sceneId) end
 
 -- Retrieves a global variable by its name.
 -- @param varName - The name of the global variable.
 -- @return The global variable object, or nil if not found.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_global_variable(varName) return api.get("/globalVariables/"..varName) end
 
 -- Retrieves a specific property of a device.
 -- @param deviceId - The ID of the device.
 -- @param propertyName - The name of the property.
 -- @return The property object, or nil if not found.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_device_property(deviceId, propertyName) return api.get("/devices/"..deviceId.."/properties/"..propertyName) end
 
 -- Retrieves all devices of a specific type.
 -- @param type - The type of devices to retrieve.
 -- @return A table containing device objects of the specified type.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_devices_by_type(type) return api.get("/devices?type="..type) end
 
 -- Retrieves a specific alarm partition by its ID.
 -- @param id - The ID of the alarm partition.
 -- @return The alarm partition object, or nil if not found.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_partition(id) return api.get('/alarms/v1/partitions/' .. tostring(id)) end
 
 -- Retrieves all alarm partitions.
 -- @return A table containing all alarm partition objects.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_partitions() return api.get('/alarms/v1/partitions') end
 
 -- Retrieves all breached alarm partitions.
 -- @return A table containing breached alarm partition objects.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaro_get_breached_partitions() return api.get("/alarms/v1/partitions/breached") end
 
 -- Pauses execution for a specified number of milliseconds.
 -- @param ms - The duration to sleep in milliseconds.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaroSleep(ms) _PY.sleep(ms/1000.0) end
 
 -- Placeholder function, seems to indicate async handler usage.
 -- @param _ - Unused parameter.
 -- @return Always true.
+---@diagnostic disable-next-line: lowercase-global
 function __fibaroUseAsyncHandler(_) return true end
 
 -- Asserts that a parameter is of a specific type.
 -- Throws an error if the type does not match.
 -- @param param - The parameter to check.
 -- @param typ - The expected type string (e.g., "number", "string").
+---@diagnostic disable-next-line: lowercase-global
 function __assert_type(param, typ)
   if type(param) ~= typ then
     error(fmt("Wrong parameter type, %s required. Provided param '%s' is type of %s",typ, tostring(param), type(param)), 3)
@@ -119,6 +133,7 @@ function fibaro.error(tag,...)
 end
 
 function print(...) fibaro.debug(__TAG, ...) end
+---@diagnostic disable-next-line: lowercase-global
 function __print(...) fibaro.plua.lib.__fibaro_add_debug_message(__TAG, logStr(...), "DEBUG") end
 
 -- Retrieves all alarm partitions.
@@ -507,6 +522,7 @@ function fibaro.setSceneVariable(name,value)
   --scene:setVariable(name,value) 
 end
 
+---@diagnostic disable-next-line: lowercase-global
 hub = fibaro
 
 return fibaro

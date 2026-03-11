@@ -4,7 +4,7 @@
 
 local http = net.HTTPClient()
 local main 
-local topic = "jdfhghdkfghhg",  -- for testing
+local topic,_ = "jdfhghdkfghhg",  -- for testing
 math.randomseed(os.time())      -- Generate random response topic
 local respTopic = ""
 for i = 1, 50 do

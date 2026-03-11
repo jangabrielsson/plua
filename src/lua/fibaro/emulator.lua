@@ -10,6 +10,7 @@ local libpath = fpath.."fibaro".._PY.config.fileSeparator
 local rsrcpath = fpath.."rsrc".._PY.config.fileSeparator
 local fmt = string.format
 local function loadLib(name,...) return loadfile(libpath..name..".lua","t",_G)(...) end
+---@diagnostic disable-next-line: lowercase-global
 _print = print
 local pluaConf = {}
 local DEVICEID = 5555-1

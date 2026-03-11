@@ -214,7 +214,7 @@ local tab = {
 }
 
 -- Example usage:
-form = {
+local form = {
   data=data,
   cellpad=2,
   glyph = 'fat', -- 'single', 'double', 'fat'

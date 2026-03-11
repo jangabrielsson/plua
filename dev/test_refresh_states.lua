@@ -46,6 +46,7 @@ print("Queue size after clear:", _PY.get_event_count())
 print("\n=== Testing Refresh States Polling ===")
 
 -- Define callback function for refresh states updates
+---@diagnostic disable-next-line: lowercase-global
 function onRefreshStatesUpdate(data)
     print("Received refresh states update:", data)
     if data and data.timestamp then

@@ -7,7 +7,7 @@
 
 --------ENDOFHEADERS------
 
- function sensorBreachedEvent()
+ local function sensorBreachedEvent()
  print("Breached triggered")
  end
 

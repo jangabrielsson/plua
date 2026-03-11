@@ -4,7 +4,7 @@ print("Testing interval scoping...")
 do
     local count = 0
     -- The interval id should be accessible for clearing
-    interval_id = _PY.setInterval(function()
+    local interval_id = _PY.setInterval(function()
         count = count + 1
         print("Scoped interval tick", count)
         

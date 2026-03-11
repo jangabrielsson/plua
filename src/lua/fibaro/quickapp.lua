@@ -159,7 +159,8 @@ QuickAppBase.registerUICallbacks = QuickAppBase.setupUICallbacks
 function QuickAppBase:callAction(name, ...)
   --if name == "" then return end
   local args = {...}
-  local stat,res = fibaro.plua.lib.prettyCall(function()
+  --local stat,res = fibaro.plua.lib.prettyCall(function()
+  local stat,res = xpcall(function()
     if (type(self[name]) == 'function') then return self[name](self, table.unpack(args))
     else print(fmt("[WARNING] Class does not have '%s' function defined - action ignored",tostring(name))) end
   end,printErr)

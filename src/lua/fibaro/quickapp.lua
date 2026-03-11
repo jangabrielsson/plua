@@ -41,21 +41,26 @@ function setTimeout(func,ms)
   ref = oldSetTimeout(function() 
     _PY.mobdebug.on()
     qaTimers[ref]= nil 
-    fibaro.plua.lib.prettyCall(func,timerErr(ref)) 
+    --fibaro.plua.lib.prettyCall(func,timerErr(ref)) 
+    coroutine.wrapdebug(func, timerErr(ref))()  -- was: prettyCall(func, timerErr(ref))
   end,ms)
   qaTimers[ref]= 'timer'
   return ref
 end
 
 local oldSetInterval = setInterval
-function setInterval(func,ms)
+function setInterval(func, ms)
   local ref
-  ref =oldSetInterval(function()
+  ref = oldSetInterval(function()
     _PY.mobdebug.on()
-    local ok = fibaro.plua.lib.prettyCall(func,timerErr(ref))
-    if not ok then clearInterval(ref) end
-  end,ms)
-  qaTimers[ref]= 'interv'
+    local co = coroutine.create(func)
+    local ok, err = coroutine.resume(co)
+    if not ok then
+      timerErr(ref)(err)
+      clearInterval(ref)
+    end
+  end, ms)
+  qaTimers[ref] = 'interv'
   return ref
 end
 

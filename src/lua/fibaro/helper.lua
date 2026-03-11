@@ -57,24 +57,35 @@ end
 local client = nil
 local server = nil
 local cb = nil
-function startServer(helperId,wsurl)
-  server = net.WebSocketServer(false,true)
-  local host,port = Emu.config.IPAddress,PORT
-  Emu:INFO("Starting helper server on",host or "",port)
+
+local pendingQueue = {}
+
+function startServer(helperId, wsurl)
+  server = net.WebSocketServer(false, true)
+  local host, port = Emu.config.IPAddress, PORT
+  Emu:INFO("Starting helper server on", host or "", port)
   server:start(host, port, {
     receive = function(client_id, msg)
-      print("Helper msg:",msg) 
-      if cb then cb(msg) end end,
+      print("Helper msg:", msg)
+      if cb then cb(msg) end
+    end,
     connected = function(client_id)
       if Emu.debugFlag then Emu:INFO("Helper connected") end
       client = client_id
       Emu.config.helperConnected = helperId
+      -- Resume any callers that were waiting for the connection
+      local pending = pendingQueue
+      pendingQueue = {}
+      for _, p in ipairs(pending) do
+        cb = function(msg) coroutine.resume(p.co, msg) end
+        server:send(client, p.msg)
+      end
     end,
     disconnected = function(client_id) print("DIS") client = nil end
   })
   setTimeout(function()
-    Emu.api.hc3.post("/devices/"..helperId.."/action/connect",{args={wsurl}}) 
-  end,10)
+    Emu.api.hc3.post("/devices/" .. helperId .. "/action/connect", {args = {wsurl}})
+  end, 10)
 end
 
 local function send(msg)
@@ -82,12 +93,16 @@ local function send(msg)
     Emu:WARNING("api.hc3.restricted: Offline mode")
     return '{false,"Offline mode"}'
   end
-  if not (client and server) then return nil end
-  local co,flag = coroutine.running()
+  local co, is_main = coroutine.running()
   if not co then return nil end
-  cb = function(msg) coroutine.resume(co,msg) end
-  server:send(client,msg)
-  return coroutine.yield()
+  if not (client and server) then
+    -- Channel not ready yet — queue this call and wait
+    table.insert(pendingQueue, {co = co, msg = msg})
+    return coroutine.yield()  -- resumes when connected + response received
+  end
+  cb = function(msg) coroutine.resume(co, msg) end
+  server:send(client, msg)
+  if not is_main then return coroutine.yield() end
 end
 
 Emu.lib.startHelper = startHelper

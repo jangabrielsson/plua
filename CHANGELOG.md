@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.61] - 2026-03-11
+
+
+
+#### Commits since v1.2.60:
+
+- 🐛 **Fix**: correct internal storage key and adjust debug logging in TestHelper
+
+
+
 ## [v1.2.60] - 2026-03-11
 
 

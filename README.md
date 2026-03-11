@@ -46,7 +46,48 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
-## 🚀 Quick Start
+## � HC3 Credentials Setup
+
+To connect PLua to your Fibaro Home Center 3, you need to provide credentials. PLua reads them from environment variables, which you can set in a `.env` file.
+
+### Option 1: Project `.env` file (recommended)
+Create a `.env` file in your project directory:
+```ini
+HC3_URL=http://192.168.1.100
+HC3_USER=admin
+HC3_PASSWORD=your-password
+HC3_PIN=1234
+```
+> `HC3_PIN` is only required for restricted API calls (e.g., accessing alarm panels).
+
+### Option 2: Global `~/.env` file
+Place a `.env` file in your home directory (`~/.env`) to share credentials across all projects — useful if you work with a single HC3. The format is the same as above.
+
+### Option 3: Shell environment variables
+```bash
+export HC3_URL=http://192.168.1.100
+export HC3_USER=admin
+export HC3_PASSWORD=your-password
+export HC3_PIN=1234
+```
+
+### Lookup order
+PLua checks in this order and uses the first match found:
+1. System environment variables
+2. `.env` in the current working directory
+3. `~/.env` in your home directory
+
+> **Security note**: Add `.env` to your `.gitignore` to avoid committing credentials.
+
+### Test your connection
+```bash
+plua --diagnostic
+```
+This prints a summary of your PLua installation, HC3 connection status, and basic device/system info from your HC3. If it connects successfully you're ready to go.
+
+---
+
+## �🚀 Quick Start
 
 ### 1. Create a New QuickApp Project
 ```bash

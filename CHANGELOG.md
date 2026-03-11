@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.60] - 2026-03-11
+
+
+
+#### Commits since v1.2.59:
+
+- ✨ **Feature**: enhance TestHelper with internal storage management and debug logging fix: improve startServer function to handle pending messages correctly in WebSocket refactor: update setTimeout and setInterval to use coroutine for better error handling
+
+
+
 ## [v1.2.59] - 2026-03-10
 
 

@@ -76,6 +76,9 @@ class LuaEngine:
         self._execution_queue = queue.Queue()
         self._execution_results = {}  # Store results by request ID
 
+        # Thread-safe queue for fire-and-forget Lua function calls from background threads
+        self._lua_call_queue = queue.Queue()
+
         self._queue_processor_task = None
 
         # Set this engine as the global instance
@@ -192,6 +195,15 @@ class LuaEngine:
 
                 except queue.Empty:
                     pass  # No callbacks pending
+
+                # Process fire-and-forget Lua function call queue (posted from background threads)
+                try:
+                    func_name, args = self._lua_call_queue.get_nowait()
+                    py_func = self._lua.globals()["_PY"][func_name]
+                    if py_func is not None:
+                        py_func(*args)
+                except queue.Empty:
+                    pass  # No Lua calls pending
 
                 # Process execution queue
                 try:
@@ -381,6 +393,22 @@ class LuaEngine:
             logger.info(f"Active operations: callbacks={callback_count}, intervals={interval_count}")
         
         return callback_count > 0 or interval_count > 0
+
+    def post_lua_call(self, func_name: str, *args) -> None:
+        """
+        Post a fire-and-forget Lua function call to be executed in the main event loop.
+
+        This is thread-safe and can be called from any Python thread.
+        The call is executed asynchronously — no result is returned.
+
+        Args:
+            func_name: Name of the function inside the _PY Lua table
+            *args: Arguments to pass to the function (must be plain Python types)
+        """
+        try:
+            self._lua_call_queue.put_nowait((func_name, args))
+        except queue.Full:
+            logger.error(f"Lua call queue is full, dropping call to {func_name}")
 
     def post_callback_from_thread(self, callback_id: int, error=None, result=None):
         """

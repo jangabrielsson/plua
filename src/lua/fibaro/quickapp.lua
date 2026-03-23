@@ -295,7 +295,7 @@ end
 -- @param key - The storage key (optional, if nil returns all variables)
 -- @return The stored value or nil if not found
 function QuickAppBase:internalStorageGet(key)
-  __assert_type(key, 'string')
+  --__assert_type(key, 'string')
   if key then
     local res, stat = api.get("/plugins/" .. self.id .. "/variables/" .. key)
     if stat ~= 200 then return nil end

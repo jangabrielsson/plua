@@ -880,9 +880,12 @@ class LuaBindings:
             self._events_lock = threading.Lock()
         
         def _convert_lua_table(lua_table):
-            """Convert Lua table to Python dict"""
+            """Deeply convert a Lua table (or plain dict) to a pure Python dict."""
             if isinstance(lua_table, dict):
                 return lua_table
+            elif hasattr(lua_table, '__class__') and 'lua' in str(lua_table.__class__).lower():
+                # Use full recursive converter so no Lupa proxies survive into background threads
+                return lua_to_python_table(lua_table)
             elif hasattr(lua_table, 'items'):
                 return dict(lua_table.items())
             else:
@@ -958,13 +961,11 @@ class LuaBindings:
                     event_with_counter = {'last': self._event_count, 'event': event}
                     self._events.append(event_with_counter)
                 
-                # Call _PY.newRefreshStatesEvent if it exists (for Lua event hooks)
+                # Notify Lua of the new event via the thread-safe fire-and-forget queue.
+                # Direct Lua calls from this background thread are unsafe (SIGSEGV/LuaIter race).
                 try:
-                    if hasattr(self.engine._lua.globals(), '_PY') and hasattr(self.engine._lua.globals()['_PY'], 'newRefreshStatesEvent'):
-                        if isinstance(event, str):
-                            self.engine._lua.globals()['_PY']['newRefreshStatesEvent'](event)
-                        else:
-                            self.engine._lua.globals()['_PY']['newRefreshStatesEvent'](json.dumps(event))
+                    event_json = event if isinstance(event, str) else json.dumps(event)
+                    self.engine.post_lua_call('newRefreshStatesEvent', event_json)
                 except Exception as e:
                     # Silently ignore errors in event hook - don't break the queue
                     pass

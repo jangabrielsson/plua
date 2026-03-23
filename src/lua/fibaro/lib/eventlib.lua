@@ -494,7 +494,6 @@ toHash['weather'] = function(e) return 'weather'..(e.property or "") end
 toHash['custom-event'] = function(e) return 'custom-event'..(e.name or "") end
 toHash['deviceEvent'] = function(e) return 'deviceEvent'..(e.id or "")..(e.value or "") end
 toHash['sceneEvent'] = function(e) return 'sceneEvent'..(e.id or "")..(e.value or "") end
-toHash['sceneEvent'] = function(e) return 'sceneEvent'..(e.id or "")..(e.value or "") end
 toHash['timer'] = function(e) return 'timer'..(e.id or "")..(e.time or "") end
 toHash['cron'] = function(e) return 'cron'..(e.id or "")..(e.time or "") end
 

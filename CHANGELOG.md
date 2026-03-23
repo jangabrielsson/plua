@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.63] - 2026-03-23
+
+
+
+#### Commits since v1.2.62:
+
+- ✨ **Feature**: Enhance Lua integration and fix potential crash issues
+- ✨ **Feature**: add .luarc.json configuration and refactor variable scopes in multiple files
+- 📚 **Docs**: add HC3 credentials setup instructions to README
+- 🐛 **Fix**: update error handling in QuickApp and improve initialization process
+
+
+
 ## [v1.2.62] - 2026-03-11
 
 

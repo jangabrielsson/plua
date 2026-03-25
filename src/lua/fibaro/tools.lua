@@ -317,9 +317,13 @@ local function updateQAparts(id,parts,silent)
   
   if parts.files then
     local oldFiles = Emu.api.hc3.get("/quickApp/"..id.."/files") or {}
-    local oldMap,existingFiles,newFiles = {},{},{}
+    local oldMap,existingFiles,newFiles,files = {},{},{},{}
+    for n,f in pairs(parts.files) do
+      local name = type(n)=='number' and f.name or n
+      files[name] = f
+    end
     for _,f in ipairs(oldFiles) do oldMap[f.name] = f end
-    for n,_ in pairs(parts.files) do
+    for n,_ in pairs(files) do
       local flag = oldMap[n]
       oldMap[n]=nil
       if flag then existingFiles[n] = true else newFiles[n] = true end
@@ -337,7 +341,7 @@ local function updateQAparts(id,parts,silent)
     
     -- Create new files
     for name,_ in pairs(newFiles) do
-      local path = parts.files[name]
+      local path = files[name].path
       local f = {name=name, isMain=false, isOpen=false, type='lua', content=Emu.lib.readFile(path)}
       local r,err = Emu.api.hc3.post("/quickApp/"..id.."/files",f)
       if err > 206 then
@@ -350,7 +354,7 @@ local function updateQAparts(id,parts,silent)
     -- Update existing files
     local ufiles = {}
     for name,_ in pairs(existingFiles) do
-      local path = parts.files[name]
+      local path = files[name].path
       local ef = Emu.api.hc3.get("/quickApp/"..id.."/files/"..name)
       local content = Emu.lib.readFile(path)
       if content == ef.content then
@@ -366,7 +370,7 @@ local function updateQAparts(id,parts,silent)
         return Emu:ERROR(fmt("Failed to update files for QuickApp %s: %s", id, err))
       else
         for name,_ in pairs(existingFiles) do
-          Emu:INFO(fmt("Updated file %s:%s in QuickApp %s", name, parts.files[name], id))
+          Emu:INFO(fmt("Updated file %s in QuickApp %s", name, id))
         end
       end
     end
@@ -467,8 +471,8 @@ local function updateQA(fname)
   assert(id,"No entry for "..fname.." in .project file")
   assert(data,"No .project found for "..fname)
   local qa = Emu.api.hc3.get("/devices/"..id)
-  if not qa then
-    return Emu:ERROR(fmt("QuickApp on HC3 with ID %s not found %s", tostring(id)))
+  if not qa or qa.name:match("_Proxy$") then
+    return Emu:ERROR(fmt("QuickApp on HC3 with ID %s not found (or being proxy)", tostring(id)))
   end
   local info = Emu:createInfoFromFile(fname)
   Emu:registerDevice(info)
@@ -476,7 +480,7 @@ local function updateQA(fname)
   assert(fqa, "Emulator installation error")
   assert(qa.type == fqa.type, "QuickApp type mismatch: expected " .. fqa.type .. ", got " .. qa.type)
   updateQAparts(id,{
-    files = fqa.files, 
+    files = info.files, 
     interfaces = fqa.initialInterfaces, 
     quickVars = fqa.initialProperties.quickAppVariables,
     props = fqa.initialProperties,

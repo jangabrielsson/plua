@@ -519,7 +519,7 @@ local stdLua = {
   "setTimeout", "clearTimeout", "setInterval", "clearInterval",
   "setmetatable", "getmetatable", "rawget", "rawset", "rawlen","collectgarbage",
   "next", "pairs", "ipairs", "type", "tonumber", "tostring", "pcall", "xpcall",
-  "error", "assert", "select", "unpack", "load", "loadstring", "loadfile", "dofile",
+  "error", "assert", "select", "unpack", "load", "loadstring", "loadfile", "dofile","utf8",
   "print",
 }
 

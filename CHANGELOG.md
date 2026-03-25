@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.64] - 2026-03-25
+
+
+
+#### Commits since v1.2.63:
+
+- 📝 Fix updateQA
+
+
+
 ## [v1.2.63] - 2026-03-23
 
 

@@ -1,0 +1,108 @@
+---
+name: quickapp-troubleshooting
+description: Known gotchas, quirks, and behaviour differences when developing Fibaro HC3 QuickApps. Covers UI rendering issues (HTML in labels, new-views flag), property/variable edge cases, event handling surprises, and HC3 firmware behaviour differences. USE FOR: diagnosing unexpected QA behaviour on a real HC3, UI not rendering as expected, callbacks not firing, properties not updating.
+---
+
+# QuickApp Troubleshooting
+
+Known issues and non-obvious behaviour specific to Fibaro HC3 QuickApps.
+
+---
+
+## UI Issues
+
+### HTML in labels doesn't render — shows raw HTML instead
+
+**Symptom:** `self:updateView("lbl", "text", "<b>Hello</b>")` shows the literal string `<b>Hello</b>` in the mobile app instead of rendered bold text.
+
+**Cause:** The "new views" rendering mode does not support HTML in label text. When **Advanced → Use the new views in mobile application** is checked for the QA in the HC3 web UI, the mobile app renders labels as plain text.
+
+**Fix:** In the HC3 web UI, open the QuickApp's settings → **Advanced** tab → uncheck **"Use the new views in mobile application"**. After unchecking, HTML tags in label text are rendered normally.
+
+**Note:** The checkbox defaults to checked on newer firmware. If you are distributing a QA that uses HTML formatting, document this requirement for end users. Alternatively, avoid HTML and use plain Unicode characters for formatting (e.g. `●`, `▸`, `✔`).
+
+---
+
+## Property & Variable Issues
+
+### `self:getVariable()` returns `""` for undeclared variables — never `nil`
+
+`self:getVariable()` always returns `""` (empty string) when the variable is not declared — both on a real HC3 and in plua offline mode. It never returns `nil`.
+
+**Common mistake:** checking `if val == nil` — this is always false.
+
+**Correct guard:**
+```lua
+local val = self:getVariable("myVar")
+if val == "" then val = "defaultValue" end
+```
+
+---
+
+## Event Handling Issues
+
+### UI callback not called after `updateView`
+
+**Symptom:** Calling `self:updateView("switch1", "value", "true")` programmatically does not trigger the `onReleased`/`onChanged` handler.
+
+**Cause:** `updateView` only updates the visual state of the element — it does not fire the associated Lua callback. The callback only fires when the user interacts with the element in the UI.
+
+**Fix:** If you need to react to a programmatic value change, call your handler directly:
+```lua
+self:updateView("switch1", "value", "true")
+self:mySwitch({ values = {"true"} })  -- call handler manually if needed
+```
+
+### `onChanged` for a slider receives value as a string, not a number
+
+**Symptom:** Comparing `event.values[1] > 50` always fails or behaves oddly.
+
+**Cause:** Slider callback values arrive as strings.
+
+**Fix:**
+```lua
+function QuickApp:handleSlider(event)
+    local val = tonumber(event.values[1])
+end
+```
+
+---
+
+## HC3 Firmware / Platform Differences
+
+### `fibaro.call()` vs `api.post()` action timing
+
+**Symptom:** `fibaro.call(id, "turnOn")` appears to have no effect when called immediately after creating a child device.
+
+**Cause:** Device actions sent immediately after creation may be dropped if the device is not yet fully initialised on the HC3. This is a firmware timing issue.
+
+**Fix:** Add a short delay:
+```lua
+setTimeout(function()
+    fibaro.call(childId, "turnOn")
+end, 500)
+```
+
+### `self:updateProperty("value", ...)` does not persist across QA restart
+
+**Symptom:** After restarting the QA the `value` property reverts to its previous state.
+
+**Cause:** `updateProperty` writes to the HC3's in-memory device state. The HC3 persists this to disk periodically, but a restart before the write can result in the old value being loaded.
+
+**Fix:** Use QuickApp variables (`self:setVariable`) for state you need to survive restarts:
+```lua
+self:setVariable("lastValue", tostring(val))
+api.post("/plugins/updateProperty", { deviceId = self.id, propertyName = "value", value = val })
+```
+
+---
+
+## plua-specific Differences from a Real HC3
+
+| Behaviour | Real HC3 | plua emulation |
+|-----------|----------|----------------|
+| `self:getVariable()` on undeclared var | Returns `""` | Returns `""` — same behaviour |
+| `fibaro.sleep()` | Supported | Not recommended; use `setTimeout` |
+| Multi-file QA projects | Supported | Supported via `--%%file:` header |
+| Push notifications | Sent to mobile app | Logged only, not sent |
+| Alarm partition callbacks | Fire on real arm/disarm events | Simulated only |

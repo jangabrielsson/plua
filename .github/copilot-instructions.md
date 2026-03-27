@@ -160,3 +160,4 @@ Type a slash command in Copilot chat for detailed reference:
 - `/lua-basics` — Lua language reference for non-Lua developers
 - `/plua-troubleshooting` — port conflicts, debugger warnings, common runtime errors
 - `/plua-setup` — install, HC3 credentials, --init-qa, VS Code integration, CLI flags
+- `/quickapp-troubleshooting` — HTML in labels, UI callbacks, property persistence, HC3 vs plua differences

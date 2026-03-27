@@ -33,9 +33,9 @@ function QuickApp:poll()
                 self:error("Unexpected response structure")
                 return
             end
-            local temp  = tonumber(tostring(cc.temp_C))    or 0
-            local feels = tonumber(tostring(cc.FeelsLikeC)) or 0
-            local desc  = tostring(cc.weatherDesc and cc.weatherDesc[1] and cc.weatherDesc[1].value or "")
+            local temp  = tonumber(cc.temp_C) or 0
+            local feels = tonumber(cc.FeelsLikeC) or 0
+            local desc  = cc.weatherDesc and cc.weatherDesc[1] and cc.weatherDesc[1].value or ""
             self:updateProperty("value", temp)
             self:updateView("tempLbl", "text",
                 string.format("Temp: %.1f°C  (feels like %.1f°C)", temp, feels))

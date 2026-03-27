@@ -89,4 +89,4 @@ Run these to understand the actual structure before writing code that reads or u
 
 ## Available skills
 Type a slash command in chat to load detailed reference:
-`/quickapp-api` · `/quickapp-types` · `/quickapp-patterns` · `/hc3-rest-api` · `/lua-basics` · `/plua-troubleshooting` · `/plua-setup`
+`/quickapp-api` · `/quickapp-types` · `/quickapp-patterns` · `/hc3-rest-api` · `/lua-basics` · `/plua-troubleshooting` · `/plua-setup` · `/quickapp-troubleshooting`

@@ -11,10 +11,13 @@ Install / update the plua QuickApp development skills in this workspace.
 
 ## Step 1 — Download files
 
-Run this in the terminal (Python stdlib only, no extra dependencies required):
+**Do NOT use `python3 -c "..."` — multi-line shell strings get mangled.**
 
-```
-python3 -c "
+Instead, use the `create_file` tool to write the script to a temp file, run it, then delete it:
+
+1. Use `create_file` to create `_install_skills.py` in the workspace root with this content:
+
+```python
 import urllib.request, json, pathlib, sys
 
 REPO = 'jangabrielsson/plua'
@@ -60,10 +63,12 @@ print(f'{len(files) - len(errors)}/{len(files)} files installed.')
 if errors:
     print('Failed:', errors)
     sys.exit(1)
-"
 ```
 
-> **Windows:** If `python3` is not found, try `python` instead.
+2. Run in terminal: `python3 _install_skills.py`
+   > **Windows:** If `python3` is not found, try `python` instead.
+
+3. Delete the temp file: `rm _install_skills.py` (Windows: `del _install_skills.py`)
 
 If the GitHub API rate-limits you, use the git fallback:
 ```

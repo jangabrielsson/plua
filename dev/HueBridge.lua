@@ -6,6 +6,7 @@
 --%%var:hueChildMap={}
 --%%u:{label="statusLbl",text="Connecting..."}
 --%%u:{{button="refreshBtn",text="Refresh",onReleased="onRefresh"},{button="syncBtn",text="Sync Lights",onReleased="onSync"}}
+--%%desktop:true
 
 -- Philips Hue V2 (CLIP v2) integration.
 -- Creates a QuickAppChild for each Hue light and keeps its value in sync.

@@ -54,7 +54,19 @@ local watches = {
     }
   },
   ["com.fibaro.colorController"] = {
-    value = { id = "__colorComponentValue", prop="text"},
+    value = { id = "__colorComponentValue", prop="text", fmt=function(val)
+      if type(val) == "table" then
+        local r = val.dimming and math.floor(val.dimming.brightness + 0.5) or 0
+        local c = val.color or {}
+        return string.format(
+          "<font color='rgb(%d,%d,%d)'>%s</font>",
+          c.r or 0, c.g or 0, c.b or 0,
+          r > 0 and "ON" or "OFF"
+        )
+      else
+        return binFalse
+      end
+    end},
   },
   ["com.fibaro.multilevelSensor"] = {
     value = { id = "__multisensorValue", fmt="%.3f", prop="text"},

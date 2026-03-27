@@ -5,6 +5,30 @@ description: Downloads and installs plua QuickApp development skills and auto-ap
 
 Install / update the plua QuickApp development skills in this workspace.
 
+## Bootstrap — get this file first
+
+Before you can run `/install-qa-skills`, you need this prompt file in your workspace. Run one of these commands from your workspace root, then type `/install-qa-skills` in Copilot chat.
+
+**Universal (Python — macOS, Linux, Windows):**
+```
+python3 -c "import urllib.request,pathlib; pathlib.Path('.github/prompts').mkdir(parents=True,exist_ok=True); urllib.request.urlretrieve('https://raw.githubusercontent.com/jangabrielsson/plua/main/.github/prompts/install-qa-skills.prompt.md','.github/prompts/install-qa-skills.prompt.md'); print('Done')"
+```
+> On Windows, replace `python3` with `python` if needed.
+
+**macOS / Linux (curl):**
+```bash
+mkdir -p .github/prompts && curl -sL https://raw.githubusercontent.com/jangabrielsson/plua/main/.github/prompts/install-qa-skills.prompt.md -o .github/prompts/install-qa-skills.prompt.md
+```
+
+**Windows (PowerShell):**
+```powershell
+New-Item -ItemType Directory -Force .github/prompts | Out-Null; Invoke-WebRequest https://raw.githubusercontent.com/jangabrielsson/plua/main/.github/prompts/install-qa-skills.prompt.md -OutFile .github/prompts/install-qa-skills.prompt.md
+```
+
+Then in VS Code Copilot Chat: type `/install-qa-skills` and the agent will download all skills automatically.
+
+---
+
 ## What this does
 - Downloads `.github/skills/` (7 skills with Lua templates) and `.github/instructions/quickapp-dev.instructions.md` from the public `jangabrielsson/plua` GitHub repo
 - Adds or updates the `## QuickApp Development Skills` section in `.github/copilot-instructions.md`

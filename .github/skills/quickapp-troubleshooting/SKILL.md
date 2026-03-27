@@ -23,6 +23,24 @@ Known issues and non-obvious behaviour specific to Fibaro HC3 QuickApps.
 
 ---
 
+## Header / Variable Declaration Issues
+
+### `--%%var:` string values must use Lua string literal syntax
+
+**Symptom:** `self:getVariable("city")` returns `""` even though `--%%var:city=London` is declared at the top of the file.
+
+**Cause:** The value part of `--%%var:` is evaluated as a Lua expression. `London` is an identifier — it resolves to the global variable `London`, which is `nil`, so the variable ends up unset.
+
+**Fix:** Wrap string values in Lua string quotes:
+```lua
+--%%var:city="London"       -- correct: Lua string literal
+--%%var:apiKey="abc123"     -- correct
+--%%var:pollInterval=300    -- correct: number literal, no quotes needed
+--%%var:city=London         -- WRONG: evaluates global 'London' → nil
+```
+
+---
+
 ## Property & Variable Issues
 
 ### `self:getVariable()` returns `""` for undeclared variables — never `nil`
@@ -82,6 +100,21 @@ setTimeout(function()
     fibaro.call(childId, "turnOn")
 end, 500)
 ```
+
+### `self:updateProperty()` takes one property at a time — no table form
+
+`self:updateProperty` signature is `(propertyName, value)`. There is no batch/table form.
+
+```lua
+-- CORRECT — one call per property
+self:updateProperty("value", temp)
+self:updateProperty("unit", "C")
+
+-- WRONG — does not work
+self:updateProperty({ value = temp, unit = "C" })
+```
+
+---
 
 ### `self:updateProperty("value", ...)` does not persist across QA restart
 

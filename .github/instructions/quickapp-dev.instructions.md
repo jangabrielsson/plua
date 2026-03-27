@@ -10,7 +10,8 @@ You are helping develop Fibaro HC3 QuickApps run under **plua** (a Lua interpret
 ```lua
 --%%name:My QuickApp          -- device display name
 --%%type:com.fibaro.binarySwitch  -- Fibaro device type
---%%var:myKey=myValue         -- QuickApp variable
+--%%var:myKey="myValue"       -- QuickApp variable (value is Lua: strings need quotes)
+--%%var:count=10              -- numbers work without quotes
 --%%u:{label="lbl",text="Status"}  -- UI element (one per row)
 --%%u:{button="btn",text="Go",onReleased="handleBtn"}
 --%%u:{slider="s1",text="",min="0",max="100",value="50",onChanged="handleSlider"}

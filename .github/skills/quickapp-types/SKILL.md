@@ -34,9 +34,12 @@ Headers are Lua comments processed by plua before execution. All headers must ap
 ## Variable Headers
 
 ```lua
---%%var:apiKey=abc123           -- QuickApp variable (readable via self:getVariable)
---%%var:updateInterval=30
+--%%var:apiKey="abc123"          -- string value: must be a Lua string literal
+--%%var:location="Stockholm"     -- strings need quotes
+--%%var:updateInterval=30        -- numbers are Lua literals, no quotes needed
 ```
+
+> **Gotcha:** The value is evaluated as a Lua expression. `--%%var:X=London` evaluates the global `London` (likely `nil`). Use `--%%var:X="London"` for strings.
 
 ## Interface Headers
 

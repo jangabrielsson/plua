@@ -1,7 +1,7 @@
 --%%name:Temperature (wttr.in)
 --%%type:com.fibaro.multilevelSensor
 --%%proxy:true
---%%var:location=Stockholm
+--%%var:location="Stockholm"
 --%%var:pollInterval=300
 --%%u:{label="tempLbl",text="Temp: --"}
 --%%u:{label="condLbl",text=""}

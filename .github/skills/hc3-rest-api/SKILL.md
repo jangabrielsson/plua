@@ -1,6 +1,6 @@
 ---
 name: hc3-rest-api
-description: Condensed HC3 REST API reference covering the ~60 most-used endpoints: devices (CRUD, actions, filtering), plugins (updateProperty, updateView, callUIEvent, restart, createChildDevice), QuickApp files (list, get, update, import/export), global variables, custom events, scenes, alarm partitions, rooms, profiles, refreshStates polling, weather. Includes Lua api.* call examples for each endpoint. USE FOR: calling HC3 REST endpoints from QA code or externally, understanding request/response shapes, filtering devices, triggering scenes or events.
+description: HC3 REST API reference: quick-reference for the most-used ~60 endpoints inline, plus full 269-endpoint coverage via assets/ subdirectory (5 files grouped by category: devices, scenes-automation, energy-climate, system, misc). Includes Lua api.* examples for each endpoint. USE FOR: calling HC3 REST endpoints from QA code or externally, understanding request/response shapes, filtering devices, triggering scenes or events. Ask the agent to read a specific asset file for deep coverage of any category.
 ---
 
 # HC3 REST API Reference
@@ -323,6 +323,16 @@ DELETE /api/debugMessages   -- clear
 
 ---
 
-## Full Reference
+## Full Endpoint Reference
 
-The full 269-endpoint reference is in `docs/FIBARO_REST.md` in the plua workspace.
+Detailed coverage of all 269 HC3 REST endpoints is in the `assets/` subdirectory alongside this skill. These files are distributed with the `/install-qa-skills` installer and available in any workspace that has installed the skills.
+
+Ask the agent to read the relevant file when you need deeper coverage:
+
+| File | Contents | Endpoints |
+|------|----------|-----------|
+| `.github/skills/hc3-rest-api/assets/devices.md` | Devices, Plugins, QuickApp files, Interfaces | 59 |
+| `.github/skills/hc3-rest-api/assets/scenes-automation.md` | Scenes, Profiles, Custom Events, Global Variables | 35 |
+| `.github/skills/hc3-rest-api/assets/energy-climate.md` | Energy, Billing, Climate, Humidity, Sprinklers | 52 |
+| `.github/skills/hc3-rest-api/assets/system.md` | Network, Users, Alarms, Rooms, Sections | 55 |
+| `.github/skills/hc3-rest-api/assets/misc.md` | Notifications, Location, Debug, Weather, Icons, RGB, Push, System | 46 |

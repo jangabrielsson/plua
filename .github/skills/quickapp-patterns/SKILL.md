@@ -170,18 +170,26 @@ end
 
 ### Using the built-in RefreshStateSubscriber class
 
+> **Prefer this over polling.** `RefreshStateSubscriber` listens to the HC3 event stream, so it reacts immediately when a device changes state — no waiting for the next poll interval. It is also more efficient because no repeated HTTP requests are made to fetch device state.
+
+`subscribe(filter, handler)` — `filter(event)` is called first; if it returns `true`, `handler(event)` is called. A common pattern is to pass a filter that always returns `true` and do all filtering inside the handler.
+
 ```lua
 function QuickApp:onInit()
     self.rss = RefreshStateSubscriber()
 
-    self.rss:subscribe(function(event)
-        if event.type == "DevicePropertyUpdatedEvent" then
-            local id = event.data.id
-            local prop = event.data.property
-            local val = event.data.newValue
-            self:debug("Device", id, prop, "->", tostring(val))
+    -- filter always returns true; handler does the filtering
+    self.rss:subscribe(
+        function(event) return true end,
+        function(event)
+            if event.type == "DevicePropertyUpdatedEvent" then
+                local id = event.data.id
+                local prop = event.data.property
+                local val = event.data.newValue
+                self:debug("Device", id, prop, "->", tostring(val))
+            end
         end
-    end)
+    )
 
     self.rss:run()
 end
@@ -191,13 +199,31 @@ function QuickApp:onDestroy()
 end
 ```
 
+### Narrowing with a real filter
+```lua
+-- Only invoke handler for a specific device's value changes
+self.rss:subscribe(
+    function(event)
+        return event.type == "DevicePropertyUpdatedEvent"
+            and event.data.id == watchedId
+            and event.data.property == "value"
+    end,
+    function(event)
+        self:applyValue(event.data.newValue)
+    end
+)
+```
+
 ### Listening for CustomEvents
 ```lua
-self.rss:subscribe(function(event)
-    if event.type == "CustomEvent" and event.data.name == "myEvent" then
-        self:debug("Custom event received!")
+self.rss:subscribe(
+    function(event) return true end,
+    function(event)
+        if event.type == "CustomEvent" and event.data.name == "myEvent" then
+            self:debug("Custom event received!")
+        end
     end
-end)
+)
 ```
 
 ---

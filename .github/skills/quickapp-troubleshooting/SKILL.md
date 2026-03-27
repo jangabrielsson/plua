@@ -77,6 +77,33 @@ return table.concat(rows, "\n")
 --%%var:city=London         -- WRONG: evaluates global 'London' → nil
 ```
 
+### Using `~/.plua/config.lua` to keep secrets out of source code
+
+Because `--%%var:` values are evaluated as Lua expressions at startup, you can reference any global that is already defined — including values loaded from `~/.plua/config.lua`, which plua loads automatically before running any script.
+
+This lets you store API tokens, IPs, and passwords in one place on the developer machine and reference them by name in the QA header, so secrets never appear in source code or version control:
+
+```lua
+-- ~/.plua/config.lua
+return {
+    Hue_user = "AqlHjZVly4IRgcDmzr5YfJh...",
+    Hue_ip   = "192.168.50.56",
+    myApiKey = "sk-proj-...",
+}
+
+-- In your QA file header (config fields are globals inside plua)
+--%%var:HueUser=config.Hue_user
+--%%var:HueIP=config.Hue_ip
+--%%var:ApiKey=config.myApiKey
+```
+
+The child QA then reads them normally:
+```lua
+self.hueUser = self:getVariable("HueUser")
+```
+
+> **Note:** This trick only works when running under plua locally. When the QA is uploaded to a real HC3, the variables are baked in with the resolved values at upload time — so the HC3 device will have the correct values without needing access to `config.lua`.
+
 ---
 
 ## Property & Variable Issues

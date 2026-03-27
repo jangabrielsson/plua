@@ -1,7 +1,10 @@
 ---
 mode: agent
 description: Downloads and installs plua QuickApp development skills and auto-apply instructions from github.com/jangabrielsson/plua into this workspace. Safe to re-run for updates.
+skill_version: "1.1.0"
 ---
+
+<!-- SKILL VERSION: 1.1.0 -->
 
 Install / update the plua QuickApp development skills in this workspace.
 
@@ -112,6 +115,8 @@ The section to write:
 ```markdown
 ## QuickApp Development Skills
 
+Skill version: **1.1.0**
+
 Skills for Fibaro HC3 QuickApp development with plua, auto-discovered from `.github/skills/`.
 The instruction file `.github/instructions/quickapp-dev.instructions.md` is auto-applied to all `*.lua` files.
 
@@ -124,9 +129,18 @@ Type a slash command in Copilot chat for detailed reference:
 - `/lua-basics` — Lua language reference for non-Lua developers
 - `/plua-troubleshooting` — port conflicts, debugger warnings, common runtime errors
 - `/plua-setup` — install, HC3 credentials, --init-qa, VS Code integration, CLI flags
+- `/quickapp-troubleshooting` — HTML in labels, UI callbacks, property persistence, HC3 vs plua differences
 ```
 
 ## Done
+
+Report the following message to the user:
+
+> **QuickApp skills v1.1.0 installed successfully.**
+> Ask me anything about QuickApp development, or type a `/` command for detailed reference.
+> To check the installed version at any time, ask: *"what QuickApp skill version is installed?"*
+
+When a user asks **"what QuickApp skill version is installed?"** (or similar), look for the `Skill version:` line in the `## QuickApp Development Skills` section of `.github/copilot-instructions.md` and report that version number.
 
 Report:
 - How many files were downloaded (and any that failed)

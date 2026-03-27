@@ -148,6 +148,8 @@ PLua provides Python functions (exported to Lua) for managing QuickApp desktop w
 
 ## QuickApp Development Skills
 
+Skill version: **1.1.0**
+
 Skills for Fibaro HC3 QuickApp development with plua, auto-discovered from `.github/skills/`.
 The instruction file `.github/instructions/quickapp-dev.instructions.md` is auto-applied to all `*.lua` files.
 

@@ -8,15 +8,26 @@ Full reference for Energy (25), Consumption (6), Climate Panel (7), Humidity Pan
 
 ### Device and Consumption Monitoring
 - `GET /api/energy/devices` — List energy-enabled devices
-- `GET /api/energy/consumption/summary` — Overall energy consumption summary
-- `GET /api/energy/consumption/metrics` — Energy consumption metrics
-- `GET /api/energy/consumption/detail` — Detailed consumption data
-- `GET /api/energy/consumption/room/{roomId}/detail` — Room-specific consumption
-- `GET /api/energy/consumption/device/{deviceId}/detail` — Device-specific consumption
+- `GET /api/energy/consumption/summary?period={period}` — Energy consumption summary
+- `GET /api/energy/consumption/metrics?period={period}` — Energy consumption metrics
+- `GET /api/energy/consumption/detail?period={period}` — Detailed consumption data
+- `GET /api/energy/consumption/room/{roomId}/detail?period={period}` — Room-specific consumption
+- `GET /api/energy/consumption/device/{deviceId}/detail?period={period}` — Device-specific consumption
 - `DELETE /api/energy/consumption` — Delete consumption data
   ```json
   { "deviceIds": [1, 2, 3], "startPeriod": "2025-01-01", "endPeriod": "2025-01-31" }
   ```
+
+> **period value:** a date in `YYYY-MM-DD` format, e.g. `2026-03-27`
+
+Terminal examples:
+```bash
+# Summary for today (shows HTTP status too)
+plua --fibaro --nodebugger -e "json.encodeFormated({api.get('/energy/consumption/summary?period=2026-03-27')})"
+
+# Detail for device 42 on a specific date
+plua --fibaro --nodebugger -e "json.encodeFormated((api.get('/energy/consumption/device/42/detail?period=2026-03-27')))"
+```
 
 ### Billing Management
 - `GET /api/energy/billing/summary` — Billing summary
@@ -79,7 +90,7 @@ Full reference for Energy (25), Consumption (6), Climate Panel (7), Humidity Pan
 - `GET /api/panels/energy?details=ranking&period={period}` — Device ranking by consumption
 - `GET /api/panels/energy?details=ecology&period={period}` — Ecology impact data
 
-Period values: `hour`, `day`, `week`, `month`, `year`
+**period value:** a date in `YYYY-MM-DD` format, e.g. `2026-03-27`
 
 ---
 

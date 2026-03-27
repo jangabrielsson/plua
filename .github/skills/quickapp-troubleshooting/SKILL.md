@@ -21,6 +21,44 @@ Known issues and non-obvious behaviour specific to Fibaro HC3 QuickApps.
 
 **Note:** The checkbox defaults to checked on newer firmware. If you are distributing a QA that uses HTML formatting, document this requirement for end users. Alternatively, avoid HTML and use plain Unicode characters for formatting (e.g. `●`, `▸`, `✔`).
 
+### Supported HTML tags in label text
+
+The HC3 mobile app only renders a limited subset of HTML. Unsupported tags are either stripped or shown as raw text.
+
+| Tag / Attribute | Purpose |
+|---|---|
+| `<b>` | Bold text |
+| `<i>` | Italic text |
+| `<font color="...">` | Text colour (e.g. `red`, `green`, `#ff6600`) |
+| `<font size="...">` | Text size |
+| `<table>`, `<tr>`, `<td>` | Structured / tabular layouts |
+| `<br>` | Line break |
+| `<span>` | Generic inline styling |
+| `<section align="...">` | Block-level alignment (e.g. `align="center"`) |
+| `<code>`, `<tt>` | Monospaced / code text |
+
+**Table attributes are not supported.** Do not use `border=`, `cellpadding=`, `style=`, or `bgcolor=` on `<table>`, `<tr>`, or `<td>`. To colour a cell's content, wrap the text in a `<font color="...">` tag inside the `<td>`.
+
+```lua
+-- Correct: colour applied via font tag inside the cell
+"<table><tr><td><font color='green'>ON</font></td></tr></table>"
+
+-- Wrong: attribute on td is ignored
+"<table><tr><td style='color:green'>ON</td></tr></table>"
+```
+
+**Newlines inside HTML strings add blank lines.** The HC3 label renderer treats each `\n` in the HTML string as a visible blank line offset at the top of the table. Always concatenate HTML tags without newlines:
+
+```lua
+-- Correct: no newlines between tags
+return table.concat(rows, "")
+
+-- Wrong: each \n adds a blank line above the table
+return table.concat(rows, "\n")
+```
+
+**Best practice:** Stick to these tags. Avoid `<div>`, `<p>`, `<ul>`, `<li>`, CSS classes, or JavaScript — they are not supported and will produce unexpected output.
+
 ---
 
 ## Header / Variable Declaration Issues

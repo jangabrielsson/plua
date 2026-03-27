@@ -143,3 +143,21 @@ PLua provides Python functions (exported to Lua) for managing QuickApp desktop w
 - Register all async operations in the callback system
 - Use the decorator pattern for extending Lua functionality
 - dev/ is the testing directory (create test scripts here to avoid polluting top level)
+
+---
+
+## QuickApp Development Skills
+
+The following skills provide detailed reference material for developing Fibaro QuickApps with plua. They are also designed to be portable — users can copy `.github/skills/` and `.github/instructions/` to their own QuickApp workspace.
+
+The auto-applied instruction file `.github/instructions/quickapp-dev.instructions.md` (applied to all `*.lua` files) provides a concise quick-reference. Use the skills below for deeper coverage.
+
+Skills are defined as SKILL.md directories in `.github/skills/` — auto-discovered by VS Code Copilot. Type the skill name as a slash command in chat to load it:
+
+- `/quickapp-api` — full fibaro.\*, QuickApp methods, net.HTTPClient, timers
+- `/quickapp-types` — all 40+ device types, UI headers, starter templates
+- `/quickapp-patterns` — timer loops, refreshStates, HTTP, children, state persistence
+- `/hc3-rest-api` — HC3 REST endpoints with examples
+- `/lua-basics` — Lua language reference for non-Lua developers
+- `/plua-troubleshooting` — port conflicts, debugger warnings, common runtime errors
+- `/plua-setup` — install, HC3 credentials, --init-qa, VS Code integration, CLI flags

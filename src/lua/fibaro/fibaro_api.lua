@@ -554,7 +554,8 @@ router:add("POST", "/plugins/updateProperty", function(path, data, vars, query)
         local watch = dev.watches[prop]
         if watch[1] == nil then watch = {watch} end
         for _,w in ipairs(watch) do
-          local str = type(w.fmt)=='func'..'tion' and w.fmt(value) or string.format(w.fmt,value)
+          local fmt = w.fmt or tostring
+          local str = type(fmt)=='function' and fmt(value) or string.format(fmt,value)
           Emu:updateView(id,{componentName=w.id,propertyName=w.prop,newValue=str})
         end
       end

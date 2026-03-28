@@ -548,19 +548,19 @@ class WindowManager:
                 set targetURL to "{window.url}"
                 set qaId to "{qa_id}"
                 
-                -- Check if a window with this QA ID already exists
-                if (exists (first window)) and qaId is not "" then
+                -- Check if a window/tab with this QA ID already exists (scan ALL tabs)
+                if qaId is not "" then
                     repeat with w in windows
-                        if (exists (current tab of w)) then
-                            set currentURL to URL of current tab of w
-                            if currentURL contains ("qa_id=" & qaId) then
-                                -- Found existing window with same QA ID, bring just this window to front
+                        repeat with t in (every tab of w)
+                            if (URL of t) contains ("qa_id=" & qaId) then
+                                set current tab of w to t
                                 set index of w to 1
                                 set bounds of w to {{{window.x}, {window.y}, {window.x + window.width}, {window.y + window.height}}}
                                 set foundWindow to true
                                 exit repeat
                             end if
-                        end if
+                        end repeat
+                        if foundWindow then exit repeat
                     end repeat
                 end if
                 
@@ -573,22 +573,15 @@ class WindowManager:
                         -- Set bounds for the first window
                         if (exists (first window)) then
                             set bounds of first window to {{{window.x}, {window.y}, {window.x + window.width}, {window.y + window.height}}}
-                            -- Only bring this window to front, don't activate entire Safari
                             set index of first window to 1
                         end if
                     else
                         -- Create a new window with the URL
-                        set newDoc to make new document with properties {{URL:targetURL}}
+                        -- make new document always becomes first window (index 1)
+                        make new document with properties {{URL:targetURL}}
                         delay 0.5
-                        -- Find the window containing the new document and set its bounds
-                        repeat with w in windows
-                            if (exists (current tab of w)) and (URL of current tab of w contains targetURL) then
-                                set bounds of w to {{{window.x}, {window.y}, {window.x + window.width}, {window.y + window.height}}}
-                                -- Only bring this specific window to front
-                                set index of w to 1
-                                exit repeat
-                            end if
-                        end repeat
+                        set bounds of first window to {{{window.x}, {window.y}, {window.x + window.width}, {window.y + window.height}}}
+                        set index of first window to 1
                     end if
                 end if
                 -- Don't activate Safari - this would bring all windows to front
@@ -604,6 +597,27 @@ class WindowManager:
             
             if result.returncode == 0:
                 logger.debug(f"macOS AppleScript command succeeded for {window.url} ({window.width}x{window.height} at {window.x},{window.y})")
+                # Try to close the sidebar via UI scripting (requires Accessibility permission).
+                # This is best-effort — silently ignored if permission is not granted.
+                sidebar_script = '''
+                tell application "System Events"
+                    tell process "Safari"
+                        repeat with btn in (buttons of toolbar 1 of first window)
+                            if (description of btn) contains "Sidebar" then
+                                if (value of btn as integer) = 1 then
+                                    click btn
+                                end if
+                                exit repeat
+                            end if
+                        end repeat
+                    end tell
+                end tell
+                '''
+                try:
+                    subprocess.run(["osascript", "-e", sidebar_script],
+                                   capture_output=True, text=True, timeout=5)
+                except Exception:
+                    pass
                 return True
             else:
                 logger.warning(f"macOS AppleScript failed (code {result.returncode}), falling back to webbrowser")
@@ -617,6 +631,49 @@ class WindowManager:
         except Exception as e:
             logger.warning(f"macOS AppleScript command failed: {e}, falling back to webbrowser")
             return webbrowser.open(window.url, new=1, autoraise=True)
+
+    def focus_window_macos(self, qa_id: str, x: int, y: int, width: int, height: int) -> bool:
+        """
+        Bring an existing Safari tab for this qa_id to the front without creating a new window.
+        Used when we already know the browser tab is live (WebSocket connected).
+
+        Returns True if the tab was found and focused, False otherwise.
+        """
+        import subprocess
+        applescript = f'''
+        tell application "Safari"
+            set foundWindow to false
+            set qaId to "{qa_id}"
+            repeat with w in windows
+                repeat with t in (every tab of w)
+                    if (URL of t) contains ("qa_id=" & qaId) then
+                        set current tab of w to t
+                        set index of w to 1
+                        set bounds of w to {{{x}, {y}, {x + width}, {y + height}}}
+                        set foundWindow to true
+                        exit repeat
+                    end if
+                end repeat
+                if foundWindow then exit repeat
+            end repeat
+            return foundWindow
+        end tell
+        '''
+        try:
+            result = subprocess.run(
+                ["osascript", "-e", applescript],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                found = result.stdout.strip() == "true"
+                logger.debug(f"focus_window_macos qa_id={qa_id}: found={found}")
+                return found
+            else:
+                logger.debug(f"focus_window_macos AppleScript failed: {result.stderr}")
+                return False
+        except Exception as e:
+            logger.debug(f"focus_window_macos error: {e}")
+            return False
 
 
 # Global window manager instance

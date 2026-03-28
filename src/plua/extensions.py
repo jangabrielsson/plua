@@ -406,26 +406,26 @@ def get_screen_dimensions() -> Any:
         if system == "darwin":  # macOS
             try:
                 import subprocess
-                result = subprocess.run([
-                    "system_profiler", "SPDisplaysDataType", "-json"
-                ], capture_output=True, text=True, check=True)
-                
-                import json
-                displays = json.loads(result.stdout)
-                
-                # Get primary display info
-                primary_display = displays.get("SPDisplaysDataType", [{}])[0]
-                resolution = primary_display.get("_spdisplays_resolution", "1920 x 1080")
-                width, height = resolution.split(" x ")
-                
-                return python_to_lua_table({
-                    "width": int(width),
-                    "height": int(height),
-                    "primary": True
-                })
+                # Use Finder bounds of desktop window — returns logical coordinates
+                # that match what Safari/AppleScript use for window positioning.
+                result = subprocess.run(
+                    ["osascript", "-e",
+                     'tell application "Finder" to get bounds of window of desktop'],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    parts = [p.strip() for p in result.stdout.strip().split(",")]
+                    if len(parts) == 4:
+                        x1, y1, x2, y2 = (int(p) for p in parts)
+                        return python_to_lua_table({
+                            "width": x2 - x1,
+                            "height": y2 - y1,
+                            "primary": True
+                        })
             except Exception:
-                # Fallback for macOS
-                return python_to_lua_table({"width": 1920, "height": 1080, "primary": True})
+                pass
+            # Fallback for macOS
+            return python_to_lua_table({"width": 1920, "height": 1080, "primary": True})
                 
         elif system == "linux":
             try:
@@ -521,7 +521,21 @@ def open_quickapp_window(qa_id: int, title: str, width: int = 800, height: int =
         
         # Use the existing window manager to create the browser window
         window_id = f"quickapp_{qa_id}"
-        
+
+        # Fast path: if the browser tab is already live (WebSocket connected), just
+        # tell it to reload its UI layout and bring it to the front — no new window.
+        if api_server and api_server.has_live_connection(int(qa_id)):
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                loop.create_task(api_server.send_reload_ui(int(qa_id)))
+            except Exception as _e:
+                logging.warning(f"send_reload_ui task creation failed: {_e}")
+            if window_manager.system == 'darwin':
+                window_manager.focus_window_macos(str(qa_id), pos_x, pos_y, width, height)
+            logging.info(f"QA {qa_id} already has live WebSocket — sent reload_ui, skipping new browser window")
+            return True
+
         success = window_manager.create_window(
             window_id=window_id,
             url=static_url,

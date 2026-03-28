@@ -1141,7 +1141,7 @@
                     }
                 }
                 
-                const wsUrl = this.apiBase.replace('http', 'ws') + '/ws';
+                const wsUrl = this.apiBase.replace('http', 'ws') + `/ws?qa_id=${this.qaId}`;
                 this.debug(`🔌 Connecting to WebSocket: ${wsUrl} (attempt ${(this.wsConnectionAttempts || 0) + 1})`);
                 
                 this.websocket = new WebSocket(wsUrl);
@@ -1194,15 +1194,20 @@
                     this.updateStatus('Disconnected');
                     this.websocket = null;
                     
-                    // More conservative reconnection for development workflows
-                    // Only auto-reconnect on unexpected disconnections, not when server is intentionally stopped
-                    if (event.code !== 1000 && event.code !== 1001 && this.wsConnectionAttempts < 5) {
-                        this.debug(`🔄 Will attempt reconnection in 10 seconds (attempt ${this.wsConnectionAttempts})`);
-                        this.updateStatus('Reconnecting in 10s...');
-                        setTimeout(() => this.connectWebSocket(), 10000); // Longer delay for less aggressive reconnection
+                    if (event.code === 4001) {
+                        // Server is restarting — reconnect promptly and reload UI when back up.
+                        this.debug('🔄 Server restarting (4001) — reconnecting in 2s');
+                        this.wsConnectionAttempts = 0; // reset so we get full retries
+                        this.updateStatus('Reconnecting...');
+                        setTimeout(() => this.connectWebSocket(), 2000);
+                    } else if (event.code !== 1000 && event.code !== 1001 && this.wsConnectionAttempts < 5) {
+                        // Unexpected drop — retry with a moderate back-off.
+                        this.debug(`🔄 Will attempt reconnection in 5 seconds (attempt ${this.wsConnectionAttempts})`);
+                        this.updateStatus('Reconnecting in 5s...');
+                        setTimeout(() => this.connectWebSocket(), 5000);
                     } else {
-                        this.debug('🔄 Not auto-reconnecting: server appears to be intentionally stopped or max attempts reached');
-                        this.updateStatus('Disconnected (use window focus to reconnect)');
+                        this.debug('🔄 Not auto-reconnecting: clean close or max attempts reached');
+                        this.updateStatus('Disconnected (focus window to reconnect)');
                     }
                 };
                 
@@ -1361,6 +1366,19 @@
                         this.pingTimeoutId = null;
                     }
                     
+                    return;
+                }
+
+                // Server requesting UI reload after a QA restart
+                if (message.type === 'reload_ui' && message.qa_id === parseInt(this.qaId)) {
+                    this.debug('🔄 Server requested UI reload after restart');
+                    this.hasLoadedUIBefore = false; // force a full re-fetch of the UI layout
+                    this.loadQuickApp()
+                        .then(() => { this.hasLoadedUIBefore = true; })
+                        .catch(e => {
+                            this.debug('❌ reload_ui loadQuickApp failed:', e);
+                            this.hasLoadedUIBefore = true;
+                        });
                     return;
                 }
                 

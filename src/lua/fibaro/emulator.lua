@@ -163,7 +163,9 @@ end
 
 local gbgcolor = os.getenv("PLUA_QA_COLOR") or "lightgrey"
 
-local tileX, tileY = 20,20
+local tileX, tileY = 20, 20
+local tileW, tileH = 400, 400
+local tileGap = 10
 function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   _G["QA"..qa.id] = qa
   local info = self.DIR[qa.id]
@@ -173,9 +175,14 @@ function Emulator:registerQAGlobally(qa) -- QuickApp object (mother or child)
   if openWindow == nil then openWindow = info.headers and info.headers.desktop end
   if openWindow then
     local dim = self.lib.getScreenDimension()
-    local success = self.lib.createQuickAppWindow(qa.id, "Auto-opened Desktop Window", 400, 400, tileX, tileY, bgcolor)
+    local screenW = type(dim) == "table" and dim.width or (type(dim) == "number" and dim or 1920)
+    local success = self.lib.createQuickAppWindow(qa.id, "Auto-opened Desktop Window", tileW, tileH, tileX, tileY, bgcolor)
     if success then
-      tileX = tileX + 400 + 10
+      tileX = tileX + tileW + tileGap
+      if tileX + tileW > screenW then
+        tileX = 20
+        tileY = tileY + tileH + tileGap
+      end
     end
   end
 end

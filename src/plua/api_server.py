@@ -79,6 +79,8 @@ class PlUA2APIServer:
 
         # WebSocket connections for real-time UI updates
         self.websocket_connections: set[WebSocket] = set()
+        # Per-QA WebSocket tracking: qa_id (int) -> set of active WebSocket connections
+        self.websocket_connections_by_qa: dict[int, set] = {}
 
         # Clean up the port if it's in use
         if not is_port_free(port, host):
@@ -384,6 +386,15 @@ class PlUA2APIServer:
             await websocket.accept()
             self.websocket_connections.add(websocket)
 
+            # Track per-qa_id so we can tell open_quickapp_window whether
+            # the browser tab is already live for this QA.
+            qa_id_str = websocket.query_params.get("qa_id")
+            qa_id_int = int(qa_id_str) if qa_id_str and qa_id_str.isdigit() else None
+            if qa_id_int is not None:
+                if qa_id_int not in self.websocket_connections_by_qa:
+                    self.websocket_connections_by_qa[qa_id_int] = set()
+                self.websocket_connections_by_qa[qa_id_int].add(websocket)
+
             try:
                 while True:
                     # Keep connection alive by receiving messages
@@ -391,15 +402,22 @@ class PlUA2APIServer:
             except WebSocketDisconnect:
                 pass
             except asyncio.CancelledError:
-                # Server is shutting down, close gracefully
+                # Server is shutting down — use code 4001 so the browser
+                # knows to reconnect automatically when the server restarts.
                 try:
-                    await websocket.close(code=1000, reason="Server shutting down")
+                    await websocket.close(code=4001, reason="Server restarting")
                 except Exception:
                     pass
             except Exception:
                 pass
             finally:
                 self.websocket_connections.discard(websocket)
+                if qa_id_int is not None:
+                    qa_set = self.websocket_connections_by_qa.get(qa_id_int)
+                    if qa_set:
+                        qa_set.discard(websocket)
+                        if not qa_set:
+                            del self.websocket_connections_by_qa[qa_id_int]
 
     async def broadcast_ui_update(self, qa_id: int):
         """
@@ -574,6 +592,30 @@ class PlUA2APIServer:
                 }
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
+
+    def has_live_connection(self, qa_id: int) -> bool:
+        """Return True if at least one WebSocket is currently open for this QA."""
+        return bool(self.websocket_connections_by_qa.get(qa_id))
+
+    async def send_reload_ui(self, qa_id: int):
+        """Tell the existing browser tab for this QA to reload its UI from the REST endpoint."""
+        import json as _json
+        sockets = self.websocket_connections_by_qa.get(qa_id, set()).copy()
+        msg = _json.dumps({"type": "reload_ui", "qa_id": qa_id})
+        dead = set()
+        for ws in sockets:
+            try:
+                await ws.send_text(msg)
+            except Exception:
+                dead.add(ws)
+        # Clean up any dead sockets discovered during broadcast
+        qa_set = self.websocket_connections_by_qa.get(qa_id)
+        if qa_set:
+            for ws in dead:
+                qa_set.discard(ws)
+                self.websocket_connections.discard(ws)
+            if not qa_set:
+                del self.websocket_connections_by_qa[qa_id]
 
     def register_fibaro_endpoints(self):
         """

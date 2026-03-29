@@ -249,6 +249,25 @@ local t = json.decode('{"key": "value", "num": 42}')
 local s = json.encode({ key = "value", num = 42 })
 ```
 
+### Availability: plua vs HC3
+| Function | plua | HC3 |
+|---|---|---|
+| `json.encode(t)` | ✓ | ✓ |
+| `json.decode(s)` | ✓ | ✓ |
+| `json.encodeFormated(t)` | ✓ | ✗ — **plua only** |
+| `json.util.InitArray(t)` | ✓ | ✓ |
+
+> **`json.encodeFormated`** produces pretty-printed JSON but is only available in plua. Do **not** use it in code intended to run on a real HC3 — it will throw a nil-call error. If you need formatted output on the HC3, provide your own implementation.
+
+### Marking tables as arrays: `json.util.InitArray`
+By default, an empty or mixed Lua table may encode as `{}` (object) rather than `[]` (array). Use `json.util.InitArray` to force array encoding — this is available on **both plua and real HC3** and is essential when posting to REST APIs that require a JSON array:
+
+```lua
+local arr = json.util.InitArray({})          -- encodes as [] not {}
+local items = json.util.InitArray({"a","b"}) -- encodes as ["a","b"]
+api.post("/foo", { ids = json.util.InitArray({}) })
+```
+
 ---
 
 ## Standard Lua Available in QAs

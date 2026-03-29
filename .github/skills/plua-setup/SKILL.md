@@ -89,8 +89,104 @@ my-quickapp/
 
 ## VS Code Integration
 
+> **Note:** The `--init-qa` scaffold wizard generates VS Code config files. If you are not using VS Code or prefer to set up manually, use the templates below.
+
+### Required VS Code extensions
+
+| Extension | Author | Purpose |
+|---|---|---|
+| **Lua MobDebug** (`actboy168.lua-debug` or search "Lua MobDebug") | Alexey Melnichuk | Provides the `luaMobDebug` launch type — required for F5 debugging |
+| **Lua** (Lua Language Server, search "Lua") | Sumneko | Syntax highlighting, autocomplete, type inference, linting — recommended |
+
+Install both from the VS Code Extensions panel (Ctrl+Shift+X).
+
+---
+
+### `.vscode/launch.json`
+Minimum configuration to run/debug any `.lua` file with F5:
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Plua: Current Fibaro File",
+      "type": "luaMobDebug",
+      "request": "launch",
+      "workingDirectory": "${workspaceFolder}",
+      "sourceBasePath": "${workspaceFolder}",
+      "listenPort": 8172,
+      "stopOnEntry": false,
+      "sourceEncoding": "UTF-8",
+      "interpreter": "./run.sh",
+      "arguments": [
+        "--fibaro",
+        "--run-for",
+        "0",
+        "${relativeFile}"
+      ],
+      "listenPublicly": true
+    }
+  ]
+}
+```
+
+> Change `"--run-for", "0"` to `"--run-for", "1"` if you want the script to exit automatically when timers are idle.  
+> On Windows replace `"./run.sh"` with `"run.bat"`.
+
+---
+
+### `.vscode/settings.json` — Lua globals for linting
+The Lua Language Server will warn about undefined globals unless you declare them. Add to `.vscode/settings.json`:
+```json
+{
+  "Lua.diagnostics.globals": [
+    "QuickApp",
+    "QuickAppBase",
+    "QuickAppChild",
+    "QuickerAppChild",
+    "QwikAppChild",
+    "MyChild",
+    "fibaro",
+    "api",
+    "net",
+    "json",
+    "plugin",
+    "class",
+    "hub",
+    "setTimeout",
+    "clearTimeout",
+    "setInterval",
+    "clearInterval",
+    "RefreshStateSubscriber",
+    "sourceTrigger",
+    "UDPServer",
+    "quickApp",
+    "__TAG",
+    "___id",
+    "_sceneId",
+    "__print",
+    "__setTimeout",
+    "__clearTimeout",
+    "__fibaroUseAsyncHandler",
+    "__fibaroSleep",
+    "__fibaro_get_global_variable",
+    "__fibaro_get_device",
+    "__fibaro_get_devices",
+    "__fibaro_get_room",
+    "__fibaro_get_scene",
+    "__fibaro_get_device_property",
+    "__fibaro_get_breached_partitions",
+    "__fibaro_get_partition",
+    "__fibaro_add_debug_message",
+    "__assert_type"
+  ]
+}
+```
+
+---
+
 ### Debugging (F5)
-The generated `launch.json` runs your QA under the VS Code Lua debugger. Set breakpoints, inspect variables, step through code — press F5 to start.
+Press F5 with a `.lua` file open — plua starts with the Lua MobDebug debugger attached. Set breakpoints, inspect variables, step through code.
 
 ### Tasks (Ctrl+Shift+P → "Tasks: Run Task")
 | Task | Description |

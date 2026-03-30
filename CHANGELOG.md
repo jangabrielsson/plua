@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.65] - 2026-03-30
+
+
+
+#### Commits since v1.2.64:
+
+- ✨ **Feature**: Update HTTPTestQA to use dynamic location for weather API and modify updateQA function to accept flags
+- ✨ **Feature**: Add hc3vfs skill for managing Fibaro HC3 QuickApp files in VS Code
+- ✨ **Feature**: Add HTTPTestQA script for testing HTTP requests in QuickApps
+- ✨ **Feature**: Update SKILL.md with VS Code integration details and debugging configuration
+- ✨ **Feature**: Enhance WebSocket management for QuickApps with per-QA tracking and UI reload support
+- ✨ **Feature**: Enhance colorController value formatting for improved RGB display
+- ♻️ **Refactor**: Simplify string formatting logic in updateProperty API endpoint
+- ✨ **Feature**: Update QuickApp skill version to 1.1.0 in instructions and prompts
+- ✨ **Feature**: Add Hue Bridge QuickApp integration with variable management for secure API access
+- ✨ **Feature**: Implement Binary Switch Status QuickApp with real-time updates and HTML rendering
+- ✨ **Feature**: Add Device Sync Sensor implementation with RefreshStateSubscriber for real-time updates
+- 📚 **Docs**: Update HC3 REST API documentation with detailed endpoint parameters and examples for energy consumption
+- 📚 **Docs**: Update QuickApp variable declaration examples for clarity and correctness
+- 📝 fix
+- ✨ **Feature**: Add quickapp-troubleshooting skill and update documentation for QuickApp development
+- 📝 Update HC3 REST API documentation with detailed endpoint references for devices, energy & climate, scenes & automation, system configuration, and miscellaneous features. Added new markdown files for assets and improved descriptions for better clarity and usability.
+- 📚 **Docs**: Clarify installation instructions for plua QuickApp development skills
+- ♻️ **Refactor**: Update QuickApp development skills instructions for clarity and auto-discovery
+- ✨ **Feature**: Add installation prompt for plua QuickApp development skills
+- 📝 Add QuickApp device type templates and documentation
+
+
+
 ## [v1.2.64] - 2026-03-25
 
 

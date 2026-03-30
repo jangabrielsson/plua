@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.66] - 2026-03-30
+
+
+
+#### Commits since v1.2.65:
+
+- ✨ **Feature**: Enhance updateQAparts function to log skipped quickAppVariables when 'nq' flag is present
+
+
+
 ## [v1.2.65] - 2026-03-30
 
 

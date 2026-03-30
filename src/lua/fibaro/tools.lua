@@ -418,7 +418,10 @@ local function updateQAparts(id,parts,silent,flags)
       "manufacturer","model","buildNumber",
       "userDescription","quickAppUuid","deviceRole"
     }
-    if not flags:match("nq") then table.insert(updateProps,1,"quickAppVariables") end
+    if not flags:match("nq") then table.insert(updateProps,1,"quickAppVariables") 
+    else 
+      if not silent then Emu:INFO(fmt("Skipped quickAppVars for QuickApp %s", id)) end
+    end
     for _,prop in ipairs(updateProps) do 
       local value = parts.props[prop]
       if value ~= nil and value ~= "" and value ~= qa.properties[prop] then 

@@ -2,7 +2,6 @@
 --%%type:com.fibaro.deviceController
 --%%u:{button="refreshBtn",text="Refresh",onReleased="onRefresh"}
 --%%u:{label="tableLbl",text="Loading..."}
---%%desktop:true
 
 -- Lists all HC3 binarySwitch devices in an HTML table (ID, Name, Status).
 -- Updates instantly when any switch changes state via RefreshStateSubscriber.

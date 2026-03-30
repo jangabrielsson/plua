@@ -309,7 +309,8 @@ local function findIdAndName(fname)
   return find(p2,file)
 end
 
-local function updateQAparts(id,parts,silent)
+local function updateQAparts(id,parts,silent,flags)
+  flags = flags or ""
   local qa = Emu.api.hc3.get("/devices/"..id)
   if not qa then
     return Emu:ERROR(fmt("QuickApp on HC3 with ID %s not found %s", tostring(id)))
@@ -414,9 +415,10 @@ local function updateQAparts(id,parts,silent)
   -- Update other properties
   if parts.props then
     local updateProps = {
-      "quickAppVariables","manufacturer","model","buildNumber",
+      "manufacturer","model","buildNumber",
       "userDescription","quickAppUuid","deviceRole"
     }
+    if not flags:match("nq") then table.insert(updateProps,1,"quickAppVariables") end
     for _,prop in ipairs(updateProps) do 
       local value = parts.props[prop]
       if value ~= nil and value ~= "" and value ~= qa.properties[prop] then 
@@ -464,8 +466,9 @@ local function updateQAparts(id,parts,silent)
   if not silent then Emu:INFO("Done") end
 end
 
-local function updateQA(fname)
+local function updateQA(fname,flags)
   Emu:INFO(fmt("Updating QA: %s",tostring(fname))) -- fname
+  flags = tostring(flags or ""):lower()
   local exist,id,qn,data = findIdAndName(fname)
   assert(exist,"No .project file found for " .. fname)
   assert(id,"No entry for "..fname.." in .project file")
@@ -479,14 +482,15 @@ local function updateQA(fname)
   local fqa = Emu.lib.getFQA(info.device.id)
   assert(fqa, "Emulator installation error")
   assert(qa.type == fqa.type, "QuickApp type mismatch: expected " .. fqa.type .. ", got " .. qa.type)
+
   updateQAparts(id,{
     files = info.files, 
     interfaces = fqa.initialInterfaces, 
-    quickVars = fqa.initialProperties.quickAppVariables,
+    quickVars =  fqa.initialProperties.quickAppVariables,
     props = fqa.initialProperties,
     viewLayout = fqa.initialProperties.viewLayout,
     uiCallbacks = fqa.initialProperties.uiCallbacks
-  })
+  },nil,flags)
 end
 
 local function updateFile(fname)

@@ -940,11 +940,11 @@ local tools = {
   updateQA = {
     sort = 4,
     doc = "Update QuickApp on HC3, need to have .project file",
-    usage = ">plua -t updateQA <filename>",
-    fun = function(self,file)
+    usage = ">plua -t updateQA <filename> [<flags>] -- nq flag to skip quickVars update",
+    fun = function(self,file,flags) -- "nq", no quickVars
       file = tostring(file)
       assert(_PY.file_exists(file),"File don't exist:"..tostring(file))
-      self.lib.updateQA(file)
+      self.lib.updateQA(file,flags or "")
       self:INFO("Updated QA",file)
     end
   },

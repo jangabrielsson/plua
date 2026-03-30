@@ -4,8 +4,8 @@
 
 function QuickApp:onInit()
     self:debug(self.name, self.id)
-
-    local url = "https://httpbin.org/get?SNs=EH257001316"
+    local location = 'foppolo'
+    local url = "https://wttr.in/gg/" .. location
     local http = net.HTTPClient()
 
     http:request(url, {

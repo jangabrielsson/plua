@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.67] - 2026-03-31
+
+
+
+#### Commits since v1.2.66:
+
+- ✨ **Feature**: Add corErr.lua for API error handling and enhance QA_children.lua with child creation logging
+
+
+
 ## [v1.2.66] - 2026-03-30
 
 

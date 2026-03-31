@@ -396,9 +396,16 @@ class PlUA2APIServer:
                 self.websocket_connections_by_qa[qa_id_int].add(websocket)
 
             try:
+                import json as _json
                 while True:
-                    # Keep connection alive by receiving messages
-                    await websocket.receive_text()
+                    # Keep connection alive and handle client messages
+                    data = await websocket.receive_text()
+                    try:
+                        msg = _json.loads(data)
+                        if msg.get("type") == "ping":
+                            await websocket.send_text(_json.dumps({"type": "pong", "timestamp": msg.get("timestamp")}))
+                    except Exception:
+                        pass
             except WebSocketDisconnect:
                 pass
             except asyncio.CancelledError:

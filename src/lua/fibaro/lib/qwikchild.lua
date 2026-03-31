@@ -399,13 +399,13 @@ Usage:
   self:loadExistingChildren()
   -- Load existing children
   self:createChild(uid,props,className,UI)
-  -- props = {
-  --   name = 'ChildA',
-  --   type = 'com.fibaro.binarySensor',
-  --   className=<className>,
-  --   properties = {...},
-  --   interfaces = {...},
-  --   store = {<key>=<value>,...},
-  --   room = <roomID>,
-  -- }
+  props = {
+     name = 'ChildA',
+     type = 'com.fibaro.binarySensor',
+     className=<className>,
+     properties = {...},
+     interfaces = {...},
+     store = {<key>=<value>,...},
+     room = <roomID>,
+   }
 --]]

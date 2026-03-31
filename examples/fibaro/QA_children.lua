@@ -2,7 +2,7 @@
 --%%type:com.fibaro.binarySwitch
 --%%debug:false
 --%%var:X=9
---%%offline:true
+-- %%offline:true
 --%%desktop:true
 --%%save:QA_children.fqa
 
@@ -21,11 +21,14 @@ function QuickApp:onInit()
 
   -- Create children
   for i = 1,5 do 
-    self:createChildDevice({name="MyChild"..i,type="com.fibaro.binarySwitch"},MyChild)
+    local child = self:createChildDevice({name="MyChild"..i,type="com.fibaro.binarySwitch"},MyChild)
+    self:debug("Created child",child.name,child.id)
+    --api.post("/plugins/"..child.id.."/variables",{ name='test', value="Foo"}) -- create var if not exist
   end
   local children = api.get("/devices?parentId="..self.id)
   for _,c in ipairs(children) do 
-    print(c.name)
+    print(c.name,c.id)
+
   end
 
   setInterval(function() 

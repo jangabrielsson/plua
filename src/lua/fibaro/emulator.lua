@@ -154,9 +154,11 @@ function Emulator:ERROR(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib
 function Emulator:registerDevice(info)
   if info.device.id == nil then DEVICEID = DEVICEID + 1; info.device.id = DEVICEID end
   self:DEBUG("Registering device with ID: " .. tostring(info.device.id))
+  local existing = self.DIR[info.device.id]
   self.DIR[info.device.id] = { 
     device = info.device, files = info.files, env = info.env, headers = info.headers,
     UI = info.UI, UImap = info.UImap, watches = info.watches,
+    vars = existing and existing.vars,  -- preserve vars written by top-level code before registerDevice
   }
   self:DEBUG("Device registered. Total devices in DIR: " .. table.maxn(self.DIR))
 end
@@ -563,6 +565,15 @@ function Emulator:loadQA(info,envAdds)
   if info.headers.breakOnLoad then
     local firstLine,onInitLine = self.lib.findFirstLine(info.files.main.content)
     if firstLine then self.lib.mobdebug.setbreakpoint(info.files.main.path,firstLine) end
+  end
+  -- Pre-register device so top-level code can call api.* without coroutine errors.
+  -- Without this the device isn't in DIR yet, api.* falls through to hc3.restricted
+  -- which needs a coroutine (yields), causing an error at load time.
+  if not self.DIR[info.device.id] then
+    self.DIR[info.device.id] = { 
+      device = info.device, files = info.files, env = info.env, headers = info.headers,
+      UI = info.UI, UImap = info.UImap, watches = info.watches,
+    }
   end
   loadFile(env,info.files.main.path,'main',info.files.main.content)
 end

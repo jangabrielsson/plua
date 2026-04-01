@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.69] - 2026-04-01
+
+
+
+#### Commits since v1.2.68:
+
+- ✨ **Feature**: Enhance HTTP client timeout settings and improve WebSocket message handling
+
+
+
 ## [v1.2.68] - 2026-03-31
 
 

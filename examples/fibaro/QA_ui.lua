@@ -6,6 +6,7 @@
 --%%offline:true
 --%%desktop:true
 
+--%%file:$fibaro.lib.qwikchild,qwikchild
 --%%u:{label="lbl1",text="Hello Tue Jul 1 06_34:53 2025"}
 --%%u:{{button="button_ID_6_1",text="Btn 1",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn1"},{button="button_ID_6_2",text="Btn 2",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn2"},{button="button_ID_6_3",text="Btn 3",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn3"},{button="button_ID_6_4",text="Btn 5",visible=true,onLongPressDown="",onLongPressReleased="",onReleased="testBtn5"}}
 --%%u:{switch="btn2",text="Btn2",value="false",visible=true,onReleased="mySwitch"}
@@ -62,6 +63,7 @@ end
 
 function QuickApp:onInit()
   self:debug("onInit")
+  self:setupUIhandler()
   local a = self:getVariable("textenv")
   -- Browser opening is now handled automatically by --%%desktop:true header
   -- No need to manually open web interface
@@ -74,4 +76,25 @@ function QuickApp:onInit()
     print(txt)
     self:updateView("lbl1", "text", txt)
   end, 2000)  -- Update every second
+
+  local function pollHTTP()
+    net.HTTPClient():request(a, {
+      options = {
+      method = "GET",
+      timeout = 5000,
+      },
+    success = function(response)
+      if response.status == 200 then
+        print("HTTP request successful")
+      else
+        print("HTTP request failed")
+      end
+      setTimeout(pollHTTP, 2000) -- Poll every 10 seconds
+    end,
+    error = function(err) print("HTTP request error:", err)
+    pollHTTP()
+    end
+  })
+  end
+  pollHTTP()
 end

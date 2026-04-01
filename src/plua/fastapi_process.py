@@ -407,8 +407,14 @@ def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
             
             try:
                 while True:
-                    # Keep connection alive by receiving messages
-                    await websocket.receive_text()
+                    # Keep connection alive and handle client messages
+                    data = await websocket.receive_text()
+                    try:
+                        msg = json.loads(data)
+                        if msg.get("type") == "ping":
+                            await websocket.send_text(json.dumps({"type": "pong", "timestamp": msg.get("timestamp")}))
+                    except Exception:
+                        pass
             except WebSocketDisconnect:
                 logger.info("WebSocket client disconnected normally")
             except Exception as e:

@@ -73,7 +73,7 @@ async def _perform_http_request(url: str, options: Dict[str, Any], callback_id: 
         headers = options.get('headers', {})
         data = options.get('data')
         json_data = options.get('json')
-        timeout = options.get('timeout', 30)
+        timeout = options.get('timeout', 30000) / 1000.0  # Lua passes ms, aiohttp expects seconds
         check_cert = options.get('checkCertificate', True)
 
         # Prepare request kwargs

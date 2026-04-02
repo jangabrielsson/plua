@@ -165,3 +165,4 @@ Type a slash command in Copilot chat for detailed reference:
 - `/quickapp-troubleshooting` — HTML in labels, UI callbacks, property persistence, HC3 vs plua differences
 - `/hc3vfs` — editing QA files in the VS Code hc3:// virtual filesystem (requires hc3-vfs extension)
 - `/qwikchild` — QwikAppChild library: UID-based children, declarative initChildren, per-child UI, UI event routing
+- `/skill-creator` — create, improve, and evaluate skills

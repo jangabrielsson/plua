@@ -52,6 +52,7 @@ Headers are Lua comments processed by plua before execution. All headers must ap
 ```lua
 --%%file:./lib/utils.lua,utils   -- include external Lua file (path, module name)
 ```
+To include a plua library file, use `--%%file:$fibaro.lib.libraryName,alias` (e.g. `--%%file:$fibaro.lib.qwikchild,qwikchild`)
 
 ## Development & Debug Headers
 

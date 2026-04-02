@@ -161,6 +161,7 @@ Type a slash command in Copilot chat for detailed reference:
 - `/hc3-rest-api` — HC3 REST endpoints with examples
 - `/lua-basics` — Lua language reference for non-Lua developers
 - `/plua-troubleshooting` — port conflicts, debugger warnings, common runtime errors
-- `/plua-setup` — install, HC3 credentials, --init-qa, VS Code integration, CLI flags
+- `/plua-setup` — install, HC3 credentials, --init-qa, VS Code integration, CLI flags, Lua.diagnostics.globals
 - `/quickapp-troubleshooting` — HTML in labels, UI callbacks, property persistence, HC3 vs plua differences
 - `/hc3vfs` — editing QA files in the VS Code hc3:// virtual filesystem (requires hc3-vfs extension)
+- `/qwikchild` — QwikAppChild library: UID-based children, declarative initChildren, per-child UI, UI event routing

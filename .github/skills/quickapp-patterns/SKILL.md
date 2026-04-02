@@ -275,6 +275,24 @@ function MyChild:doSomething()
 end
 ```
 
+> **For more advanced child management** — UID-based addressing, declarative `initChildren`, per-child UI, and `internalStorage` per child — use the plua **QwikAppChild** library. Ask `/qwikchild` for full details.
+
+---
+
+## Variable Storage — When to Use What
+
+| Storage | Visible in UI | Saved with QA | Shared across QAs | Use for |
+|---|---|---|---|---|
+| **Fibaro Global Variable** | No | No | Yes | System-wide values shared by multiple QAs or Scenes (e.g. `HomeMode`, `AlarmArmed`) |
+| **QuickApp variable** (`self:getVariable`) | Yes | Yes | No | User-configurable parameters (API keys, IP addresses, poll intervals) — shown in the QA panel and exported with the QA `.fqa` file |
+| **internalStorage** | No | No | No | Private runtime state that must survive QA restarts but should not be visible or user-editable (e.g. last-seen timestamps, cached values, counters) |
+
+> **Fibaro Global Variables** are the right choice when a value needs to be read or written by more than one QuickApp or Scene.
+
+> **QuickApp variables** are the right choice for settings the user may want to change — they appear in the HC3 UI under the device panel and are bundled into the QA when it is downloaded as a `.fqa` file.
+
+> **internalStorage** stores arbitrary Lua values (tables, strings, numbers, booleans — anything JSON-encodable). You do **not** need to call `json.encode`/`json.decode` yourself; the API handles serialisation transparently. Functions cannot be stored.
+
 ---
 
 ## Global Variable Patterns
@@ -293,7 +311,16 @@ api.put("/globalVariables/HomeMode", { value = "Home" })
 
 ## State Persistence
 
-### Using QuickApp variables
+### Using QuickApp variables (user-visible, saved with QA)
+```lua
+function QuickApp:onInit()
+    -- Read user-configured parameter set in the HC3 UI
+    local interval = tonumber(self:getVariable("pollInterval")) or 30
+    self.pollInterval = interval * 1000
+end
+```
+
+### Saving runtime state across restarts with QuickApp variables
 ```lua
 function QuickApp:setState(val)
     self.state = val
@@ -307,11 +334,15 @@ function QuickApp:onInit()
 end
 ```
 
-### Using internalStorage (HC3 only)
+### Using internalStorage (private, not user-visible)
 ```lua
-self:internalStorageSet("key", "value")
-local v = self:internalStorageGet("key")   -- nil if not found
-self:internalStorageRemove("key")
+-- Store any JSON-encodable Lua value — no manual json.encode needed
+self:internalStorageSet("lastSeen", os.time())
+self:internalStorageSet("cache", { temp = 21.5, hum = 55 })
+
+local ts    = self:internalStorageGet("lastSeen")   -- nil if not set
+local cache = self:internalStorageGet("cache")       -- returns Lua table directly
+self:internalStorageRemove("lastSeen")
 self:internalStorageClear()
 ```
 

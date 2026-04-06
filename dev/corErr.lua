@@ -1,4 +1,14 @@
   --%%name:TestErr
 
-  -- Call API on QA toplevel, causes yield error.
-  api.post("/plugins/"..plugin.mainDeviceId.."/variables",{ name='test', value="Foo"}) -- create var if not exist
+  local a = {
+    c = [[A
+  B
+  C
+  D
+  E]]
+  }
+
+  local b = json.encode(a)
+  print("Encoded JSON:", b)
+  local c = json.decode(b)
+  print("Decoded JSON:", c)

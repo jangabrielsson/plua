@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.73] - 2026-04-06
+
+
+
+#### Commits since v1.2.72:
+
+- ✨ **Feature**: Enhance JSON encoding to handle additional control characters and update test error handling
+
+
+
 ## [v1.2.72] - 2026-04-06
 
 

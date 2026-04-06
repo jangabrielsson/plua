@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.70] - 2026-04-06
+
+
+
+#### Commits since v1.2.69:
+
+- ✨ **Feature**: Enhance UI components and update variable handling in emulator
+- ✨ **Feature**: Add skill description improvement and evaluation scripts
+- ✨ **Feature**: Update Copilot instructions and add QwikAppChild library documentation
+
+
+
 ## [v1.2.69] - 2026-04-01
 
 

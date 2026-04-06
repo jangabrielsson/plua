@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.71] - 2026-04-06
+
+
+
+#### Commits since v1.2.70:
+
+- ✨ **Feature**: Update variable handling in emulator and add initialization function in QuickApp
+
+
+
 ## [v1.2.70] - 2026-04-06
 
 

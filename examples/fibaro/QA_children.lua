@@ -3,9 +3,68 @@
 --%%debug:false
 --%%var:X=9
 -- %%offline:true
---%%desktop:true
+-- %%desktop:true
 --%%save:QA_children.fqa
 
+local UI = [[
+[
+      {
+        "components": [
+          {
+            "eventBinding": {
+              "onLongPressDown": [
+                {
+                  "params": {
+                    "actionName": "UIAction",
+                    "args": [
+                      "onLongPressDown",
+                      "btn1"
+                    ]
+                  },
+                  "type": "deviceAction"
+                }
+              ],
+              "onLongPressReleased": [
+                {
+                  "params": {
+                    "actionName": "UIAction",
+                    "args": [
+                      "onLongPressReleased",
+                      "btn1"
+                    ]
+                  },
+                  "type": "deviceAction"
+                }
+              ],
+              "onReleased": [
+                {
+                  "params": {
+                    "actionName": "UIAction",
+                    "args": [
+                      "onReleased",
+                      "btn1"
+                    ]
+                  },
+                  "type": "deviceAction"
+                }
+              ]
+            },
+            "name": "btn1",
+            "style": {
+              "weight": "1.0"
+            },
+            "text": "MyButton",
+            "type": "button",
+            "visible": true
+          }
+        ],
+        "style": {
+          "weight": "1.0"
+        },
+        "type": "horizontal"
+      }
+    ]
+]]
 ---@class MyChild : QuickAppChild
 MyChild = {}
 class 'MyChild'(QuickAppChild)
@@ -20,8 +79,12 @@ function QuickApp:onInit()
   self:debug(self.name, self.id)
 
   -- Create children
-  for i = 1,5 do 
-    local child = self:createChildDevice({name="MyChild"..i,type="com.fibaro.binarySwitch"},MyChild)
+  for i = 1,1 do 
+    local child = self:createChildDevice({
+      name="MyChild"..i,
+      type="com.fibaro.binarySwitch",
+      initialProperties = { uiView = (json.decode(UI)) }
+    },MyChild)
     self:debug("Created child",child.name,child.id)
     --api.post("/plugins/"..child.id.."/variables",{ name='test', value="Foo"}) -- create var if not exist
   end

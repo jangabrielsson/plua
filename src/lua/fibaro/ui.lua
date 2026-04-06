@@ -206,9 +206,11 @@ local function uiView2UI(uiView,uiCallbacks)
       local cb = ce and ce.callback
       if e.type == 'button' then
         elm = {button=e.name,text=e.text}
-        for _,v in ipairs(cbMap[e.name]) do
-          local cb = v.callback ~= "" and v.callback or nil
-          elm[v.eventType] = cb
+        if cbMap[e.name] then
+          for _,v in ipairs(cbMap[e.name]) do
+            local cb = v.callback ~= "" and v.callback or nil
+            elm[v.eventType] = cb
+          end
         end
       elseif e.type == 'label' then
         elm = {label=e.name,text=e.text}

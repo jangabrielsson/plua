@@ -451,7 +451,16 @@ end
 function Emulator:saveQA(fname,id)
   local info = self.DIR[id]
   local fqa = self.lib.getFQA(id)
+  local conceal = info.headers.conceal or {}
+  local vars = fqa.initialProperties.quickAppVariables or {}
+  local vars2 = table.copy(vars)
+  for _,v in ipairs(vars) do
+    if conceal[v.name] then 
+      v.value = conceal[v.name]
+    end
+  end
   self.lib.writeFile(fname,json.encodeFast(fqa))
+  fqa.initialProperties.quickAppVariables = vars2
   self:INFO("Saved QA to",fname)
 end
 
@@ -662,6 +671,21 @@ function Emulator:updateView(id,data,noUpdate)
   end
 end
 
+local function escapeMultiByte(data)
+  -- HC3's JSON parser is ASCII-only; escape multi-byte UTF-8 to \uXXXX
+  if type(data) == 'string' then
+    data = data:gsub("[\xC0-\xFF][\x80-\xBF]*", function(s)
+      local b = {s:byte(1,-1)}
+      local cp
+      if #b == 2 then cp = (b[1]-0xC0)*0x40 + (b[2]-0x80)
+      elseif #b == 3 then cp = ((b[1]-0xE0)*0x40+(b[2]-0x80))*0x40+(b[3]-0x80)
+      elseif #b == 4 then cp = (((b[1]-0xF0)*0x40+(b[2]-0x80))*0x40+(b[3]-0x80))*0x40+(b[4]-0x80) end
+      return cp and fmt("\\u%04x",cp) or s
+    end)
+  end
+  return data
+end
+
 function Emulator:HC3_CALL(method, path, data)
   if not self.config.hc3_creds then
     self:ERROR("HC3 credentials are not set")
@@ -672,7 +696,7 @@ function Emulator:HC3_CALL(method, path, data)
   
   local function makeRequest()
     local url = self.config.hc3_url.."/api"..path
-    if type(data) == 'table' then data = json.encode(data) end
+    if type(data) == 'table' then data = escapeMultiByte(json.encode(data)) end
     return _PY.http_request_sync({
       method = method, 
       url = url,
@@ -798,6 +822,12 @@ function headerKeys.nop(str,info,k) validate(str,"boolean",k) end
 function headerKeys.norun(str,info,k) end
 function headerKeys.noproxy(str,info,k) info.noproxy = validate(str,"boolean",k) end
 function headerKeys.interfaces(str,info,k) info.interfaces = validate(str,"table",k) end
+function headerKeys.conceal(str,info,k) 
+  info.conceal = info.conceal or {}
+  local name,value = str:match("^([%w_]+)%s*=%s*(.+)$")
+  assert(name,"Invalid conceal header: "..str)
+  info.conceal[name] = validate(value,nil,k)
+end
 function headerKeys.breakonload(str,info,k) info.breakOnLoad = validate(str,"boolean",k) end
 function headerKeys.headers(str,info,k) info.include = str end
 function headerKeys.var(str,info,k) 

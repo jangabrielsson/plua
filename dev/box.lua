@@ -1,3 +1,7 @@
+--%%var:foo="Hello"
+--%%conceal:foo="World"
+--%%save:conceal.fqa
+
 local glyphsfat = {
   corner1 = '┏',
   corner2 = '┓',

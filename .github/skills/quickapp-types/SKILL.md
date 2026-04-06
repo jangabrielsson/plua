@@ -113,6 +113,23 @@ Each `--%%u:` line defines one row. Use `{{...},{...}}` for multiple elements on
 --%%u:{{button="onBtn",text="On",onReleased="turnOn"},{button="offBtn",text="Off",onReleased="turnOff"}}
 ```
 
+
+### Updating dropdowns at runtime
+
+**Single-select (`select`)** — use `"selectedItem"` to set the current selection:
+```lua
+self:updateView("modeSelect", "options", {{type='option',text='Economy',value='1'},{type='option',text='Comfort',value='2'}})
+self:updateView("modeSelect", "selectedItem", "1")   -- value string of the selected option
+```
+
+**Multi-select (`multi`)** — use `"selectedItems"` to set selected values, `"options"` to update the list:
+```lua
+self:updateView("tagMulti", "options", {{type='option',text='Tag A',value='1'},{type='option',text='Tag B',value='2'}})
+self:updateView("tagMulti", "selectedItems", {"1","3"})  -- table of selected value strings
+```
+
+> **Gotcha:** Using `"values"` instead of `"selectedItems"` (or `"selectedItem"` for single-select) will silently fail or have no effect on the HC3.
+
 ### UI event callback pattern
 ```lua
 function QuickApp:handleClick(event)

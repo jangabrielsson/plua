@@ -454,13 +454,13 @@ function Emulator:saveQA(fname,id)
   local conceal = info.headers.conceal or {}
   local vars = fqa.initialProperties.quickAppVariables or {}
   local vars2 = table.copy(vars)
-  for _,v in ipairs(vars) do
+  for _,v in ipairs(vars2) do
     if conceal[v.name] then 
       v.value = conceal[v.name]
     end
   end
-  self.lib.writeFile(fname,json.encodeFast(fqa))
   fqa.initialProperties.quickAppVariables = vars2
+  self.lib.writeFile(fname,json.encodeFast(fqa))
   self:INFO("Saved QA to",fname)
 end
 

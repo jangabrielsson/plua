@@ -2,6 +2,10 @@
 --%%conceal:foo="World"
 --%%save:conceal.fqa
 
+function QuickApp:onInit()
+  self:debug("foo is",self:getVariable("foo"))
+end
+
 local glyphsfat = {
   corner1 = '┏',
   corner2 = '┓',

@@ -522,7 +522,7 @@ end
 
 local function luaToFQA(code)
     local info = Emu:createInfoFromContent("",code)
-    return info2FQA(info)
+    return info2FQA(info),info
 end
 
 local function loadFQA(fqa,extraHeaders)

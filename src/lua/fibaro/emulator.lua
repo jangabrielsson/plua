@@ -1012,7 +1012,17 @@ local tools = {
       assert(_PY.file_exists(file),"file doesn't exist")
       if not name then name = file:gsub("%.lua$","")..".fqa" end
       local code = self.lib.readFile(file)
-      local fqa = self.lib.luaToFQA(code)
+      local fqa,info = self.lib.luaToFQA(code)
+
+      local conceal = info.headers.conceal or {}
+      local vars = fqa.initialProperties.quickAppVariables or {}
+      local vars2 = table.copy(vars)
+      for _,v in ipairs(vars2) do
+        if conceal[v.name] then 
+          v.value = conceal[v.name]
+        end
+      end
+      fqa.initialProperties.quickAppVariables = vars2
       self.lib.writeFile(name,json.encodeFast(fqa))
       self:INFO("Packed QA",file,"to",name)
     end

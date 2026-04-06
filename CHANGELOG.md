@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.72] - 2026-04-06
+
+
+
+#### Commits since v1.2.71:
+
+- ✨ **Feature**: Enhance luaToFQA function to return additional info and update quick app variable handling
+
+
+
 ## [v1.2.71] - 2026-04-06
 
 

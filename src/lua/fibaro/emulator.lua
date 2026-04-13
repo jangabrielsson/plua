@@ -921,8 +921,8 @@ function Emulator:processHeaders(filename,content,extraHeaders)
     local f = io.open(headers.include)
     assert(f,"Failed to open include file: "..headers.include)
     for line in f:lines() do
-      line = line and line:match("%-%-%%%%(.*)") or line
-      extraHeaders[#extraHeaders+1] = line
+      local l = line and line:match("%-%-%%%%(.*)") or line
+      extraHeaders[#extraHeaders+1] = l
     end
     f:close()
   end

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.74] - 2026-04-13
+
+
+
+#### Commits since v1.2.73:
+
+- ✨ **Feature**: Update error handling in validate function and include timestamp in refreshEvent
+
+
+
 ## [v1.2.73] - 2026-04-06
 
 

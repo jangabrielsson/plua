@@ -599,7 +599,7 @@ end
 
 local venv = setmetatable({}, { __index = function(t,k) return os.getenv(k) end })
 local function validate(str,typ,key)
-  local stat,val = pcall(function() return load("return "..str, nil, "t", {env = venv, plua = pluaConf, config = pluaConf})() end)
+  local stat,val = pcall(function() return load("return "..str, nil, "t", {env = venv, os = os, plua = pluaConf, config = pluaConf})() end)
   if not stat then error(fmt("Invalid header %s: %s",key,str)) end
   if typ and type(val) ~= typ then 
     error(fmt("Invalid header %s: expected %s, got %s",key,typ,type(val)))
@@ -788,7 +788,10 @@ end
 function Emulator:getRefreshStates(last) return _PY.getEvents(last) end
 
 function Emulator:refreshEvent(typ,data) 
-  setTimeout(function() _PY.addEventFromLua(json.encode({type=typ,data=data})) end, 0)
+  local created = os.time()
+  setTimeout(function() 
+    _PY.addEventFromLua(json.encode({type=typ,created=created,data=data})) 
+  end, 0)
 end
 
 local headerKeys = {}

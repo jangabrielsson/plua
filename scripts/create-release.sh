@@ -305,7 +305,8 @@ main() {
     
     # Update version in pyproject.toml
     print_status "Updating version in pyproject.toml..."
-    sed -i.bak "s/version = \".*\"/version = \"$new_version\"/" pyproject.toml
+    # Match only the top-level [project] version line, NOT target-version etc.
+    sed -i.bak "s/^version = \".*\"/version = \"$new_version\"/" pyproject.toml
     rm pyproject.toml.bak
     
     # Update or create CHANGELOG.md

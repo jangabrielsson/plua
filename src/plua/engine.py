@@ -6,6 +6,7 @@ execution with Python's async timer functionality.
 """
 
 import asyncio
+import locale
 import logging
 import queue
 import sys
@@ -60,6 +61,18 @@ class LuaEngine:
 
         # Configure Lupa to use UTF-8 encoding for all string conversions
         # This ensures Lua strings with UTF-8 characters are properly handled
+        #
+        # Force C locale for LC_CTYPE so that Lua's pattern classes (%s, %a, etc.)
+        # — which are implemented via libc's isspace()/isalpha()/... in lstrlib.c —
+        # behave identically across platforms. Without this, locales such as
+        # pl_PL.UTF-8 / C.UTF-8 / Polish on Windows classify byte 0x85 (NEL) and
+        # 0xA0 (NBSP) as whitespace, which corrupts UTF-8 strings whose
+        # continuation bytes happen to land on those values (e.g. "ą" = C4 85
+        # gets split by `%S+`).
+        try:
+            locale.setlocale(locale.LC_CTYPE, 'C')
+        except locale.Error:
+            logger.warning("Could not force LC_CTYPE=C; Lua pattern classes may be locale-dependent")
         self._lua = lupa.LuaRuntime(
             unpack_returned_tuples=True,
             encoding='UTF-8'  # pyright: ignore[reportCallIssue]

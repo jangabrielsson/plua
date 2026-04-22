@@ -97,6 +97,62 @@ generate_release_notes() {
     echo "*Generated automatically from git commits*"
 }
 
+# Run quality checks (ruff, pyright, pytest) before any release work
+run_quality_checks() {
+    if [[ "$SKIP_CHECKS" == "1" ]]; then
+        print_warning "SKIP_CHECKS=1 set — skipping ruff/pyright/pytest"
+        return 0
+    fi
+
+    print_status "Running pre-release quality checks (set SKIP_CHECKS=1 to bypass)..."
+
+    # Activate venv if present and not already active
+    if [[ -z "$VIRTUAL_ENV" && -f ".venv/bin/activate" ]]; then
+        # shellcheck disable=SC1091
+        source .venv/bin/activate
+    fi
+
+    local failed=0
+
+    if command -v ruff &> /dev/null; then
+        print_status "  → ruff check src/"
+        if ! ruff check src/; then
+            print_error "ruff failed"
+            failed=1
+        fi
+    else
+        print_warning "  → ruff not installed, skipping"
+    fi
+
+    if command -v pyright &> /dev/null; then
+        print_status "  → pyright src/"
+        if ! pyright src/; then
+            print_error "pyright failed"
+            failed=1
+        fi
+    else
+        print_warning "  → pyright not installed, skipping"
+    fi
+
+    if command -v pytest &> /dev/null; then
+        print_status "  → pytest -q"
+        if ! pytest -q; then
+            print_error "pytest failed"
+            failed=1
+        fi
+    else
+        print_warning "  → pytest not installed, skipping"
+    fi
+
+    if [[ $failed -ne 0 ]]; then
+        print_error "Quality checks failed. Fix issues or re-run with SKIP_CHECKS=1 to bypass."
+        exit 1
+    fi
+
+    print_success "Quality checks passed"
+    echo
+}
+
 # Bump version based on type
 bump_version() {
     local current_version=$1
@@ -147,7 +203,10 @@ main() {
         print_status "Run: gh auth login"
         exit 1
     fi
-    
+
+    # Run quality gate before any version/changelog mutations
+    run_quality_checks
+
     current_version=$(get_current_version)
     print_status "Current version: $current_version"
     

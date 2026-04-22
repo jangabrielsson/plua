@@ -672,17 +672,30 @@ function Emulator:updateView(id,data,noUpdate)
 end
 
 local function escapeMultiByte(data)
-  -- HC3's JSON parser is ASCII-only; escape multi-byte UTF-8 to \uXXXX
-  if type(data) == 'string' then
-    data = data:gsub("[\xC0-\xFF][\x80-\xBF]*", function(s)
-      local b = {s:byte(1,-1)}
-      local cp
-      if #b == 2 then cp = (b[1]-0xC0)*0x40 + (b[2]-0x80)
-      elseif #b == 3 then cp = ((b[1]-0xE0)*0x40+(b[2]-0x80))*0x40+(b[3]-0x80)
-      elseif #b == 4 then cp = (((b[1]-0xF0)*0x40+(b[2]-0x80))*0x40+(b[3]-0x80))*0x40+(b[4]-0x80) end
-      return cp and fmt("\\u%04x",cp) or s
-    end)
-  end
+  -- Convert valid multi-byte UTF-8 sequences to JSON \uXXXX escapes.
+  -- Only used for endpoints/firmwares that don't accept raw UTF-8 in JSON bodies.
+  -- Strict matching: only consumes a lead byte plus the exact number of
+  -- continuation bytes the lead requires. Code points > 0xFFFF are emitted
+  -- as a UTF-16 surrogate pair, as required by JSON.
+  if type(data) ~= 'string' then return data end
+  -- Process each UTF-8 width with its own strict pattern (lead + exact continuations).
+  -- Stray continuation bytes or invalid leads are left untouched.
+  data = data:gsub("([\xF0-\xF4])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])", function(b1,b2,b3,b4)
+    local cp = ((((b1:byte()-0xF0)*0x40)+(b2:byte()-0x80))*0x40+(b3:byte()-0x80))*0x40+(b4:byte()-0x80)
+    if cp < 0x10000 then return fmt("\\u%04x", cp) end
+    cp = cp - 0x10000
+    local hi = 0xD800 + (cp >> 10)
+    local lo = 0xDC00 + (cp & 0x3FF)
+    return fmt("\\u%04x\\u%04x", hi, lo)
+  end)
+  data = data:gsub("([\xE0-\xEF])([\x80-\xBF])([\x80-\xBF])", function(b1,b2,b3)
+    local cp = ((b1:byte()-0xE0)*0x40+(b2:byte()-0x80))*0x40+(b3:byte()-0x80)
+    return fmt("\\u%04x", cp)
+  end)
+  data = data:gsub("([\xC2-\xDF])([\x80-\xBF])", function(b1,b2)
+    local cp = (b1:byte()-0xC0)*0x40 + (b2:byte()-0x80)
+    return fmt("\\u%04x", cp)
+  end)
   return data
 end
 
@@ -696,7 +709,13 @@ function Emulator:HC3_CALL(method, path, data)
   
   local function makeRequest()
     local url = self.config.hc3_url.."/api"..path
-    if type(data) == 'table' then data = escapeMultiByte(json.encode(data)) end
+    -- Send raw UTF-8 JSON; Python side encodes as UTF-8 bytes and we declare the charset.
+    -- We deliberately do NOT pre-escape multi-byte chars to \uXXXX here -- that path
+    -- truncated supplementary-plane code points and could corrupt long payloads (e.g.
+    -- base64-encoded SVGs containing UTF-8 text) when combined with the HTTP layer's
+    -- default latin-1 str-encoding. escapeMultiByte() is still available for callers
+    -- that need an ASCII-only body.
+    if type(data) == 'table' then data = json.encode(data) end
     return _PY.http_request_sync({
       method = method, 
       url = url,
@@ -705,7 +724,7 @@ function Emulator:HC3_CALL(method, path, data)
         ['X-Fibaro-Version'] = '2',
         ['Accept-language'] = 'en',
         ["User-Agent"] = "plua/0.1.0",
-        ["Content-Type"] = "application/json",
+        ["Content-Type"] = "application/json; charset=utf-8",
         ["Authorization"] = "Basic " .. (self.config.hc3_creds or ""),
         ['Fibaro-User-PIN'] = self.config.hc3_pin
       }

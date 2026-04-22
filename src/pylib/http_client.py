@@ -85,7 +85,12 @@ async def _perform_http_request(url: str, options: Dict[str, Any], callback_id: 
         # Handle request body
         if json_data:
             request_kwargs['json'] = json_data
-        elif data:
+        elif data is not None:
+            # Always send str bodies as explicit UTF-8 bytes so the byte width on the
+            # wire matches what the caller assembled (aiohttp would also default to
+            # utf-8 for str, but being explicit avoids any ambiguity / future change).
+            if isinstance(data, str):
+                data = data.encode('utf-8')
             request_kwargs['data'] = data
 
         # SSL verification
@@ -166,7 +171,13 @@ def http_request_sync(options: Any) -> Any:
         headers = py_options.get('headers', {})
         data = py_options.get('data')
         timeout = py_options.get('timeout', 30)
-        
+
+        # Always send str bodies as explicit UTF-8 bytes. If we left this as a str,
+        # `requests`/`http.client` would encode it with latin-1, which silently corrupts
+        # multi-byte UTF-8 (or raises UnicodeEncodeError for code points > 0xFF).
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+
         # Make the synchronous request
         response = requests.request(
             method=method,

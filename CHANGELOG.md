@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.79] - 2026-04-22
+
+
+
+#### Commits since v1.2.78:
+
+- ✨ **Feature**: Update version handling in create-release script and enforce C locale for Lua pattern consistency
+- 🐛 **Fix**: Restrict workflow triggers to manual only for build executables and release pipeline
+
+
+
 ## [v1.2.78] - 2026-04-22
 
 

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.77] - 2026-04-22
+
+
+
+#### Commits since v1.2.76:
+
+- 🐛 **Fix**: Improve UTF-8 handling in error messages and diagnostics
+
+
+
 ## [v1.2.76] - 2026-04-22
 
 

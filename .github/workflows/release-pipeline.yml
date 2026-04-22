@@ -1,9 +1,9 @@
 name: Release Pipeline
 
+# Disabled: PyPI is the preferred distribution channel for plua.
+# Native executable builds are kept available for manual runs only.
 on:
-  release:
-    types: [published]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   # Job 1: Build executables

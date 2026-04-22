@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.75] - 2026-04-22
+
+
+
+#### Commits since v1.2.74:
+
+- ✨ **Feature**: Improve HTTP request handling for UTF-8 encoding and enhance JSON escaping
+
+
+
 ## [v1.2.74] - 2026-04-13
 
 

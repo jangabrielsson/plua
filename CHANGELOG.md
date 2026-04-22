@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.76] - 2026-04-22
+
+
+
+#### Commits since v1.2.75:
+
+- ✨ **Feature**: Add UTF test script and enhance JSON array handling in emulator
+
+
+
 ## [v1.2.75] - 2026-04-22
 
 

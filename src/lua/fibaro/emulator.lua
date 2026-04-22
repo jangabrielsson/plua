@@ -454,6 +454,10 @@ function Emulator:saveQA(fname,id)
   local conceal = info.headers.conceal or {}
   local vars = fqa.initialProperties.quickAppVariables or {}
   local vars2 = table.copy(vars)
+  -- table.copy does not preserve metatables, so the __isArray marker set by
+  -- arrayifyFqa() is lost. Re-mark it so an empty quickAppVariables encodes
+  -- as [] (which HC3 requires) instead of {} (which HC3's importer rejects).
+  json.initArray(vars2)
   for _,v in ipairs(vars2) do
     if conceal[v.name] then 
       v.value = conceal[v.name]

@@ -3,13 +3,13 @@ Synchronous socket functionality for MobDebug compatibility
 Provides LuaSocket-compatible TCP operations for MobDebug debugging support
 """
 
+import logging
 import socket
 import threading
-import time
-import errno
-import requests
-from typing import Any, Dict, Optional, Tuple, Callable, Union
-import logging
+from collections.abc import Callable
+from typing import Any
+
+import httpx
 
 from .lua_bindings import export_to_lua
 
@@ -23,13 +23,13 @@ class SynchronousTCPManager:
     with LuaSocket and suitable for use with MobDebug.
     """
     
-    def __init__(self, debug_print: Optional[Callable[[str], None]] = None):
-        self._sockets: Dict[int, socket.socket] = {}  # Track open sockets
+    def __init__(self, debug_print: Callable[[str], None] | None = None):
+        self._sockets: dict[int, socket.socket] = {}  # Track open sockets
         self._socket_id_counter = 0
         self._socket_lock = threading.Lock()  # Thread safety for socket operations
         self._debug_print = debug_print or (lambda msg: logger.debug(msg))
     
-    def tcp_connect_sync(self, host: str, port: int) -> Tuple[bool, Optional[int], str]:
+    def tcp_connect_sync(self, host: str, port: int) -> tuple[bool, int | None, str]:
         """
         Synchronously connect to a TCP host/port
         
@@ -45,9 +45,9 @@ class SynchronousTCPManager:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # Set a 1 second connection timeout like your working implementation
             sock.settimeout(1.0)  # 1 second connection timeout
-            self._debug_print(f"[SYNC_SOCKET] Attempting connection...")
+            self._debug_print("[SYNC_SOCKET] Attempting connection...")
             sock.connect((host, port))
-            self._debug_print(f"[SYNC_SOCKET] Connection successful!")
+            self._debug_print("[SYNC_SOCKET] Connection successful!")
             
             with self._socket_lock:
                 self._socket_id_counter += 1
@@ -60,7 +60,7 @@ class SynchronousTCPManager:
             self._debug_print(f"[SYNC_SOCKET] Connection failed: {e}")
             return False, None, f"TCP connect error: {str(e)}"
 
-    def tcp_write_sync(self, conn_id: int, data: str) -> Tuple[bool, Optional[int], str]:
+    def tcp_write_sync(self, conn_id: int, data: str) -> tuple[bool, int | None, str]:
         """
         Synchronously write data to a TCP connection
         
@@ -88,7 +88,7 @@ class SynchronousTCPManager:
             self._debug_print(f"[SYNC_SOCKET] Send failed: {e}")
             return False, None, str(e)
 
-    def tcp_read_sync(self, conn_id: int, pattern_or_n: Any = "*l") -> Tuple[bool, Optional[str], Optional[str]]:
+    def tcp_read_sync(self, conn_id: int, pattern_or_n: Any = "*l") -> tuple[bool, str | None, str | None]:
         """
         Synchronously read data from a TCP connection with LuaSocket-compatible semantics
         
@@ -115,12 +115,12 @@ class SynchronousTCPManager:
                 # Read line (until newline) - LuaSocket compatible, ignore CR
                 data = b""
                 try:
-                    self._debug_print(f"[SYNC_SOCKET] Reading line...")
+                    self._debug_print("[SYNC_SOCKET] Reading line...")
                     while True:
                         byte = sock.recv(1)
                         if not byte:
                             # Connection closed
-                            self._debug_print(f"[SYNC_SOCKET] Connection closed during line read")
+                            self._debug_print("[SYNC_SOCKET] Connection closed during line read")
                             if data:
                                 return False, None, data.decode('utf-8', errors='replace')
                             return False, None, None
@@ -147,8 +147,8 @@ class SynchronousTCPManager:
                         if data:
                             return False, None, data.decode('utf-8', errors='replace')
                         return False, None, None
-                except socket.timeout:
-                    self._debug_print(f"[SYNC_SOCKET] Timeout during line read")
+                except TimeoutError:
+                    self._debug_print("[SYNC_SOCKET] Timeout during line read")
                     # Timeout occurred
                     if data:
                         return False, None, data.decode('utf-8', errors='replace')
@@ -178,7 +178,7 @@ class SynchronousTCPManager:
                         return True, data.decode('utf-8', errors='replace'), None
                     else:
                         return False, None, None
-                except socket.timeout:
+                except TimeoutError:
                     # Timeout - return what we have so far
                     if data_parts:
                         data = b"".join(data_parts)
@@ -212,7 +212,7 @@ class SynchronousTCPManager:
                     if data:
                         return False, None, data.decode('utf-8', errors='replace')
                     return False, None, None
-                except socket.timeout:
+                except TimeoutError:
                     # Timeout occurred
                     if data:
                         return False, None, data.decode('utf-8', errors='replace')
@@ -225,7 +225,7 @@ class SynchronousTCPManager:
             self._debug_print(f"[SYNC_SOCKET] Read error: {e}")
             return False, None, None
 
-    def tcp_close_sync(self, conn_id: int) -> Tuple[bool, str]:
+    def tcp_close_sync(self, conn_id: int) -> tuple[bool, str]:
         """
         Synchronously close a TCP connection
         
@@ -251,7 +251,7 @@ class SynchronousTCPManager:
             self._debug_print(f"[SYNC_SOCKET] Close error: {e}")
             return False, str(e)
 
-    def tcp_set_timeout_sync(self, conn_id: int, timeout: Optional[float]) -> Tuple[bool, str]:
+    def tcp_set_timeout_sync(self, conn_id: int, timeout: float | None) -> tuple[bool, str]:
         """
         Synchronously set timeout for a TCP connection (LuaSocket compatible)
         
@@ -296,7 +296,7 @@ class SynchronousTCPManager:
         Close all open connections - useful for cleanup
         """
         with self._socket_lock:
-            for conn_id, sock in list(self._sockets.items()):
+            for _, sock in list(self._sockets.items()):
                 try:
                     sock.close()
                 except Exception:
@@ -320,37 +320,37 @@ _tcp_manager = SynchronousTCPManager()
 
 # Export functions to Lua
 @export_to_lua("tcp_connect_sync")
-def tcp_connect_sync(host: str, port: int) -> Tuple[bool, Optional[int], str]:
+def tcp_connect_sync(host: str, port: int) -> tuple[bool, int | None, str]:
     """Connect to a TCP host/port synchronously."""
     return _tcp_manager.tcp_connect_sync(host, port)
 
 
 @export_to_lua("tcp_write_sync")
-def tcp_write_sync(conn_id: int, data: str) -> Tuple[bool, Optional[int], str]:
+def tcp_write_sync(conn_id: int, data: str) -> tuple[bool, int | None, str]:
     """Write data to a TCP connection synchronously."""
     return _tcp_manager.tcp_write_sync(conn_id, data)
 
 
 @export_to_lua("tcp_read_sync")
-def tcp_read_sync(conn_id: int, pattern_or_n: Any = "*l") -> Tuple[bool, Optional[str], Optional[str]]:
+def tcp_read_sync(conn_id: int, pattern_or_n: Any = "*l") -> tuple[bool, str | None, str | None]:
     """Read data from a TCP connection synchronously."""
     return _tcp_manager.tcp_read_sync(conn_id, pattern_or_n)
 
 
 @export_to_lua("tcp_close_sync")
-def tcp_close_sync(conn_id: int) -> Tuple[bool, str]:
+def tcp_close_sync(conn_id: int) -> tuple[bool, str]:
     """Close a TCP connection synchronously."""
     return _tcp_manager.tcp_close_sync(conn_id)
 
 
 @export_to_lua("tcp_set_timeout_sync")
-def tcp_set_timeout_sync(conn_id: int, timeout: Optional[float]) -> Tuple[bool, str]:
+def tcp_set_timeout_sync(conn_id: int, timeout: float | None) -> tuple[bool, str]:
     """Set timeout for a TCP connection synchronously."""
     return _tcp_manager.tcp_set_timeout_sync(conn_id, timeout)
 
 
 @export_to_lua("http_call_sync")
-def http_call_sync(method: str, url: str, headers: Optional[Dict[str, str]] = None, payload: Optional[str] = None) -> Tuple[bool, int, str, str]:
+def http_call_sync(method: str, url: str, headers: dict[str, str] | None = None, payload: str | None = None) -> tuple[bool, int, str, str]:
     """
     Make a synchronous HTTP call (for socket.lua compatibility).
     
@@ -374,21 +374,23 @@ def http_call_sync(method: str, url: str, headers: Optional[Dict[str, str]] = No
         
         if headers:
             request_kwargs['headers'] = headers
-            
+
         if payload and method.upper() in ['POST', 'PUT', 'PATCH']:
-            request_kwargs['data'] = payload
-            
-        # Make the request
-        response = requests.request(**request_kwargs)
-        
+            # httpx uses `content=` for raw body (str/bytes); `data=` is form-encoded.
+            body: bytes | str = payload.encode('utf-8') if isinstance(payload, str) else payload
+            request_kwargs['content'] = body
+
+        # Make the request via httpx (replaces legacy `requests` call).
+        response = httpx.request(**request_kwargs)
+
         logger.debug(f"[SYNC_SOCKET] HTTP call successful: {response.status_code}")
         return True, response.status_code, response.text, ""
-        
-    except requests.exceptions.Timeout:
+
+    except httpx.TimeoutException:
         error_msg = "HTTP request timeout"
         logger.debug(f"[SYNC_SOCKET] {error_msg}")
         return False, 0, "", error_msg
-    except requests.exceptions.ConnectionError as e:
+    except httpx.ConnectError as e:
         error_msg = f"HTTP connection error: {str(e)}"
         logger.debug(f"[SYNC_SOCKET] {error_msg}")
         return False, 0, "", error_msg

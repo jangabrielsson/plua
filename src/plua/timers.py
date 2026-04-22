@@ -9,8 +9,9 @@ import asyncio
 import logging
 import time
 import uuid
-from typing import Callable, Dict, Optional, Any
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +22,11 @@ class TimerInfo:
     timer_id: str
     delay: float
     callback: Callable
-    task: Optional[asyncio.Task] = None
-    created_at: float = None
+    task: asyncio.Task | None = None
+    created_at: float = 0.0
 
     def __post_init__(self):
-        if self.created_at is None:
+        if not self.created_at:
             self.created_at = time.time()
 
 
@@ -38,7 +39,7 @@ class AsyncTimerManager:
     """
 
     def __init__(self):
-        self._timers: Dict[str, TimerInfo] = {}
+        self._timers: dict[str, TimerInfo] = {}
         self._running = False
 
     async def start(self):
@@ -128,7 +129,7 @@ class AsyncTimerManager:
         """Get the number of active timers."""
         return len(self._timers)
 
-    def get_timer_info(self, timer_id: str) -> Optional[Dict[str, Any]]:
+    def get_timer_info(self, timer_id: str) -> dict[str, Any] | None:
         """Get information about a specific timer."""
         timer_info = self._timers.get(timer_id)
         if timer_info:

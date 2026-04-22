@@ -12,9 +12,9 @@ and terminal emulators.
 
 import os
 import sys
+
 from rich.console import Console
 from rich.theme import Theme
-from rich.style import Style
 
 # Define a custom theme for PLua with consistent colors
 plua_theme = Theme({

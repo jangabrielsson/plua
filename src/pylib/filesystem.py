@@ -8,13 +8,14 @@ All functions are designed to be called from Lua scripts via the _PY interface.
 import os
 import stat
 import time
-import logging
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, Tuple
-from plua.lua_bindings import export_to_lua, python_to_lua_table
+from typing import Any
+
+from plua.lua_bindings import export_to_lua
+
 
 @export_to_lua()
-def fs_attributes(filepath: str, request_name: Optional[str] = None) -> Union[Dict[str, Any], Any, None]:
+def fs_attributes(filepath: str, request_name: str | None = None) -> dict[str, Any] | Any | None:
     """
     Get file attributes (implements lfs.attributes)
     Returns a table with file attributes or specific attribute if request_name provided
@@ -65,10 +66,10 @@ def fs_attributes(filepath: str, request_name: Optional[str] = None) -> Union[Di
         return attributes
         
     except OSError as e:
-        return None, str(e), e.errno
+        return None, str(e), e.errno or 0
 
 @export_to_lua()  
-def fs_symlinkattributes(filepath: str, request_name: Optional[str] = None) -> Union[Dict[str, Any], Any, None]:
+def fs_symlinkattributes(filepath: str, request_name: str | None = None) -> dict[str, Any] | Any | None:
     """
     Get symlink attributes (implements lfs.symlinkattributes)
     Like fs_attributes but for symlinks themselves, adds 'target' field
@@ -127,10 +128,10 @@ def fs_symlinkattributes(filepath: str, request_name: Optional[str] = None) -> U
         return attributes
         
     except OSError as e:
-        return None, str(e), e.errno
+        return None, str(e), e.errno or 0
 
 @export_to_lua()
-def fs_chdir(path: str) -> Union[bool, Tuple[None, str]]:
+def fs_chdir(path: str) -> bool | tuple[None, str]:
     """
     Change current working directory (implements lfs.chdir)
     """
@@ -141,7 +142,7 @@ def fs_chdir(path: str) -> Union[bool, Tuple[None, str]]:
         return None, str(e)
 
 @export_to_lua()
-def fs_currentdir() -> Union[str, Tuple[None, str]]:
+def fs_currentdir() -> str | tuple[None, str]:
     """
     Get current working directory (implements lfs.currentdir)
     """
@@ -151,7 +152,7 @@ def fs_currentdir() -> Union[str, Tuple[None, str]]:
         return None, str(e)
 
 @export_to_lua()
-def fs_mkdir(dirname: str) -> Union[bool, Tuple[None, str, int]]:
+def fs_mkdir(dirname: str) -> bool | tuple[None, str, int]:
     """
     Create directory (implements lfs.mkdir)
     """
@@ -159,10 +160,10 @@ def fs_mkdir(dirname: str) -> Union[bool, Tuple[None, str, int]]:
         os.mkdir(dirname)
         return True
     except OSError as e:
-        return None, str(e), e.errno
+        return None, str(e), e.errno or 0
 
 @export_to_lua()
-def fs_rmdir(dirname: str) -> Union[bool, Tuple[None, str, int]]:
+def fs_rmdir(dirname: str) -> bool | tuple[None, str, int]:
     """
     Remove directory (implements lfs.rmdir)
     """
@@ -170,10 +171,10 @@ def fs_rmdir(dirname: str) -> Union[bool, Tuple[None, str, int]]:
         os.rmdir(dirname)
         return True
     except OSError as e:
-        return None, str(e), e.errno
+        return None, str(e), e.errno or 0
 
 @export_to_lua()
-def fs_dir_open(path: str) -> Union[int, Tuple[None, str]]:
+def fs_dir_open(path: str) -> int | tuple[None, str]:
     """
     Open directory for iteration (implements lfs.dir)
     Returns directory handle ID or nil + error
@@ -201,7 +202,7 @@ def fs_dir_open(path: str) -> Union[int, Tuple[None, str]]:
         return None, str(e)
 
 @export_to_lua()
-def fs_dir_next(dir_id: int) -> Optional[str]:
+def fs_dir_next(dir_id: int) -> str | None:
     """
     Get next directory entry (for lfs.dir iterator)
     """
@@ -235,7 +236,7 @@ def fs_dir_close(dir_id: int) -> bool:
     return False
 
 @export_to_lua()
-def fs_touch(filepath: str, atime: Optional[float] = None, mtime: Optional[float] = None) -> Union[bool, Tuple[None, str, int]]:
+def fs_touch(filepath: str, atime: float | None = None, mtime: float | None = None) -> bool | tuple[None, str, int]:
     """
     Set file access and modification times (implements lfs.touch)
     """
@@ -263,10 +264,10 @@ def fs_touch(filepath: str, atime: Optional[float] = None, mtime: Optional[float
         return True
         
     except OSError as e:
-        return None, str(e), e.errno
+        return None, str(e), e.errno or 0
 
 @export_to_lua()
-def fs_link(old: str, new: str, symlink: bool = False) -> Union[bool, Tuple[None, str, int]]:
+def fs_link(old: str, new: str, symlink: bool = False) -> bool | tuple[None, str, int]:
     """
     Create hard or symbolic link (implements lfs.link)
     """
@@ -277,10 +278,10 @@ def fs_link(old: str, new: str, symlink: bool = False) -> Union[bool, Tuple[None
             os.link(old, new)
         return True
     except OSError as e:
-        return None, str(e), e.errno
+        return None, str(e), e.errno or 0
 
 @export_to_lua()
-def fs_setmode(file_handle, mode: str) -> Union[Tuple[bool, str], Tuple[None, str]]:
+def fs_setmode(file_handle, mode: str) -> tuple[bool, str] | tuple[None, str]:
     """
     Set file mode (implements lfs.setmode)
     On Unix/macOS, this is a no-op since binary/text modes are identical

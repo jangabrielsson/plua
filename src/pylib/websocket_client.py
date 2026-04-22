@@ -12,22 +12,23 @@ Features:
 import asyncio
 import logging
 import ssl
-from typing import Dict, Any, Optional
+from typing import Any
+
 from plua.lua_bindings import export_to_lua, get_global_engine
 
 logger = logging.getLogger(__name__)
 
 # WebSocket connection management
-_websocket_connections: Dict[int, Any] = {}
+_websocket_connections: dict[int, Any] = {}
 _websocket_connection_counter = 0
 
 # WebSocket server management  
-_websocket_servers: Dict[int, Any] = {}
+_websocket_servers: dict[int, Any] = {}
 _websocket_server_counter = 0
 
 
 @export_to_lua("websocket_connect")
-def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, str]] = None) -> int:
+def websocket_connect(url: str, callback_id: int, headers: dict[str, str] | None = None) -> int:
     """
     Connect to a WebSocket server asynchronously
 
@@ -58,7 +59,7 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
                 ssl_context.verify_mode = ssl.CERT_NONE
 
             session = aiohttp.ClientSession()
-            ws = await session.ws_connect(url, headers=headers_dict, ssl=ssl_context)
+            ws = await session.ws_connect(url, headers=headers_dict, ssl=ssl_context if ssl_context is not None else True)
 
             # Store the connection
             _websocket_connections[conn_id] = {
@@ -163,7 +164,7 @@ def websocket_connect(url: str, callback_id: int, headers: Optional[Dict[str, st
 
 
 @export_to_lua("websocket_send")
-def websocket_send(conn_id: int, data: str, callback_id: Optional[int] = None) -> None:
+def websocket_send(conn_id: int, data: str, callback_id: int | None = None) -> None:
     """
     Send data through a WebSocket connection
 
@@ -224,7 +225,7 @@ def websocket_send(conn_id: int, data: str, callback_id: Optional[int] = None) -
 
 
 @export_to_lua("websocket_close")
-def websocket_close(conn_id: int, callback_id: Optional[int] = None) -> None:
+def websocket_close(conn_id: int, callback_id: int | None = None) -> None:
     """
     Close a WebSocket connection
 
@@ -467,7 +468,7 @@ def websocket_server_start(server_id: int, host: str, port: int, callback_id: in
 
 
 @export_to_lua("websocket_server_send")
-def websocket_server_send(server_id: int, client_id: int, data: str, callback_id: Optional[int] = None) -> None:
+def websocket_server_send(server_id: int, client_id: int, data: str, callback_id: int | None = None) -> None:
     """
     Send data to a specific WebSocket client
 
@@ -542,7 +543,7 @@ def websocket_server_send(server_id: int, client_id: int, data: str, callback_id
 
 
 @export_to_lua("websocket_server_stop")
-def websocket_server_stop(server_id: int, callback_id: Optional[int] = None) -> None:
+def websocket_server_stop(server_id: int, callback_id: int | None = None) -> None:
     """
     Stop a WebSocket server
 

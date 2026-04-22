@@ -3,10 +3,11 @@ Project scaffolding utilities for plua
 """
 
 import json
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
+
 from .path_utils import get_static_file
 
 
@@ -251,7 +252,7 @@ def init_quickapp_project() -> None:
             if 1 <= choice_num <= len(template_keys):
                 selected_key = template_keys[choice_num - 1]
             else:
-                print(f"Invalid choice. Using basic template.")
+                print("Invalid choice. Using basic template.")
                 selected_key = "basic"
     except (ValueError, KeyboardInterrupt):
         print("\nUsing basic template.")
@@ -311,10 +312,10 @@ def init_quickapp_project() -> None:
         try:
             with urllib.request.urlopen(selected_template['url']) as response:
                 main_lua_content = response.read().decode('utf-8')
-            print(f"  ✓ Template downloaded successfully")
+            print("  ✓ Template downloaded successfully")
         except urllib.error.URLError as e:
             print(f"  ✗ Failed to fetch template: {e}")
-            print(f"  Falling back to basic template")
+            print("  Falling back to basic template")
             main_lua_content = get_basic_quickapp_template()
     
     if main_lua_path.exists():
@@ -334,18 +335,18 @@ def init_quickapp_project() -> None:
     print("\nTip: Always use 'plua --fibaro main.lua' for QuickApp development")
 
 
-def get_vscode_launch_config() -> Dict[str, Any]:
+def get_vscode_launch_config() -> dict[str, Any]:
     """Get VS Code launch configuration for plua projects"""
     config_path = get_static_file('vscode_launch_config.json')
-    with open(config_path, 'r') as f:
+    with open(config_path) as f:
         config_content = f.read()
     return json.loads(config_content)
 
 
-def get_vscode_tasks_config() -> Dict[str, Any]:
+def get_vscode_tasks_config() -> dict[str, Any]:
     """Get VS Code tasks configuration for HC3 integration"""
     config_path = get_static_file('vscode_tasks_config.json')
-    with open(config_path, 'r') as f:
+    with open(config_path) as f:
         config_content = f.read()
     return json.loads(config_content)
 
@@ -353,12 +354,12 @@ def get_vscode_tasks_config() -> Dict[str, Any]:
 def get_basic_quickapp_template() -> str:
     """Get the basic QuickApp template content"""
     template_path = get_static_file('basic_quickapp_template.lua')
-    with open(template_path, 'r') as f:
+    with open(template_path) as f:
         return f.read()
 
 
 def get_project_config() -> str:
     """Get the .project file configuration for HC3"""
     config_path = get_static_file('project_config.json')
-    with open(config_path, 'r') as f:
+    with open(config_path) as f:
         return f.read()

@@ -2,14 +2,21 @@
 Example module showing how to extend PLua with custom functions using decorators.
 """
 
-import os
-import json
-import logging
 import importlib
 import importlib.util
+import json
+import logging
+import os
 import time
-from typing import Dict, Any
-from .lua_bindings import export_to_lua, python_to_lua_table, lua_to_python_table, get_exported_functions, get_global_engine
+from typing import Any
+
+from .lua_bindings import (
+    export_to_lua,
+    get_exported_functions,
+    get_global_engine,
+    lua_to_python_table,
+    python_to_lua_table,
+)
 
 # Import window manager for browser-based UI
 try:
@@ -39,7 +46,7 @@ except ImportError as e:
 
 
 @export_to_lua("loadPythonModule")
-def load_python_module(module_name: str) -> Dict[str, Any]:
+def load_python_module(module_name: str) -> dict[str, Any]:
     """
     Dynamically load a Python module and make its exported functions available to Lua.
 
@@ -144,12 +151,12 @@ def read_file(filename: str) -> str:
     """Read a file and return its contents with proper UTF-8 handling."""
     try:
         # Try reading with UTF-8 first (most common)
-        with open(filename, 'r', encoding='utf-8', errors='strict') as f:
+        with open(filename, encoding='utf-8', errors='strict') as f:
             return f.read()
     except UnicodeDecodeError:
         # If UTF-8 fails, try with error replacement to ensure valid UTF-8 output
         try:
-            with open(filename, 'r', encoding='utf-8', errors='replace') as f:
+            with open(filename, encoding='utf-8', errors='replace') as f:
                 content = f.read()
                 logging.warning(f"File {filename} contains invalid UTF-8, used replacement characters")
                 return content

@@ -6,15 +6,22 @@ It also provides HTTP server functionality for testing and development.
 For other network protocols, see separate modules: tcp.py, udp.py, websocket.py, mqtt.py
 """
 
-import logging
 import asyncio
 import json
-import requests  # For synchronous requests
-from typing import Any, Dict, Optional
-import aiohttp
-from aiohttp import web
+import logging
 import uuid
-from plua.lua_bindings import export_to_lua, get_global_engine, python_to_lua_table, lua_to_python_table
+from typing import Any
+
+import aiohttp
+import httpx  # For synchronous requests (replaces `requests`)
+from aiohttp import web
+
+from plua.lua_bindings import (
+    export_to_lua,
+    get_global_engine,
+    lua_to_python_table,
+    python_to_lua_table,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +60,7 @@ def call_http(url: str, options: Any, callback_id: int) -> None:
         asyncio.create_task(_perform_http_request(url, request_options, callback_id))
 
 
-async def _perform_http_request(url: str, options: Dict[str, Any], callback_id: int) -> None:
+async def _perform_http_request(url: str, options: dict[str, Any], callback_id: int) -> None:
     """
     Perform the actual HTTP request asynchronously.
     
@@ -96,7 +103,6 @@ async def _perform_http_request(url: str, options: Dict[str, Any], callback_id: 
         # SSL verification
         connector = None
         if not check_cert:
-            import ssl
             connector = aiohttp.TCPConnector(ssl=False)
 
         # Make the HTTP request
@@ -132,7 +138,7 @@ async def _perform_http_request(url: str, options: Dict[str, Any], callback_id: 
                 except Exception as e:
                     logger.error(f"Error calling HTTP callback {callback_id}: {e}")
                     
-    except asyncio.TimeoutError:
+    except TimeoutError:
         # logger.error(f"HTTP request timeout for {url}")
         error_message = f'Request to {url} timed out after {timeout} seconds'
         try:
@@ -172,21 +178,23 @@ def http_request_sync(options: Any) -> Any:
         data = py_options.get('data')
         timeout = py_options.get('timeout', 30)
 
-        # Always send str bodies as explicit UTF-8 bytes. If we left this as a str,
-        # `requests`/`http.client` would encode it with latin-1, which silently corrupts
-        # multi-byte UTF-8 (or raises UnicodeEncodeError for code points > 0xFF).
+        # Always send str bodies as explicit UTF-8 bytes so the byte width on the wire
+        # matches what the caller assembled. httpx's `content=` accepts bytes/str directly
+        # (str is encoded as utf-8); we encode explicitly to keep behaviour identical to
+        # the previous `requests`-based implementation and to avoid any future change in
+        # httpx's default body encoding.
         if isinstance(data, str):
             data = data.encode('utf-8')
 
-        # Make the synchronous request
-        response = requests.request(
+        # Make the synchronous request via httpx (replaces the legacy `requests` call).
+        response = httpx.request(
             method=method,
             url=url,
             headers=headers,
-            data=data,
-            timeout=timeout
+            content=data,
+            timeout=timeout,
         )
-        
+
         # Try to parse JSON response
         response_json = None
         try:
@@ -197,18 +205,18 @@ def http_request_sync(options: Any) -> Any:
         # Create result
         result = {
             'status': response.status_code,
-            'status_text': response.reason or '',
+            'status_text': response.reason_phrase or '',
             'headers': dict(response.headers),
             'text': response.text,
             'json': response_json,
-            'url': response.url,
+            'url': str(response.url),
             'ok': 200 <= response.status_code < 300
         }
         
         logger.debug(f"Sync HTTP request completed: {response.status_code} for {url}")
         return python_to_lua_table(result)
         
-    except requests.RequestException as e:
+    except httpx.RequestError as e:
         return python_to_lua_table({'error': str(e)})
     except Exception as e:
         return python_to_lua_table({'error': str(e)})
@@ -226,11 +234,11 @@ class HTTPServerHandler:
     
     def __init__(self, server_id: str):
         self.server_id = server_id
-        self.app = None
-        self.runner = None
-        self.site = None
-        self.callback_id = None
-        self.pending_responses = {}  # Store pending response objects by request_id
+        self.app: Any = None
+        self.runner: Any = None
+        self.site: Any = None
+        self.callback_id: Any = None
+        self.pending_responses: dict = {}  # Store pending response objects by request_id
         
     async def handle_request(self, request):
         """Handle incoming HTTP requests"""
@@ -283,7 +291,7 @@ class HTTPServerHandler:
                     status=response_data['status_code'],
                     headers=response_headers
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Clean up pending response
                 self.pending_responses.pop(request_id, None)
                 return web.Response(text='{"error": "Request timeout"}', 
@@ -294,7 +302,7 @@ class HTTPServerHandler:
             return web.Response(text=f'{{"error": "Internal server error: {e}"}}', 
                               status=500, content_type='application/json')
     
-    def respond_to_request(self, request_id: str, data: str, status_code: int, content_type: str, headers: Dict[str, str] = None):
+    def respond_to_request(self, request_id: str, data: str, status_code: int, content_type: str, headers: dict[str, str] = None):
         """Respond to a pending HTTP request"""
         future = self.pending_responses.pop(request_id, None)
         if future and not future.done():
@@ -425,7 +433,7 @@ def http_server_respond(*args) -> bool:
 
 
 @export_to_lua("http_server_stop")
-def http_server_stop(server_id: str, callback_id: Optional[int] = None) -> None:
+def http_server_stop(server_id: str, callback_id: int | None = None) -> None:
     """
     Stop an HTTP server.
     
@@ -450,7 +458,7 @@ def http_server_stop(server_id: str, callback_id: Optional[int] = None) -> None:
     asyncio.create_task(_stop_http_server(server_handler, callback_id))
 
 
-async def _stop_http_server(server_handler: HTTPServerHandler, callback_id: Optional[int] = None) -> None:
+async def _stop_http_server(server_handler: HTTPServerHandler, callback_id: int | None = None) -> None:
     """
     Actually stop the HTTP server asynchronously.
     
@@ -460,7 +468,7 @@ async def _stop_http_server(server_handler: HTTPServerHandler, callback_id: Opti
     """
     try:
         # Clean up any pending responses
-        for request_id, future in server_handler.pending_responses.items():
+        for _, future in server_handler.pending_responses.items():
             if not future.done():
                 future.set_result({
                     'data': '{"error": "Server shutting down"}',

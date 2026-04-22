@@ -11,7 +11,8 @@ import platform
 import queue
 import time
 import uuid
-from typing import Dict, Any, Optional, Union
+from collections.abc import Callable
+from typing import Any, Union
 
 # Platform-specific imports
 if platform.system() == "Windows":
@@ -27,6 +28,7 @@ if platform.system() == "Windows":
     try:
         # Import multiprocessing only if needed for configuration
         import multiprocessing
+
         # Try to use fork method if available, otherwise stick with spawn
         import sys
         if hasattr(sys, 'set_int_max_str_digits'):  # Python 3.11+
@@ -38,12 +40,12 @@ if platform.system() == "Windows":
     except RuntimeError:
         pass  # Method already set
 
+import uvicorn
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import uvicorn
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +61,7 @@ class LuaExecuteResponse(BaseModel):
     success: bool
     result: Any = None
     output: str = ""
-    error: Optional[str] = None
+    error: str | None = None
     execution_time_ms: float = 0.0
 
 
@@ -67,11 +69,11 @@ class IPCMessage(BaseModel):
     """Message format for IPC communication"""
     id: str
     type: str  # "execute", "fibaro_api", "response"
-    data: Dict[str, Any]
+    data: dict[str, Any]
     timestamp: float
 
 
-def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'], response_queue: Union[queue.Queue, 'multiprocessing.Queue'], broadcast_queue: Union[queue.Queue, 'multiprocessing.Queue'], config: Dict[str, Any]) -> FastAPI:
+def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'], response_queue: Union[queue.Queue, 'multiprocessing.Queue'], broadcast_queue: Union[queue.Queue, 'multiprocessing.Queue'], config: dict[str, Any]) -> FastAPI:
     """Create the FastAPI application with IPC communication"""
     
     app = FastAPI(
@@ -117,7 +119,7 @@ def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
     request_count = 0
     
     # Helper function to send IPC request and wait for response
-    async def send_ipc_request(message_type: str, data: Dict[str, Any], timeout: float = 30.0) -> Dict[str, Any]:
+    async def send_ipc_request(message_type: str, data: dict[str, Any], timeout: float = 30.0) -> dict[str, Any]:
         """Send an IPC request and wait for response"""
         nonlocal request_count
         request_count += 1
@@ -262,7 +264,7 @@ def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
             
             # Accept any 2xx status code as success (200, 201, 202, etc.)
             if not (200 <= status_code < 300):
-                error_msg = hook_result if isinstance(hook_result, str) else f"Fibaro API error"
+                error_msg = hook_result if isinstance(hook_result, str) else "Fibaro API error"
                 raise HTTPException(status_code=status_code, detail=error_msg)
                 
             return hook_result
@@ -476,7 +478,7 @@ def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
                 try:
                     await asyncio.wait_for(shutdown_event.wait(), timeout=0.01)
                     break  # Shutdown signal received
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass  # Continue processing
             
             logger.info("📥 Broadcast processor stopping...")
@@ -495,10 +497,10 @@ def create_fastapi_app(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
     return app
 
 
-def run_fastapi_server(request_queue: Union[queue.Queue, 'multiprocessing.Queue'], response_queue: Union[queue.Queue, 'multiprocessing.Queue'], broadcast_queue: Union[queue.Queue, 'multiprocessing.Queue'], config: Dict[str, Any]):
+def run_fastapi_server(request_queue: Union[queue.Queue, 'multiprocessing.Queue'], response_queue: Union[queue.Queue, 'multiprocessing.Queue'], broadcast_queue: Union[queue.Queue, 'multiprocessing.Queue'], config: dict[str, Any]):
     """Run the FastAPI server in a separate process"""
-    import sys
     import os
+    import sys
     
     # On Windows, suppress stderr to avoid multiprocessing spawn errors
     if platform.system() == "Windows":
@@ -550,7 +552,7 @@ def run_fastapi_server(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
 class FastAPIProcessManager:
     """Manages the FastAPI server process and IPC communication"""
     
-    def __init__(self, host: str = "0.0.0.0", port: int = 8080, config: Dict[str, Any] = None):
+    def __init__(self, host: str = "0.0.0.0", port: int = 8080, config: dict[str, Any] = None):
         self.host = host
         self.port = port
         self.config = config or {}
@@ -562,25 +564,25 @@ class FastAPIProcessManager:
         self.broadcast_queue = QueueType()  # Separate queue for WebSocket broadcasts
         
         # Process management
-        self.server_process: Optional[multiprocessing.Process] = None
+        self.server_process: multiprocessing.Process | None = None
         self.running = False
         
         # Callbacks
-        self.lua_executor: Optional[callable] = None
-        self.fibaro_callback: Optional[callable] = None
-        self.quickapp_callback: Optional[callable] = None
+        self.lua_executor: Callable[..., Any] | None = None
+        self.fibaro_callback: Callable[..., Any] | None = None
+        self.quickapp_callback: Callable[..., Any] | None = None
         
-    def set_lua_executor(self, executor: callable):
+    def set_lua_executor(self, executor: Callable[..., Any]):
         """Set the Lua code executor function"""
         self.lua_executor = executor
         logger.info("Lua executor set for FastAPI process")
         
-    def set_fibaro_callback(self, callback: callable):
+    def set_fibaro_callback(self, callback: Callable[..., Any]):
         """Set the Fibaro API callback function"""
         self.fibaro_callback = callback
         logger.info("Fibaro API callback set for FastAPI process")
         
-    def set_quickapp_callback(self, callback: callable):
+    def set_quickapp_callback(self, callback: Callable[..., Any]):
         """Set the QuickApp data callback function"""
         self.quickapp_callback = callback
         logger.info("QuickApp callback set for FastAPI process")
@@ -622,8 +624,8 @@ class FastAPIProcessManager:
         # Start the server process with Windows-specific handling
         if platform.system() == "Windows":
             # On Windows, use threading instead of multiprocessing to avoid spawn issues
-            import threading
             import asyncio
+            import threading
             
             def run_in_thread():
                 # Create new event loop for this thread
@@ -864,19 +866,19 @@ class FastAPIProcessManager:
             return self.running and hasattr(self, 'server_thread') and self.server_thread.is_alive()
         else:
             # Unix/Linux - check process
-            return self.running and self.server_process and self.server_process.is_alive()
+            return bool(self.running and self.server_process and self.server_process.is_alive())
 
 
 # Global process manager instance
-_process_manager: Optional[FastAPIProcessManager] = None
+_process_manager: FastAPIProcessManager | None = None
 
 
-def get_process_manager() -> Optional[FastAPIProcessManager]:
+def get_process_manager() -> FastAPIProcessManager | None:
     """Get the global process manager instance"""
     return _process_manager
 
 
-def start_fastapi_process(host: str = "0.0.0.0", port: int = 8080, config: Dict[str, Any] = None) -> FastAPIProcessManager:
+def start_fastapi_process(host: str = "0.0.0.0", port: int = 8080, config: dict[str, Any] = None) -> FastAPIProcessManager:
     """Start the global FastAPI server process"""
     global _process_manager
     

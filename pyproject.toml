@@ -9,18 +9,17 @@ description = "Python project using Lupa to run Lua scripts with async timer fun
 authors = [{name = "Jan Gabrielsson", email = "jan@gabrielsson.com"}]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
-    "lupa>=2.2",  # 2.2+ required for Python 3.12 compatibility (GC/immortal object fixes)
-    "aiohttp>=3.8.0",
-    "aiomqtt>=2.0.0",  # MQTT client support
-    "fastapi>=0.100.0",
-    "uvicorn[standard]>=0.23.0",  # Include WebSocket support
-    "websockets>=11.0",  # WebSocket library for uvicorn
-    "httpx>=0.24.0",  # For FastAPI testing
-    "requests>=2.28.0",
-    "prompt_toolkit>=3.0.0",  # Enhanced REPL with history and completion
-    "rich>=13.0.0",  # Rich text and beautiful formatting for terminal output
+    "lupa>=2.4",            # 2.4+ for Python 3.13 wheels and CPython GC fixes
+    "aiohttp>=3.10.0",      # 3.10 dropped Python 3.8 and tightened cancellation handling
+    "aiomqtt>=2.3.0",       # MQTT client (asyncio-mqtt successor)
+    "fastapi>=0.115.0",     # current lifespan API; pre-0.110 lifespan is deprecated
+    "uvicorn[standard]>=0.30.0",  # Include WebSocket support
+    "websockets>=13.0",     # 13.x has the new asyncio module; 11.x is legacy
+    "httpx>=0.27.0",        # sync + async HTTP client (replaces `requests`)
+    "prompt_toolkit>=3.0.47",  # Enhanced REPL with history and completion
+    "rich>=13.7.0",         # Rich text and beautiful formatting for terminal output
 ]
 
 [project.urls]
@@ -35,10 +34,10 @@ plua = "plua.cli:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=22.0",
-    "flake8>=5.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.6.0",          # replaces black + flake8
+    "pyright>=1.1.380",     # static type checking baseline
 ]
 build = [
     "nuitka>=2.0.0",
@@ -56,9 +55,36 @@ include = ["plua*", "pylib*", "lua*"]
 plua = ["static/*"]
 lua = ["**/*"]
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py38']
+target-version = "py311"
+
+[tool.ruff.lint]
+# Conservative starter set; broaden later. E/F = pycodestyle+pyflakes (flake8 core),
+# I = import order (isort), UP = pyupgrade hints, B = common bugs.
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "E501",  # line length handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", "src/lua", "src/plua/static"]
+pythonVersion = "3.11"
+# Start permissive; tighten in follow-up PRs as modules are typed.
+typeCheckingMode = "basic"
+reportMissingImports = "warning"
+reportMissingTypeStubs = false
+# Lupa LuaTable proxies and other dynamic-attribute helpers (e.g. aiohttp
+# request handler app/runner/site assignment) cannot be statically modelled,
+# so attribute-access errors here are noise rather than real bugs.
+reportAttributeAccessIssue = "none"
+# Generated FastAPI endpoint code calls .dict() on Pydantic models that pyright
+# sees as plain Dict[str, Any]; the runtime hasattr() guard makes it safe.
+reportArgumentType = "warning"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -25,12 +25,13 @@ fibaro_api_hook function for implementation.
 Important: Keep this file in src/plua/ - it's critical for maintaining the API!
 """
 
-import json
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Set
 import argparse
+import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
 
 @dataclass
 class SchemaReference:
@@ -44,19 +45,19 @@ class SchemaReference:
 
 class TypedAPIGenerator:
     def __init__(self):
-        self.all_schemas: Dict[str, Dict[str, Any]] = {}
-        self.generated_models: Set[str] = set()
+        self.all_schemas: dict[str, dict[str, Any]] = {}
+        self.generated_models: set[str] = set()
         
-    def load_swagger_file(self, filepath: Path) -> Optional[Dict[str, Any]]:
+    def load_swagger_file(self, filepath: Path) -> dict[str, Any] | None:
         """Load and parse a Swagger/OpenAPI JSON file."""
         try:
-            with open(filepath, 'r') as f:
+            with open(filepath) as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading {filepath}: {e}")
             return None
 
-    def python_type_from_schema(self, schema: Dict[str, Any], required: bool = True) -> str:
+    def python_type_from_schema(self, schema: dict[str, Any], required: bool = True) -> str:
         """Convert JSON schema to Python type annotation."""
         if '$ref' in schema:
             # Reference to another schema
@@ -93,7 +94,7 @@ class TypedAPIGenerator:
         else:
             return 'Any' if required else 'Optional[Any]'
 
-    def generate_pydantic_model(self, model_name: str, schema: Dict[str, Any]) -> str:
+    def generate_pydantic_model(self, model_name: str, schema: dict[str, Any]) -> str:
         """Generate a Pydantic model from a JSON schema."""
         if model_name in self.generated_models:
             return ""
@@ -184,7 +185,7 @@ class TypedAPIGenerator:
             cleaned = 'api_' + cleaned
         return cleaned
 
-    def extract_endpoints_from_swagger(self, swagger_data: Dict[str, Any], file_name: str) -> List[Dict[str, Any]]:
+    def extract_endpoints_from_swagger(self, swagger_data: dict[str, Any], file_name: str) -> list[dict[str, Any]]:
         """Extract endpoint definitions from Swagger data."""
         endpoints = []
         
@@ -227,7 +228,7 @@ class TypedAPIGenerator:
         
         return endpoints
 
-    def generate_typed_endpoint(self, endpoint: Dict[str, Any]) -> str:
+    def generate_typed_endpoint(self, endpoint: dict[str, Any]) -> str:
         """Generate a fully typed FastAPI endpoint."""
         method = endpoint['method'].lower()
         path = endpoint['path']
@@ -556,7 +557,7 @@ def main():
     generator = TypedAPIGenerator()
     total_endpoints = generator.generate_complete_api_module(docs_dir, output_dir)
     
-    print(f"\nSuccessfully generated:")
+    print("\nSuccessfully generated:")
     print(f"  - {output_dir}/fibaro_api_models.py with {len(generator.all_schemas)} models")
     print(f"  - {output_dir}/fibaro_api_endpoints.py with {total_endpoints} endpoints")
     return 0

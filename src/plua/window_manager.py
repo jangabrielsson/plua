@@ -5,15 +5,15 @@ This module provides window management functionality specifically designed
 for the PLua UI system. It replaces the previous Tkinter-based UI with browser windows
 """
 
-import platform
-import logging
-import time
-import os
 import json
-import webbrowser
+import logging
+import os
+import platform
 import subprocess
-from typing import Dict, Optional, Any
+import time
+import webbrowser
 from datetime import datetime, timedelta
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class WindowManager:
     """Manages external browser windows for PLua UI."""
     
     def __init__(self):
-        self.windows: Dict[str, BrowserWindow] = {}
+        self.windows: dict[str, BrowserWindow] = {}
         self.system = platform.system().lower()
         
         # Use ~/.plua/ directory for state file
@@ -57,7 +57,7 @@ class WindowManager:
         """Load window state from persistent storage and clean up stale entries"""
         try:
             if os.path.exists(self.state_file):
-                with open(self.state_file, 'r') as f:
+                with open(self.state_file) as f:
                     state = json.load(f)
                 
                 # Clean up entries older than 10 minutes
@@ -237,7 +237,7 @@ class WindowManager:
             logger.error(f"Error creating window {window_id}: {e}")
             return False
     
-    def _find_window_by_url(self, url: str) -> Optional[BrowserWindow]:
+    def _find_window_by_url(self, url: str) -> BrowserWindow | None:
         """
         Find an existing window that displays the same URL.
         
@@ -365,7 +365,7 @@ class WindowManager:
             logger.error(f"Error updating window {window_id} URL: {e}")
             return False
             
-    def get_window_info(self, window_id: str) -> Optional[Dict[str, Any]]:
+    def get_window_info(self, window_id: str) -> dict[str, Any] | None:
         """
         Get information about a window.
         
@@ -475,14 +475,18 @@ class WindowManager:
             logger.error(f"Error injecting CSS into window {window_id}: {e}")
             return False
         
-    def list_windows(self) -> Dict[str, Dict[str, Any]]:
+    def list_windows(self) -> dict[str, dict[str, Any]]:
         """
         List all managed windows.
         
         Returns:
             Dictionary mapping window IDs to window information
         """
-        return {wid: self.get_window_info(wid) for wid in self.windows.keys()}
+        return {
+            wid: info
+            for wid in self.windows.keys()
+            if (info := self.get_window_info(wid)) is not None
+        }
         
     def close_all_windows(self):
         """Close all managed windows."""
@@ -533,7 +537,6 @@ class WindowManager:
             True if browser was launched successfully, False otherwise
         """
         import subprocess
-        import urllib.parse
         
         try:
             # Extract QA ID from URL for matching
@@ -734,7 +737,7 @@ def set_window_url(window_id: str, url: str) -> bool:
     return get_window_manager().set_window_url(window_id, url)
 
 
-def get_window_info(window_id: str) -> Optional[Dict[str, Any]]:
+def get_window_info(window_id: str) -> dict[str, Any] | None:
     """
     Get information about a window (Lua callable).
     
@@ -747,7 +750,7 @@ def get_window_info(window_id: str) -> Optional[Dict[str, Any]]:
     return get_window_manager().get_window_info(window_id)
 
 
-def list_windows() -> Dict[str, Dict[str, Any]]:
+def list_windows() -> dict[str, dict[str, Any]]:
     """
     List all managed windows (Lua callable).
     

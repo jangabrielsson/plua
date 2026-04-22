@@ -5,19 +5,19 @@ This module provides TCP socket capabilities that can be called from Lua scripts
 Supports async TCP client connections, TCP servers, and connection management.
 """
 
-import logging
 import asyncio
-from typing import Dict, Tuple, Optional
+import logging
+
 from plua.lua_bindings import export_to_lua, get_global_engine, python_to_lua_table
 
 logger = logging.getLogger(__name__)
 
 # Connection management
-_tcp_connections: Dict[int, Tuple[asyncio.StreamReader, asyncio.StreamWriter]] = {}
+_tcp_connections: dict[int, tuple[asyncio.StreamReader, asyncio.StreamWriter]] = {}
 _tcp_connection_counter = 0
 
 # Server management  
-_tcp_servers: Dict[int, asyncio.Server] = {}
+_tcp_servers: dict[int, asyncio.Server] = {}
 _tcp_server_counter = 0
 
 

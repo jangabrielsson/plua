@@ -6,17 +6,18 @@ specifically for timer operations and other engine features.
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional
 import os
+import platform
 import socket
 import subprocess
-import platform
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # Registry for decorated functions
-_exported_functions: Dict[str, Callable] = {}
+_exported_functions: dict[str, Callable] = {}
 
 # Global engine instance reference
 _global_engine = None
@@ -118,7 +119,7 @@ def lua_to_python_table(lua_table: Any) -> Any:
         return lua_table
 
 
-def export_to_lua(name: Optional[str] = None):
+def export_to_lua(name: str | None = None):
     """
     Decorator to automatically export Python functions to the _PY table.
     
@@ -146,7 +147,7 @@ def export_to_lua(name: Optional[str] = None):
     return decorator
 
 
-def get_exported_functions() -> Dict[str, Callable]:
+def get_exported_functions() -> dict[str, Callable]:
     """Get all functions marked for export to Lua."""
     return _exported_functions.copy()
 
@@ -169,6 +170,13 @@ class LuaBindings:
         """
         self.timer_manager = timer_manager
         self.engine = engine_instance
+        # REPL state (populated lazily by REPL setup paths below)
+        self.repl_running: bool = False
+        self.repl_task: Any = None
+        # Telnet server state (populated lazily by telnet setup paths below)
+        self.telnet_clients: list = []
+        self.telnet_server_running: bool = False
+        self.telnet_server_task: Any = None
         self._setup_exported_functions()
         
     def _setup_exported_functions(self):
@@ -278,7 +286,6 @@ class LuaBindings:
         @export_to_lua("os.exit")
         def os_exit(code: int = 0) -> None:
             """Exit the PLua process with the specified exit code"""
-            import os
             import sys
             
             # Simple approach: just exit and let the system handle cleanup
@@ -301,8 +308,8 @@ class LuaBindings:
         @export_to_lua("get_system_info")
         def get_system_info() -> Any:
             """Get comprehensive system information as Lua table."""
-            import platform
             import os
+            import platform
             import time
             
             info = {
@@ -340,7 +347,8 @@ class LuaBindings:
         @export_to_lua("utime")
         def utime(file: str, creation: int, mod: int) -> float:
             """Update the access and modification times of a file."""
-            return os.utime(file, (creation, mod))
+            os.utime(file, (creation, mod))
+            return 0.0
 
         @export_to_lua("random_number")
         def random_number(min_val: float = 0, max_val: float = 1) -> float:
@@ -414,7 +422,7 @@ class LuaBindings:
             """
             Read data from a file.
             """
-            with open(filename, 'r') as f:
+            with open(filename) as f:
                 return f.read()
         
         @export_to_lua("base64_encode")
@@ -482,8 +490,8 @@ class LuaBindings:
             # Read .env files in order (cwd first, then home)
             for env_file in env_files:
                 try:
-                    with open(env_file, 'r', encoding='utf-8') as f:
-                        for line_num, line in enumerate(f, 1):
+                    with open(env_file, encoding='utf-8') as f:
+                        for _, line in enumerate(f, 1):
                             line = line.strip()
                             
                             # Skip empty lines and comments
@@ -515,7 +523,6 @@ class LuaBindings:
         def start_repl():
             """Start async REPL that reads from stdin and writes to stdout"""
             import asyncio
-            import sys
             
             # Check if REPL is already running
             if hasattr(self, 'repl_running') and self.repl_running:
@@ -531,8 +538,8 @@ class LuaBindings:
                     # Try to import prompt_toolkit for enhanced REPL
                     try:
                         from prompt_toolkit import PromptSession
-                        from prompt_toolkit.shortcuts import print_formatted_text
                         from prompt_toolkit.formatted_text import HTML
+                        from prompt_toolkit.shortcuts import print_formatted_text
                         has_prompt_toolkit = True
                     except ImportError:
                         has_prompt_toolkit = False
@@ -688,7 +695,7 @@ class LuaBindings:
                             
                             # Handle exit commands
                             if command.lower() in ['exit', 'quit']:
-                                writer.write("👋 Goodbye!\n".encode('utf-8'))
+                                writer.write("👋 Goodbye!\n".encode())
                                 await writer.drain()
                                 # Exit the entire PLua process
                                 import os
@@ -705,7 +712,7 @@ class LuaBindings:
                                     # Fallback: execute directly in Lua
                                     result = self.engine._lua.execute(command)
                                     if result is not None:
-                                        writer.write(f"{result}\n".encode('utf-8'))
+                                        writer.write(f"{result}\n".encode())
                                         await writer.drain()
                             except Exception as e:
                                 # Fallback error handling
@@ -811,7 +818,7 @@ class LuaBindings:
                                 if message.endswith('\n'):
                                     writer.write(message.encode('utf-8'))
                                 else:
-                                    writer.write(f"{message}\n".encode('utf-8'))
+                                    writer.write(f"{message}\n".encode())
                                 # Schedule the drain operation
                                 loop = asyncio.get_event_loop()
                                 loop.create_task(writer.drain())
@@ -845,7 +852,7 @@ class LuaBindings:
                             if message.endswith('\n'):
                                 writer.write(message.encode('utf-8'))
                             else:
-                                writer.write(f"{message}\n".encode('utf-8'))
+                                writer.write(f"{message}\n".encode())
                             # Schedule the drain operation
                             loop = asyncio.get_event_loop()
                             loop.create_task(writer.drain())
@@ -896,8 +903,8 @@ class LuaBindings:
             """Start polling refresh states in a background thread (HC3 compatible)"""
             import threading
             import time
-            import requests
-            import sys
+
+            import httpx
             # Stop existing thread if running
             if self._refresh_running and self._refresh_thread:
                 self._refresh_running = False
@@ -913,25 +920,25 @@ class LuaBindings:
                 while self._refresh_running:
                     try:
                         nurl = url + str(last) + "&lang=en&rand=7784634785"
-                        resp = requests.get(nurl, headers=options_dict.get('headers', {}), timeout=30)
+                        resp = httpx.get(nurl, headers=options_dict.get('headers', {}), timeout=30)
                         if resp.status_code == 200:
                             retries = 0
                             data = resp.json()
                             last = data.get('last', last)
-                            
+
                             if data.get('events'):
                                 for event in data['events']:
                                     # Use addEvent function directly with dict for efficiency
                                     addEvent(event)
-                        
+
                         elif resp.status_code == 401:
                             logger.error("HC3 credentials error")
                             logger.error("Exiting refreshStates loop")
                             break
-                    
-                    except requests.exceptions.Timeout:
+
+                    except httpx.TimeoutException:
                         pass
-                    except requests.exceptions.ConnectionError:
+                    except httpx.ConnectError:
                         retries += 1
                         if retries > 5:
                             logger.error(f"Connection error: {nurl}")
@@ -966,7 +973,7 @@ class LuaBindings:
                 try:
                     event_json = event if isinstance(event, str) else json.dumps(event)
                     self.engine.post_lua_call('newRefreshStatesEvent', event_json)
-                except Exception as e:
+                except Exception:
                     # Silently ignore errors in event hook - don't break the queue
                     pass
                 
@@ -1038,10 +1045,10 @@ class LuaBindings:
                     }
                 return {'running': False}
             except Exception as e:
-                logger.error(f"Error getting refresh states status: {e}", file=sys.stderr)
+                logger.error(f"Error getting refresh states status: {e}")
                 return {'running': False, 'error': str(e)}
 
-    def get_all_bindings(self) -> Dict[str, Any]:
+    def get_all_bindings(self) -> dict[str, Any]:
         """
         Get all available bindings for Lua.
         

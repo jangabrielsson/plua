@@ -45,6 +45,8 @@ async def handle_request(request: Request, method: str, body_data: Any = None):
 
     try:
         logger.debug(f"Calling fibaroApiHook with method={method}, path={full_path}, data={data}")
+        if interpreter is None:
+            return {"error": "Interpreter not initialized"}
         result = interpreter.lua.globals()._PY.fibaroApiHook(method, full_path, data)
         logger.debug(f"fibaroApiHook returned: {result}")
         return result
@@ -2574,7 +2576,7 @@ def create_fibaro_api_routes(app: FastAPI):
         return await handle_request(request, "GET", None)
 
     @app.get("/api/settings/info", tags=["info settings"])
-    async def getSettings(request: Request):
+    async def getInfoSettings(request: Request):
         """
         Get current info settings
 

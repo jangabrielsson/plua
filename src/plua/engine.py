@@ -7,19 +7,19 @@ execution with Python's async timer functionality.
 
 import asyncio
 import logging
-import uuid
-import time
 import queue
-
 import sys
+import time
+import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
+
 import lupa
 
-from .timers import AsyncTimerManager
-from .lua_bindings import LuaBindings, set_global_engine
 # Import extensions to register decorated functions
 from . import extensions  # noqa: F401,F811
+from .lua_bindings import LuaBindings, set_global_engine
+from .timers import AsyncTimerManager
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class LuaEngine:
     interact with Python's async timer system and other Python functionality.
     """
 
-    def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, loop: asyncio.AbstractEventLoop | None = None, config: dict[str, Any] | None = None):
         """
         Initialize the Lua engine.
 
@@ -62,12 +62,12 @@ class LuaEngine:
         # This ensures Lua strings with UTF-8 characters are properly handled
         self._lua = lupa.LuaRuntime(
             unpack_returned_tuples=True,
-            encoding='UTF-8'  # Explicitly set UTF-8 encoding
+            encoding='UTF-8'  # pyright: ignore[reportCallIssue]
         )
         self._timer_manager = AsyncTimerManager()
         self._bindings = LuaBindings(self._timer_manager, self)
         self._running = False
-        self._scripts: Dict[str, str] = {}  # Store loaded scripts
+        self._scripts: dict[str, str] = {}  # Store loaded scripts
 
         # Thread-safe queue for cross-thread callback communication
         self._callback_queue = queue.Queue()
@@ -258,7 +258,7 @@ class LuaEngine:
             except asyncio.CancelledError:
                 pass
 
-    def execute_lua(self, lua_code: str, script_name: Optional[str] = None) -> Any:
+    def execute_lua(self, lua_code: str, script_name: str | None = None) -> Any:
         """
         Execute Lua code synchronously.
 
@@ -288,7 +288,7 @@ class LuaEngine:
             logger.error(f"Unexpected error in Lua execution: {e}")
             raise
 
-    async def run_script(self, lua_code: str, script_name: Optional[str] = None) -> Any:
+    async def run_script(self, lua_code: str, script_name: str | None = None) -> Any:
         """
         Run Lua code asynchronously.
 
@@ -316,7 +316,7 @@ class LuaEngine:
             logger.error(f"Error in run_script: {e}")
             raise
 
-    async def load_and_run_file(self, file_path: Union[str, Path]) -> Any:
+    async def load_and_run_file(self, file_path: str | Path) -> Any:
         """
         Load and run a Lua script from a file.
 
@@ -502,7 +502,7 @@ class LuaEngine:
         """Check if the engine is running."""
         return self._running
 
-    def get_loaded_scripts(self) -> Dict[str, str]:
+    def get_loaded_scripts(self) -> dict[str, str]:
         """Get a dictionary of loaded scripts."""
         return self._scripts.copy()
 

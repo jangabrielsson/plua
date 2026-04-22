@@ -11,31 +11,31 @@ functions that can be called from Lua scripts.
 # This registers their @export_to_lua decorated functions
 
 try:
-    from . import filesystem
+    from . import filesystem  # noqa: F401
 except ImportError:
     pass
 
 try:
-    from . import http_client
+    from . import http_client  # noqa: F401
 except ImportError:
     pass
 
 try:
-    from . import tcp_client
+    from . import tcp_client  # noqa: F401
 except ImportError:
     pass
 
 try:
-    from . import udp_client
+    from . import udp_client  # noqa: F401
 except ImportError:
     pass
 
 try:
-    from . import websocket_client
+    from . import websocket_client  # noqa: F401
 except ImportError:
     pass
 
 try:
-    from . import mqtt_client
+    from . import mqtt_client  # noqa: F401
 except ImportError:
     pass

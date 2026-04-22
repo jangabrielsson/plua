@@ -4,20 +4,27 @@ Provides async MQTT operations using aiomqtt
 """
 
 import asyncio
-import uuid
-import ssl
-from typing import Dict, Any, Optional
-from plua.lua_bindings import export_to_lua, get_global_engine, python_to_lua_table, lua_to_python_table
 import logging
+import ssl
+import uuid
+from typing import Any
+
+from plua.lua_bindings import (
+    export_to_lua,
+    get_global_engine,
+    lua_to_python_table,
+    python_to_lua_table,
+)
 
 logger = logging.getLogger(__name__)
 
 # Global storage for MQTT clients
-_mqtt_clients: Dict[str, Dict[str, Any]] = {}
+_mqtt_clients: dict[str, dict[str, Any]] = {}
 _mqtt_counter = 0
 
 try:
-    from aiomqtt import Client as AioMQTTClient, MqttError
+    from aiomqtt import Client as AioMQTTClient
+    from aiomqtt import MqttError
     AIOMQTT_AVAILABLE = True
 except ImportError:
     logger.warning("aiomqtt not available. MQTT functionality will be limited.")
@@ -31,7 +38,7 @@ def _generate_client_id() -> str:
     _mqtt_counter += 1
     return f"eplua_mqtt_{_mqtt_counter}"
 
-def _parse_uri(uri: str, options: Dict = None) -> Dict[str, Any]:
+def _parse_uri(uri: str, options: dict = None) -> dict[str, Any]:
     """Parse MQTT URI and extract connection details"""
     # Convert Lua table to Python dict if needed
     if options is not None:
@@ -92,7 +99,7 @@ def _parse_uri(uri: str, options: Dict = None) -> Dict[str, Any]:
     }
 
 @export_to_lua("mqtt_client_connect")
-def mqtt_client_connect(uri: str, options: Optional[Dict] = None, callback_id: Optional[str] = None) -> str:
+def mqtt_client_connect(uri: str, options: dict | None = None, callback_id: str | None = None) -> str:
     """
     Connect to MQTT broker
     
@@ -165,7 +172,11 @@ async def _mqtt_connect_and_listen(client_id: str):
     """Connect to MQTT broker and listen for messages"""
     if client_id not in _mqtt_clients:
         return
-        
+
+    if AioMQTTClient is None:
+        logger.error("aiomqtt not installed; cannot connect")
+        return
+
     client_info = _mqtt_clients[client_id]
     conn_params = client_info['connection_params']
     callback_id = client_info['main_callback_id']
@@ -208,7 +219,7 @@ async def _mqtt_connect_and_listen(client_id: str):
                         'event': 'connected',
                         'client_id': client_id,
                         'success': True,
-                        'sessionPresent': conn_params['clean_session'] == False,
+                        'sessionPresent': not conn_params['clean_session'],
                         'returnCode': 0  # 0 = success
                     })
             
@@ -220,7 +231,7 @@ async def _mqtt_connect_and_listen(client_id: str):
                     engine.post_callback_from_thread(event_callback_id, {
                         'event': 'connected',
                         'client_id': client_id,
-                        'sessionPresent': conn_params['clean_session'] == False,
+                        'sessionPresent': not conn_params['clean_session'],
                         'returnCode': 0  # 0 = success
                     })
             
@@ -229,7 +240,16 @@ async def _mqtt_connect_and_listen(client_id: str):
                 # Generate a packet ID (simplified)
                 import random
                 packet_id = random.randint(1, 65535)
-                
+
+                # Normalize payload to text for Lua callbacks
+                raw_payload = message.payload
+                if isinstance(raw_payload, (bytes, bytearray)):
+                    payload_text = bytes(raw_payload).decode('utf-8', errors='replace')
+                elif raw_payload is None:
+                    payload_text = ''
+                else:
+                    payload_text = str(raw_payload)
+
                 # Send to main callback if exists
                 if callback_id:
                     engine = get_global_engine()
@@ -238,7 +258,7 @@ async def _mqtt_connect_and_listen(client_id: str):
                             'event': 'message',
                             'client_id': client_id,
                             'topic': str(message.topic),
-                            'payload': message.payload.decode('utf-8', errors='replace'),
+                            'payload': payload_text,
                             'qos': message.qos,
                             'retain': message.retain,
                             'packetId': packet_id,
@@ -254,7 +274,7 @@ async def _mqtt_connect_and_listen(client_id: str):
                             'event': 'message',
                             'client_id': client_id,
                             'topic': str(message.topic),
-                            'payload': message.payload.decode('utf-8', errors='replace'),
+                            'payload': payload_text,
                             'qos': message.qos,
                             'retain': message.retain,
                             'packetId': packet_id,
@@ -320,7 +340,7 @@ async def _mqtt_connect_and_listen(client_id: str):
                 })
 
 @export_to_lua("mqtt_client_disconnect")
-def mqtt_client_disconnect(client_id: str, callback_id: Optional[str] = None) -> None:
+def mqtt_client_disconnect(client_id: str, callback_id: str | None = None) -> None:
     """
     Disconnect MQTT client
     
@@ -368,7 +388,7 @@ def mqtt_client_disconnect(client_id: str, callback_id: Optional[str] = None) ->
             })
 
 @export_to_lua("mqtt_client_publish")
-def mqtt_client_publish(client_id: str, topic: str, payload: str, options: Optional[Dict] = None, callback_id: Optional[str] = None) -> None:
+def mqtt_client_publish(client_id: str, topic: str, payload: str, options: dict | None = None, callback_id: str | None = None) -> None:
     """
     Publish MQTT message
     
@@ -421,7 +441,7 @@ def mqtt_client_publish(client_id: str, topic: str, payload: str, options: Optio
                     'error': f'Failed to create task: {e}'
                 })
 
-async def _mqtt_publish(client_id: str, topic: str, payload: str, qos: int, retain: bool, callback_id: Optional[str]):
+async def _mqtt_publish(client_id: str, topic: str, payload: str, qos: int, retain: bool, callback_id: str | None):
     """Async MQTT publish"""
     if client_id not in _mqtt_clients:
         return
@@ -467,7 +487,7 @@ async def _mqtt_publish(client_id: str, topic: str, payload: str, qos: int, reta
                 })
 
 @export_to_lua("mqtt_client_subscribe")
-def mqtt_client_subscribe(client_id: str, topic: str, options: Optional[Dict] = None, callback_id: Optional[str] = None) -> None:
+def mqtt_client_subscribe(client_id: str, topic: str, options: dict | None = None, callback_id: str | None = None) -> None:
     """
     Subscribe to MQTT topic
     
@@ -518,7 +538,7 @@ def mqtt_client_subscribe(client_id: str, topic: str, options: Optional[Dict] = 
                     'error': f'Failed to create task: {e}'
                 })
 
-async def _mqtt_subscribe(client_id: str, topic: str, qos: int, callback_id: Optional[str]):
+async def _mqtt_subscribe(client_id: str, topic: str, qos: int, callback_id: str | None):
     """Async MQTT subscribe"""
     if client_id not in _mqtt_clients:
         return
@@ -565,7 +585,7 @@ async def _mqtt_subscribe(client_id: str, topic: str, qos: int, callback_id: Opt
                 })
 
 @export_to_lua("mqtt_client_unsubscribe")
-def mqtt_client_unsubscribe(client_id: str, topic: str, callback_id: Optional[str] = None) -> None:
+def mqtt_client_unsubscribe(client_id: str, topic: str, callback_id: str | None = None) -> None:
     """
     Unsubscribe from MQTT topic
     
@@ -608,7 +628,7 @@ def mqtt_client_unsubscribe(client_id: str, topic: str, callback_id: Optional[st
                     'error': f'Failed to create task: {e}'
                 })
 
-async def _mqtt_unsubscribe(client_id: str, topic: str, callback_id: Optional[str]):
+async def _mqtt_unsubscribe(client_id: str, topic: str, callback_id: str | None):
     """Async MQTT unsubscribe"""
     if client_id not in _mqtt_clients:
         return
@@ -655,7 +675,7 @@ def mqtt_client_is_connected(client_id: str) -> bool:
     return _mqtt_clients[client_id]['connected']
 
 @export_to_lua("mqtt_client_get_info")
-def mqtt_client_get_info(client_id: str) -> Optional[Dict]:
+def mqtt_client_get_info(client_id: str) -> dict | None:
     """
     Get MQTT client information
     

@@ -1,16 +1,17 @@
 #!/usr/binimport asyncio
-import atexit
-import sys
 import argparse
+import asyncio
+import atexit
 import io
+import logging
 import os
 import platform
-import subprocess
-import logging
-import time 
 import socket
+import subprocess
+import sys
+import time
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
 
 # Handle tomllib import for different Python versions
 try:
@@ -19,7 +20,7 @@ except ImportError:
     try:
         import tomli as tomllib  # pyright: ignore[reportMissingImports] # Fallback for older Python versions
     except ImportError:
-        tomllib = Nonen3 # pyright: ignore[reportUndefinedVariable]
+        tomllib = None  # pyright: ignore[reportUndefinedVariable]
 """
 PLua CLI - Python Lua Engine with Web UI
 
@@ -28,17 +29,6 @@ Simplified single-threaded architecture for running Lua scripts.
 - Interactive REPL mode with command history
 - Focused on web UI without tkinter complexity
 """
-
-import asyncio
-import sys
-import argparse
-import io
-import os
-import subprocess
-import logging
-import tomllib
-from pathlib import Path
-from typing import Optional, Dict, Any
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -112,7 +102,7 @@ def get_version():
             pyproject_path = current_dir.parent.parent / "pyproject.toml"
             
             if pyproject_path.exists():
-                with open(pyproject_path, "r", encoding="utf-8") as f:
+                with open(pyproject_path, encoding="utf-8") as f:
                     for line in f:
                         if line.strip().startswith("version ="):
                             # Extract version from line like: version = "0.1.0"
@@ -134,19 +124,21 @@ def get_version():
         return "unknown"
 
 
-def display_startup_greeting(config: Dict[str, Any]):
+def display_startup_greeting(config: dict[str, Any]):
     """Display a proper startup greeting with version information"""
     import sys
-    from .console import console
+
     from rich.panel import Panel
     from rich.text import Text
+
+    from .console import console
     
     try:
         import lupa
-        lua_runtime = lupa.LuaRuntime()
-        lua_version = lua_runtime.execute("return _VERSION")
-        if lua_version:
-            lua_version = lua_version.replace("Lua ", "")
+        lua_runtime = lupa.LuaRuntime(unpack_returned_tuples=True)
+        lua_version_raw = lua_runtime.execute("return _VERSION")
+        if lua_version_raw:
+            lua_version = str(lua_version_raw).replace("Lua ", "")
         else:
             lua_version = "Unknown"
     except Exception:
@@ -233,7 +225,7 @@ def get_config():
 def run_engine(
     script_paths: list = None,
     fragments: list = None,
-    config: Dict[str, Any] = None,
+    config: dict[str, Any] = None,
     interactive: bool = False,
     telnet_mode: bool = False,
 ):
@@ -417,14 +409,12 @@ def run_engine(
                                 logger.debug(f"Fibaro callback: {method} {path}")
                                 
                                 # Parse JSON data if provided
-                                data_obj = None
                                 if data:
                                     try:
                                         import json
-                                        data_obj = json.loads(data)
+                                        json.loads(data)
                                     except json.JSONDecodeError:
                                         logger.warning(f"Invalid JSON data: {data}")
-                                        data_obj = None
                                 
                                 # Use the existing thread-safe IPC mechanism correctly
                                 try:
@@ -632,7 +622,7 @@ def run_engine(
         logger.error(f"Unexpected error: {e}")
 
 
-def run_telnet_server(config: Dict[str, Any]):
+def run_telnet_server(config: dict[str, Any]):
     """Start telnet server mode using the main engine architecture"""
     # Use the main engine architecture but start telnet server
     logger.info("Starting PLua with telnet server mode")
@@ -686,14 +676,9 @@ def main():
     # which are required by aiomqtt (paho-mqtt). Switch to SelectorEventLoop.
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    # Suppress multiprocessing resource tracker warnings (only if warnings module is available)
+    # Suppress multiprocessing resource tracker warnings
     import os
-    try:
-        import warnings
-        os.environ["PYTHONWARNINGS"] = "ignore::UserWarning:multiprocessing.resource_tracker"
-    except ImportError:
-        # warnings module not available (e.g., in Nuitka build), skip warning suppression
-        pass
+    os.environ["PYTHONWARNINGS"] = "ignore::UserWarning:multiprocessing.resource_tracker"
     
     # Ensure ~/.plua directory exists early
     ensure_plua_directory()
@@ -879,7 +864,7 @@ def main():
     if not args.nogreet:
         display_startup_greeting(config)
 
-    implicit_interactive = args.scripts == [] and args.telnet == False and args.eval is None
+    implicit_interactive = args.scripts == [] and not args.telnet and args.eval is None
     if args.interactive or implicit_interactive:
         # Interactive mode with main engine
         logger.info("Starting PLua with interactive mode")

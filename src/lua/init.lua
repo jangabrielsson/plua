@@ -108,8 +108,10 @@ io.open = utf8_io_open
 local original_error = error
 local function safe_error(message, level)
   if type(message) == "string" then
+    local replaced = 0
+    local first_bad -- {pos, byte} of the first offending lead byte
     -- Sanitize UTF-8: replace invalid sequences with '?'
-    local sanitized = message:gsub("[\192-\255][\128-\191]*", function(seq)
+    local sanitized = message:gsub("()([\192-\255][\128-\191]*)", function(pos, seq)
       -- Check if it's a valid UTF-8 sequence
       local b1 = string.byte(seq, 1)
       if b1 >= 192 and b1 <= 223 then
@@ -132,8 +134,23 @@ local function safe_error(message, level)
         end
       end
       -- Invalid sequence, replace with '?'
+      replaced = replaced + 1
+      if not first_bad then first_bad = {pos = pos, byte = b1, len = #seq} end
       return "?"
     end)
+    if replaced > 0 then
+      -- Surface this to the developer: an invalid UTF-8 byte made it into an
+      -- error message. Almost always means a non-ASCII string was sliced on a
+      -- byte boundary somewhere (string.sub on a multi-byte char, truncation
+      -- via // operator, etc.) -- not a plua transport issue.
+      local fb = first_bad or {pos = 0, byte = 0, len = 0}
+      _print(string.format(
+        "[plua] WARNING: invalid UTF-8 in error message -- replaced %d byte(s) with '?'. " ..
+        "First bad lead byte 0x%02X at position %d (run length=%d). " ..
+        "Likely cause: a string was sliced mid-codepoint (string.sub byte vs char). " ..
+        "Sanitised message follows.",
+        replaced, fb.byte, fb.pos, fb.len))
+    end
     original_error(sanitized, (level or 1) + 1)
   else
     original_error(message, (level or 1) + 1)

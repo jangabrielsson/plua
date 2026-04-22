@@ -1865,11 +1865,12 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
           vars = vscode_variables_ref[ref]
         end
         if vars then
-          for name, var in pairs(vars) do
-            if type(name) == 'number' then
-              name = '[' .. tostring(name) .. ']'
+          for key, var in pairs(vars) do
+            local name
+            if type(key) == 'number' then
+              name = '[' .. tostring(key) .. ']'
             else
-              name = tostring(name)
+              name = tostring(key)
             end
 
             local value, string_value

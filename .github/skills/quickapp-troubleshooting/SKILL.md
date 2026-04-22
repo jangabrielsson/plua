@@ -204,3 +204,99 @@ api.post("/plugins/updateProperty", { deviceId = self.id, propertyName = "value"
 | Multi-file QA projects | Supported | Supported via `--%%file:` header |
 | Push notifications | Sent to mobile app | Logged only, not sent |
 | Alarm partition callbacks | Fire on real arm/disarm events | Simulated only |
+
+---
+
+## UTF-8 / Non-ASCII Character Issues
+
+### `string.sub`, `#str`, `//` truncate inside multi-byte characters
+
+**Symptom:** A QA that handles non-ASCII text (Polish `ł`, German `ü`, accented French, Cyrillic, emoji, etc.) works on a real HC3 but fails in plua with errors like:
+
+```
+invalid UTF-8 code
+attempt to ... (a nil value)
+[plua] WARNING: invalid UTF-8 in error message -- replaced N byte(s) with '?'.
+First bad lead byte 0xC4 at position 4 (run length=1). Likely cause: a string was
+sliced mid-codepoint (string.sub byte vs char).
+```
+
+**Cause:** Lua's `string` library is **byte-based**, not character-based:
+
+| Operation | Counts | Behaviour on `"łabc"` (5 bytes: `C4 82 61 62 63`) |
+|---|---|---|
+| `#str` | bytes | `5` (not `4`) |
+| `string.sub(str, 1, 2)` | bytes | `"\xC4\x82"` (a valid 2-byte char — fine here) |
+| `string.sub(str, 1, 1)` | bytes | `"\xC4"` (half a character — **invalid UTF-8**) |
+| `str // 3` (truncate operator) | bytes | `"\xC4\x82a"` (works because boundary is lucky) |
+| `str // 1` | bytes | `"\xC4"` (broken) |
+
+When the resulting half-character is later fed to `utf8.codes`, `utf8.len`, JSON encoders, or anything that validates UTF-8, you get a hard error. On a real HC3 the same code may *appear* to work because the firmware sometimes round-trips strings through normalisation that hides the corruption — but the bug is in the QA, not the platform.
+
+**Fix:** Use the `utf8` library for character-aware operations, or build a codepoint array once and slice that:
+
+```lua
+-- Wrong: byte-based slice cuts ł in half
+local prefix = string.sub(label, 1, n)
+
+-- Right: utf8-aware slice
+local function utf8sub(s, i, j)
+  local n = utf8.len(s) or #s
+  if i < 0 then i = math.max(n + i + 1, 1) end
+  j = j or n
+  if j < 0 then j = n + j + 1 end
+  if i > j then return "" end
+  local bi = utf8.offset(s, i)
+  local bj = utf8.offset(s, j + 1)
+  return s:sub(bi, bj and bj - 1 or -1)
+end
+local prefix = utf8sub(label, 1, n)
+
+-- Right (alternative): work on a codepoint array
+local chars = {}
+for _, cp in utf8.codes(label) do
+  chars[#chars + 1] = utf8.char(cp)
+end
+local prefix = table.concat(chars, "", 1, n)
+
+-- Length in characters, not bytes:
+local nchars = utf8.len(label)
+```
+
+**Tip:** When `utf8.codes(s)` itself throws on `s`, pass the lax flag to skip validation: `utf8.codes(s, true)`. This is fine for read-only iteration but does not fix the underlying truncation — track it down at the point where the string was sliced.
+
+**plua diagnostic:** plua's `error()` shim sanitises invalid UTF-8 in error messages and prints a `[plua] WARNING: invalid UTF-8 in error message …` line that includes the position and lead byte of the first bad sequence. Use that hint to find the slice site in your code (often a `string.sub` call computing widths or wrapping lines).
+
+### `%S` / `%s` truncates UTF-8 strings — `gmatch("%S+")` returns a half character
+
+**Symptom:** Iterating words of a UTF-8 string with `gmatch("%S+")` (or splitting on `%s`) returns a token that ends with a stray lead byte and triggers `'utf-8' codec can't decode byte 0xc4 …: invalid continuation byte` when later printed, JSON-encoded, or sent to HC3.
+
+```lua
+local line = "TOPą"          -- bytes: 54 4F 50 C4 85
+for word in line:gmatch("%S+") do
+  print(word)                -- prints "TOP?" — token is 54 4F 50 C4 (broken)
+end
+```
+
+**Cause:** Lua's `%s` character class is implemented via the C library's `isspace()`, which is **locale-dependent and byte-based**. On many systems (and on the HC3) `isspace(0x85)` returns true (byte `0x85` is the ISO-8859 NEL — Next Line — control character). The continuation byte of `ą` (`C4 85`) therefore *matches* `%s`, so `%S+` stops one byte too early and emits the orphan `C4`.
+
+The same trap affects byte `0xA0` (NBSP), and also `%w`, `%a`, `%p` etc. — they all delegate to locale-dependent C predicates and can misclassify UTF-8 continuation bytes.
+
+**Fix:** Replace locale classes with **explicit ASCII character sets** when tokenising UTF-8 text:
+
+```lua
+-- Wrong: %S can stop inside a multi-byte char
+for word in line:gmatch("%S+") do ... end
+
+-- Right: explicit ASCII whitespace set
+for word in line:gmatch("[^ \t\r\n]+") do ... end
+
+-- Splitting on whitespace
+for part in line:gmatch("[^%s]+") do ... end       -- still uses %s, still broken
+for part in line:gmatch("[^ \t\r\n\f\v]+") do ... end  -- safe
+```
+
+**Rule of thumb:** In any pattern that runs over text that may contain non-ASCII characters, prefer explicit byte sets (`[^ \t\r\n]`, `[%w_]` is usually OK because `0x80+` rarely matches `isalnum`, but verify) over the shortcut classes `%s`, `%S`, `%a`, `%A`, `%w`, `%W`, `%p`, `%P`. The `%d` / `%D` and `%x` / `%X` classes are safe — they are not locale-dependent.
+
+**plua diagnostic:** because the broken token only shows the problem when it crosses a UTF-8 boundary (print, JSON, HTTP), the `[plua] WARNING: invalid UTF-8 …` line described above will fire. The "lead byte" it reports (e.g. `0xC4` for `ą`, `0xC5` for `ł`) plus the position is your fastest route to the offending pattern.
+

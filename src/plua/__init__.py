@@ -9,5 +9,5 @@ from .timers import AsyncTimerManager
 # Import remaining core modules
 # from . import web_server
 
-__version__ = "1.2.77"
+__version__ = "1.2.78"
 __all__ = ["LuaEngine", "AsyncTimerManager", "export_to_lua", "python_to_lua_table"]

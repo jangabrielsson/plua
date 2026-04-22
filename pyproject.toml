@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "plua"
-version = "1.2.77"
+version = "1.2.78"
 description = "Python project using Lupa to run Lua scripts with async timer functionality"
 authors = [{name = "Jan Gabrielsson", email = "jan@gabrielsson.com"}]
 license = "MIT"
@@ -57,7 +57,7 @@ lua = ["**/*"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "1.2.78"
 
 [tool.ruff.lint]
 # Conservative starter set; broaden later. E/F = pycodestyle+pyflakes (flake8 core),

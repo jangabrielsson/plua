@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.78] - 2026-04-22
+
+
+
+#### Commits since v1.2.77:
+
+- ✨ **Feature**: Add quality checks for ruff, pyright, and pytest before release
+- 📝 Refactor type hints and imports across multiple modules
+
+
+
 ## [v1.2.77] - 2026-04-22
 
 

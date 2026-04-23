@@ -1,7 +1,6 @@
 ---
 name: hc3-write-safety
-description: Non-obvious HC3 write-path hazards learned from direct experimentation. Covers silent data loss on PUT /api/devices/{id} and PUT /api/panels/climate/{id} (top-level fields merge but array-valued properties like quickAppVariables / parameters / schedules fully replace, so partial submissions wipe siblings); silent value coercion on the setVariable action endpoint (numeric-looking strings become numbers and break the HC3 UI edit affordance); silent enum coercion on climate zone mode (invalid values become "Manual"); cache-only writes on Z-wave configuration parameters (PUT updates HC3's stored copy without transmitting to the device, producing a misleading success); silent action failures via HC3's HTTP-202-with-jsonrpc-error-envelope shape; and the read-modify-write + post-write-verify pattern that defends against most of them. USE FOR: writing to HC3 state via REST from QA code or external callers, or when deciding whether to use a direct api.put() / api.post() call vs a guarded helper.
-paths: "**/*.lua"
+description: Non-obvious HC3 write-path hazards learned from direct experimentation. Covers silent data loss on PUT /api/devices/{id} and PUT /api/panels/climate/{id} (array-valued properties like quickAppVariables / parameters / schedules fully replace, so partial writes wipe siblings); silent value coercion on the setVariable action endpoint (numeric-looking strings become numbers and break the HC3 UI edit affordance); silent enum coercion on climate zone mode (invalid values become "Manual"); cache-only writes on Z-wave configuration parameters (PUT updates HC3's cached copy without transmitting to the device); silent action failures via HC3's HTTP-202-with-jsonrpc-error-envelope shape; and the read-modify-write + post-write-verify pattern that defends against them. USE FOR: writing to HC3 state via REST from QA code or external callers, or when deciding whether to use a direct api.put() / api.post() call vs a guarded helper.
 ---
 
 # HC3 Write-Path Safety
@@ -20,6 +19,11 @@ Where the HC3_mcp tools (`modify_device`, `update_climate_zone`,
 are available, they wrap these hazards with read-modify-write and
 post-write verification — direct `api.put()` / `api.post()` calls skip
 the guards.
+
+> **Note:** If you don't have the HC3_mcp server installed, ignore the
+> MCP tool references below and apply the patterns directly via
+> `api.get` / `api.put` / `api.post` from your QuickApp. The hazards
+> and defensive patterns are the important part.
 
 ---
 
@@ -139,15 +143,22 @@ from the UI.
   fork hard-rejects this call at the tool boundary for exactly this
   reason.
 
-## 6. `POST /api/plugins/updateProperty` — undocumented, avoid
+## 6. `POST /api/plugins/updateProperty` — avoid from external callers
 
-This endpoint does not appear in HC3's Swagger documentation. Its
-behaviour is not guaranteed stable across firmware versions. The
-`hc3-rest-api` skill lists it for completeness but do not rely on it.
+This endpoint does not appear in HC3's Swagger documentation and its
+behaviour is not guaranteed stable across firmware versions when called
+directly. The `hc3-rest-api` skill lists it for completeness.
 
-Use `PUT /api/devices/{id}` for property writes — it's the documented
-endpoint and goes through the same merge/replace semantics documented
-in section 1. `modify_device` in HC3_mcp wraps the documented path.
+**Inside a QuickApp**, prefer `self:updateProperty(name, value)` — it
+goes through the same internal path safely and is the canonical way for
+a QA to update its own properties. Don't rewrite working
+`self:updateProperty` calls into `PUT /api/devices/{id}`.
+
+**From external callers** (other QAs, scenes, MCP, REST clients) writing
+to a *different* device's properties, prefer `PUT /api/devices/{id}` —
+it's the documented endpoint and goes through the merge/replace
+semantics in section 1. `modify_device` in HC3_mcp wraps the documented
+path.
 
 ## 7. Z-wave mesh-config writes are cache-only — do not use REST
 
@@ -212,7 +223,8 @@ JSON-RPC envelope in the response body:
 and return as if the call succeeded. A successful action returns the
 same envelope shape with `error: null`.
 
-**Defensive pattern:**
+**Defensive pattern** (reusing the section 7 example, which is exactly
+the silent-failure shape this check catches):
 
 ```lua
 local res = api.post("/devices/4753/action/setParameter", { args = { 2, 0, 1 } })
@@ -243,3 +255,15 @@ All the HC3_mcp write tools (`modify_device`, `update_climate_zone`,
 `update_location_settings`, `modify_scene`, `set_quickapp_variable`) do
 this for you. Prefer them over raw `api.put` / `api.post` wherever the
 MCP is available.
+
+---
+
+## See also
+
+- **quickapp-api** — `api.*` / `fibaro.*` / `self:*` reference, including
+  `json.util.InitArray` and the list of FQA fields that must be marked
+  as arrays before encoding (closely related to section 1's array-replace
+  hazard).
+- **hc3-rest-api** — full HC3 REST endpoint reference.
+- **quickapp-troubleshooting** — additional QA quirks and HC3 firmware
+  behaviour differences not specific to writes.

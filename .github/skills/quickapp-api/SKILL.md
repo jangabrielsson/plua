@@ -172,6 +172,12 @@ api.delete("/globalVariables/oldVar")
 
 `api.*` returns the parsed JSON response (Lua table), or `nil` on error.
 
+> **Write safety:** `api.put` / `api.post` against HC3 have several
+> non-obvious silent-failure modes (partial array writes wipe siblings,
+> action POSTs return HTTP 202 even on failure, enum values get silently
+> coerced, etc.). Before writing non-trivial data via `api.*`, see the
+> **hc3-write-safety** skill for the read-modify-write + verify pattern.
+
 ---
 
 ## Timers and Scheduling
@@ -268,6 +274,32 @@ local items = json.util.InitArray({"a","b"}) -- encodes as ["a","b"]
 api.post("/foo", { ids = json.util.InitArray({}) })
 ```
 
+#### Fields that MUST be array-encoded when uploading an FQA
+
+When building an FQA structure to POST to `/api/quickApp/`, several
+nested fields are array-typed on HC3. If any of them is empty (or
+sparse), the JSON encoder will emit `{}` and HC3 will reject the upload
+or silently treat the field as missing. Mark them as arrays before
+encoding:
+
+```lua
+local function markArray(t) if type(t)=='table' then json.util.InitArray(t) end end
+
+markArray(fqa.initialInterfaces)
+markArray(fqa.initialProperties.quickAppVariables)
+markArray(fqa.initialProperties.uiView)
+markArray(fqa.initialProperties.uiCallbacks)
+markArray(fqa.initialProperties.supportedDeviceRoles)
+
+api.post("/quickApp/", json.encode(fqa))
+```
+
+The same care applies whenever you PUT an array-valued property back to
+`/api/devices/{id}` (e.g. `properties.quickAppVariables`,
+`properties.uiCallbacks`) — see the **hc3-write-safety** skill for the
+full list of array-valued properties and the read-modify-write pattern
+needed to avoid wiping siblings.
+
 ---
 
 ## Standard Lua Available in QAs
@@ -293,3 +325,16 @@ api.post("/foo", { ids = json.util.InitArray({}) })
 - All QuickApp methods are publicly callable via `fibaro.call(id, "method")` — keep private helpers as `local function`s outside the class
 - `self.parent` is **not** available during `Child:__init()` — use child's `onInit()` instead
 - `quickApp` global is only set after `onInit()` returns
+
+---
+
+## See also
+
+- **hc3-write-safety** — silent-failure hazards on `api.put` / `api.post`
+  writes (partial array wipes, enum coercion, Z-wave cache-only writes,
+  HTTP-202 action failures) and the defensive read-modify-write pattern.
+- **hc3-rest-api** — full HC3 REST endpoint reference.
+- **quickapp-patterns** — common QA implementation patterns (timer
+  loops, refreshStates, child devices).
+- **quickapp-troubleshooting** — known QA quirks and HC3 firmware
+  behaviour differences.

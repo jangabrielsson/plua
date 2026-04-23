@@ -92,8 +92,8 @@ Fibaro API account for ~6 kLOC of that).
 
 | Module | Role |
 |---|---|
-| `cli.py` | Argument parsing, environment detection, port cleanup, engine bootstrap |
-| `engine.py` | `LuaEngine`: owns the Lupa VM, the queue processor, and the cross-thread queue |
+| `cli.py` | Argument parsing, environment detection, engine bootstrap (port cleanup lives in `port_utils.py`) |
+| `engine.py` | `LuaEngine`: owns the Lupa VM and the queue-processor task; cross-thread queue plumbing lives in `cross_thread.py` |
 | `timers.py` | `AsyncTimerManager`: `setTimeout`-style timers backed by asyncio tasks |
 | `lua_bindings.py` | The `@export_to_lua` decorator, the `_PY` namespace, table converters; bundles ~50 utility functions exposed to Lua |
 | `extensions.py` | `_PY.loadPythonModule()` — dynamic discovery and loading of `pylib/*` modules |
@@ -101,6 +101,8 @@ Fibaro API account for ~6 kLOC of that).
 | `fibaro_api_endpoints.py` | **Generated.** Typed FastAPI route stubs for the full HC3 REST surface; each route delegates to Lua via `fibaroApiHook()` |
 | `fibaro_api_models.py` | **Generated.** Pydantic models for HC3 request/response shapes |
 | `generate_typed_fibaro_api.py` | The generator. Run by hand against Fibaro's Swagger JSON when the API changes; not used at runtime |
+| `cross_thread.py` | `CrossThreadDispatch` — owns the three thread→loop queues (callbacks, fire-and-forget Lua calls, sync script execution) drained by the engine on every tick |
+| `port_utils.py` | Best-effort `free_port(port)` helper used by the CLI before binding the FastAPI server (lsof on Unix, netstat+taskkill on Windows) |
 | `sync_socket.py` | Blocking TCP socket pool — needed by `mobdebug`, which assumes synchronous LuaSocket semantics |
 | `window_manager.py` | Opens/reuses browser windows for QuickApp UIs; persists state to `~/.plua/windows.json` |
 | `console.py` | Rich console with environment-aware color/terminal handling |
@@ -110,18 +112,25 @@ Fibaro API account for ~6 kLOC of that).
 ### The callback registry
 
 Asynchronous results — timer fires, HTTP responses, MQTT messages, thread
-results — funnel through three asyncio queues consumed by
+results — funnel through `CrossThreadDispatch` (in `cross_thread.py`),
+which owns three `queue.Queue` instances drained on every tick by
 `LuaEngine._process_queues()`:
 
 - **`_callback_queue`** — `(callback_id, error, result)` from any
   background source. `callback_id` is an **integer** registered by
-  `_PY.registerCallback()` in `init.lua`.
+  `_PY.registerCallback()` in `init.lua`. Producers call
+  `LuaEngine.post_callback_from_thread(...)`, which delegates to the
+  dispatch object.
 - **`_execution_queue`** — Lua execution requests from FastAPI; keyed by
-  UUID `request_id`.
-- **`_lua_call_queue`** — direct Python→Lua calls posted from threads.
+  UUID `request_id`. Producers call
+  `LuaEngine.execute_script_from_thread(...)` and block on a result map.
+- **`_lua_call_queue`** — fire-and-forget direct Python→Lua calls posted
+  from threads via `LuaEngine.post_lua_call(name, *args)`.
 
 The registry has no separate data structure; entries live in their queue
-until the processor delivers them via `_PY.timerExpired(id, err, result)`.
+until the processor delivers them via `_PY.timerExpired(id, err, result)`
+(or, for execution requests, via `_PY.threadRequest(...)` followed by a
+Lua-side `_PY.threadRequestResult(...)` callback).
 
 ### Lua ↔ Python bridge
 
@@ -129,10 +138,14 @@ until the processor delivers them via `_PY.timerExpired(id, err, result)`.
   startup `LuaBindings._setup_exported_functions()` iterates the registry
   and assigns each function into a single Lua table called `_PY`.
 - `python_to_lua_table(data)` recurses through dicts/lists and uses
-  `LuaRuntime.table_from(...)` to produce Lupa tables.
+  `LuaRuntime.table_from(...)` to produce Lupa tables. Cyclic input is
+  detected (via an `id()` walk) and raises `ValueError` rather than
+  letting Lupa stack-overflow.
 - `lua_to_python_table(t)` walks a Lua table, converts keys/values, and
   detects array-shaped tables (consecutive 1-indexed integer keys) so they
-  become Python lists rather than dicts.
+  become Python lists rather than dicts. Recursion is bounded by depth
+  and a `seen` set so cyclic Lua tables resolve to a `"<cycle>"`
+  placeholder rather than hanging the engine.
 - A `locale.setlocale(LC_CTYPE, 'C')` call before `LuaRuntime` creation
   forces Lua's `%S`/`%s` patterns (which use libc `isspace()`) onto the C
   locale, so multi-byte UTF-8 characters such as `ą` are not split.
@@ -306,18 +319,19 @@ goodbye line. The FastAPI subprocess is terminated via its `Process` /
   routing, UI compilation, FQA tooling, HC3 connectivity all live in one
   file.
 - **`lua_bindings.py` mixes ~50 unrelated exports** (timers, REPL, file
-  I/O, platform info, telnet) inside a single setup method.
+  I/O, platform info, telnet) inside a single setup method. Still
+  overviewable as one file but a candidate for a future `bindings/`
+  package split.
 - **`fibaro_api_endpoints.py` and `fibaro_api_models.py` are generated**
   from a vendored Swagger snapshot. They will drift from a real HC3 over
   time and must be regenerated with `generate_typed_fibaro_api.py`.
-- **Two callback-delivery paths in `pylib`**: HTTP and TCP call
-  `_PY.timerExpired` directly; UDP, WebSocket, MQTT use
-  `post_callback_from_thread`. Either is correct, but they are not
-  uniform.
+- **`filesystem.py` is synchronous** — long file operations block the
+  asyncio loop. Wrapping the underlying `os.*` calls in
+  `asyncio.to_thread()` is not enough on its own; the Lua-side `lfs.*` API
+  is synchronous by contract, so a real fix needs a callback-based Lua
+  surface.
 - **Per-protocol global registries are unlocked** — fine today (Lua is
   single-threaded inside the loop) but means concurrent connection
   creation from multiple threads would race.
-- **`filesystem.py` is synchronous** — long file operations block the
-  asyncio loop.
 - **Proxy mode is sparsely tested.** It depends on a custom helper QA
   (`PluaHelper.fqa`) running on HC3.

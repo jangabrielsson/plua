@@ -329,7 +329,8 @@ PLua supports all Fibaro device types and interfaces:
 - [docs/QuickApp.md](docs/QuickApp.md) - QuickApp coding quickstart
 - [docs/VSCode.md](docs/VSCode.md) - VSCode setup
 - [docs/Zerobrane.md](docs/Zerobrane.md) - Zerobrane setup
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and internals
+- [docs/ARCHITECTURE-OVERVIEW.md](docs/ARCHITECTURE-OVERVIEW.md) - **Friendly "how plua works" overview for QA developers**
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and internals (deep dive)
 - [QuickApp internals](docs/tutorials/README.md) - Some QuickApp implementation deep dives
 - [docs/](docs/) - Detailed documentation and guides
 - [examples/](examples/) - Code examples and templates

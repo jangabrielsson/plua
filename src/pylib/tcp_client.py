@@ -56,7 +56,7 @@ def tcp_connect(host: str, port: int, callback_id: int) -> None:
             
             # Call back to Lua
             lua_result = python_to_lua_table(result)
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+            engine.post_callback_from_thread(callback_id, lua_result)
             
             logger.debug(f"TCP connected to {host}:{port} with conn_id {conn_id}")
             
@@ -70,7 +70,7 @@ def tcp_connect(host: str, port: int, callback_id: int) -> None:
             
             try:
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
             except Exception as callback_err:
                 logger.error(f"Error calling TCP connect callback {callback_id}: {callback_err}")
             
@@ -104,7 +104,7 @@ def tcp_read(conn_id: int, max_bytes: int, callback_id: int) -> None:
                     'message': 'Connection not found'
                 }
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
                 return
             
             reader, writer = _tcp_connections[conn_id]
@@ -119,7 +119,7 @@ def tcp_read(conn_id: int, max_bytes: int, callback_id: int) -> None:
             }
             
             lua_result = python_to_lua_table(result)
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+            engine.post_callback_from_thread(callback_id, lua_result)
             
             logger.debug(f"TCP read {len(data)} bytes from conn_id {conn_id}")
             
@@ -132,7 +132,7 @@ def tcp_read(conn_id: int, max_bytes: int, callback_id: int) -> None:
             
             try:
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
             except Exception as callback_err:
                 logger.error(f"Error calling TCP read callback {callback_id}: {callback_err}")
             
@@ -167,7 +167,7 @@ def tcp_read_until(conn_id: int, delimiter: str, max_bytes: int, callback_id: in
                     'message': 'Connection not found'
                 }
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
                 return
             
             reader, writer = _tcp_connections[conn_id]
@@ -191,7 +191,7 @@ def tcp_read_until(conn_id: int, delimiter: str, max_bytes: int, callback_id: in
             }
             
             lua_result = python_to_lua_table(result)
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+            engine.post_callback_from_thread(callback_id, lua_result)
             
             logger.debug(f"TCP read_until {len(buffer)} bytes from conn_id {conn_id}")
             
@@ -204,7 +204,7 @@ def tcp_read_until(conn_id: int, delimiter: str, max_bytes: int, callback_id: in
             
             try:
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
             except Exception as callback_err:
                 logger.error(f"Error calling TCP read_until callback {callback_id}: {callback_err}")
             
@@ -238,7 +238,7 @@ def tcp_write(conn_id: int, data: str, callback_id: int) -> None:
                     'message': 'Connection not found'
                 }
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
                 return
             
             reader, writer = _tcp_connections[conn_id]
@@ -253,7 +253,7 @@ def tcp_write(conn_id: int, data: str, callback_id: int) -> None:
             }
             
             lua_result = python_to_lua_table(result)
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+            engine.post_callback_from_thread(callback_id, lua_result)
             
             logger.debug(f"TCP wrote {len(data_bytes)} bytes to conn_id {conn_id}")
             
@@ -266,7 +266,7 @@ def tcp_write(conn_id: int, data: str, callback_id: int) -> None:
             
             try:
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
             except Exception as callback_err:
                 logger.error(f"Error calling TCP write callback {callback_id}: {callback_err}")
             
@@ -298,7 +298,7 @@ def tcp_close(conn_id: int, callback_id: int) -> None:
                     'message': 'Connection not found'
                 }
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
                 return
             
             reader, writer = _tcp_connections[conn_id]
@@ -312,7 +312,7 @@ def tcp_close(conn_id: int, callback_id: int) -> None:
             }
             
             lua_result = python_to_lua_table(result)
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+            engine.post_callback_from_thread(callback_id, lua_result)
             
             logger.debug(f"TCP closed conn_id {conn_id}")
             
@@ -324,7 +324,7 @@ def tcp_close(conn_id: int, callback_id: int) -> None:
             
             try:
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
             except Exception as callback_err:
                 logger.error(f"Error calling TCP close callback {callback_id}: {callback_err}")
             
@@ -388,7 +388,7 @@ def tcp_server_start(server_id: int, host: str, port: int, callback_id: int) -> 
             }
             
             lua_result = python_to_lua_table(result)
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+            engine.post_callback_from_thread(callback_id, lua_result)
             
             logger.debug(f"TCP server accepted client {client_ip}:{client_port} as conn_id {conn_id}")
             
@@ -404,7 +404,7 @@ def tcp_server_start(server_id: int, host: str, port: int, callback_id: int) -> 
             
             try:
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
             except Exception as callback_err:
                 logger.error(f"Error calling TCP server client callback {callback_id}: {callback_err}")
             
@@ -465,7 +465,7 @@ def tcp_server_stop(server_id: int, callback_id: int) -> None:
                 }
             
             lua_result = python_to_lua_table(result)
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+            engine.post_callback_from_thread(callback_id, lua_result)
             
         except Exception as e:
             result = {
@@ -475,7 +475,7 @@ def tcp_server_stop(server_id: int, callback_id: int) -> None:
             
             try:
                 lua_result = python_to_lua_table(result)
-                engine._lua.globals()["_PY"]["timerExpired"](callback_id, lua_result)
+                engine.post_callback_from_thread(callback_id, lua_result)
             except Exception as callback_err:
                 logger.error(f"Error calling TCP server stop callback {callback_id}: {callback_err}")
             

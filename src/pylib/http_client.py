@@ -134,7 +134,7 @@ async def _perform_http_request(url: str, options: dict[str, Any], callback_id: 
                 try:
                     # Convert response to Lua table
                     lua_result = python_to_lua_table(result)
-                    engine._lua.globals()["_PY"]["timerExpired"](callback_id, None, lua_result)
+                    engine.post_callback_from_thread(callback_id, None, lua_result)
                 except Exception as e:
                     logger.error(f"Error calling HTTP callback {callback_id}: {e}")
                     
@@ -142,14 +142,14 @@ async def _perform_http_request(url: str, options: dict[str, Any], callback_id: 
         # logger.error(f"HTTP request timeout for {url}")
         error_message = f'Request to {url} timed out after {timeout} seconds'
         try:
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, error_message, None)
+            engine.post_callback_from_thread(callback_id, error_message, None)
         except Exception as e:
             logger.error(f"Error calling HTTP timeout callback {callback_id}: {e}")
             
     except Exception as e:
         # logger.error(f"HTTP request error for {url}: {e}")
         try:
-            engine._lua.globals()["_PY"]["timerExpired"](callback_id, str(e), None)
+            engine.post_callback_from_thread(callback_id, str(e), None)
         except Exception as e:
             logger.error(f"Error calling HTTP error callback {callback_id}: {e}")
 
@@ -275,7 +275,7 @@ class HTTPServerHandler:
             
             # Call the Lua callback
             lua_request_data = python_to_lua_table(request_data)
-            engine._lua.globals()["_PY"]["timerExpired"](self.callback_id, lua_request_data)
+            engine.post_callback_from_thread(self.callback_id, lua_request_data)
             
             # Wait for response from Lua (via http_server_respond)
             try:
@@ -449,7 +449,7 @@ def http_server_stop(server_id: str, callback_id: int | None = None) -> None:
             if engine:
                 try:
                     result = python_to_lua_table({'success': False, 'message': 'Server not found'})
-                    engine._lua.globals()["_PY"]["timerExpired"](callback_id, result)
+                    engine.post_callback_from_thread(callback_id, result)
                 except Exception as e:
                     logger.error(f"Error calling stop callback: {e}")
         return
@@ -501,7 +501,7 @@ async def _stop_http_server(server_handler: HTTPServerHandler, callback_id: int 
             if engine:
                 try:
                     result = python_to_lua_table({'success': True, 'message': 'Server stopped successfully'})
-                    engine._lua.globals()["_PY"]["timerExpired"](callback_id, result)
+                    engine.post_callback_from_thread(callback_id, result)
                 except Exception as e:
                     logger.error(f"Error calling stop callback: {e}")
                     
@@ -514,7 +514,7 @@ async def _stop_http_server(server_handler: HTTPServerHandler, callback_id: int 
             if engine:
                 try:
                     result = python_to_lua_table({'success': False, 'message': str(e)})
-                    engine._lua.globals()["_PY"]["timerExpired"](callback_id, result)
+                    engine.post_callback_from_thread(callback_id, result)
                 except Exception as e:
                     logger.error(f"Error calling stop callback: {e}")
 

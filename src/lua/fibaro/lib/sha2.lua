@@ -1,4 +1,7 @@
 ---@diagnostic disable: cast-local-type, undefined-field, need-check-nil, assign-type-mismatch
+-- VENDORED THIRD-PARTY LIBRARY — DO NOT MODIFY
+-- Upstream: https://github.com/Egor-Skriptunoff/pure_lua_SHA (trimmed by tinman/Intuitech for HC3)
+-- License:  MIT
 --------------------------------------------------------------------------------------------------------------------------
 -- sha2 lib v0.1 (c) tinman/Intuitech
 -- 99.99987534 % of the code is based on sha2.lua from Egor Skriptunoff

@@ -1,4 +1,7 @@
 #!/usr/bin/env lua
+-- VENDORED THIRD-PARTY LIBRARY — DO NOT MODIFY
+-- Upstream: https://github.com/mpeterv/markdown (originally by Niklas Frykholm)
+-- License:  MIT
 
 ----------------------------------------------------------------------
 -- Utility functions

@@ -8,10 +8,7 @@ execution with Python's async timer functionality.
 import asyncio
 import locale
 import logging
-import queue
 import sys
-import time
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +16,7 @@ import lupa
 
 # Import extensions to register decorated functions
 from . import extensions  # noqa: F401,F811
+from .cross_thread import CrossThreadDispatch
 from .lua_bindings import LuaBindings, set_global_engine
 from .timers import AsyncTimerManager
 
@@ -82,15 +80,9 @@ class LuaEngine:
         self._running = False
         self._scripts: dict[str, str] = {}  # Store loaded scripts
 
-        # Thread-safe queue for cross-thread callback communication
-        self._callback_queue = queue.Queue()
-
-        # Thread-safe queue for execution requests from other threads
-        self._execution_queue = queue.Queue()
-        self._execution_results = {}  # Store results by request ID
-
-        # Thread-safe queue for fire-and-forget Lua function calls from background threads
-        self._lua_call_queue = queue.Queue()
+        # All cross-thread queue plumbing (callbacks, fire-and-forget Lua
+        # calls, synchronous script execution) lives in CrossThreadDispatch.
+        self._dispatch = CrossThreadDispatch()
 
         self._queue_processor_task = None
 
@@ -180,75 +172,12 @@ class LuaEngine:
         self._queue_processor_task = asyncio.create_task(self._process_queues())
 
     async def _process_queues(self):
-        """Process callbacks and execution requests from other threads."""
+        """Drain the cross-thread dispatch queues into the main loop."""
+        from .lua_bindings import python_to_lua_table
         while self._running:
             try:
-                # Process callback queue
-                try:
-                    callback_data = self._callback_queue.get_nowait()
-                    callback_id, error, result = callback_data
-
-                    # Convert Python data structures to Lua tables before passing to Lua
-                    from .lua_bindings import python_to_lua_table
-                    
-                    # Convert error data if it's a dict or list
-                    if error is not None and isinstance(error, (dict, list)):
-                        error = python_to_lua_table(error)
-                    
-                    # Convert result data if it's a dict or list
-                    if result is not None and isinstance(result, (dict, list)):
-                        result = python_to_lua_table(result)
-
-                    # Keep strong references until after the Lua call so Python 3.12's
-                    # GC cannot finalize the Lupa wrapper objects while Lua is using them
-                    _keep_alive = (error, result)
-                    # Call the Lua callback
-                    self._lua.globals()["_PY"]["timerExpired"](callback_id, error, result)
-                    del _keep_alive
-
-                except queue.Empty:
-                    pass  # No callbacks pending
-
-                # Process fire-and-forget Lua function call queue (posted from background threads)
-                try:
-                    func_name, args = self._lua_call_queue.get_nowait()
-                    py_func = self._lua.globals()["_PY"][func_name]
-                    if py_func is not None:
-                        py_func(*args)
-                except queue.Empty:
-                    pass  # No Lua calls pending
-
-                # Process execution queue
-                try:
-                    execution_request = self._execution_queue.get_nowait()
-                    request_id, script, timeout_seconds, is_json = execution_request
-
-                    # Execute the script via Lua's threadRequest system
-                    try:
-                        start_time = time.time()
-
-                        # Call the Lua threadRequest function which will handle execution
-                        # and callback to threadRequestResult when done
-                        self._lua.globals()["_PY"]["threadRequest"](request_id, script, is_json)
-
-                        # Note: The actual result will be stored via handle_thread_request_result
-                        # when Lua calls _PY.threadRequestResult(id, result)
-
-                    except Exception as e:
-                        # Store the error immediately if Lua call fails
-                        self._execution_results[request_id] = {
-                            "success": False,
-                            "result": None,
-                            "execution_time": time.time() - start_time,
-                            "error": f"Failed to execute threadRequest: {str(e)}"
-                        }
-
-                except queue.Empty:
-                    pass  # No execution requests pending
-
-                # Sleep briefly if no work was done
+                self._dispatch.process_once(self._lua, python_to_lua_table)
                 await asyncio.sleep(0.01)
-
             except Exception as e:
                 logger.error(f"Error processing callback queue: {e}")
                 await asyncio.sleep(0.1)
@@ -408,83 +337,16 @@ class LuaEngine:
         return callback_count > 0 or interval_count > 0
 
     def post_lua_call(self, func_name: str, *args) -> None:
-        """
-        Post a fire-and-forget Lua function call to be executed in the main event loop.
-
-        This is thread-safe and can be called from any Python thread.
-        The call is executed asynchronously — no result is returned.
-
-        Args:
-            func_name: Name of the function inside the _PY Lua table
-            *args: Arguments to pass to the function (must be plain Python types)
-        """
-        try:
-            self._lua_call_queue.put_nowait((func_name, args))
-        except queue.Full:
-            logger.error(f"Lua call queue is full, dropping call to {func_name}")
+        """Post a fire-and-forget _PY.<func_name>(*args) call from any thread."""
+        self._dispatch.post_lua_call(func_name, args)
 
     def post_callback_from_thread(self, callback_id: int, error=None, result=None):
-        """
-        Post a callback result from another thread.
-
-        This is thread-safe and can be called from any Python thread.
-        The callback will be executed in the main event loop.
-
-        Args:
-            callback_id: The callback ID from _PY.registerCallback()
-            error: Error message if any (None for success)
-            result: Result data to pass to the callback
-        """
-        try:
-            self._callback_queue.put_nowait((callback_id, error, result))
-        except queue.Full:
-            logger.error(f"Callback queue is full, dropping callback {callback_id}")
+        """Post a callback result from any Python thread to the main loop."""
+        self._dispatch.post_callback(callback_id, error, result)
 
     def execute_script_from_thread(self, script: str, timeout_seconds: float = 30.0, is_json: bool = False):
-        """
-        Execute a Lua script from another thread and wait for the result.
-
-        This is thread-safe and can be called from any Python thread.
-        The script will be executed in the main event loop.
-
-        Args:
-            script: The Lua script to execute OR JSON function call data
-            timeout_seconds: Maximum time to wait for execution
-            is_json: If True, treat script as JSON function call data
-
-        Returns:
-            Dict with execution result: {"success": bool, "result": Any, "execution_time": float, "error": str}
-        """
-
-        request_id = str(uuid.uuid4())
-
-        try:
-            # Post the execution request with the is_json flag
-            self._execution_queue.put_nowait((request_id, script, timeout_seconds, is_json))
-        except queue.Full:
-            return {
-                "success": False,
-                "result": None,
-                "execution_time": 0,
-                "error": "Execution queue is full"
-            }
-
-        # Wait for the result with timeout
-        start_time = time.time()
-        while time.time() - start_time < timeout_seconds:
-            if request_id in self._execution_results:
-                result = self._execution_results.pop(request_id)
-                return result
-            time.sleep(0.01)  # Small sleep to avoid busy waiting
-
-        # Cleanup if timeout
-        self._execution_results.pop(request_id, None)
-        return {
-            "success": False,
-            "result": None,
-            "execution_time": timeout_seconds,
-            "error": f"Script execution timeout after {timeout_seconds} seconds"
-        }
+        """Execute a Lua script from any thread and block until the result is ready."""
+        return self._dispatch.execute_script_and_wait(script, timeout_seconds, is_json)
 
     def handle_thread_request_result(self, request_id: str, result: Any):
         """
@@ -505,7 +367,7 @@ class LuaEngine:
                 # Keep the original result if conversion fails
 
         # Store the result for the waiting thread
-        self._execution_results[request_id] = result
+        self._dispatch.store_execution_result(request_id, result)
 
     def get_bindings(self) -> LuaBindings:
         """Get the Lua bindings instance."""

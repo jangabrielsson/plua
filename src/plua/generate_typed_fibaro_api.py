@@ -466,6 +466,7 @@ import logging
 import json
 
 # flake8: noqa
+# pyright: reportAttributeAccessIssue=false
 # Import all models from the separate models file
 from .fibaro_api_models import *
 

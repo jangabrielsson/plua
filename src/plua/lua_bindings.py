@@ -34,89 +34,119 @@ def get_global_engine():
     return _global_engine
 
 
+# Maximum recursion depth for the table converters. Cycles are detected via
+# a `seen` set on every call, but the depth limit is a belt-and-braces guard
+# against pathological data that lacks identity equality (e.g. nested Lua
+# proxy objects that are not the same Python object on every traversal).
+_MAX_TABLE_DEPTH = 100
+
+
+def _is_lua_table(obj: Any) -> bool:
+    return hasattr(obj, '__class__') and 'lua' in str(obj.__class__).lower()
+
+
+def _decode_bytes(b: bytes) -> str:
+    try:
+        return b.decode('utf-8')
+    except UnicodeDecodeError:
+        return b.decode('utf-8', errors='replace')
+
+
 def python_to_lua_table(data: Any) -> Any:
     """
     Convert Python data structures to Lua tables using Lupa.
-    
-    Args:
-        data: Python data (dict, list, or primitive)
-        
-    Returns:
-        Lua table or primitive value
+
+    Cycles are detected by walking `data` first; if any cycle is found, the
+    converter raises `ValueError` rather than letting Lupa recurse into a
+    stack overflow. Callers should not pass self-referential structures.
     """
     if _global_engine is None:
         raise RuntimeError("Global engine not set. Call set_global_engine() first.")
-    
-    if isinstance(data, (dict, list)):
-        return _global_engine._lua.table_from(data, recursive=True)
-    else:
+
+    if not isinstance(data, (dict, list)):
         return data
+
+    # Cycle check before handing off to Lupa's C-level recursive converter
+    # (Lupa has no cycle protection and will stack-overflow on cyclic data).
+    def _check(obj: Any, seen: set[int], depth: int) -> None:
+        if depth > _MAX_TABLE_DEPTH:
+            raise ValueError(f"python_to_lua_table: depth limit ({_MAX_TABLE_DEPTH}) exceeded")
+        if isinstance(obj, (dict, list)):
+            oid = id(obj)
+            if oid in seen:
+                raise ValueError("python_to_lua_table: cycle detected in input")
+            seen.add(oid)
+            try:
+                values = obj.values() if isinstance(obj, dict) else obj
+                for v in values:
+                    _check(v, seen, depth + 1)
+            finally:
+                seen.discard(oid)
+
+    _check(data, set(), 0)
+    return _global_engine._lua.table_from(data, recursive=True)
 
 
 def lua_to_python_table(lua_table: Any) -> Any:
     """
     Convert Lua tables to Python data structures with proper UTF-8 handling.
-    
-    Args:
-        lua_table: Lua table or primitive value
-        
-    Returns:
-        Python dict, list, or primitive value
+
+    Recursion is bounded by `_MAX_TABLE_DEPTH` and a `seen` set keyed by
+    `id(lua_table)`, so cyclic Lua tables resolve to a placeholder string
+    rather than hanging the engine.
     """
     if _global_engine is None:
         raise RuntimeError("Global engine not set. Call set_global_engine() first.")
-    
-    # Handle bytes objects (Lupa sometimes passes strings as bytes)
+    return _lua_to_python(lua_table, set(), 0)
+
+
+def _lua_to_python(lua_table: Any, seen: set[int], depth: int) -> Any:
+    if depth > _MAX_TABLE_DEPTH:
+        logger.warning("lua_to_python_table: depth limit exceeded; truncating")
+        return "<max-depth>"
+
     if isinstance(lua_table, bytes):
-        try:
-            return lua_table.decode('utf-8')
-        except UnicodeDecodeError:
-            # Fallback: decode with error replacement
-            return lua_table.decode('utf-8', errors='replace')
-    
-    # Check if it's a Lua table
-    if hasattr(lua_table, '__class__') and 'lua' in str(lua_table.__class__).lower():
-        try:
-            # Convert to Python dict first
-            temp_dict = {}
-            for key, value in lua_table.items():
-                # Handle bytes keys/values
-                if isinstance(key, bytes):
-                    try:
-                        python_key = key.decode('utf-8')
-                    except UnicodeDecodeError:
-                        python_key = key.decode('utf-8', errors='replace')
-                elif hasattr(key, '__class__') and 'lua' in str(key.__class__).lower():
-                    python_key = lua_to_python_table(key)
-                else:
-                    python_key = key
-                
-                if isinstance(value, bytes):
-                    try:
-                        python_value = value.decode('utf-8')
-                    except UnicodeDecodeError:
-                        python_value = value.decode('utf-8', errors='replace')
-                elif hasattr(value, '__class__') and 'lua' in str(value.__class__).lower():
-                    python_value = lua_to_python_table(value)
-                else:
-                    python_value = value
-                
-                temp_dict[python_key] = python_value
-            
-            # Check if this looks like an array (consecutive integer keys starting from 1)
-            if temp_dict and all(isinstance(k, (int, float)) and k > 0 for k in temp_dict.keys()):
-                keys = sorted([int(k) for k in temp_dict.keys()])
-                if keys == list(range(1, len(keys) + 1)):
-                    # This is a Lua array, convert to Python list
-                    return [temp_dict[k] for k in keys]
-            
-            return temp_dict
-        except Exception as e:
-            logger.warning(f"Error converting Lua table: {e}")
-            # If conversion fails, return string representation
-            return str(lua_table)
-    else:
+        return _decode_bytes(lua_table)
+
+    if not _is_lua_table(lua_table):
         return lua_table
+
+    oid = id(lua_table)
+    if oid in seen:
+        return "<cycle>"
+    seen.add(oid)
+
+    try:
+        temp_dict: dict[Any, Any] = {}
+        for key, value in lua_table.items():
+            if isinstance(key, bytes):
+                python_key = _decode_bytes(key)
+            elif _is_lua_table(key):
+                python_key = _lua_to_python(key, seen, depth + 1)
+            else:
+                python_key = key
+
+            if isinstance(value, bytes):
+                python_value = _decode_bytes(value)
+            elif _is_lua_table(value):
+                python_value = _lua_to_python(value, seen, depth + 1)
+            else:
+                python_value = value
+
+            temp_dict[python_key] = python_value
+
+        # Detect Lua array shape (consecutive integer keys starting from 1).
+        if temp_dict and all(isinstance(k, (int, float)) and k > 0 for k in temp_dict.keys()):
+            keys = sorted([int(k) for k in temp_dict.keys()])
+            if keys == list(range(1, len(keys) + 1)):
+                return [temp_dict[k] for k in keys]
+
+        return temp_dict
+    except Exception as e:
+        logger.warning(f"Error converting Lua table: {e}")
+        return str(lua_table)
+    finally:
+        seen.discard(oid)
 
 
 def export_to_lua(name: str | None = None):

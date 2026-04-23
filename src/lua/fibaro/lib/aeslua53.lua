@@ -1,3 +1,6 @@
+-- VENDORED THIRD-PARTY LIBRARY — DO NOT MODIFY
+-- Upstream: https://github.com/bighil/aeslua (Lua 5.3 port)
+-- License:  LGPL 2.1+
 --[[
 aeslua: Lua AES implementation
 Copyright (c) 2006,2007 Matthias Hilbig

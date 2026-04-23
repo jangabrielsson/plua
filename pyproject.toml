@@ -78,10 +78,9 @@ pythonVersion = "3.11"
 typeCheckingMode = "basic"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
-# Lupa LuaTable proxies and other dynamic-attribute helpers (e.g. aiohttp
-# request handler app/runner/site assignment) cannot be statically modelled,
-# so attribute-access errors here are noise rather than real bugs.
-reportAttributeAccessIssue = "none"
+# Lupa LuaTable proxies are dynamic, but currently produce no pyright errors —
+# any new dynamic-attribute sites should use a targeted `# pyright: ignore[
+# reportAttributeAccessIssue]` comment rather than re-enabling a global mute.
 # Generated FastAPI endpoint code calls .dict() on Pydantic models that pyright
 # sees as plain Dict[str, Any]; the runtime hasattr() guard makes it safe.
 reportArgumentType = "warning"

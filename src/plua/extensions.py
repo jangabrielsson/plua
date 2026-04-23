@@ -7,6 +7,7 @@ import importlib.util
 import json
 import logging
 import os
+import sys
 import time
 from typing import Any
 
@@ -27,11 +28,6 @@ except ImportError as e:
 
 # Import remaining extension modules (FFI libraries are now in pylib/)
 # Use try/except to make imports safer
-try:
-    from . import web_server  # noqa: F401
-except ImportError as e:
-    logging.debug(f"web_server not available: {e}")
-
 try:
     from . import sync_socket  # noqa: F401
 except ImportError as e:
@@ -91,9 +87,9 @@ def load_python_module(module_name: str) -> dict[str, Any]:
         for attempt in import_attempts:
             try:
                 # Check if module is already loaded
-                if attempt in importlib.sys.modules:
+                if attempt in sys.modules:
                     logging.info(f"Reloading existing module: {attempt}")
-                    module = importlib.reload(importlib.sys.modules[attempt])
+                    module = importlib.reload(sys.modules[attempt])
                     full_module_name = attempt
                     break
                 else:
@@ -461,7 +457,7 @@ def get_screen_dimensions() -> Any:
         elif system == "windows":
             try:
                 import ctypes
-                user32 = ctypes.windll.user32
+                user32 = ctypes.windll.user32  # pyright: ignore[reportAttributeAccessIssue]
                 width = user32.GetSystemMetrics(0)
                 height = user32.GetSystemMetrics(1)
                 
@@ -538,8 +534,8 @@ def open_quickapp_window(qa_id: int, title: str, width: int = 800, height: int =
                 loop.create_task(api_server.send_reload_ui(int(qa_id)))
             except Exception as _e:
                 logging.warning(f"send_reload_ui task creation failed: {_e}")
-            if window_manager.system == 'darwin':
-                window_manager.focus_window_macos(str(qa_id), pos_x, pos_y, width, height)
+            if window_manager.get_window_manager().system == 'darwin':
+                window_manager.get_window_manager().focus_window_macos(str(qa_id), pos_x, pos_y, width, height)
             logging.info(f"QA {qa_id} already has live WebSocket — sent reload_ui, skipping new browser window")
             return True
 

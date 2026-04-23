@@ -1,3 +1,6 @@
+-- VENDORED THIRD-PARTY LIBRARY — DO NOT MODIFY
+-- Upstream: https://github.com/pkulchenko/MobDebug
+-- License:  MIT (see file)
 --
 -- MobDebug -- Lua remote debugger
 -- Copyright 2011-20 Paul Kulchenko

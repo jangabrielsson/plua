@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.0] - 2026-04-23
+
+
+
+#### Commits since v1.2.79:
+
+- 📝 Refactor PLua engine for improved cross-thread communication and port management
+- 📚 **Docs**: Revise PLua architecture documentation for clarity and detail on system components and data flow
+- 📚 **Docs**: Enhance HC3 write safety documentation in SKILL.md for better clarity on silent failures and defensive patterns
+- ✨ **Feature**: add hc3-write-safety skill
+
+
+
 ## [v1.2.79] - 2026-04-22
 
 

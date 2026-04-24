@@ -147,9 +147,9 @@ function Emulator:post(event)
 end
 
 function Emulator:DEBUG(...) if self.debugFlag then print(...) end end
-function Emulator:INFO(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "INFO", false) end 
-function Emulator:WARNING(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "WARNING", false) end 
-function Emulator:ERROR(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "ERROR", false) end 
+function Emulator:INFO(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "INFO") end 
+function Emulator:WARNING(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "WARNING") end 
+function Emulator:ERROR(...) self.lib.__fibaro_add_debug_message(__TAG, self.lib.logStr(...), "ERROR") end 
 
 function Emulator:registerDevice(info)
   if info.device.id == nil then DEVICEID = DEVICEID + 1; info.device.id = DEVICEID end

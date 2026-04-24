@@ -111,9 +111,10 @@ local typeColor = {
 -- @param tag - The tag for the debug message.
 -- @param msg - The message string.
 -- @param typ - The type of message (e.g., "DEBUG", "ERROR").
-local function __fibaro_add_debug_message(tag, msg, typ, nohtml)
+-- @param time - Optional epoch timestamp; defaults to current time.
+local function __fibaro_add_debug_message(tag, msg, typ, time)
   tag = tag or "PLUA"
-  Emu.lib.log.debugOutput(tag, msg, typ)
+  Emu.lib.log.debugOutput(tag, msg, typ, time)
 end
 
 local logStr = function(...) 

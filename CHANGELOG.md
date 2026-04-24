@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.1] - 2026-04-24
+
+
+
+#### Commits since v1.3.0:
+
+- ✨ **Feature**: Implement speed library for time management and debugging enhancements
+- 📚 **Docs**: Add friendly overview of PLua architecture for QuickApp developers
+
+
+
 ## [v1.3.0] - 2026-04-23
 
 

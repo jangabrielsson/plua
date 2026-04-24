@@ -302,7 +302,7 @@ class HTTPServerHandler:
             return web.Response(text=f'{{"error": "Internal server error: {e}"}}', 
                               status=500, content_type='application/json')
     
-    def respond_to_request(self, request_id: str, data: str, status_code: int, content_type: str, headers: dict[str, str] = None):
+    def respond_to_request(self, request_id: str, data: str, status_code: int, content_type: str, headers: dict[str, str] | None = None):
         """Respond to a pending HTTP request"""
         future = self.pending_responses.pop(request_id, None)
         if future and not future.done():

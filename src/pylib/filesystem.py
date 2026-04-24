@@ -259,7 +259,8 @@ def fs_touch(filepath: str, atime: float | None = None, mtime: float | None = No
         elif atime is None:
             # atime omitted - use current time
             atime = current_time
-        
+
+        assert atime is not None and mtime is not None
         os.utime(filepath, (atime, mtime))
         return True
         

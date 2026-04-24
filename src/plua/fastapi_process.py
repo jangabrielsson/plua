@@ -552,7 +552,7 @@ def run_fastapi_server(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
 class FastAPIProcessManager:
     """Manages the FastAPI server process and IPC communication"""
     
-    def __init__(self, host: str = "0.0.0.0", port: int = 8080, config: dict[str, Any] = None):
+    def __init__(self, host: str = "0.0.0.0", port: int = 8080, config: dict[str, Any] | None = None):
         self.host = host
         self.port = port
         self.config = config or {}
@@ -878,7 +878,7 @@ def get_process_manager() -> FastAPIProcessManager | None:
     return _process_manager
 
 
-def start_fastapi_process(host: str = "0.0.0.0", port: int = 8080, config: dict[str, Any] = None) -> FastAPIProcessManager:
+def start_fastapi_process(host: str = "0.0.0.0", port: int = 8080, config: dict[str, Any] | None = None) -> FastAPIProcessManager:
     """Start the global FastAPI server process"""
     global _process_manager
     

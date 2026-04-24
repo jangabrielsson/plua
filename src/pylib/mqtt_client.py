@@ -38,7 +38,7 @@ def _generate_client_id() -> str:
     _mqtt_counter += 1
     return f"eplua_mqtt_{_mqtt_counter}"
 
-def _parse_uri(uri: str, options: dict = None) -> dict[str, Any]:
+def _parse_uri(uri: str, options: dict | None = None) -> dict[str, Any]:
     """Parse MQTT URI and extract connection details"""
     # Convert Lua table to Python dict if needed
     if options is not None:

@@ -221,13 +221,14 @@ def get_config():
 
 
 def run_engine(
-    script_paths: list = None,
-    fragments: list = None,
-    config: dict[str, Any] = None,
+    script_paths: list | None = None,
+    fragments: list | None = None,
+    config: dict[str, Any] | None = None,
     interactive: bool = False,
     telnet_mode: bool = False,
 ):
     """Run Lua engine in main thread"""
+    config = config or {}
     try:
         from plua.engine import LuaEngine
 
@@ -297,7 +298,7 @@ def run_engine(
                         api_manager.set_lua_executor(lua_executor)
                         
                         # Always set up Fibaro callback - hook will determine availability
-                        def fibaro_callback(method: str, path: str, data: str = None):
+                        def fibaro_callback(method: str, path: str, data: str | None = None):
                             """Thread-safe Fibaro API callback - receives JSON string, passes to Lua"""
                             try:
                                 logger.debug(f"Fibaro callback: {method} {path}")
@@ -355,7 +356,7 @@ def run_engine(
                         api_manager.set_fibaro_callback(fibaro_callback)
                         
                         # QuickApp data callback
-                        def quickapp_callback(action: str, qa_id: int = None):
+                        def quickapp_callback(action: str, qa_id: int | None = None):
                             """Handle QuickApp data requests"""
                             try:
                                 if action == "get_quickapp" and qa_id is not None:

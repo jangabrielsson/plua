@@ -480,7 +480,7 @@ class LuaBindings:
             return time.time()
         
         @export_to_lua("dotgetenv")
-        def dotgetenv(key: str, default: str = None) -> str:
+        def dotgetenv(key: str, default: str | None = None) -> str | None:
             """
             Read environment variables from .env files and system environment.
             

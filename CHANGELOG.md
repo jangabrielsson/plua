@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.2] - 2026-04-24
+
+
+
+#### Commits since v1.3.1:
+
+- ✨ **Feature**: Update type hints to support optional values in various modules
+
+
+
 ## [v1.3.1] - 2026-04-24
 
 

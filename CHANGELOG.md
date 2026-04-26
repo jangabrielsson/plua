@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.3] - 2026-04-26
+
+
+
+#### Commits since v1.3.2:
+
+- ✨ **Feature**: Enhance HTTP client with streaming support and improve request handling
+
+
+
 ## [v1.3.2] - 2026-04-24
 
 

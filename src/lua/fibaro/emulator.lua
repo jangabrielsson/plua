@@ -522,17 +522,15 @@ function Emulator:loadMainFile(filenames,greet)
     local color = _PY.config.environment == 'zerobrane' and "yellow" or "orange"
     _print(self.lib.log.colorStr(color,fmt("Fibaro SDK, %s, (%.4fs)",
     self.offline and "offline" or "online",
-    self.lib.millitime()-self.config.startTime)
-  )
-)
-end
-
-self:loadQA(info)
-
-self:registerDevice(info)
-
-self:startQA(info.device.id)
-for i=2, #filenames do self.lib.loadQA(filenames[i]) end
+    self.lib.millitime()-self.config.startTime)))
+  end
+  
+  self:loadQA(info)
+  
+  self:registerDevice(info)
+  
+  self:startQA(info.device.id)
+  for i=2, #filenames do self.lib.loadQA(filenames[i]) end
 end
 
 local stdLua = { 
@@ -883,6 +881,10 @@ function headerKeys.file(str,info)
     error(fmt("--%%file: File not found: '%s'",path))
   end
 end
+function headerKeys.speed(str,info,k)
+  info.speed = validate(str,nil,k)
+  headerKeys.file("$fibaro.lib.speed,speedlib",info)
+end
 function headerKeys.merge(str,info)
   local files,dest = str:match("^(.+)=(.+)$")
   files = files:split(',')
@@ -1039,7 +1041,7 @@ local tools = {
       if not name then name = file:gsub("%.lua$","")..".fqa" end
       local code = self.lib.readFile(file)
       local fqa,info = self.lib.luaToFQA(code)
-
+      
       local conceal = info.headers.conceal or {}
       local vars = fqa.initialProperties.quickAppVariables or {}
       local vars2 = table.copy(vars)

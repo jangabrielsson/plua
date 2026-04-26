@@ -25,6 +25,9 @@ from plua.lua_bindings import (
 
 logger = logging.getLogger(__name__)
 
+# Active SSE / streaming HTTP requests, keyed by stream_id so they can be cancelled.
+_active_streams: dict[str, asyncio.Task] = {}
+
 
 @export_to_lua("call_http")
 def call_http(url: str, options: Any, callback_id: int) -> None:
@@ -152,6 +155,128 @@ async def _perform_http_request(url: str, options: dict[str, Any], callback_id: 
             engine.post_callback_from_thread(callback_id, str(e), None)
         except Exception as e:
             logger.error(f"Error calling HTTP error callback {callback_id}: {e}")
+
+
+@export_to_lua("call_http_stream")
+def call_http_stream(url: str, options: Any, callback_id: int) -> str:
+    """
+    Open a streaming HTTP request (e.g. text/event-stream / SSE).
+
+    The Lua callback is invoked once per SSE event with (nil, response).
+    On stream end or error, it is invoked once with (err_message, nil) and
+    the stream is removed from the registry. The returned stream_id can be
+    passed to ``cancel_http_stream`` to terminate the stream early.
+    """
+    py_options = lua_to_python_table(options) if hasattr(options, 'items') else {}
+    stream_id = f"sse_{uuid.uuid4().hex[:8]}"
+    engine = get_global_engine()
+    if engine and engine._timer_manager:
+        task = asyncio.create_task(
+            _perform_http_stream(url, py_options, callback_id, stream_id)
+        )
+        _active_streams[stream_id] = task
+    return stream_id
+
+
+@export_to_lua("cancel_http_stream")
+def cancel_http_stream(stream_id: str) -> bool:
+    """Cancel an active streaming HTTP request. Returns True if a stream was cancelled."""
+    task = _active_streams.pop(stream_id, None)
+    if task and not task.done():
+        task.cancel()
+        return True
+    return False
+
+
+async def _perform_http_stream(
+    url: str, options: dict[str, Any], callback_id: int, stream_id: str
+) -> None:
+    engine = get_global_engine()
+    if not engine:
+        return
+
+    method = options.get('method', 'GET').upper()
+    headers = options.get('headers', {}) or {}
+    check_cert = options.get('checkCertificate', True)
+    # For streams, "timeout" is a per-read inactivity timeout (ms). 0 / nil = no limit.
+    raw_timeout = options.get('timeout', 0) or 0
+    sock_read = (raw_timeout / 1000.0) if raw_timeout > 0 else None
+
+    connector = aiohttp.TCPConnector(ssl=False) if not check_cert else None
+    final_error: str | None = None
+
+    try:
+        timeout = aiohttp.ClientTimeout(total=None, sock_read=sock_read)
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+            async with session.request(method, url, headers=headers) as response:
+                response_headers = dict(response.headers)
+
+                if response.status >= 400:
+                    body = await response.text()
+                    final_error = f"HTTP {response.status}: {body[:200]}"
+                    return
+
+                # SSE parser per https://html.spec.whatwg.org/multipage/server-sent-events.html
+                event_data: list[str] = []
+                event_name: str | None = None
+                event_id: str | None = None
+
+                async for raw_line in response.content:
+                    line = raw_line.decode('utf-8', errors='replace').rstrip('\r\n')
+
+                    if line == '':
+                        if event_data:
+                            data = '\n'.join(event_data)
+                            result = {
+                                'status': response.status,
+                                'headers': response_headers,
+                                'data': data,
+                                'event': event_name,
+                                'id': event_id,
+                                'streaming': True,
+                            }
+                            try:
+                                lua_result = python_to_lua_table(result)
+                                engine.post_callback_from_thread(callback_id, None, lua_result)
+                            except Exception as e:
+                                logger.error(f"SSE callback {callback_id} failed: {e}")
+                            event_data = []
+                            event_name = None
+                            event_id = None
+                        continue
+
+                    if line.startswith(':'):
+                        continue  # comment
+
+                    if ':' in line:
+                        field, _, value = line.partition(':')
+                        if value.startswith(' '):
+                            value = value[1:]
+                    else:
+                        field, value = line, ''
+
+                    if field == 'data':
+                        event_data.append(value)
+                    elif field == 'event':
+                        event_name = value
+                    elif field == 'id':
+                        event_id = value
+                    # 'retry' field is ignored.
+
+                final_error = "stream closed"
+
+    except asyncio.CancelledError:
+        final_error = "cancelled"
+        raise
+    except Exception as e:
+        final_error = str(e)
+    finally:
+        _active_streams.pop(stream_id, None)
+        if final_error is not None:
+            try:
+                engine.post_callback_from_thread(callback_id, final_error, None)
+            except Exception as cb_err:
+                logger.error(f"SSE final callback {callback_id} failed: {cb_err}")
 
 
 @export_to_lua("http_request_sync")

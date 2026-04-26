@@ -364,6 +364,8 @@ do
     self:removeUndefinedChildren(children) -- Remove child devices not loaded/created
   end
   
+  fibaro.UI2uiCallbacks = UI2uiCallbacks
+  fibaro.UI2NewUiView = UI2NewUiView
 end
 
 --[[

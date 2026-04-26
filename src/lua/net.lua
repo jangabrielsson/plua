@@ -7,47 +7,65 @@ function net.HTTPClient()
   local self = {}
   -- url is string
   -- options = { options = { method = "get", headers = {}, data = "...", timeout = 10000 }, success = function(response) end, error = function(status) end }
+  -- For SSE / text/event-stream requests, the success callback is invoked once per event
+  -- (response.data carries the event payload, response.event / response.id when present).
+  -- Streaming is auto-detected from an Accept: text/event-stream header, or you can force it with options.stream = true.
+  -- The :request() call returns a handle with a :close() method to terminate the stream.
   function self:request(url, options)
+    local opts = options.options or {}
+    local hdrs = opts.headers or {}
+    local accept = hdrs.Accept or hdrs.accept or ""
+    local is_stream = options.stream == true
+      or (type(accept) == "string" and accept:lower():find("text/event%-stream", 1, false) ~= nil)
+
     -- Extract options for call_http
     local call_options = {
-      method = options.options and options.options.method or "GET",
-      headers = options.options and options.options.headers or {},
-      data = options.options and options.options.data or nil,
-      timeout = options.options and options.options.timeout or 30000,
-      checkCertificate = options.options and options.options.checkCertificate ~= false,
+      method = opts.method or "GET",
+      headers = hdrs,
+      data = opts.data,
+      timeout = opts.timeout or (is_stream and 0 or 30000),
+      checkCertificate = opts.checkCertificate ~= false,
     }
-    
-    -- Create a callback function that adapts call_http response to net.HTTPClient format
-    local callback = function(err, response)
+
+    local callback_id  -- forward declaration so the wrapper can clear itself on stream end
+    local function dispatch(err, response)
       if err then
-        -- Call error callback if provided
+        if is_stream and callback_id then
+          _PY.clearRegisteredCallback(callback_id)
+        end
         if options.error then
-          -- For timeout errors, pass "timeout" string. For other errors, pass the error message
-          local error_param = err:lower():find("timeout") and "timeout" or err
-          local success, callback_err = pcall(options.error, error_param)
-          if not success then
-            print("Error in HTTP error callback: " .. tostring(callback_err))
-          end
+          local error_param = (type(err) == "string" and err:lower():find("timeout")) and "timeout" or err
+          local ok, cb_err = pcall(options.error, error_param)
+          if not ok then print("Error in HTTP error callback: " .. tostring(cb_err)) end
         end
       else
-        -- Call success callback if provided
         if options.success then
-          -- Adapt call_http response format to net.HTTPClient format
-          local res = { 
-            status = response.status, 
-            data = response.text,  -- call_http uses 'text', net.HTTPClient expects 'data'
-            headers = response.headers  -- Include headers in the response
+          local res = {
+            status  = response.status,
+            data    = response.data or response.text,  -- streams use 'data', one-shots use 'text'
+            headers = response.headers,
+            event   = response.event,                  -- SSE only
+            id      = response.id,                     -- SSE only
           }
-          local success, callback_err = pcall(options.success, res)
-          if not success then
-            print("Error in HTTP success callback: " .. tostring(callback_err))
-          end
+          local ok, cb_err = pcall(options.success, res)
+          if not ok then print("Error in HTTP success callback: " .. tostring(cb_err)) end
         end
       end
     end
-    
-    -- Use our existing call_http function
-    local callback_id = _PY.registerCallback(callback)
+
+    if is_stream then
+      callback_id = _PY.registerCallback(dispatch, true)  -- persistent
+      local stream_id = _PY.call_http_stream(url, call_options, callback_id)
+      return {
+        stream_id = stream_id,
+        close = function(_)
+          _PY.cancel_http_stream(stream_id)
+          _PY.clearRegisteredCallback(callback_id)
+        end,
+      }
+    end
+
+    callback_id = _PY.registerCallback(dispatch)
     _PY.call_http(url, call_options, callback_id)
   end
   return self

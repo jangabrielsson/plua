@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.4] - 2026-04-28
+
+
+
+#### Commits since v1.3.3:
+
+- ✨ **Feature**: Add optional hook parameter to speedTime function for post-execution callback
+
+
+
 ## [v1.3.3] - 2026-04-26
 
 

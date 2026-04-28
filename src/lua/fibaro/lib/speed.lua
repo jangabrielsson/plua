@@ -122,7 +122,7 @@ function speed.loop()
   end
 end
   
-function fibaro.speedTime(speedTime,fun)
+function fibaro.speedTime(speedTime,fun,hook)
   speed.stopTime = os.time() + speedTime*3600
   setTimeout = speed.setTimeout
   clearTimeout = speed.clearTimeout
@@ -132,4 +132,5 @@ function fibaro.speedTime(speedTime,fun)
   os.date = speed.userDate
   setTimeout(fun,0)
   speed.loop()
+  if hook then hook() end
 end

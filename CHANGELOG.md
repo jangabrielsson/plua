@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.6] - 2026-05-03
+
+
+
+#### Commits since v1.3.5:
+
+- ✨ **Feature**: Trigger 'DeviceCreatedEvent' after registering a device
+
+
+
 ## [v1.3.5] - 2026-05-03
 
 

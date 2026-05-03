@@ -20,5 +20,6 @@ function QuickApp:setValue(val)
     local unit = val.unit
     assert(type(value)=='number',"Value should be a number")
     assert(unit=="C" or unit=="F","Unit should be either 'C' or 'F'")
-    self:updateProperty("value", { value= value, unit= unit })    
+    self:updateProperty("value",value)
+    self:updateProperty("unit",unit)    
 end

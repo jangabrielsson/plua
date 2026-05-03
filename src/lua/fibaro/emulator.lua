@@ -160,6 +160,7 @@ function Emulator:registerDevice(info)
     UI = info.UI, UImap = info.UImap, watches = info.watches,
     vars = existing and existing.vars,  -- preserve vars written by top-level code before registerDevice
   }
+  self:refreshEvent('DeviceCreatedEvent', { id = info.device.id })
   self:DEBUG("Device registered. Total devices in DIR: " .. table.maxn(self.DIR))
 end
 

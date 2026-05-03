@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.8] - 2026-05-03
+
+
+
+#### Commits since v1.3.7:
+
+- ♻️ **Refactor**: Update setValue function in doorSensor and temperatureSensor for clarity and consistency
+
+
+
 ## [v1.3.7] - 2026-05-03
 
 

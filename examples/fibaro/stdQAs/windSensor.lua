@@ -13,7 +13,7 @@ function QuickApp:onInit()
     end
 end
 
-function QuickApp:updateWind(value)
-    self:debug("wind sensor update: " .. tostring(value))
-    self:updateProperty("value", value)
+function QuickApp:setValue(val)
+    assert(type(val)=='number',"Value should be a number")
+    self:updateProperty("value", val)    
 end

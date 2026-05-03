@@ -21,3 +21,8 @@ function QuickApp:updateEnergy(value)
     self:debug("energy meter update: " .. tostring(value))
     self:updateProperty("value", value)
 end
+
+function QuickApp:setValue(val)
+    assert(type(val)=='number',"Value should be a number")
+    self:updateProperty("value", val)    
+end

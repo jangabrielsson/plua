@@ -14,3 +14,8 @@ end
 -- Humidity sensor type have no actions to handle
 -- To update humidity, update property "value" with floating point number
 -- Eg. self:updateProperty("value", 90.28) 
+
+function QuickApp:setValue(val)
+    assert(type(val)=='number',"Value should be a number")
+    self:updateProperty("value", val)    
+end

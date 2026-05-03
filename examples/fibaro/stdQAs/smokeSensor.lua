@@ -10,3 +10,8 @@ function QuickApp:onInit()
         return
     end
 end
+
+function QuickApp:setValue(val)
+    assert(type(val)=='boolean',"Value should be a boolean")
+    self:updateProperty("value", val)    
+end

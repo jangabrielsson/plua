@@ -13,7 +13,7 @@ function QuickApp:onInit()
     end
 end
 
-function QuickApp:breached(state)
-    self:debug("window sensor breached: " .. tostring(state))
-    self:updateProperty("value", state)
+function QuickApp:setValue(val)
+    assert(type(val)=='boolean',"Value should be a boolean")
+    self:updateProperty("value", val)    
 end

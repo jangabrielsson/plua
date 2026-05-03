@@ -20,3 +20,8 @@ function QuickApp:onInit()
         return
     end
 end 
+
+function QuickApp:setValue(val)
+    assert(type(val)=='number',"Value should be a number")
+    self:updateProperty("value", val)    
+end

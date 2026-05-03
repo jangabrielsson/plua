@@ -23,3 +23,7 @@ function QuickApp:turnOff()
     self:debug("binary switch turned off")
     self:updateProperty("value", false)    
 end 
+
+function QuickApp:setValue(val)
+    self:updateProperty("value", val)    
+end 

@@ -63,7 +63,11 @@ local function createQueue()
     end
   end
   
-  function self:pop() local t = times; if times then times.dead=true  times = times.next end return t end
+  function self:pop() 
+    local t = times
+    if times then times.dead=true times = times.next if times then times.prev = nil end end
+    return t 
+  end
   function self:peek() return times end
   return self
 end
@@ -117,6 +121,7 @@ function speed.loop()
     if not t then break end
     local offs = t.time - _time()
     setTimeOffset(offs)
+    if speed.userTime() > speed.stopTime then break end
     --print(os.date("%Y-%m-%d %H:%M:%S",speed.userTime())," Timer:",t.id)
     t.fun()
   end

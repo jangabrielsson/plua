@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.7] - 2026-05-03
+
+
+
+#### Commits since v1.3.6:
+
+- ✨ **Feature**: Add setValue function to sensor scripts for updating properties
+
+
+
 ## [v1.3.6] - 2026-05-03
 
 

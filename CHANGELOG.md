@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.5] - 2026-05-03
+
+
+
+#### Commits since v1.3.4:
+
+- 🐛 **Fix**: Improve binarySwitch and windowCovering scripts with debugging and formatting adjustments; enhance speed function for better queue management
+
+
+
 ## [v1.3.4] - 2026-04-28
 
 

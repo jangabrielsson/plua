@@ -576,7 +576,6 @@ class FastAPIProcessManager:
         # the Queues are created (i.e. while resource_tracker is spawned), then
         # restore them.  This is safe because no output is printed during __init__.
         if platform.system() != "Windows":
-            import sys as _sys
             _saved_stdout = os.dup(1)
             _saved_stderr = os.dup(2)
             _devnull = os.open(os.devnull, os.O_WRONLY)

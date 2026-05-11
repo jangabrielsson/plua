@@ -7,6 +7,7 @@ This eliminates asyncio event loop conflicts and provides a stable web server
 import asyncio
 import json
 import logging
+import os
 import platform
 import queue
 import time
@@ -501,14 +502,21 @@ def run_fastapi_server(request_queue: Union[queue.Queue, 'multiprocessing.Queue'
     """Run the FastAPI server in a separate process"""
     import os
     import sys
-    
-    # On Windows, suppress stderr to avoid multiprocessing spawn errors
-    if platform.system() == "Windows":
-        try:
-            # Redirect stderr to null to suppress spawn errors
-            sys.stderr = open(os.devnull, 'w')
-        except Exception:
-            pass
+
+    # Redirect stdout and stderr to /dev/null at the OS level so this child
+    # process does NOT keep any inherited pipe file descriptors open.
+    # Without this, running plua with piped output (e.g. "plua ... | grep")
+    # means the child inherits the pipe's write-end; when the parent exits the
+    # pipeline reader (grep/cat) never gets EOF because the child is still alive.
+    try:
+        devnull_fd = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull_fd, 1)  # stdout
+        os.dup2(devnull_fd, 2)  # stderr
+        os.close(devnull_fd)
+        sys.stdout = open(os.devnull, 'w')
+        sys.stderr = open(os.devnull, 'w')
+    except Exception:
+        pass
     
     # Set up logging for the server process
     logging.basicConfig(
@@ -558,10 +566,37 @@ class FastAPIProcessManager:
         self.config = config or {}
         self.config.update({"host": host, "port": port})
         
+        # When multiprocessing creates its first Queue it spawns a resource_tracker
+        # subprocess via subprocess.Popen.  That call always passes fds 0, 1, 2
+        # to the child (FD_CLOEXEC does NOT help here).  If plua's stdout/stderr
+        # are a shell pipe (e.g. "plua ... | grep ..."), the resource_tracker holds
+        # the write-end of that pipe open indefinitely, so the pipeline reader never
+        # gets EOF.
+        # Fix: temporarily redirect fd 1 and fd 2 to /dev/null in the parent while
+        # the Queues are created (i.e. while resource_tracker is spawned), then
+        # restore them.  This is safe because no output is printed during __init__.
+        if platform.system() != "Windows":
+            import sys as _sys
+            _saved_stdout = os.dup(1)
+            _saved_stderr = os.dup(2)
+            _devnull = os.open(os.devnull, os.O_WRONLY)
+            try:
+                os.dup2(_devnull, 1)
+                os.dup2(_devnull, 2)
+            finally:
+                os.close(_devnull)
+
         # IPC queues
         self.request_queue = QueueType()
         self.response_queue = QueueType()
         self.broadcast_queue = QueueType()  # Separate queue for WebSocket broadcasts
+
+        if platform.system() != "Windows":
+            # Restore original stdout/stderr
+            os.dup2(_saved_stdout, 1)
+            os.dup2(_saved_stderr, 2)
+            os.close(_saved_stdout)
+            os.close(_saved_stderr)
         
         # Process management
         self.server_process: multiprocessing.Process | None = None

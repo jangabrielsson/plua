@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.9] - 2026-05-11
+
+
+
+#### Commits since v1.3.8:
+
+- ♻️ **Refactor**: Remove unused import of sys in FastAPIProcessManager class
+- ✨ **Feature**: Add setInterval function to error handling and create test5.lua for periodic tasks refactor: Improve stdout and stderr handling in FastAPI process to prevent pipe issues
+
+
+
 ## [v1.3.8] - 2026-05-03
 
 

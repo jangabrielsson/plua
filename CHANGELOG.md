@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.10] - 2026-05-25
+
+
+
+#### Commits since v1.3.9:
+
+- ✨ **Feature**: add JSON schema and examples for CodeTour files
+
+
+
 ## [v1.3.9] - 2026-05-11
 
 

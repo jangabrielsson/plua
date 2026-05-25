@@ -1051,6 +1051,7 @@ local tools = {
           v.value = conceal[v.name]
         end
       end
+      json.util.InitArray(vars2)
       fqa.initialProperties.quickAppVariables = vars2
       self.lib.writeFile(name,json.encodeFast(fqa))
       self:INFO("Packed QA",file,"to",name)

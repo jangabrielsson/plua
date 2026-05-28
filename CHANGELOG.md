@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.11] - 2026-05-28
+
+
+
+#### Commits since v1.3.10:
+
+- 🐛 **Fix**: improve type function to correctly check for userdata
+
+
+
 ## [v1.3.10] - 2026-05-25
 
 

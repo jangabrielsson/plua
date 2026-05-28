@@ -558,7 +558,10 @@ function Emulator:loadQA(info,envAdds)
   info.env = env
   env._G = env
   env._ENV = env
-  env.type = function(e) local t = type(e) return t == "table" and e.__USERDATA and "userdata" or t end
+  env.type = function(e) 
+    local t = type(e) 
+    return t == "table" and rawget(e,"__USERDATA") and "userdata" or t 
+  end
   loadfile(libpath.."fibaro_funs.lua","t",env)()
   local ff,erf = loadfile(libpath.."quickapp.lua","t",env)
   if ff then ff()

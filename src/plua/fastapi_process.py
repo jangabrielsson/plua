@@ -809,15 +809,25 @@ class FastAPIProcessManager:
                     try:
                         if self.quickapp_callback:
                             logger.info(f"🔧 Calling quickapp_callback for QA {qa_id}")
-                            qa_info = self.quickapp_callback("get_quickapp", qa_id)
-                            if qa_info:
-                                # Convert any LuaTable objects to Python objects before IPC
-                                qa_info = self._convert_lua_objects(qa_info)
+                            qa_result = self.quickapp_callback("get_quickapp", qa_id)
+                            if qa_result.get("success"):
+                                qa_info = self._convert_lua_objects(qa_result["data"])
                                 logger.info(f"🔧 QuickApp info found: {qa_info}")
                                 response_data = {"success": True, "data": qa_info}
                             else:
-                                logger.warning(f"🔧 QuickApp {qa_id} not found")
-                                response_data = {"success": False, "error": f"QuickApp {qa_id} not found"}
+                                reason = qa_result.get("reason", "unknown")
+                                err_msg = qa_result.get("error", f"QuickApp {qa_id} not found")
+                                if reason == "timeout":
+                                    logger.warning(f"🔧 QuickApp {qa_id}: Lua engine busy (cross-thread execution timed out)")
+                                elif reason == "queue_full":
+                                    logger.warning(f"🔧 QuickApp {qa_id}: Lua execution queue full")
+                                elif reason == "not_found":
+                                    logger.warning(f"🔧 QuickApp {qa_id} not found in Lua DIR (QA may still be initializing)")
+                                elif reason == "lua_error":
+                                    logger.warning(f"🔧 QuickApp {qa_id}: Lua error — {err_msg}")
+                                else:
+                                    logger.warning(f"🔧 QuickApp {qa_id}: {err_msg}")
+                                response_data = {"success": False, "error": err_msg}
                         else:
                             logger.error("🔧 QuickApp callback not set!")
                             response_data = {"success": False, "error": "QuickApp callback not set"}
@@ -831,11 +841,18 @@ class FastAPIProcessManager:
                     try:
                         if self.quickapp_callback:
                             logger.info("🔧 Calling quickapp_callback for all QAs")
-                            all_qas = self.quickapp_callback("get_all_quickapps")
-                            # Convert any LuaTable objects to Python objects before IPC
-                            all_qas = self._convert_lua_objects(all_qas)
-                            logger.info(f"🔧 All QuickApps found: {all_qas}")
-                            response_data = {"success": True, "data": all_qas}
+                            qa_result = self.quickapp_callback("get_all_quickapps")
+                            all_qas = self._convert_lua_objects(qa_result.get("data", []))
+                            if qa_result.get("success"):
+                                logger.info(f"🔧 All QuickApps found: {all_qas}")
+                                response_data = {"success": True, "data": all_qas}
+                            else:
+                                reason = qa_result.get("reason", "unknown")
+                                if reason == "timeout":
+                                    logger.warning("🔧 All QuickApps: Lua engine busy (cross-thread execution timed out)")
+                                else:
+                                    logger.warning(f"🔧 All QuickApps: {qa_result.get('error', 'unknown error')}")
+                                response_data = {"success": True, "data": all_qas}
                         else:
                             logger.error("🔧 QuickApp callback not set!")
                             response_data = {"success": False, "error": "QuickApp callback not set"}

@@ -357,10 +357,18 @@ def run_engine(
                         
                         # QuickApp data callback
                         def quickapp_callback(action: str, qa_id: int | None = None):
-                            """Handle QuickApp data requests"""
+                            """Handle QuickApp data requests.
+                            
+                            Returns a dict with keys:
+                                success (bool)
+                                data (any) — present on success
+                                error (str) — present on failure
+                                reason (str) — one of "timeout", "queue_full",
+                                    "not_found", "lua_error", "exception"
+                            """
+                            import json
                             try:
                                 if action == "get_quickapp" and qa_id is not None:
-                                    # Get specific QuickApp via Lua
                                     lua_script = f'''
                                         local qa_id = {qa_id}
                                         
@@ -383,13 +391,19 @@ def run_engine(
                                         return "null"
                                     '''
                                     result = engine.execute_script_from_thread(lua_script, 30.0, is_json=False)
-                                    if result.get("success") and result.get("result") != "null":
-                                        import json
-                                        return json.loads(result.get("result", "null"))
-                                    return None
-                                    
+                                    if not result.get("success"):
+                                        err = result.get("error", "")
+                                        if "timeout" in err.lower():
+                                            return {"success": False, "error": err, "reason": "timeout"}
+                                        elif "queue is full" in err.lower():
+                                            return {"success": False, "error": err, "reason": "queue_full"}
+                                        else:
+                                            return {"success": False, "error": err, "reason": "lua_error"}
+                                    if result.get("result") == "null":
+                                        return {"success": False, "error": f"QuickApp {qa_id} not found in Lua DIR", "reason": "not_found"}
+                                    return {"success": True, "data": json.loads(result.get("result", "null"))}
+
                                 elif action == "get_all_quickapps":
-                                    # Get all QuickApps via Lua
                                     lua_script = '''
                                         -- Try fibaro.plua first (this is the working path)
                                         if fibaro and fibaro.plua and fibaro.plua.getQuickApps then
@@ -406,15 +420,17 @@ def run_engine(
                                         return "[]"
                                     '''
                                     result = engine.execute_script_from_thread(lua_script, 30.0, is_json=False)
-                                    if result.get("success"):
-                                        import json
-                                        return json.loads(result.get("result", "[]"))
-                                    return []
+                                    if not result.get("success"):
+                                        err = result.get("error", "")
+                                        if "timeout" in err.lower():
+                                            return {"success": False, "data": [], "error": err, "reason": "timeout"}
+                                        return {"success": False, "data": [], "error": err, "reason": "lua_error"}
+                                    return {"success": True, "data": json.loads(result.get("result", "[]"))}
                                 else:
-                                    return None
+                                    return {"success": False, "error": f"Unknown action: {action}", "reason": "exception"}
                             except Exception as e:
                                 logger.error(f"QuickApp callback error: {e}")
-                                return None
+                                return {"success": False, "error": str(e), "reason": "exception"}
                                 
                         api_manager.set_quickapp_callback(quickapp_callback)
                         

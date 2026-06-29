@@ -25,11 +25,11 @@ local function findFirstLine(src)
   local n,first,init = 0,nil,nil
   for line in string.gmatch(src,"([^\r\n]*\r?\n?)") do
     n = n+1
-    line = line:match("^%s*(.*)")
-    if not (line=="" or line:match("^[%-]+")) then 
+    local l = line:match("^%s*(.*)")
+    if not (l=="" or l:match("^[%-]+")) then 
       if not first then first = n end
     end
-    if line:match("%s*QuickApp%s*:%s*onInit%s*%(") then
+    if l:match("%s*QuickApp%s*:%s*onInit%s*%(") then
       if not init then init = n end
     end
   end
@@ -237,8 +237,11 @@ local function unpackFQAAux(id,fqa,path) -- Unpack fqa and save it to disk
   
   local savedFiles = {}
   for _,f in ipairs(files) do
-    local fn = path..fname.."_"..f.name..".lua"
-    Emu.lib.writeFile(fn,f.content)
+    fn = f.path
+    if not fn then
+      fn = path..fname.."_"..f.name..".lua"
+      Emu.lib.writeFile(fn,f.content)
+    end
     pr:printf("--%%%%file:%s,%s",fn,f.name)
     savedFiles[#savedFiles+1] = {name=f.name, fname=fn}
   end

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.13] - 2026-06-29
+
+
+
+#### Commits since v1.3.12:
+
+- 🐛 **Fix**: Improve error handling in loadLib function for loading Lua files
+
+
+
 ## [v1.3.12] - 2026-06-29
 
 

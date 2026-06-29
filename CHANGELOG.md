@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.12] - 2026-06-29
+
+
+
+#### Commits since v1.3.11:
+
+- 🐛 **Fix**: Add type ignore comments for optional callback calls in FastAPIProcessManager
+- ♻️ **Refactor**: Simplify quickapp_callback invocation by storing it in a variable
+- 🐛 **Fix**: Add assertion to ensure quickapp_callback is not None before invocation
+- ✨ **Feature**: Add new patchfile and patchfile2 with initialization logic and file handling
+- ✨ **Feature**: Add auto-generated project structure instructions file
+- ✨ **Feature**: Enhance QuickApp callback handling with detailed error responses and logging
+
+
+
 ## [v1.3.11] - 2026-05-28
 
 

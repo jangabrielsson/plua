@@ -809,6 +809,7 @@ class FastAPIProcessManager:
                     try:
                         if self.quickapp_callback:
                             logger.info(f"🔧 Calling quickapp_callback for QA {qa_id}")
+                            assert self.quickapp_callback is not None  # pyright: guard
                             qa_result = self.quickapp_callback("get_quickapp", qa_id)
                             if qa_result.get("success"):
                                 qa_info = self._convert_lua_objects(qa_result["data"])
@@ -841,6 +842,7 @@ class FastAPIProcessManager:
                     try:
                         if self.quickapp_callback:
                             logger.info("🔧 Calling quickapp_callback for all QAs")
+                            assert self.quickapp_callback is not None  # pyright: guard
                             qa_result = self.quickapp_callback("get_all_quickapps")
                             all_qas = self._convert_lua_objects(qa_result.get("data", []))
                             if qa_result.get("success"):

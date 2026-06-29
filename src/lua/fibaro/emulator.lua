@@ -9,7 +9,12 @@ fpath = fpath:sub(1,-(#"fibaro.lua"+1))
 local libpath = fpath.."fibaro".._PY.config.fileSeparator
 local rsrcpath = fpath.."rsrc".._PY.config.fileSeparator
 local fmt = string.format
-local function loadLib(name,...) return loadfile(libpath..name..".lua","t",_G)(...) end
+local function loadLib(name,...)
+  local filename = libpath..name..".lua"
+  local f, err = loadfile(filename,"t",_G)
+  if not f then error(fmt("Cannot load %s: %s",filename,err or "unknown error")) end
+  return f(...)
+end
 ---@diagnostic disable-next-line: lowercase-global
 _print = print
 local pluaConf = {}

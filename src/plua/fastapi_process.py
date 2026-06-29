@@ -810,7 +810,7 @@ class FastAPIProcessManager:
                         if self.quickapp_callback:
                             logger.info(f"🔧 Calling quickapp_callback for QA {qa_id}")
                             cb = self.quickapp_callback
-                            qa_result = cb("get_quickapp", qa_id)
+                            qa_result = cb("get_quickapp", qa_id)  # pyright: ignore[reportOptionalCall]
                             if qa_result.get("success"):
                                 qa_info = self._convert_lua_objects(qa_result["data"])
                                 logger.info(f"🔧 QuickApp info found: {qa_info}")
@@ -843,7 +843,7 @@ class FastAPIProcessManager:
                         if self.quickapp_callback:
                             logger.info("🔧 Calling quickapp_callback for all QAs")
                             cb = self.quickapp_callback
-                            qa_result = cb("get_all_quickapps")
+                            qa_result = cb("get_all_quickapps")  # pyright: ignore[reportOptionalCall]
                             all_qas = self._convert_lua_objects(qa_result.get("data", []))
                             if qa_result.get("success"):
                                 logger.info(f"🔧 All QuickApps found: {all_qas}")

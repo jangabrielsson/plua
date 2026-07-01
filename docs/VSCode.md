@@ -206,7 +206,7 @@ Tasks enable easy HC3 QuickApp management. Create `.vscode/tasks.json`:
             "command": "plua",
             "args": [
                 "--fibaro",
-                "-a",
+                "-t",
                 "uploadQA",
                 "${relativeFile}"
             ],
@@ -218,7 +218,7 @@ Tasks enable easy HC3 QuickApp management. Create `.vscode/tasks.json`:
             "command": "plua",
             "args": [
                 "--fibaro",
-                "-a",
+                "-t",
                 "updateFile",
                 "${relativeFile}"
             ],
@@ -231,7 +231,7 @@ Tasks enable easy HC3 QuickApp management. Create `.vscode/tasks.json`:
             "args": [
                 "--fibaro",
                 "updateQA",
-                "-a",
+                "-t",
                 "${relativeFile}"
             ],
             "group": "build"
@@ -242,7 +242,7 @@ Tasks enable easy HC3 QuickApp management. Create `.vscode/tasks.json`:
             "command": "plua",
             "args": [
                 "--fibaro",
-                "-a",
+                "-t",
                 "downloadQA ${input:QA_id}:${input:path_id}",
                 "dummy.lua"
             ],

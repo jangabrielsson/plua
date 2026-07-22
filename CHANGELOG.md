@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.14] - 2026-07-22
+
+
+
+#### Commits since v1.3.13:
+
+- ✨ **Feature**: Refactor corErr.lua, add err2.lua, and enhance offline_data.lua for sunrise/sunset calculations
+- 🐛 **Fix**: Update argument flag from '-a' to '-t' in VSCode tasks for QuickApp management
+
+
+
 ## [v1.3.13] - 2026-06-29
 
 

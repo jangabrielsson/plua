@@ -221,7 +221,10 @@ async def _perform_http_stream(
                 event_name: str | None = None
                 event_id: str | None = None
 
-                async for raw_line in response.content:
+                while True:
+                    raw_line = await response.content.readline()
+                    if not raw_line:
+                        break
                     line = raw_line.decode('utf-8', errors='replace').rstrip('\r\n')
 
                     if line == '':

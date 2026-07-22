@@ -1,12 +1,13 @@
 local speed = {}
 local timeOffset = os.time() 
 
-local old__fibaro_add_debug_message = fibaro.plua.lib.__fibaro_add_debug_message
+-- We patch fibaro.plua.userTime instead....
+-- local old__fibaro_add_debug_message = fibaro.plua.lib.__fibaro_add_debug_message
 
-function fibaro.plua.lib.__fibaro_add_debug_message(tag, msg, typ, time)
-  local t = time or os.time()
-  old__fibaro_add_debug_message(tag, msg, typ, t)
-end
+-- function fibaro.plua.lib.__fibaro_add_debug_message(tag, msg, typ, time)
+--   local t = time or os.time()
+--   old__fibaro_add_debug_message(tag, msg, typ, t)
+-- end
 
 local _setTimeout,_clearTimeout,_setInterval,_clearInterval = setTimeout,clearTimeout,setInterval,clearInterval
 local _time,_date = os.time,os.date
@@ -23,7 +24,9 @@ function speed.userDate(a, b)
 end
 
 local function getTimeOffset() return timeOffset end
-local function setTimeOffset(offs) timeOffset = offs end
+local function setTimeOffset(offs) 
+  timeOffset = offs 
+end
 
 local function createQueue()
   local self = {}
@@ -135,6 +138,8 @@ function fibaro.speedTime(speedTime,fun,hook)
   clearInterval = speed.clearInterval
   os.time = speed.userTime
   os.date = speed.userDate
+  fibaro.plua.lib.userTime = speed.userTime
+  fibaro.plua.lib.userDate = speed.userDate
   setTimeout(fun,0)
   speed.loop()
   if hook then hook() end

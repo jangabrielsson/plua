@@ -1,13 +1,34 @@
 local Emu, store = ...
 
+local lastTime = 0
+local sunriseHour, sunsetHour = nil, nil
+local function computeSuncalc()
+  local utime = Emu.lib.userTime()
+  if os.date("*t",lastTime).yday ~= os.date("*t",utime).yday then
+    lastTime = utime
+    sunriseHour, sunsetHour = Emu.lib.sunCalc(nil, Emu.lib.latitude, Emu.lib.longitude)
+  end
+end
+
 Emu:registerDevice({
   device ={
     id = 1, name = "zwave", roomID = 219,
     type = "com.fibaro.zwavePrimaryController",
-    properties = {
-      sunriseHour = "03:57",
-      sunsetHour = "21:32",
-    }
+    properties = 
+      setmetatable({}, {
+        __index = function(t,k)
+          if k == "sunriseHour" then
+            computeSuncalc()
+            return sunriseHour
+          elseif k == "sunsetHour" then
+            computeSuncalc()
+            return sunsetHour
+          else
+            return nil
+          end
+        end
+      }
+      ),
   }
 })
 

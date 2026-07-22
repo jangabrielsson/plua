@@ -261,9 +261,9 @@ end)
 
 router:add("GET", "/devices/<id>/properties/<name>", function(path, data, vars, query)
   local id,name = vars.id,vars.name
-  if id == 1 and (name == "sunriseHour" or name == "sunsetHour") then
-    return {value=Emu[name],modified=0},HTTP.OK
-  end
+  -- if id == 1 and (name == "sunriseHour" or name == "sunsetHour") then
+  --   return {value=Emu[name],modified=0},HTTP.OK
+  -- end
   local dev = Emu.DIR[id]
   if not dev then if Emu.offline then return nil,HTTP.NOT_FOUND else return hc3api.get(path) end end
   return {value=dev.device.properties[name],modified=0},HTTP.OK

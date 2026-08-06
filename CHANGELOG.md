@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.15] - 2026-08-06
+
+
+
+#### Commits since v1.3.14:
+
+
+
+
 ## [v1.3.14] - 2026-07-22
 
 
